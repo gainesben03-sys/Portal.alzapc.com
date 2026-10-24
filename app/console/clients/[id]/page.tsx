@@ -99,6 +99,14 @@ export default function ClientSetup() {
           ))}
         </div>
 
+        <div className="section-head section"><h2>Growth</h2></div>
+        <div className="card">
+          <label className="rule" style={{ cursor: "pointer" }}>
+            <span className="switch"><input type="checkbox" checked={cfg.softAsks !== false} onChange={(e) => set({ softAsks: e.target.checked })} /><span /></span>
+            <div><b>Referral and add-on lines</b><div className="tiny muted">A quiet line at the bottom of their dashboard and in the first Huddle each month inviting intros. Shows a hiring line only if Recruiting is off.</div></div>
+          </label>
+        </div>
+
         <div className="section-head section"><h2>Brand color</h2></div>
         <div className="card">
           <div className="swatches">

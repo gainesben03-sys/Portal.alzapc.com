@@ -32,6 +32,14 @@ Clickable prototype of the Alza client portal: the Master Console for Ben and a 
 - **Light and dark mode** toggle on every screen (remembers your choice, follows the phone setting by default).
 - **HEX color** field in Client setup, with a readability warning for colors too light for white button text.
 
+**Added in round 4**
+
+- **Tiled client Home**: Needs you, Talk to Ben (booking link), Projects, Chat with Ben, Share with HR, Hiring, Coming up, Recent wins, Ben is working on, Resources, Wellness, HR Huddle email. Tiles respect modules and access level.
+- **Customize**: each person can show, hide and reorder tiles. Ben sets the default layout per client by customizing while viewing their workspace.
+- **Tasks page** (`/c/[client]/tasks`): the full tabbed task list that used to live on Home.
+- **Booking link**: set once in Console → Clients; powers the Talk to Ben tile everywhere.
+- **Quiet referral and add-on lines**: a low-key intro request at the bottom of the dashboard and in the first Huddle each month, plus a hiring line only when Recruiting is off. Toggle per client in Client setup → Growth.
+
 Reminder logic (business days, configurable): friendly reminder 3 before, due-date reminder, overdue notice 1 after, escalation 3 after, blocker flag on the console 7 after. When a client requests changes, the item moves to Alza's side so the client is never shown as the holdup.
 
 ## Run locally

@@ -17,6 +17,7 @@ export interface HuddleInput {
   files: SharedFile[];
   rules: Rules;
   sinceDays?: number;
+  softAsks?: boolean;
 }
 
 export interface HuddleOutput {
@@ -27,7 +28,7 @@ export interface HuddleOutput {
   counts: { needs: number; overdue: number; done: number; active: number };
 }
 
-export function buildHuddle({ client, settings, actions, projects, files, rules, sinceDays = 7 }: HuddleInput): HuddleOutput {
+export function buildHuddle({ client, settings, actions, projects, files, rules, sinceDays = 7, softAsks }: HuddleInput): HuddleOutput {
   const now = today();
   const since = new Date(now.getTime() - sinceDays * 86400000);
   const horizon = addBusinessDays(now, 5);
@@ -123,6 +124,9 @@ export function buildHuddle({ client, settings, actions, projects, files, rules,
       ? `A few things need your team this week. Everything else is moving.`
       : `Nothing needs you this week. Here's a quick look at where things stand.`;
 
+  // Quiet referral line: only in the first Huddle of each month, and only if Ben hasn't turned it off.
+  const softAsk = softAsks !== false && now.getDate() <= 7;
+
   const html = `<!doctype html><html><body style="margin:0;padding:0;background:#faf8f4">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#faf8f4"><tr><td align="center" style="padding:20px 12px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:14px;overflow:hidden">
@@ -141,6 +145,7 @@ ${section("Coming up", roadmapHtml)}
 <td style="width:10px"></td>
 <td style="border:1px solid #dbe2ee;border-radius:10px"><a href="${PORTAL}/c/${client.id}/share" style="display:inline-block;padding:11px 16px;font:700 15px Arial,sans-serif;color:#16213a;text-decoration:none">Share with HR</a></td>
 </tr></table></td></tr>
+${softAsk ? `<tr><td style="padding:0 24px 14px;font:13px/1.5 Arial,sans-serif;color:#5b6b85">Know a company that could use a hand with HR? Introductions are always welcome. <a href="${PORTAL}/c/${client.id}" style="color:#5b6b85">Make an intro</a></td></tr>` : ""}
 <tr><td style="padding:0 24px 22px;font:12px/1.5 Arial,sans-serif;color:#8a97ad">You get this from AlzaHR ${settings.cadence === "weekly" ? "weekly" : settings.cadence === "biweekly" ? "every two weeks" : "monthly"}. Quiet weeks are skipped. <a href="${PORTAL}/c/${client.id}/team" style="color:#8a97ad">Change email settings</a></td></tr>
 </table>
 <p style="font:11px Arial,sans-serif;color:#8a97ad;margin:12px 0 0">Powered by <span style="font-family:Georgia,serif;font-weight:700;color:#19283c">Alza</span><span style="font-family:Georgia,serif;font-weight:700;color:#d9a046">HR</span></p>

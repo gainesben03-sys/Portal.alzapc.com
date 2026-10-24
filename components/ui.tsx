@@ -289,7 +289,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
   const unread = viewer?.kind === "advisor" ? notes.filter((n) => n.clientId === clientId && n.status === "new").length : 0;
   const access = me?.access;
   const items = [
-    ...(access === "hiring" ? [] : [{ href: base, label: "Home" }, { href: `${base}/projects`, label: "Projects" }]),
+    ...(access === "hiring" ? [] : [{ href: base, label: "Home" }, { href: `${base}/tasks`, label: "Tasks" }, { href: `${base}/projects`, label: "Projects" }]),
     ...MODULES.filter((m) => cfg?.modules[m.key] && canSee(access, m.key)).map((m) => ({ href: `${base}/${m.key}`, label: m.label })),
     ...(access === "hiring" ? [] : [{ href: `${base}/share`, label: "Share with HR" }]),
     ...(canSee(access, "team") ? [{ href: `${base}/team`, label: "Team" }] : []),
@@ -298,7 +298,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
     <nav className="subnav">
       <div className="subnav-inner">
         {items.map((i) => {
-          const on = i.href === base ? path === base || path.startsWith(`${base}/a/`) : path.startsWith(i.href);
+          const on = i.href === base ? path === base : i.href === `${base}/tasks` ? path.startsWith(i.href) || path.startsWith(`${base}/a/`) : path.startsWith(i.href);
           return (
             <Link key={i.href} href={i.href} className={on ? "on" : ""}>
               {i.label}

@@ -36,6 +36,8 @@ interface State {
   files: SharedFile[];
   notices: Notice[];
   helpful: Record<string, "up" | "down">;
+  bookingUrl: string; // Ben's scheduling link (Calendly)
+  layouts: Record<string, string[]>; // per-person dashboard tiles, key `${clientId}:${email}`
 }
 
 interface Store extends State {
@@ -60,7 +62,7 @@ const KEY = "alza-portal-demo-v4";
 function fresh(): State {
   const a = seed();
   const m = seedModules();
-  return { ...a, rules: DEFAULT_RULES, ...m, helpful: {} };
+  return { ...a, rules: DEFAULT_RULES, ...m, helpful: {}, bookingUrl: "", layouts: {} };
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -80,6 +82,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     files: [],
     notices: [],
     helpful: {},
+    bookingUrl: "",
+    layouts: {},
   }));
 
   useEffect(() => {

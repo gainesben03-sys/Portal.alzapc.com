@@ -51,8 +51,8 @@ export default function ActionDetail() {
       <ClientTopbar client={client} />
       <ClientNav clientId={client.id} />
       <main className="wrap">
-        <Link href={isAdvisor ? "/console" : `/c/${client.id}`} className="small" style={{ color: "var(--blue)" }}>
-          ← {isAdvisor ? "Console" : "All items"}
+        <Link href={isAdvisor ? "/console" : `/c/${client.id}/tasks`} className="small" style={{ color: "var(--blue)" }}>
+          ← {isAdvisor ? "Console" : "All tasks"}
         </Link>
 
         <div style={{ marginTop: 12 }}>

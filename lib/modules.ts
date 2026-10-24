@@ -102,7 +102,25 @@ export interface Notice {
   read: boolean;
 }
 
+export const TILES: { id: string; label: string; blurb: string; module?: ModuleKey; wide?: boolean }[] = [
+  { id: "tasks", label: "Your tasks", blurb: "What needs you and your team", wide: true },
+  { id: "schedule", label: "Talk to Ben", blurb: "Book time on Ben's calendar" },
+  { id: "projects", label: "Projects", blurb: "Progress on current work", wide: true },
+  { id: "chat", label: "Chat with Ben", blurb: "Quick messages and requests", module: "board" },
+  { id: "share", label: "Share with HR", blurb: "Upload documents for Ben" },
+  { id: "recruiting", label: "Hiring", blurb: "Open roles and candidates waiting on you", module: "recruiting" },
+  { id: "upcoming", label: "Coming up", blurb: "Next items on your HR roadmap" },
+  { id: "wins", label: "Recent wins", blurb: "What got done lately" },
+  { id: "alza", label: "Ben is working on", blurb: "What AlzaHR owes you" },
+  { id: "resources", label: "Resources", blurb: "Recently shared templates and guides", module: "resources" },
+  { id: "wellness", label: "Wellness", blurb: "Latest benefits news", module: "wellness" },
+  { id: "huddle", label: "HR Huddle email", blurb: "Turn your recap email on or off" },
+];
+export const DEFAULT_TILES = ["tasks", "schedule", "projects", "chat", "share", "recruiting", "upcoming", "wins", "huddle"];
+
 export interface ClientConfig {
+  tiles?: string[]; // default dashboard for everyone at this client (set by Ben)
+  softAsks?: boolean; // show the quiet referral / add-on lines (default on)
   huddle: HuddleSettings;
   modules: Record<ModuleKey, boolean>;
   accent: string;

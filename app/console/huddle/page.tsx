@@ -25,7 +25,7 @@ export default function HuddleList() {
             const c = getClient(b.id)!;
             const h = config[c.id]?.huddle;
             if (!h) return null;
-            const out = buildHuddle({ client: c, settings: h, actions, projects, files, rules });
+            const out = buildHuddle({ client: c, settings: h, actions, projects, files, rules, softAsks: config[c.id]?.softAsks });
             const next = nextHuddle(h);
             return (
               <Link key={c.id} href={`/console/huddle/${c.id}`} className="card" style={{ display: "block" }}>

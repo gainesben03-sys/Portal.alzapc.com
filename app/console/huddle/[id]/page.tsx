@@ -21,7 +21,7 @@ export default function HuddleSetup() {
 
   const h = cfg.huddle;
   const set = (p: Partial<HuddleSettings>) => patch({ config: { ...config, [id]: { ...cfg, huddle: { ...h, ...p } } } });
-  const out = buildHuddle({ client, settings: h, actions, projects, files, rules });
+  const out = buildHuddle({ client, settings: h, actions, projects, files, rules, softAsks: config[client.id]?.softAsks });
   const next = nextHuddle(h);
 
   const send = async (mode: "test" | "send") => {
