@@ -312,7 +312,8 @@ export function ClientNav({ clientId }: { clientId: string }) {
 }
 
 export function AlzaNav() {
-  const { notes, resources, files } = useStore();
+  const { notes, resources, files, hires } = useStore();
+  const newHires = hires.filter((h) => h.status === "Approved to hire" && !(h.docs ?? []).length).length;
   const path = usePathname();
   const newFiles = files.filter((f) => !f.reviewed && !f.fromAdvisor).length;
   const unread = notes.filter((n) => n.status === "new").length;
@@ -321,6 +322,7 @@ export function AlzaNav() {
     { href: "/console", label: "Overview" },
     { href: "/console/board", label: "Notes", badge: unread },
     { href: "/console/files", label: "Files", badge: newFiles },
+    { href: "/console/hires", label: "New hires", badge: newHires },
     { href: "/console/huddle", label: "HR Huddle" },
     { href: "/console/library", label: "Library", badge: stale },
     { href: "/console/clients", label: "Clients" },

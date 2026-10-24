@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { Action, Client, DEFAULT_RULES, fmt, Project, reminderPlan, Rules, toISO, today } from "@/lib/data";
 import { buildHuddle } from "@/lib/huddle";
 import { ClientConfig, HuddleSettings, SharedFile } from "@/lib/modules";
+import { addDaysISO, firstDayEmail, Hire, onboardingFor, stageIndex, welcomeEmail } from "@/lib/hires";
 import { admin, PORTAL_URL, sendEmail } from "@/lib/server";
 
 export const dynamic = "force-dynamic";
@@ -129,6 +130,64 @@ export async function GET(req: Request) {
         }
       }
     }
+  }
+
+  // ---------- 3. New hires: welcome email, first-day email, start, 30-day check-in
+  const hiresR = await db.from("hires").select("id, client_id, data");
+  for (const row of hiresR.data ?? []) {
+    const c = (clientsR.data ?? []).find((x) => x.id === row.client_id);
+    if (!c) continue;
+    const cfg = (c.config ?? {}) as Partial<ClientConfig>;
+    const s = onboardingFor(cfg.onboarding);
+    const brand = { company: c.name, accent: cfg.accent || "#19283c", logoUrl: cfg.logo && /^https?:/.test(cfg.logo) ? cfg.logo : undefined };
+    const h = { ...(row.data as Hire), id: row.id, clientId: row.client_id };
+    if (!h.startDate) continue;
+    const data = { ...(row.data as Hire) };
+    let changed = false;
+    const note = (text: string) => {
+      data.history = [...(data.history ?? []), { at: new Date().toISOString(), by: "AlzaHR", text }];
+      changed = true;
+    };
+    const signed = stageIndex(h.status) >= 2;
+    const to = (h.personalEmail || "").trim().toLowerCase();
+    if (s.autoSend && signed && to && !h.emails?.welcome) {
+      const m = welcomeEmail(h, s, brand);
+      await once(`hire:welcome:${h.id}`, async () => {
+        const r = await sendEmail({ to: [to], subject: m.subject, html: m.html, text: m.text });
+        if (r.ok) {
+          data.emails = { ...(data.emails ?? {}), welcome: new Date().toISOString() };
+          note(`Welcome email sent to ${to}`);
+        }
+        return r;
+      });
+    }
+    if (s.autoSend && signed && to && !h.emails?.firstDay && day >= addDaysISO(h.startDate, -s.firstDayDaysBefore) && day <= h.startDate) {
+      const m = firstDayEmail(h, s, brand);
+      await once(`hire:firstday:${h.id}`, async () => {
+        const r = await sendEmail({ to: [to], subject: m.subject, html: m.html, text: m.text });
+        if (r.ok) {
+          data.emails = { ...(data.emails ?? {}), firstDay: new Date().toISOString() };
+          if (stageIndex(data.status) < 4) data.status = "First-day email sent";
+          note(`First-day email sent to ${to}`);
+        }
+        return r;
+      });
+    }
+    if (signed && day >= h.startDate && data.status !== "Started") {
+      data.status = "Started";
+      note("Started");
+    }
+    if (day === addDaysISO(h.startDate, 30) && !h.emails?.checkIn) {
+      await once(`hire:checkin:${h.id}`, async () => {
+        const r = await sendEmail({ to: [ben], subject: `[Portal] 30-day check-in: ${h.name} at ${c.name}`, text: `${h.name} (${h.title}) hit 30 days at ${c.name} today. A good time to check in with them and ${h.managerName}.\n\n${PORTAL_URL}/c/${c.id}/hires/${h.id}` });
+        if (r.ok) {
+          data.emails = { ...(data.emails ?? {}), checkIn: new Date().toISOString() };
+          note("30-day check-in reminder sent to Ben");
+        }
+        return r;
+      });
+    }
+    if (changed) await db.from("hires").update({ data }).eq("id", row.id);
   }
 
   return NextResponse.json({ ok: true, day, log });

@@ -7,6 +7,8 @@ import { ClientNav, ClientTopbar, Sheet, Toast, UrgencyPill, useGuard, useToast 
 import { ADVISOR, fmt, fmtTime, parseDay, projectProgress, today, urgency } from "@/lib/data";
 import { canSee, daysSince, DEFAULT_TILES, Note, TILES } from "@/lib/modules";
 import { notifyBen, useStore } from "@/lib/store";
+import { Tracker, startsIn } from "@/components/hires";
+import { shortDate } from "@/lib/hires";
 
 const ORDER = { blocker: 0, overdue: 1, today: 2, soon: 3, later: 4, done: 5 } as const;
 
@@ -29,7 +31,7 @@ export default function Home() {
   const { client: clientId } = useParams<{ client: string }>();
   const ok = useGuard("client", clientId);
   const s = useStore();
-  const { actions, projects, rules, viewer, update, getClient, config, me, patch, notes, candidates, roles, files, resources, announcements, bookingUrl, layouts, notice, who } = s;
+  const { actions, projects, rules, viewer, update, getClient, config, me, patch, notes, candidates, roles, files, resources, announcements, bookingUrl, layouts, notice, who, hires } = s;
   const client = getClient(clientId);
   const [editing, setEditing] = useState(false);
   const [msg, setMsg] = useState("");
@@ -191,6 +193,26 @@ export default function Home() {
             );
           })}
           {waiting.length > 0 && <p className="tiny muted" style={{ marginTop: 8 }}>Longest wait: {Math.max(...waiting.map((c) => daysSince(c.sentAt)))} days</p>}
+        </Tile>
+      );
+    },
+    hires: () => {
+      const list = hires.filter((h) => h.clientId === client.id && h.status !== "Started").sort((a, b) => (a.startDate || "9999").localeCompare(b.startDate || "9999"));
+      return (
+        <Tile title="New hires" count={list.length} href={`${base}/hires`} wide>
+          {list.slice(0, 3).map((h) => (
+            <Link href={`${base}/hires/${h.id}`} className="row hire-mini" key={h.id}>
+              <div className="grow" style={{ minWidth: 0 }}>
+                <div className="title">{h.name} <span className="tiny muted">· {h.title}</span></div>
+                <Tracker h={h} compact />
+              </div>
+              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                <div className="small"><b>{h.startDate ? shortDate(h.startDate) : "TBD"}</b></div>
+                <div className="tiny muted">{startsIn(h.startDate)}</div>
+              </div>
+            </Link>
+          ))}
+          {list.length === 0 && <p className="small muted">No one in progress. Start a new hire when you&apos;re ready to make an offer.</p>}
         </Tile>
       );
     },

@@ -7,9 +7,9 @@
 import { NextResponse } from "next/server";
 import { admin, caller, SERVER_LIVE } from "@/lib/server";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
-type Mode = "reply" | "document";
+type Mode = "reply" | "document" | "hire_doc";
 
 const VOICE = `You draft for Ben Gaines, a fractional HR consultant who runs AlzaHR. His clients are small and growing companies, mostly in California.
 
@@ -45,14 +45,14 @@ export async function POST(req: Request) {
   const me = await caller(req);
   if (!me?.advisor) return NextResponse.json({ ok: false, reason: "forbidden" }, { status: 403 });
 
-  let b: { clientId?: string; mode?: Mode; noteId?: string; actionId?: string; instructions?: string; previous?: string };
+  let b: { clientId?: string; mode?: Mode; noteId?: string; actionId?: string; hireId?: string; docType?: "offer" | "agreement"; instructions?: string; previous?: string };
   try {
     b = await req.json();
   } catch {
     return NextResponse.json({ ok: false, reason: "bad_request" }, { status: 400 });
   }
   const clientId = String(b.clientId ?? "");
-  const mode: Mode = b.mode === "reply" ? "reply" : "document";
+  const mode: Mode = b.mode === "reply" ? "reply" : b.mode === "hire_doc" ? "hire_doc" : "document";
   const db = admin();
 
   const [client, members, notes, actions, projects, files, resources, kn] = await Promise.all([
@@ -96,6 +96,33 @@ Note from ${n.author?.name} (${n.author?.role}), type ${n.kind}${n.urgent ? ", m
 ${(n.replies ?? []).length ? `\nThread so far:\n${n.replies.map((r: D) => `${r.by}: ${clip(r.text, 400)}`).join("\n")}` : ""}
 
 Keep it to a few sentences unless the question truly needs more. Address them by first name. Sign off as "Ben".`;
+  } else if (mode === "hire_doc") {
+    const { data: hr } = await db.from("hires").select("data, client_id").eq("id", String(b.hireId ?? "")).maybeSingle();
+    if (!hr || hr.client_id !== clientId) return NextResponse.json({ ok: false, reason: "no_hire" }, { status: 404 });
+    const h = hr.data as D;
+    const isOffer = b.docType !== "agreement";
+    const pay = h.payType === "hourly" ? `$${Number(h.payAmount).toFixed(2)} per hour (hourly, paid bi-weekly unless the template says otherwise)` : `$${Number(h.payAmount).toLocaleString("en-US")} per year (salary)`;
+    task = `${isOffer ? "Prepare the OFFER LETTER" : "Prepare the EMPLOYMENT AGREEMENT"} for this new hire at ${client.data.name}.
+
+Hire details (use exactly these, nothing invented):
+- Legal name: ${h.name}${h.firstName ? ` (goes by ${h.firstName})` : ""}
+- Position title: ${h.title}
+- Reports to: ${h.managerName}, ${h.managerTitle}
+- Classification: ${h.exempt === "nonexempt" ? "Non-exempt" : "Exempt"}, ${h.payType}
+- Pay: ${pay}
+- Bonus: ${h.bonus !== "" && h.bonus != null ? `${h.bonus}% target` : "none stated"}
+- Start date: ${h.startDate}
+- Work location: ${h.location || "[work location]"}
+- Letter date: ${h.letterDate || new Date().toISOString().slice(0, 10)}
+- Respond by: ${h.respondBy || "two days after the letter date"}
+${h.contingencies ? `- Contingencies: ${h.contingencies}\n` : ""}${h.jd ? `- Job description (use for any job description exhibit or attachment):\n${clip(h.jd, 4000)}\n` : ""}${h.notes ? `- Notes from HR: ${clip(h.notes, 800)}\n` : ""}
+How to do it:
+- If the client has a ${isOffer ? "offer letter" : "employment agreement or contract"} template, reproduce it in full and only change the hire-specific details (names, title, manager, pay, dates, bonus, classification, job description). Keep every other sentence exactly as written. Write amounts the way the template does (for example words and numerals).
+- If there is no client template but Ben has one, use Ben's.
+- If neither exists, write a clean, professional ${isOffer ? "offer letter (at-will, contingent on employment eligibility verification, with a signature block for the hire to accept)" : "employment agreement suitable for a small California employer"} and say so in the notes for Ben.
+- Leave anything unknown as a [bracketed placeholder].
+- Format with simple markdown: # for the title, ## for section headings, - for bullets. No letterhead text; the letterhead is added separately.
+- In the notes for Ben, list every value you filled in so he can check them, and flag anything that looks off (for example an exempt salary below the state minimum).`;
   } else {
     const a = A.find((x) => x.id === b.actionId);
     task = `Draft a document or written deliverable for this client.
@@ -117,7 +144,8 @@ Write the complete document in clean, professional HR formatting: a title, short
       const overlap = titleWords.filter((w) => wanted.has(w)).length;
       const own = d.client_id ? 10 : 0;
       const kindScore = mode === "reply" ? (d.kind === "handbook" || d.kind === "policy" ? 6 : 1) : d.kind === "template" ? 6 : d.kind === "handbook" || d.kind === "policy" ? 4 : 1;
-      return { ...d, score: own + kindScore + overlap * 5 };
+      const docTypeBoost = mode === "hire_doc" && d.kind === "template" && (b.docType === "agreement" ? /agreement|contract|employment/i : /offer/i).test(String(d.title)) ? 30 : 0;
+      return { ...d, score: own + kindScore + overlap * 5 + docTypeBoost };
     })
     .sort((x, y) => y.score - x.score);
   let budget = 90_000;
@@ -146,7 +174,7 @@ Write the complete document in clean, professional HR formatting: a title, short
     headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
     body: JSON.stringify({
       model: process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5",
-      max_tokens: mode === "reply" ? 1000 : 4000,
+      max_tokens: mode === "reply" ? 1000 : mode === "hire_doc" ? 8000 : 4000,
       system,
       messages: [{ role: "user", content: task }],
     }),

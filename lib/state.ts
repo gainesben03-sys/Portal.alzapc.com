@@ -1,5 +1,6 @@
 import { Action, Client, CLIENTS, DEFAULT_RULES, Project, Rules, seed } from "./data";
 import { Announcement, Benefit, Candidate, ClientConfig, Note, Notice, Resource, Role, SharedFile, seedModules } from "./modules";
+import { Hire } from "./hires";
 
 export const DEFAULT_BOOKING_URL = "https://calendly.com/ben-alzapc/30min";
 
@@ -17,6 +18,7 @@ export interface State {
   notes: Note[];
   files: SharedFile[];
   notices: Notice[];
+  hires: Hire[];
   helpful: Record<string, "up" | "down">;
   bookingUrl: string; // Ben's scheduling link (Calendly)
   layouts: Record<string, string[]>; // per-person dashboard tiles, key `${clientId}:${email}`
@@ -37,6 +39,7 @@ export function emptyState(): State {
     notes: [],
     files: [],
     notices: [],
+    hires: [],
     helpful: {},
     bookingUrl: DEFAULT_BOOKING_URL,
     layouts: {},
@@ -51,7 +54,7 @@ export function demoState(): State {
 export function newClientConfig(): ClientConfig {
   return {
     huddle: { cadence: "weekly", day: 1, recipients: [], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
-    modules: { recruiting: true, resources: true, wellness: false, board: true },
+    modules: { recruiting: true, resources: true, wellness: false, board: true, hires: true },
     accent: "#19283c",
     escalationEmail: "",
     users: [],

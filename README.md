@@ -88,7 +88,14 @@ Real sign-in, a Supabase database with row-level security, private file storage 
 1. ~~Foundation~~
 2. ~~Claude drafting~~: "Draft reply" on client notes, "Draft with Claude" on tasks (attaches a Word file to the task) and on the console. Context comes only from that one client, loaded server-side. Ben approves everything. Needs `ANTHROPIC_API_KEY`.
    - **Documents for Claude**: upload each client's handbook, policies, templates and letterhead in Client setup, plus your default templates on the Clients page (`supabase/002_knowledge.sql`). Claude follows the client's documents first, then your templates, then best practice, and says which it used. Drafts download and attach as real Word files with the client's letterhead.
-3. Hire flow: offer letters, agreements, e-signature, onboarding checklist, payroll handoff
+3. ~~Hire flow~~ (same flow as the Presidio Bay New Hire Console, per client; `supabase/003_hires.sql`):
+   - **New hires** page per client with a pizza-tracker for each person: Approved → Offer sent → Signed → Paperwork → Day 1 set → Started, plus the start-date countdown. Also a Home tile and a console **New hires** view across all clients.
+   - **New hire form** (Ben or a client executive; also "Start the hire" from a finalist marked Offer in Recruiting). Live checks: CA exempt minimum, hourly marked exempt, missing email, job description, first-day email timing.
+   - **Offer letter and agreement**: Claude fills the client's own template from the hire's details, saved as Word with letterhead. "Ask [CEO] to approve" sends it as an approval task. Upload the signed copy.
+   - **Offer signed** creates two client tasks automatically: add them to payroll (3 business days before start) and get ready for day one (owned by the manager when they're on the portal).
+   - **Emails in the client's colors**: welcome email when the offer is signed, first-day email N days before the start date (both automatic, or by hand), preview and "Send me a test". Started is set on the start date, and Ben gets a 30-day check-in reminder.
+   - **Client setup → New hire onboarding**: payroll system, office address, contact, benefits line, mission, values, leadership note, video, timing.
+   - E-signature (Anvil) and payroll integrations come later; for now stages are marked by hand.
 4. AlzaPitch link
 5. PEO and benefits calculator
 6. Ask HR (answers only from each client's own policies)

@@ -10,6 +10,7 @@ import { Action, ADVISOR, Client, Person, Rules, toISO } from "./data";
 import { Notice, PortalUser } from "./modules";
 import { demoState, emptyState, State } from "./state";
 import { authHeader, LIVE, sb } from "./supabase";
+import type { Hire } from "./hires";
 import { loadAll, saveDiff } from "./live";
 
 export type Viewer = { kind: "advisor" } | { kind: "client"; clientId: string; person: Person };
@@ -28,6 +29,8 @@ interface Store extends State {
   setRules: (r: Rules) => void;
   update: (id: string, patch: Partial<Action>, log: string) => void;
   patch: (p: Partial<State>) => void;
+  /** Change one new hire (always against the latest state) and log it. */
+  updateHire: (id: string, change: Partial<Hire> | ((h: Hire) => Partial<Hire>), log?: string) => void;
   /** Add an item to Ben's notification bell. */
   notice: (n: Omit<Notice, "id" | "at" | "read">) => void;
   getClient: (id: string) => Client | undefined;
@@ -39,7 +42,7 @@ interface Store extends State {
 }
 
 const Ctx = createContext<Store | null>(null);
-const KEY = "alza-portal-demo-v5";
+const KEY = "alza-portal-demo-v6";
 export const PENDING_INVITE = "alza-pending-invite";
 
 type Who = { email: string; advisor: boolean; memberships: { clientId: string; name: string; role: string; access: string }[] };
@@ -242,6 +245,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       getClient,
       setRules: (rules) => setState((s) => ({ ...s, rules })),
       patch: (p) => setState((s) => ({ ...s, ...p })),
+      updateHire: (id, change, log) =>
+        setState((s) => ({
+          ...s,
+          hires: s.hires.map((h) => {
+            if (h.id !== id) return h;
+            const c = typeof change === "function" ? change(h) : change;
+            const history = log ? [...(c.history ?? h.history ?? []), { at: new Date().toISOString(), by: who, text: log }] : c.history ?? h.history;
+            return { ...h, ...c, history };
+          }),
+        })),
       notice: (n) =>
         setState((s) => ({
           ...s,

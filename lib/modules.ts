@@ -1,16 +1,18 @@
 // Prototype data for the add-on modules. All people, candidates and providers are fictional.
 
 import { addBusinessDays, Person, today, toISO } from "./data";
+import type { Hire } from "./hires";
 
-export type ModuleKey = "recruiting" | "resources" | "wellness" | "board";
+export type ModuleKey = "recruiting" | "resources" | "wellness" | "board" | "hires";
 
 /** Which pages each access level can open. Executives see everything, including Team. */
 export function canSee(access: Access | undefined, page: ModuleKey | "projects" | "team"): boolean {
   if (!access || access === "exec") return true;
-  if (access === "hiring") return page === "recruiting";
+  if (access === "hiring") return page === "recruiting" || page === "hires";
   return page !== "team"; // manager
 }
 export const MODULES: { key: ModuleKey; label: string; blurb: string }[] = [
+  { key: "hires", label: "New hires", blurb: "Offer letters, onboarding emails and a tracker for every new hire" },
   { key: "recruiting", label: "Recruiting", blurb: "Open roles, candidates and hiring feedback" },
   { key: "resources", label: "Resources", blurb: "Templates, guides and deliverables shared by Alza" },
   { key: "wellness", label: "Wellness", blurb: "Benefits and wellbeing programs by pillar" },
@@ -93,7 +95,7 @@ export interface SharedFile {
 }
 export const FILE_CATEGORIES = ["Signed document", "Employee file", "Payroll or benefits", "Policy or handbook", "Other"];
 
-export type NoticeKind = "upload" | "note" | "completed" | "extension" | "revision" | "feedback";
+export type NoticeKind = "upload" | "note" | "completed" | "extension" | "revision" | "feedback" | "hire";
 export interface Notice {
   id: string;
   clientId: string;
@@ -111,6 +113,7 @@ export const TILES: { id: string; label: string; blurb: string; module?: ModuleK
   { id: "chat", label: "Chat with Ben", blurb: "Quick messages and requests", module: "board" },
   { id: "share", label: "Share with HR", blurb: "Upload documents for Ben" },
   { id: "recruiting", label: "Hiring", blurb: "Open roles and candidates waiting on you", module: "recruiting" },
+  { id: "hires", label: "New hires", blurb: "Where each new hire is, start to day one", module: "hires", wide: true },
   { id: "upcoming", label: "Coming up", blurb: "Next items on your HR roadmap" },
   { id: "wins", label: "Recent wins", blurb: "What got done lately" },
   { id: "alza", label: "Ben is working on", blurb: "What AlzaHR owes you" },
@@ -118,9 +121,10 @@ export const TILES: { id: string; label: string; blurb: string; module?: ModuleK
   { id: "wellness", label: "Wellness", blurb: "Latest benefits news", module: "wellness" },
   { id: "huddle", label: "HR Huddle email", blurb: "Turn your recap email on or off" },
 ];
-export const DEFAULT_TILES = ["tasks", "schedule", "projects", "chat", "share", "recruiting", "upcoming", "wins", "huddle"];
+export const DEFAULT_TILES = ["tasks", "schedule", "hires", "projects", "chat", "share", "recruiting", "upcoming", "wins", "huddle"];
 
 export interface ClientConfig {
+  onboarding?: Partial<import("./hires").OnboardingSettings>;
   tiles?: string[]; // default dashboard for everyone at this client (set by Ben)
   softAsks?: boolean; // show the quiet referral / add-on lines (default on)
   huddle: HuddleSettings;
@@ -266,7 +270,7 @@ export function seedModules() {
   const config: Record<string, ClientConfig> = {
     blueprint: {
       huddle: { cadence: "weekly", day: 1, recipients: ["alex@example.com", "priya@example.com"], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
-      modules: { recruiting: true, resources: true, wellness: true, board: true },
+      modules: { recruiting: true, resources: true, wellness: true, board: true, hires: true },
       accent: "#2b3ff5",
       logo: "/blueprint-logo.png",
       codes: [],
@@ -280,7 +284,7 @@ export function seedModules() {
     },
     harbor: {
       huddle: { cadence: "weekly", day: 1, recipients: ["sam@example.com"], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
-      modules: { recruiting: false, resources: true, wellness: false, board: true },
+      modules: { recruiting: false, resources: true, wellness: false, board: true, hires: true },
       accent: "#6b8c6b",
       codes: [],
       escalationEmail: "sam@example.com",
@@ -288,7 +292,7 @@ export function seedModules() {
     },
     northgate: {
       huddle: { cadence: "weekly", day: 1, recipients: ["rae@example.com"], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
-      modules: { recruiting: false, resources: true, wellness: true, board: true },
+      modules: { recruiting: false, resources: true, wellness: true, board: true, hires: true },
       accent: "#4a7ab5",
       codes: [],
       escalationEmail: "rae@example.com",
@@ -299,7 +303,7 @@ export function seedModules() {
     },
     cedar: {
       huddle: { cadence: "weekly", day: 1, recipients: ["jo@example.com"], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
-      modules: { recruiting: true, resources: false, wellness: false, board: true },
+      modules: { recruiting: true, resources: false, wellness: false, board: true, hires: true },
       accent: "#8a6d3b",
       codes: [],
       escalationEmail: "jo@example.com",
@@ -440,7 +444,14 @@ export function seedModules() {
     { id: "x2", clientId: "blueprint", kind: "feedback", text: "Marcus Cole advanced Morgan Lee (Senior Producer)", href: "/c/blueprint/recruiting", at: at(-2, 14), read: true },
   ];
 
-  return { config, roles, candidates, resources, benefits, announcements, notes, files, notices };
+  const now = new Date().toISOString();
+  const hires: Hire[] = [
+    { id: "h1", clientId: "blueprint", status: "Offer signed", title: "Senior Producer", managerName: "Marcus Cole", managerTitle: "Production Manager", name: "Morgan Lee", personalEmail: "morgan.lee@example.com", cell: "", payType: "salary", payAmount: 128000, bonus: 10, exempt: "exempt", startDate: d(9), arrivalTime: "9:00 AM", location: "", jd: "Lead production on large corporate events\nOwn event budgets", emails: { welcome: at(-1, 10) }, createdAt: now, history: [{ at: at(-4), by: "Ben Gaines", text: "Hire started" }, { at: at(-1, 10), by: "Alex Rivera", text: "Offer signed" }] },
+    { id: "h2", clientId: "blueprint", status: "Offer sent", title: "Warehouse Coordinator", managerName: "Dana Ortiz", managerTitle: "Office Manager", name: "Jordan Kim", personalEmail: "jordan@example.com", payType: "hourly", payAmount: 30, exempt: "nonexempt", startDate: d(15), arrivalTime: "7:30 AM", location: "", createdAt: now, history: [{ at: at(-2), by: "Ben Gaines", text: "Hire started" }] },
+  ];
+  config.blueprint.onboarding = { payroll: "Rippling", hqAddress: "1500 Folsom St, San Francisco, CA 94103", hrPhone: "(415) 555-0142", benefitsNote: "Your medical, dental and vision benefits start on the first of the month after your start date.", leaderQuote: "We make big moments happen. That starts with the people on our team.", leaderNames: "Alex Rivera, CEO" };
+
+  return { config, roles, candidates, resources, benefits, announcements, notes, files, notices, hires };
 }
 
 export const DAY_MS = 86400000;

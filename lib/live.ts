@@ -10,7 +10,7 @@ import { ClientConfig, InviteCode, PortalUser } from "./modules";
 import { DEFAULT_BOOKING_URL, emptyState, State } from "./state";
 
 type Row = { id: string; client_id?: string; data: Record<string, unknown> };
-const ENTITY = ["actions", "projects", "notes", "files", "notices", "roles", "candidates"] as const;
+const ENTITY = ["actions", "projects", "notes", "files", "notices", "roles", "candidates", "hires"] as const;
 const GLOBAL = ["resources", "benefits", "announcements"] as const;
 type EntityKey = (typeof ENTITY)[number];
 type GlobalKey = (typeof GLOBAL)[number];
@@ -38,7 +38,11 @@ export async function loadAll(db: SupabaseClient, email: string): Promise<State>
     pick<{ code: string; client_id: string; access: PortalUser["access"]; expires: string; created_by: string; used_by: string | null }[]>(db.from("invite_codes").select("*")),
     pick<{ key: string; data: { rules?: State["rules"]; bookingUrl?: string } }[]>(db.from("app_settings").select("*")),
     pick<{ email: string; data: { layouts?: State["layouts"]; helpful?: State["helpful"] } }[]>(db.from("user_prefs").select("*").eq("email", email)),
-    ...ENTITY.map((t) => pick<Row[]>(db.from(t).select("id, client_id, data").order("created_at"))),
+    ...ENTITY.map((t) =>
+      t === "hires"
+        ? db.from(t).select("id, client_id, data").order("created_at").then((r) => (r.error ? [] : ((r.data ?? []) as Row[]))) // table added by 003_hires.sql
+        : pick<Row[]>(db.from(t).select("id, client_id, data").order("created_at"))
+    ),
     ...GLOBAL.map((t) => pick<Row[]>(db.from(t).select("id, data"))),
   ]);
 
@@ -60,10 +64,10 @@ export async function loadAll(db: SupabaseClient, email: string): Promise<State>
       recipients: members.filter((m) => m.client_id === c.id && m.huddle).map((m) => m.email),
     };
     s.config[c.id] = {
-      modules: { recruiting: true, resources: true, wellness: false, board: true },
       accent: "#19283c",
       escalationEmail: "",
       ...cfg,
+      modules: { recruiting: true, resources: true, wellness: false, board: true, hires: true, ...(cfg.modules ?? {}) },
       huddle,
       users,
       codes: cc,

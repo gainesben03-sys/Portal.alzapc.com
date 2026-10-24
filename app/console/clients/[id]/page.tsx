@@ -7,6 +7,7 @@ import { AlzaNav, AlzaTopbar, Toast, useGuard, useToast } from "@/components/ui"
 import { Access, ACCESS_LABEL, ClientConfig, MODULES, PortalUser } from "@/lib/modules";
 import { useStore } from "@/lib/store";
 import { sendInvite } from "@/lib/invite";
+import { OnboardingSettingsCard } from "@/components/onboarding";
 import { KnowledgePanel } from "@/components/knowledge";
 
 function luminance(hex: string) {
@@ -106,6 +107,16 @@ export default function ClientSetup() {
           Their handbook, policies, templates and letterhead. Claude follows these first, then your default templates, then best practice, and tells you which it used.
         </p>
         {live ? <KnowledgePanel clientId={id} onToast={toast.show} /> : <div className="card small muted">Available once the portal is live.</div>}
+
+        {cfg.modules.hires !== false && (
+          <>
+            <div className="section-head section" id="onboarding"><h2>New hire onboarding</h2></div>
+            <p className="small muted" style={{ marginTop: -4, marginBottom: 10 }}>
+              What {client.name}&apos;s welcome and first-day emails say. Same flow as the Presidio Bay emails, in their colors and logo.
+            </p>
+            <OnboardingSettingsCard value={cfg.onboarding} onChange={(onboarding) => set({ onboarding })} />
+          </>
+        )}
 
         <div className="section-head section"><h2>Growth</h2></div>
         <div className="card">

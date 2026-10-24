@@ -4,7 +4,7 @@ import { useState } from "react";
 import { authHeader } from "@/lib/supabase";
 import { downloadDocx } from "@/lib/docx";
 
-export type DraftMode = "reply" | "document";
+export type DraftMode = "reply" | "document" | "hire_doc";
 
 const REASONS: Record<string, string> = {
   no_key: "Drafting is off. Add ANTHROPIC_API_KEY in Vercel and redeploy to turn it on.",
@@ -43,6 +43,8 @@ export function DraftPanel({
   mode,
   noteId,
   actionId,
+  hireId,
+  docType,
   title,
   askForInstructions,
   primaryLabel,
@@ -53,6 +55,8 @@ export function DraftPanel({
   mode: DraftMode;
   noteId?: string;
   actionId?: string;
+  hireId?: string;
+  docType?: "offer" | "agreement";
   title: string;
   askForInstructions?: boolean;
   primaryLabel: string;
@@ -77,6 +81,8 @@ export function DraftPanel({
       mode,
       noteId,
       actionId,
+      hireId,
+      docType,
       instructions: [instructions, extra].filter(Boolean).join("\n") || undefined,
       previous: extra ? draft ?? undefined : undefined,
     });
@@ -105,10 +111,10 @@ export function DraftPanel({
               style={{ marginTop: 8 }}
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
-              placeholder="What should Claude write? e.g. A one-page PTO policy for 25 employees in California, accrual not unlimited, 15 days a year."
+              placeholder={mode === "hire_doc" ? "Anything special? e.g. Add a sign-on bonus of $5,000 paid with the first paycheck." : "What should Claude write? e.g. A one-page PTO policy for 25 employees in California, accrual not unlimited, 15 days a year."}
             />
           )}
-          <button className="btn primary block" style={{ marginTop: 10 }} disabled={busy || (askForInstructions && !instructions.trim())} onClick={() => run()}>
+          <button className="btn primary block" style={{ marginTop: 10 }} disabled={busy || (askForInstructions && mode !== "hire_doc" && !instructions.trim())} onClick={() => run()}>
             {busy ? "Drafting..." : "Draft it"}
           </button>
         </>
@@ -158,7 +164,7 @@ export function DraftPanel({
             >
               {copied ? "Copied" : "Copy"}
             </button>
-            {mode === "document" && <button className="btn ghost sm" onClick={() => downloadDocx(title, draft, clientId)}>Download Word</button>}
+            {mode !== "reply" && <button className="btn ghost sm" onClick={() => downloadDocx(title, draft, clientId)}>Download Word</button>}
             <button
               className="btn primary sm"
               disabled={busy || saving || !draft.trim()}

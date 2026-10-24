@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { ClientNav, ClientTopbar, Sheet, Toast, useGuard, useToast } from "@/components/ui";
@@ -20,7 +21,7 @@ function Score({ n }: { n: number }) {
 export default function Recruiting() {
   const { client: clientId } = useParams<{ client: string }>();
   const ok = useGuard("client", clientId);
-  const { getClient, roles, candidates, patch, actions, update, who, config, notice, viewer } = useStore();
+  const { getClient, roles, candidates, patch, actions, update, who, config, notice, viewer, me, hires } = useStore();
   const client = getClient(clientId);
   const [view, setView] = useState<Record<string, "cards" | "compare">>({});
   const [fb, setFb] = useState<Candidate | null>(null);
@@ -154,6 +155,9 @@ export default function Recruiting() {
                       <button className={`btn sm ${c.decision ? "" : "primary"}`} style={{ marginLeft: "auto" }} onClick={() => setFb(c)}>
                         {c.decision ? "Update feedback" : "Give feedback"}
                       </button>
+                      {c.decision === "offer" && config[clientId]?.modules.hires && (viewer?.kind === "advisor" || me?.access === "exec") && !hires.some((h) => h.clientId === clientId && h.name === c.name) && (
+                        <Link href={`/c/${clientId}/hires/new?candidate=${c.id}`} className="btn sm primary">Start the hire</Link>
+                      )}
                     </div>
                   </div>
                 ))}

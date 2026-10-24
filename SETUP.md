@@ -14,7 +14,9 @@ This creates the tables, the security rules (each client sees only their own dat
 insert into public.advisors (email, name) values ('you@example.com', 'Ben Gaines');
 ```
 
-Also run `supabase/002_knowledge.sql` the same way (adds the documents Claude reads when drafting). New installs get it automatically from `schema.sql`.
+If you set up the database before these existed, also run each of these the same way (new installs get them automatically from `schema.sql`):
+- `supabase/002_knowledge.sql`: the documents Claude reads when drafting
+- `supabase/003_hires.sql`: new hires
 
 ## 2. Sign-in settings
 
@@ -63,7 +65,7 @@ Then **Deployments → ⋯ on the latest → Redeploy**.
 
 ## What runs on its own
 
-- **Every morning (about 8 AM Pacific):** task reminders, overdue notices, escalations, and HR Huddles for clients whose Huddle day it is. Quiet Huddles are skipped. Nothing is ever sent twice.
+- **Every morning (about 8 AM Pacific):** task reminders, overdue notices, escalations, HR Huddles for clients whose Huddle day it is, and new-hire emails (welcome email after the offer is signed, first-day email before the start date, 30-day check-in reminder to you). Quiet Huddles are skipped. Nothing is ever sent twice.
 - **Instantly:** note board posts, uploads, approvals and replies email the right person.
 
 On the Vercel Hobby plan the morning job can run any time between 8:00 and 8:59.
