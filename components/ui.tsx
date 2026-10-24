@@ -7,6 +7,7 @@ import { Action, Client, dueLabel, reminderStage, subtaskProgress, urgency, Urge
 import { useStore } from "@/lib/store";
 import { usePathname } from "next/navigation";
 import { canSee, MODULES } from "@/lib/modules";
+import { PushButton, PushPrompt } from "./push";
 
 export function UrgencyPill({ a }: { a: Action }) {
   const { rules } = useStore();
@@ -197,8 +198,10 @@ export function AlzaTopbar({ title = "Console" }: { title?: string }) {
         <CompanySwitcher />
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <PushButton />
         <ThemeToggle />
         <Bell />
+        <PushPrompt />
         <button
           className="viewer-switch"
           onClick={() => {
@@ -238,7 +241,9 @@ export function ClientTopbar({ client }: { client: Client }) {
         <span className="powered hide-sm">
           powered by <span className="wordmark">Alza<span className="hr">HR</span></span>
         </span>
+        {!isAdvisor && <PushButton />}
         <ThemeToggle />
+        <PushPrompt />
         {isAdvisor ? null : (
           <button
             className="viewer-switch"

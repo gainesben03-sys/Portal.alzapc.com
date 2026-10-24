@@ -18,6 +18,7 @@ If you set up the database before these existed, also run each of these the same
 - `supabase/002_knowledge.sql`: the documents Claude reads when drafting
 - `supabase/003_hires.sql`: new hires
 - `supabase/004_esign.sql`: built-in e-signature
+- `supabase/005_push.sql`: phone and computer alerts
 
 ## 2. Sign-in settings
 
@@ -55,6 +56,9 @@ Vercel → your project → **Settings → Environment Variables**. Add each for
 | `PORTAL_URL` | `https://portal.alzapc.com` |
 | `ANTHROPIC_API_KEY` | From console.anthropic.com (turns on Claude drafting) |
 | `ANTHROPIC_MODEL` | Optional. Defaults to `claude-sonnet-5-5` |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Alerts: public key (generate a pair with `npx web-push generate-vapid-keys`) |
+| `VAPID_PRIVATE_KEY` | Alerts: private key from the same pair. Only ever in Vercel |
+| `VAPID_SUBJECT` | `mailto:ben@alzapc.com` |
 
 Then **Deployments → ⋯ on the latest → Redeploy**.
 

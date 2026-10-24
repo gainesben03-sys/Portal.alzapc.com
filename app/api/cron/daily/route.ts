@@ -9,6 +9,7 @@ import { ClientConfig, HuddleSettings, SharedFile } from "@/lib/modules";
 import { addDaysISO, firstDayEmail, Hire, onboardingFor, stageIndex, welcomeEmail } from "@/lib/hires";
 import { emailLogoUrl } from "@/lib/brand";
 import { admin, PORTAL_URL, sendEmail } from "@/lib/server";
+import { advisorEmails, pushTo } from "@/lib/push";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -32,6 +33,7 @@ export async function GET(req: Request) {
   }
   const db = admin();
   const ben = process.env.NOTIFY_TO || "ben@alzapc.com";
+  const benPush = await advisorEmails(db).catch(() => [ben]);
   const now = today();
   const day = toISO(now);
   const log: string[] = [];
@@ -96,16 +98,32 @@ export async function GET(req: Request) {
           const subj =
             step.label.startsWith("Friendly") ? `Coming up: ${a.title} (due ${fmt(a.due)})` : step.label.startsWith("Due-date") ? `Due today: ${a.title}` : `Overdue: ${a.title}`;
           const body = `Hi ${first},\n\n${step.label.startsWith("Overdue") ? `"${a.title}" was due ${fmt(a.due)} and is still open.` : `Quick reminder: "${a.title}" is due ${fmt(a.due)}.`}${a.impact ? `\n\nWhy it matters: ${a.impact}` : ""}\n\nIt takes a minute from your phone: ${link}\n\nNeed more time? Tap "More time" on that page.\n\nBen`;
+          await once(`push:${key}`, async () => {
+            await pushTo(db, [ownerEmail], "reminders", { title: subj.replace(/:.*$/, ""), body: a.title, url: `/c/${c.id}/a/${a.id}`, tag: `rem-${a.id}` });
+            return { ok: true };
+          });
           await once(key, () => sendEmail({ to: [ownerEmail], subject: subj, text: body, html: `<div style="font:15px/1.55 Arial,sans-serif;color:#16213a;max-width:520px">${esc(body).replace(/\n/g, "<br>").replace(esc(link), `<a href="${link}">${esc(link)}</a>`)}</div>` }));
         } else if (step.label === "Escalation") {
           const toEsc = client.escalation.email && client.escalation.email !== ownerEmail ? client.escalation.email : null;
           if (toEsc) {
             const body = `Hi ${client.escalation.name.split(" ")[0]},\n\nHeads up: "${a.title}" (owned by ${a.owner.name}) was due ${fmt(a.due)} and is still open.${a.impact ? `\n\nWhy it matters: ${a.impact}` : ""}\n\nDetails: ${link}\n\nBen`;
+            await once(`push:${key}`, async () => {
+              await pushTo(db, [toEsc], "reminders", { title: "Needs a nudge", body: `${a.title} (${a.owner.name}) is past due`, url: `/c/${c.id}/a/${a.id}`, tag: `esc-${a.id}` });
+              return { ok: true };
+            });
             await once(key, () => sendEmail({ to: [toEsc], subject: `Needs a nudge: ${a.title}`, text: body }));
           } else {
+            await once(`push:${key}`, async () => {
+              await pushTo(db, benPush, "reminders", { title: `Check in with ${a.owner.name}`, body: `${a.title} at ${c.name} is past due`, url: `/c/${c.id}/a/${a.id}`, tag: `esc-${a.id}` });
+              return { ok: true };
+            });
             await once(key, () => sendEmail({ to: [ben], subject: `[Portal] Check in with ${a.owner.name}: ${a.title}`, text: `"${a.title}" at ${c.name} is past due and ${a.owner.name} is the escalation contact. Worth a quick call.\n\n${link}` }));
           }
         } else if (step.label.startsWith("Flagged as blocker")) {
+          await once(`push:${key}`, async () => {
+            await pushTo(db, benPush, "reminders", { title: `Blocker at ${c.name}`, body: `${a.title} (${a.owner.name})`, url: `/c/${c.id}/a/${a.id}`, tag: `blk-${a.id}` });
+            return { ok: true };
+          });
           await once(key, () => sendEmail({ to: [ben], subject: `[Portal] Blocker at ${c.name}: ${a.title}`, text: `"${a.title}" (${a.owner.name}) is ${rules.blockerAfter} business days overdue.\n\n${link}` }));
         }
       }

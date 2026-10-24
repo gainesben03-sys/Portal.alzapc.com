@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Sheet } from "@/components/ui";
 import { Action, ADVISOR, addBusinessDays, Kind, toISO, today } from "@/lib/data";
 import { useStore } from "@/lib/store";
+import { pingTask } from "@/lib/pushclient";
 
 const KINDS: { k: Kind; label: string; hint: string }[] = [
   { k: "approval", label: "Approval", hint: "They review and sign off" },
@@ -54,6 +55,7 @@ export function NewTaskSheet({ clientId, onClose, onCreated }: { clientId?: stri
       history: [{ at: now, by: ADVISOR.name, text: who === "alza" ? "Added to Ben's list" : `Request created and assigned to ${owner.name}` }],
     };
     patch({ actions: [...actions, a] });
+    if (a.side === "client") pingTask(a.id);
     onCreated(who === "alza" ? "Added to your list" : `Sent to ${owner.name}. Reminders follow your rules.`);
   };
 

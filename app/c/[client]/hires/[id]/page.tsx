@@ -11,6 +11,7 @@ import { fmtTime } from "@/lib/data";
 import { docxBlob, docxName, DOCX_MIME } from "@/lib/docx";
 import { addDaysISO, firstDayEmail, firstName, Hire, longDate, onboardingFor, payLine, shortDate, Stage, STAGES, stageIndex, welcomeEmail } from "@/lib/hires";
 import { useStore } from "@/lib/store";
+import { pingTask } from "@/lib/pushclient";
 import { LIVE, openStored } from "@/lib/supabase";
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -75,7 +76,10 @@ function HireInner() {
 
   const markSigned = async () => {
     const tasks = h.tasksCreated ? [] : signedTasks(h, cfg, client);
-    if (tasks.length) patch({ actions: [...actions, ...tasks] });
+    if (tasks.length) {
+      patch({ actions: [...actions, ...tasks] });
+      if (isAdvisor) tasks.forEach((t) => pingTask(t.id));
+    }
     const owners = Array.from(new Set(tasks.map((t) => t.owner.name)));
     updateHire(h.id, { status: "Offer signed", tasksCreated: true }, `Offer signed${owners.length ? `. Payroll and first-day tasks sent to ${owners.join(" and ")}` : ""}`);
     if (s.autoSend && !h.emails?.welcome && h.personalEmail) {
@@ -147,6 +151,7 @@ function HireInner() {
   const askApproval = (d: NonNullable<Hire["docs"]>[number]) => {
     const a = approvalTask(h, client, d);
     patch({ actions: [...actions, a] });
+    pingTask(a.id);
     updateHire(h.id, {}, `Offer letter sent to ${client.escalation.name} for approval`);
     toast.show(`Sent to ${client.escalation.name} to approve`);
   };

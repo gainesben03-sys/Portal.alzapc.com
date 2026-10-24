@@ -453,3 +453,4 @@ ul.flags li.warn { background: var(--amber-bg); color: var(--amber); }
 .sign-preview { margin: 10px 0 14px; padding: 6px 4px 4px; border-bottom: 1.5px solid var(--line); font-family: Georgia, "Times New Roman", serif; font-style: italic; font-size: 30px; color: #0f1f5a; min-height: 50px; overflow-wrap: anywhere; }
 :root[data-theme="dark"] .sign-preview { color: #c9d4ff; }
 .linklike { background: none; border: 0; padding: 0; font: inherit; color: var(--blue); cursor: pointer; text-decoration: underline; }
+.push-steps { margin: 10px 0 0; padding-left: 20px; font-size: 14px; line-height: 1.5; display: grid; gap: 6px; }

@@ -11,6 +11,7 @@ import { Notice, PortalUser } from "./modules";
 import { demoState, emptyState, State } from "./state";
 import { authHeader, LIVE, sb } from "./supabase";
 import type { Hire } from "./hires";
+import { pingBen } from "./pushclient";
 import { loadAll, saveDiff } from "./live";
 
 export type Viewer = { kind: "advisor" } | { kind: "client"; clientId: string; person: Person };
@@ -260,11 +261,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             return { ...h, ...c, history };
           }),
         })),
-      notice: (n) =>
+      notice: (n) => {
+        if (viewer?.kind === "client") pingBen(`${state.clients.find((c) => c.id === n.clientId)?.name ?? "Client"}`, n.text, n.href || "/console", n.kind === "hire" ? "hires" : "activity");
         setState((s) => ({
           ...s,
           notices: [{ ...n, id: `x${Date.now()}${Math.random().toString(36).slice(2, 6)}`, at: new Date().toISOString(), read: false }, ...s.notices],
-        })),
+        }));
+      },
       update: (id, patch, log) =>
         setState((s) => {
           const before = s.actions.find((a) => a.id === id);
@@ -274,6 +277,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               patch.status === "completed" ? "completed" : patch.status === "extension_requested" ? "extension" : patch.status === "needs_revision" ? "revision" : patch.status === "submitted" ? "upload" : null;
             if (kind) {
               const verb = { completed: "completed", extension: "asked for more time on", revision: "requested changes on", upload: "uploaded a file to" }[kind];
+              pingBen(s.clients.find((c) => c.id === before.clientId)?.name ?? "Client", `${who} ${verb} "${before.title}"`, `/c/${before.clientId}/a/${before.id}`);
               notices = [
                 { id: `x${Date.now()}`, clientId: before.clientId, kind, text: `${who} ${verb} "${before.title}"`, href: `/c/${before.clientId}/a/${before.id}`, at: new Date().toISOString(), read: false },
                 ...notices,

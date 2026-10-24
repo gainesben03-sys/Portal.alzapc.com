@@ -97,6 +97,8 @@ Real sign-in, a Supabase database with row-level security, private file storage 
    - **Client setup → New hire onboarding**: payroll system, office address, contact, benefits line, mission, values, leadership note, video, timing.
    - **Built-in e-signature** (`supabase/004_esign.sql`, free, no outside service): "Send for e-signature" on an offer letter or agreement emails the new hire a private link in the client's colors. They read it on any device, agree to sign electronically, and type their name. The signed PDF (with a signature certificate: SHA-256 of the exact text, time, IP, browser, activity) goes on the hire and into Files, a copy is emailed to them, and Ben gets an email and a bell notice. A signed offer moves the hire to Signed, creates the payroll and first-day tasks, and sends the welcome email. Links expire in 30 days; resending cancels the old link; they can decline with a note.
    - Payroll integrations come later.
+**Alerts (push notifications)** (`supabase/005_push.sql`): phone and computer alerts without an app store. The first time someone signs in they're asked once, kindly, to turn alerts on (on iPhone it shows how to add the portal to the Home Screen first). "Not now" asks once more two weeks later, then never on its own. The phone icon in the top bar turns alerts on or off per device and picks what to get. Ben: client activity, new hires, escalations. Clients: new requests and approvals, due date reminders, replies from Ben. Email still goes out either way.
+
 4. AlzaPitch link
 5. PEO and benefits calculator
 6. Ask HR (answers only from each client's own policies)

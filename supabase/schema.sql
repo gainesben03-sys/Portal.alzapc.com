@@ -464,3 +464,27 @@ alter table public.signatures enable row level security;
 drop policy if exists signatures_read on public.signatures;
 create policy signatures_read on public.signatures for select using (public.is_advisor() or public.is_exec(client_id));
 -- no insert/update/delete policies: only the server (service key) writes
+
+-- ---------------------------------------------------------------- push notifications (also in 005_push.sql)
+create table if not exists public.push_subs (
+  endpoint text primary key,           -- one row per device/browser
+  email text not null,
+  sub jsonb not null,
+  agent text,
+  created_at timestamptz not null default now(),
+  last_ok timestamptz
+);
+create index if not exists push_subs_email_idx on public.push_subs (lower(email));
+
+create table if not exists public.push_prefs (
+  email text primary key,              -- lower-case
+  topics jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.push_subs enable row level security;
+alter table public.push_prefs enable row level security;
+drop policy if exists push_subs_own on public.push_subs;
+create policy push_subs_own on public.push_subs for select using (lower(email) = lower(public.me_email()));
+drop policy if exists push_prefs_own on public.push_prefs;
+create policy push_prefs_own on public.push_prefs for select using (lower(email) = lower(public.me_email()));

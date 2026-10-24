@@ -4,6 +4,7 @@
 // In demo mode (no Supabase keys) it behaves like before: email to Ben if Resend is set up.
 import { NextResponse } from "next/server";
 import { admin, caller, sendEmail, SERVER_LIVE } from "@/lib/server";
+import { pushTo } from "@/lib/push";
 
 export async function POST(req: Request) {
   let b: { subject?: unknown; text?: unknown; toMember?: { clientId?: string; email?: string } };
@@ -31,6 +32,7 @@ export async function POST(req: Request) {
     const { data } = await admin().from("members").select("email").eq("client_id", String(b.toMember.clientId ?? "")).eq("email", email).maybeSingle();
     if (!data) return NextResponse.json({ sent: false, reason: "not_a_member" }, { status: 400 });
     const r = await sendEmail({ to: [email], subject, text });
+    await pushTo(admin(), [email], "replies", { title: "Ben replied", body: subject, url: `/c/${String(b.toMember.clientId ?? "")}/board`, tag: "reply" });
     return NextResponse.json({ sent: r.ok, reason: r.reason });
   }
 
