@@ -14,6 +14,8 @@ This creates the tables, the security rules (each client sees only their own dat
 insert into public.advisors (email, name) values ('you@example.com', 'Ben Gaines');
 ```
 
+Also run `supabase/002_knowledge.sql` the same way (adds the documents Claude reads when drafting). New installs get it automatically from `schema.sql`.
+
 ## 2. Sign-in settings
 
 **Authentication → URL Configuration**

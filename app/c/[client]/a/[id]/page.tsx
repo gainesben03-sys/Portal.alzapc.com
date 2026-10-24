@@ -6,7 +6,8 @@ import { useRef, useState } from "react";
 import { ClientNav, ClientTopbar, Sheet, Toast, UrgencyPill, useGuard, useToast } from "@/components/ui";
 import { Action, addBusinessDays, escalationTarget, fmt, fmtTime, parseDay, reminderPlan, STATUS_LABEL, subtaskProgress, toISO, today } from "@/lib/data";
 import { useStore } from "@/lib/store";
-import { DraftPanel, wordBlob } from "@/components/draft";
+import { DraftPanel } from "@/components/draft";
+import { docxBlob, docxName, DOCX_MIME } from "@/lib/docx";
 import { LIVE, openStored, uploadToStorage, authHeader } from "@/lib/supabase";
 
 export default function ActionDetail() {
@@ -134,8 +135,7 @@ export default function ActionDetail() {
                 primaryLabel="Attach to task"
                 onClose={() => setDrafting(false)}
                 onUse={async (text) => {
-                  const name = `${a.title.replace(/[^\w\- ]+/g, "").trim() || "Draft"}.doc`;
-                  await attachFile(new File([wordBlob(a.title, text)], name, { type: "application/msword" }));
+                  await attachFile(new File([await docxBlob(a.title, text, client.id)], docxName(a.title), { type: DOCX_MIME }));
                   setDrafting(false);
                 }}
               />

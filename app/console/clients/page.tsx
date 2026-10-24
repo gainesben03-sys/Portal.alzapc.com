@@ -5,12 +5,15 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlzaNav, AlzaTopbar, Sheet, useGuard } from "@/components/ui";
 import { newClientConfig } from "@/lib/state";
+import { KnowledgePanel } from "@/components/knowledge";
 import { MODULES } from "@/lib/modules";
 import { useStore } from "@/lib/store";
 
 export default function Clients() {
   const ok = useGuard("advisor");
-  const { config, getClient, bookingUrl, patch, clients } = useStore();
+  const { config, getClient, bookingUrl, patch, clients, live } = useStore();
+  const [toast, setToastRaw] = useState("");
+  const setToast = (m: string) => { setToastRaw(m); setTimeout(() => setToastRaw(""), 4000); };
   const [url, setUrl] = useState(bookingUrl);
   const [saved, setSaved] = useState("");
   const [adding, setAdding] = useState(false);
@@ -43,6 +46,11 @@ export default function Clients() {
           </div>
           <button className="btn primary" onClick={() => setAdding(true)}>Add client</button>
         </div>
+        <div className="section-head section"><h2>Your default templates</h2></div>
+        <p className="small muted" style={{ marginTop: -4, marginBottom: 10 }}>Claude uses these for any client that doesn't have its own version.</p>
+        {live ? <KnowledgePanel clientId={null} onToast={setToast} /> : <div className="card small muted">Available once the portal is live.</div>}
+        {toast && <p className="small" style={{ marginTop: 8, color: "var(--green)" }}>{toast}</p>}
+
         <div className="card section">
           <b>Your booking link</b>
           <div className="tiny muted" style={{ marginTop: 2 }}>Powers the "Talk to Ben" tile on every client dashboard. Paste your Calendly link.</div>

@@ -7,6 +7,7 @@ import { AlzaNav, AlzaTopbar, Toast, useGuard, useToast } from "@/components/ui"
 import { Access, ACCESS_LABEL, ClientConfig, MODULES, PortalUser } from "@/lib/modules";
 import { useStore } from "@/lib/store";
 import { sendInvite } from "@/lib/invite";
+import { KnowledgePanel } from "@/components/knowledge";
 
 function luminance(hex: string) {
   const n = parseInt(hex.slice(1), 16);
@@ -58,7 +59,7 @@ const SWATCHES = ["#2b3ff5", "#1a2b4a", "#4a7ab5", "#6b8c6b", "#8a6d3b", "#b4345
 export default function ClientSetup() {
   const { id } = useParams<{ id: string }>();
   const ok = useGuard("advisor");
-  const { config, patch, getClient } = useStore();
+  const { config, patch, getClient, live } = useStore();
   const client = getClient(id);
   const cfg = config[id];
   const toast = useToast();
@@ -99,6 +100,12 @@ export default function ClientSetup() {
             </label>
           ))}
         </div>
+
+        <div className="section-head section"><h2>Documents for Claude</h2></div>
+        <p className="small muted" style={{ marginTop: -4, marginBottom: 10 }}>
+          Their handbook, policies, templates and letterhead. Claude follows these first, then your default templates, then best practice, and tells you which it used.
+        </p>
+        {live ? <KnowledgePanel clientId={id} onToast={toast.show} /> : <div className="card small muted">Available once the portal is live.</div>}
 
         <div className="section-head section"><h2>Growth</h2></div>
         <div className="card">

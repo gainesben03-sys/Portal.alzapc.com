@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { authHeader } from "@/lib/supabase";
+import { downloadDocx } from "@/lib/docx";
 
 export type DraftMode = "reply" | "document";
 
@@ -15,7 +16,8 @@ const REASONS: Record<string, string> = {
   api_529: "Claude is busy right now. Try again in a minute.",
 };
 
-async function requestDraft(body: Record<string, unknown>): Promise<{ draft: string; forBen: string } | { error: string }> {
+type Used = { title: string; own: boolean }[];
+async function requestDraft(body: Record<string, unknown>): Promise<{ draft: string; forBen: string; used: Used } | { error: string }> {
   try {
     const r = await fetch("/api/draft", {
       method: "POST",
@@ -23,36 +25,12 @@ async function requestDraft(body: Record<string, unknown>): Promise<{ draft: str
       body: JSON.stringify(body),
     });
     const j = await r.json();
-    if (j.ok) return { draft: j.draft, forBen: j.forBen };
+    if (j.ok) return { draft: j.draft, forBen: j.forBen, used: j.used ?? [] };
     if (/credit|balance/i.test(j.detail ?? "")) return { error: "Your Anthropic account is out of credit. Add credit at console.anthropic.com." };
     return { error: REASONS[j.reason] ?? `Drafting failed (${j.reason ?? r.status}). Try again.` };
   } catch {
     return { error: "Couldn't reach Claude. Check your connection and try again." };
   }
-}
-
-/** Download text as a Word-openable document. */
-export function wordBlob(title: string, text: string): Blob {
-  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const body = esc(text)
-    .split(/\n{2,}/)
-    .map((p) => {
-      const t = p.trim();
-      if (/^#{1,3}\s/.test(t)) return `<h2>${t.replace(/^#{1,3}\s/, "")}</h2>`;
-      if (/^(\*|-)\s/m.test(t)) return `<ul>${t.split("\n").map((l) => `<li>${l.replace(/^(\*|-)\s/, "")}</li>`).join("")}</ul>`;
-      return `<p>${t.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/\n/g, "<br>")}</p>`;
-    })
-    .join("");
-  const html = `<html><head><meta charset="utf-8"><title>${esc(title)}</title><style>body{font-family:Calibri,Arial,sans-serif;font-size:11pt;line-height:1.4}h2{font-size:13pt;margin:14pt 0 4pt}</style></head><body>${body}</body></html>`;
-  return new Blob(["﻿", html], { type: "application/msword" });
-}
-
-export function downloadWord(title: string, text: string) {
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(wordBlob(title, text));
-  a.download = `${title.replace(/[^\w\- ]+/g, "").trim() || "Draft"}.doc`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 
 const TWEAKS = ["Shorter", "Warmer", "More formal", "Simpler words"];
@@ -88,6 +66,8 @@ export function DraftPanel({
   const [err, setErr] = useState("");
   const [tweak, setTweak] = useState("");
   const [copied, setCopied] = useState(false);
+  const [used, setUsed] = useState<Used>([]);
+  const [saving, setSaving] = useState(false);
 
   const run = async (extra?: string) => {
     setBusy(true);
@@ -104,6 +84,7 @@ export function DraftPanel({
     if ("error" in res) return setErr(res.error);
     setDraft(res.draft);
     setForBen(res.forBen);
+    setUsed(res.used);
     setTweak("");
   };
 
@@ -139,6 +120,11 @@ export function DraftPanel({
       {draft !== null && (
         <>
           <textarea className="f draft-text" value={draft} onChange={(e) => setDraft(e.target.value)} />
+          <p className="tiny muted" style={{ marginTop: 6 }}>
+            {used.length
+              ? <>Claude read: {used.map((u) => `${u.title}${u.own ? "" : " (your template)"}`).join(", ")}</>
+              : "No documents on file for this client, so this follows best practice."}
+          </p>
           {forBen && (
             <div className="for-ben">
               <b>Only you see this</b>
@@ -172,8 +158,21 @@ export function DraftPanel({
             >
               {copied ? "Copied" : "Copy"}
             </button>
-            {mode === "document" && <button className="btn ghost sm" onClick={() => downloadWord(title, draft)}>Download for Word</button>}
-            <button className="btn primary sm" disabled={busy || !draft.trim()} onClick={() => onUse(draft.trim())}>{primaryLabel}</button>
+            {mode === "document" && <button className="btn ghost sm" onClick={() => downloadDocx(title, draft, clientId)}>Download Word</button>}
+            <button
+              className="btn primary sm"
+              disabled={busy || saving || !draft.trim()}
+              onClick={async () => {
+                setSaving(true);
+                try {
+                  await onUse(draft.trim());
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            >
+              {saving ? "Saving..." : primaryLabel}
+            </button>
           </div>
         </>
       )}

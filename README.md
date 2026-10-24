@@ -87,6 +87,7 @@ Real sign-in, a Supabase database with row-level security, private file storage 
 
 1. ~~Foundation~~
 2. ~~Claude drafting~~: "Draft reply" on client notes, "Draft with Claude" on tasks (attaches a Word file to the task) and on the console. Context comes only from that one client, loaded server-side. Ben approves everything. Needs `ANTHROPIC_API_KEY`.
+   - **Documents for Claude**: upload each client's handbook, policies, templates and letterhead in Client setup, plus your default templates on the Clients page (`supabase/002_knowledge.sql`). Claude follows the client's documents first, then your templates, then best practice, and says which it used. Drafts download and attach as real Word files with the client's letterhead.
 3. Hire flow: offer letters, agreements, e-signature, onboarding checklist, payroll handoff
 4. AlzaPitch link
 5. PEO and benefits calculator
