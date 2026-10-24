@@ -61,14 +61,14 @@ export async function caller(req: Request): Promise<Caller | null> {
 
 export const PORTAL_URL = (process.env.PORTAL_URL || "https://portal.alzapc.com").replace(/\/$/, "");
 
-export async function sendEmail(opts: { to: string[]; subject: string; text: string; html?: string; scheduledAt?: string }): Promise<{ ok: boolean; reason?: string }> {
+export async function sendEmail(opts: { to: string[]; subject: string; text: string; html?: string; scheduledAt?: string; attachments?: { filename: string; content: string }[]; replyTo?: string }): Promise<{ ok: boolean; reason?: string }> {
   const key = process.env.RESEND_API_KEY;
   const from = process.env.NOTIFY_FROM;
   if (!key || !from) return { ok: false, reason: "not_configured" };
   const r = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from, to: opts.to, subject: opts.subject.replace(/[\r\n]+/g, " ").slice(0, 200), text: opts.text, html: opts.html, scheduled_at: opts.scheduledAt }),
+    body: JSON.stringify({ from, to: opts.to, subject: opts.subject.replace(/[\r\n]+/g, " ").slice(0, 200), text: opts.text, html: opts.html, scheduled_at: opts.scheduledAt, attachments: opts.attachments, reply_to: opts.replyTo }),
   });
   if (r.ok) return { ok: true };
   let msg = "";

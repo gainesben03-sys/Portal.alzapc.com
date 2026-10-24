@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { ReactNode, Suspense, useMemo, useRef, useState } from "react";
 import { ClientNav, ClientTopbar, Sheet, Toast, useGuard, useToast } from "@/components/ui";
 import { Checks, HireDraft, HireForm, startsIn, Tracker } from "@/components/hires";
-import { afterSend, approvalTask, sendHireEmail, signedTasks, storeHireFile } from "@/components/hireops";
+import { afterSend, approvalTask, requestSignature, sendHireEmail, signedTasks, storeHireFile } from "@/components/hireops";
 import { DraftPanel } from "@/components/draft";
 import { fmtTime } from "@/lib/data";
 import { docxBlob, docxName, DOCX_MIME } from "@/lib/docx";
@@ -29,6 +29,7 @@ function HireInner() {
   const [drafting, setDrafting] = useState<null | "offer" | "agreement">(null);
   const [preview, setPreview] = useState<null | "welcome" | "firstDay">(null);
   const [busy, setBusy] = useState("");
+  const [confirmSign, setConfirmSign] = useState<NonNullable<Hire["docs"]>[number] | null>(null);
   const signedInput = useRef<HTMLInputElement>(null);
 
   const brand = useMemo(() => ({ company: client?.name ?? "", accent: client?.accent ?? "#19283c", logoUrl: client?.logo }), [client]);
@@ -109,6 +110,40 @@ function HireInner() {
     }
   };
 
+  const sendForSignature = async (d: NonNullable<Hire["docs"]>[number]) => {
+    const kind = d.kind === "agreement" ? "agreement" : "offer";
+    const label = kind === "offer" ? "Offer letter" : "Employment agreement";
+    setConfirmSign(null);
+    const mirror = () => {
+      const at = new Date().toISOString();
+      updateHire(h.id, (x) => ({ esign: { ...(x.esign ?? {}), [kind]: { status: "sent", at } }, status: kind === "offer" && stageIndex(x.status) < 1 ? "Offer sent" : x.status }), `${label} sent for e-signature to ${h.personalEmail}${LIVE ? "" : " (demo, not really sent)"}`);
+    };
+    if (!LIVE) {
+      mirror();
+      return toast.show("Demo mode: marked as sent for signature");
+    }
+    setBusy("sign");
+    let r = await requestSignature(h.id, d.path!, kind);
+    if (!r.ok && (r.reason === "not_found" || r.reason === "no_document")) {
+      await wait(2500); // a just-saved document may still be on its way to the database
+      r = await requestSignature(h.id, d.path!, kind);
+    }
+    setBusy("");
+    if (r.ok) {
+      mirror();
+      toast.show(`Sent to ${h.personalEmail} to sign`);
+    } else toast.show(r.msg);
+  };
+
+  const cancelSignature = async (kind: "offer" | "agreement") => {
+    if (LIVE) {
+      const r = await requestSignature(h.id, "", kind, true);
+      if (!r.ok) return toast.show(r.msg);
+    }
+    updateHire(h.id, (x) => ({ esign: { ...(x.esign ?? {}), [kind]: undefined } }), `Cancelled the ${kind === "offer" ? "offer letter" : "agreement"} signing request`);
+    toast.show("Signing link cancelled");
+  };
+
   const askApproval = (d: NonNullable<Hire["docs"]>[number]) => {
     const a = approvalTask(h, client, d);
     patch({ actions: [...actions, a] });
@@ -118,16 +153,17 @@ function HireInner() {
 
   // ---------------------------------------------------------------- next step
   let next: { text: ReactNode; buttons?: ReactNode } = { text: "" };
+  const sig = h.esign ?? {};
   const respond = h.respondBy ? ` They have until ${shortDate(h.respondBy)} to respond.` : "";
   switch (h.status) {
     case "Approved to hire":
       next = isAdvisor
-        ? { text: "Draft the offer letter below, get it approved, then send it.", buttons: <button className="btn primary sm" onClick={() => setStage("Offer sent", "Offer sent")}>Mark offer sent</button> }
+        ? { text: "Draft the offer letter below, get it approved, then send it for e-signature. Sent it another way? Mark it sent.", buttons: <button className="btn sm" onClick={() => setStage("Offer sent", "Offer sent")}>Mark offer sent</button> }
         : { text: "Ben is preparing the offer letter. You'll get it here to approve before it goes out." };
       break;
     case "Offer sent":
       next = {
-        text: `Waiting on ${first} to sign.${respond}`,
+        text: sig.offer?.status === "viewed" ? `${first} opened the offer letter ${fmtTime(sig.offer.at)}. Waiting on their signature.${respond}` : sig.offer?.status === "declined" ? `${first} declined to sign${sig.offer.note ? `: "${sig.offer.note}"` : "."} Talk with them, then send a revised offer.` : sig.offer ? `Out for e-signature since ${fmtTime(sig.offer.at)}. You'll get an email the moment ${first} signs.${respond}` : `Waiting on ${first} to sign.${respond}`,
         buttons: canManage && (
           <>
             <button className="btn sm" disabled={busy === "doc"} onClick={() => signedInput.current?.click()}>Upload signed offer</button>
@@ -239,7 +275,18 @@ function HireInner() {
                     <div className="tiny muted">{d.kind === "offer" ? "Offer letter" : d.kind === "agreement" ? "Employment agreement" : "Signed"} · {fmtTime(d.at)}</div>
                   </div>
                   <button className="btn ghost sm" onClick={() => openDoc(d)}>Open</button>
-                  {isAdvisor && d.kind === "offer" && h.status === "Approved to hire" && <button className="btn sm" onClick={() => askApproval(d)}>Ask {client.escalation.name.split(" ")[0]} to approve</button>}
+                  {isAdvisor && d.kind === "offer" && h.status === "Approved to hire" && !sig.offer && <button className="btn ghost sm" onClick={() => askApproval(d)}>Ask {client.escalation.name.split(" ")[0]} to approve</button>}
+                  {canManage && d.kind !== "signed" && sig[d.kind]?.status !== "signed" && (
+                    <button className={`btn sm ${sig[d.kind] ? "" : "primary"}`} disabled={busy === "sign"} onClick={() => (h.personalEmail ? setConfirmSign(d) : toast.show(`Add ${first}'s personal email first (Details → Edit).`))}>
+                      {busy === "sign" ? "Sending..." : sig[d.kind] ? "Resend" : "Send for e-signature"}
+                    </button>
+                  )}
+                  {d.kind !== "signed" && sig[d.kind] && (
+                    <div className="tiny" style={{ flexBasis: "100%", color: sig[d.kind]!.status === "signed" ? "var(--green)" : sig[d.kind]!.status === "declined" ? "var(--red)" : "var(--amber)" }}>
+                      {sig[d.kind]!.status === "signed" ? `✓ Signed electronically ${fmtTime(sig[d.kind]!.at)}` : sig[d.kind]!.status === "declined" ? `Declined ${fmtTime(sig[d.kind]!.at)}${sig[d.kind]!.note ? `: "${sig[d.kind]!.note}"` : ""}` : sig[d.kind]!.status === "viewed" ? `Opened by ${first} ${fmtTime(sig[d.kind]!.at)}, not signed yet` : `Out for signature since ${fmtTime(sig[d.kind]!.at)}`}
+                      {canManage && (sig[d.kind]!.status === "sent" || sig[d.kind]!.status === "viewed") && <> · <button className="linklike" onClick={() => cancelSignature(d.kind as "offer" | "agreement")}>Cancel link</button></>}
+                    </div>
+                  )}
                 </div>
               ))}
               {isAdvisor && !drafting && (
@@ -367,6 +414,19 @@ function HireInner() {
           <iframe className="email-frame" title="Email preview" srcDoc={mail.html} sandbox="" />
           <div className="action-foot" style={{ justifyContent: "flex-end" }}>
             <button className="btn ghost sm" onClick={() => setPreview(null)}>Close</button>
+          </div>
+        </Sheet>
+      )}
+      {confirmSign && (
+        <Sheet title={`Send for e-signature?`} onClose={() => setConfirmSign(null)}>
+          <p className="small">
+            {first} gets an email in {client.name}&apos;s colors with a private link to read and sign <b>{confirmSign.name}</b>. They sign by typing their name; no account needed.
+          </p>
+          <p className="small" style={{ marginTop: 8 }}>To: <b>{h.personalEmail}</b></p>
+          <p className="tiny muted" style={{ marginTop: 8 }}>When they sign: the signed PDF (with a signature certificate) lands on this hire and in Files, they get a copy, you get an email{confirmSign.kind === "offer" ? `, the hire moves to Signed, and the payroll and first-day tasks go out` : ""}. Any earlier link for this document stops working.</p>
+          <div className="sheet-actions">
+            <button className="btn ghost sm" onClick={() => setConfirmSign(null)}>Cancel</button>
+            <button className="btn primary sm" onClick={() => sendForSignature(confirmSign)}>Send</button>
           </div>
         </Sheet>
       )}

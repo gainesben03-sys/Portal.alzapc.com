@@ -433,3 +433,23 @@ ul.flags li.warn { background: var(--amber-bg); color: var(--amber); }
 .stat .n { font-family: Fraunces, Georgia, serif; font-size: 28px; font-weight: 600; }
 .sheet:has(.email-frame) { max-width: 680px; }
 .hire-list > .card { margin: 0; }
+
+/* ---------- E-signature page ---------- */
+.sign-wrap { max-width: 760px; margin: 0 auto; padding: 24px 16px 40px; }
+.sign-head { display: flex; justify-content: center; padding: 8px 0 18px; border-top: 5px solid var(--accent); margin: -24px -16px 18px; padding-top: 22px; }
+.sign-head img { max-height: 48px; max-width: 220px; }
+.sign-co { font-family: Fraunces, Georgia, serif; font-size: 22px; font-weight: 600; }
+.sign-intro { text-align: center; margin-bottom: 14px; }
+.sign-intro h1 { margin: 0 0 4px; }
+.sign-paper { padding: 36px clamp(18px, 6vw, 56px); background: #fff; color: #1c1a19; font-family: Georgia, "Times New Roman", serif; font-size: 15.5px; line-height: 1.6; }
+.sign-letter p { margin: 0 0 14px; }
+.sign-letter h3 { font-size: 16px; margin: 20px 0 8px; }
+.sign-letter ul { margin: 0 0 14px; padding-left: 20px; }
+.sign-card { margin-top: 16px; }
+.sign-card.done { text-align: center; padding: 32px 20px; }
+.sign-check { width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 12px; display: grid; place-items: center; background: var(--accent); color: #fff; font-size: 28px; font-weight: 700; }
+.sign-consent { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 1.45; cursor: pointer; }
+.sign-consent input { margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--accent); }
+.sign-preview { margin: 10px 0 14px; padding: 6px 4px 4px; border-bottom: 1.5px solid var(--line); font-family: Georgia, "Times New Roman", serif; font-style: italic; font-size: 30px; color: #0f1f5a; min-height: 50px; overflow-wrap: anywhere; }
+:root[data-theme="dark"] .sign-preview { color: #c9d4ff; }
+.linklike { background: none; border: 0; padding: 0; font: inherit; color: var(--blue); cursor: pointer; text-decoration: underline; }

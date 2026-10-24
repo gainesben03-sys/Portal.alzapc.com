@@ -52,6 +52,15 @@ export interface Hire {
   createdAt: string;
   history: { at: string; by: string; text: string }[];
   tasksCreated?: boolean;
+  /** Built-in e-signature requests, by document type. */
+  esign?: { offer?: EsignState; agreement?: EsignState };
+}
+
+/** The signing link itself is never stored here: only the signer gets it. */
+export interface EsignState {
+  status: "sent" | "viewed" | "signed" | "declined";
+  at: string;
+  note?: string;
 }
 
 export interface OnboardingSettings {
@@ -283,4 +292,33 @@ ${signoff(s, brand.accent, "See you soon.")}`;
     html: frame(brand, inner),
     text: `Hi ${first},\n\nYour first day at ${brand.company} is ${longDate(h.startDate)}.\nArrive by: ${h.arrivalTime || s.defaultArrival}\nWhere: ${where}\nAsk for: ${h.managerName}\n\nBefore day one:\n- Find your ${s.payroll} invite (check spam)\n- Complete Section 1 of your I-9\n- Gather your I-9 documents and bank info\n\nBring: original unexpired ID, bank details, emergency contact.\n\nYou have ${s.enrollDays} days to enroll in benefits.\n\nSee you soon,\n${s.hrName}`,
   };
+}
+
+/** Signing request: "your offer is ready to review and sign". */
+export function signRequestEmail(h: Pick<Hire, "name" | "firstName" | "title">, docTitle: string, link: string, s: OnboardingSettings, b: Brand, expires: string) {
+  const brand: Brand = { ...b, bar: b.bar ?? b.accent, accent: readableInk(b.accent) };
+  const first = firstName(h);
+  const inner = `${label("Ready to sign", "#6B645E").replace("margin:0", "margin:40px 0 0 0")}
+${big(`${esc(first)}, it's <i>official.</i>`)}
+<p style="margin:14px 0 0 0;font-family:Arial,sans-serif;font-size:16px;line-height:24px;color:#4A4441">Your ${esc(docTitle.toLowerCase())} from ${esc(brand.company)} is ready to review and sign.</p><!--HERO_END-->
+${section("#F4F1EC", `<p style="margin:0 0 18px 0">Hi ${esc(first)},</p><p style="margin:0 0 22px 0">Open the link below to read your ${esc(docTitle.toLowerCase())}${h.title ? ` for the ${esc(h.title)} role` : ""} and sign it online. It takes about two minutes, and you'll get a signed PDF copy by email.</p>
+<a href="${esc(link)}" style="display:inline-block;background:${brand.bar};padding:14px 26px;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:#FFFFFF;text-decoration:none;border-radius:4px">Review and sign</a>
+<p style="margin:22px 0 0 0;font-size:13px;color:#6B645E">This link is just for you. It expires ${esc(longDate(expires))}. Questions about the offer? Reply to ${esc(s.hrEmail)}.</p>`)}
+${signoff(s, brand.accent, "We hope you'll join us.")}`;
+  return {
+    subject: `Your ${docTitle.toLowerCase()} from ${brand.company}`,
+    html: frame(brand, inner),
+    text: `Hi ${first},\n\nYour ${docTitle.toLowerCase()} from ${brand.company} is ready to review and sign:\n${link}\n\nIt takes about two minutes, and you'll get a signed PDF copy by email. The link expires ${longDate(expires)}.\n\nQuestions? Email ${s.hrEmail}.\n\n${s.hrName}`,
+  };
+}
+
+/** Sent with the signed PDF attached. */
+export function signedCopyEmail(h: Pick<Hire, "name" | "firstName">, docTitle: string, s: OnboardingSettings, b: Brand) {
+  const brand: Brand = { ...b, bar: b.bar ?? b.accent, accent: readableInk(b.accent) };
+  const first = firstName(h);
+  const inner = `${label("Signed", "#6B645E").replace("margin:0", "margin:40px 0 0 0")}
+${big(`Thank you, <i>${esc(first)}.</i>`)}
+<p style="margin:14px 0 0 0;font-family:Arial,sans-serif;font-size:16px;line-height:24px;color:#4A4441">Your signed ${esc(docTitle.toLowerCase())} is attached for your records.</p><!--HERO_END-->
+${signoff(s, brand.accent, "We're so glad you're joining us.")}`;
+  return { subject: `Signed: your ${docTitle.toLowerCase()} from ${brand.company}`, html: frame(brand, inner), text: `Hi ${first},\n\nThank you for signing. Your signed ${docTitle.toLowerCase()} is attached for your records.\n\n${s.hrName}` };
 }
