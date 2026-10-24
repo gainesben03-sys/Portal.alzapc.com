@@ -7,6 +7,7 @@ import { Action, Client, DEFAULT_RULES, fmt, Project, reminderPlan, Rules, toISO
 import { buildHuddle } from "@/lib/huddle";
 import { ClientConfig, HuddleSettings, SharedFile } from "@/lib/modules";
 import { addDaysISO, firstDayEmail, Hire, onboardingFor, stageIndex, welcomeEmail } from "@/lib/hires";
+import { emailLogoUrl } from "@/lib/brand";
 import { admin, PORTAL_URL, sendEmail } from "@/lib/server";
 
 export const dynamic = "force-dynamic";
@@ -139,7 +140,7 @@ export async function GET(req: Request) {
     if (!c) continue;
     const cfg = (c.config ?? {}) as Partial<ClientConfig>;
     const s = onboardingFor(cfg.onboarding);
-    const brand = { company: c.name, accent: cfg.accent || "#19283c", logoUrl: cfg.logo && /^https?:/.test(cfg.logo) ? cfg.logo : undefined };
+    const brand = { company: c.name, accent: cfg.accent || "#19283c", logoUrl: emailLogoUrl(c.id, cfg.logo, cfg.logoEmail, PORTAL_URL) };
     const h = { ...(row.data as Hire), id: row.id, clientId: row.client_id };
     if (!h.startDate) continue;
     const data = { ...(row.data as Hire) };

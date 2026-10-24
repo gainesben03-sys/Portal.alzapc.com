@@ -1,6 +1,7 @@
 // New hires: stages, checks and onboarding emails.
 // Same flow as the Presidio Bay / The Main Post New Hire Console, made configurable per client.
 // Pure functions, used by the browser and by the daily email job.
+import { readableInk } from "./brand";
 
 export const STAGES = ["Approved to hire", "Offer sent", "Offer signed", "Package ready", "First-day email sent", "Started"] as const;
 export type Stage = (typeof STAGES)[number];
@@ -180,19 +181,20 @@ export function payLine(h: Partial<Hire>) {
 export interface Brand {
   company: string;
   accent: string;
+  bar?: string; // exact brand color for the top stripe (accent is the readable text version)
   logoUrl?: string; // only http(s) logos are used in email
 }
 
 const esc = (s: string) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
 function frame(brand: Brand, inner: string) {
-  const logo = brand.logoUrl && /^https?:\/\//.test(brand.logoUrl)
+  const logo = brand.logoUrl && /^(https?:\/\/|data:image\/|\/)/.test(brand.logoUrl)
     ? `<img src="${esc(brand.logoUrl)}" alt="${esc(brand.company)}" height="40" style="display:block;border:0;height:40px;width:auto">`
     : `<span style="font-family:Georgia,serif;font-size:22px;color:#1C1A19">${esc(brand.company)}</span>`;
   return `<!doctype html><html><body style="margin:0;padding:0;background:#EAE5DE">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#EAE5DE"><tr><td align="center" style="padding:24px 12px">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px">
-<tr><td height="6" bgcolor="${brand.accent}" style="background:${brand.accent};height:6px;font-size:0;line-height:0">&nbsp;</td></tr>
+<tr><td height="6" bgcolor="${brand.bar ?? brand.accent}" style="background:${brand.bar ?? brand.accent};height:6px;font-size:0;line-height:0">&nbsp;</td></tr>
 <tr><td bgcolor="#FFFFFF" style="background:#FFFFFF;padding:32px 40px 36px 40px">${logo}${inner.split("<!--HERO_END-->")[0]}</td></tr>
 ${inner.split("<!--HERO_END-->")[1] ?? ""}
 <tr><td align="center" style="padding:18px 40px;font-family:Arial,sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#6B645E">${esc(brand.company)}</td></tr>
@@ -223,7 +225,8 @@ function numbered(items: [string, string][], accent: string) {
 }
 
 /** Welcome email: goes out once the offer is signed. */
-export function welcomeEmail(h: Hire, s: OnboardingSettings, brand: Brand) {
+export function welcomeEmail(h: Hire, s: OnboardingSettings, b: Brand) {
+  const brand: Brand = { ...b, bar: b.bar ?? b.accent, accent: readableInk(b.accent) };
   const first = firstName(h);
   const mgr = (h.managerName || "").split(/\s+/)[0];
   const steps: [string, string][] = [
@@ -243,7 +246,8 @@ ${signoff(s, brand.accent, "We're excited to have you on the team.")}`;
 }
 
 /** First-day email: goes out N days before the start date. */
-export function firstDayEmail(h: Hire, s: OnboardingSettings, brand: Brand) {
+export function firstDayEmail(h: Hire, s: OnboardingSettings, b: Brand) {
+  const brand: Brand = { ...b, bar: b.bar ?? b.accent, accent: readableInk(b.accent) };
   const first = firstName(h);
   const where = (h.location || s.hqAddress || "").trim();
   const grid = (pairs: [string, string][]) =>

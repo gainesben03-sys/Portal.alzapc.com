@@ -4,7 +4,8 @@
 import { NextResponse } from "next/server";
 import { firstDayEmail, Hire, onboardingFor, welcomeEmail } from "@/lib/hires";
 import { ClientConfig } from "@/lib/modules";
-import { admin, caller, sendEmail, SERVER_LIVE } from "@/lib/server";
+import { emailLogoUrl } from "@/lib/brand";
+import { admin, caller, PORTAL_URL, sendEmail, SERVER_LIVE } from "@/lib/server";
 
 export async function POST(req: Request) {
   if (!SERVER_LIVE) return NextResponse.json({ sent: false, reason: "demo" });
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
   const hire = { ...(row.data as Hire), id: row.id, clientId: row.client_id };
   const cfg = (client.config ?? {}) as ClientConfig;
   const s = onboardingFor(cfg.onboarding);
-  const brand = { company: client.name, accent: cfg.accent || "#19283c", logoUrl: cfg.logo && /^https?:/.test(cfg.logo) ? cfg.logo : undefined };
+  const brand = { company: client.name, accent: cfg.accent || "#19283c", logoUrl: emailLogoUrl(row.client_id, cfg.logo, cfg.logoEmail, PORTAL_URL) };
   const to = b.test ? me.email : (hire.personalEmail || "").trim().toLowerCase();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) return NextResponse.json({ sent: false, reason: "no_email" });
   const mail = kind === "welcome" ? welcomeEmail(hire, s, brand) : firstDayEmail(hire, s, brand);

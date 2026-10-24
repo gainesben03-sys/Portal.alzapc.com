@@ -131,6 +131,7 @@ export interface ClientConfig {
   modules: Record<ModuleKey, boolean>;
   accent: string;
   logo?: string; // URL or data URL
+  logoEmail?: string; // PNG copy of an SVG logo, for email apps
   escalationEmail: string;
   users: PortalUser[];
   codes: InviteCode[];

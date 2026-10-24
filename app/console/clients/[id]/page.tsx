@@ -7,6 +7,7 @@ import { AlzaNav, AlzaTopbar, Toast, useGuard, useToast } from "@/components/ui"
 import { Access, ACCESS_LABEL, ClientConfig, MODULES, PortalUser } from "@/lib/modules";
 import { useStore } from "@/lib/store";
 import { sendInvite } from "@/lib/invite";
+import { dominantColor } from "@/lib/brand";
 import { OnboardingSettingsCard } from "@/components/onboarding";
 import { KnowledgePanel } from "@/components/knowledge";
 
@@ -135,7 +136,22 @@ export default function ClientSetup() {
             <input type="color" value={cfg.accent} onChange={(e) => set({ accent: e.target.value })} aria-label="Custom color" style={{ width: 38, height: 34, border: 0, background: "none" }} />
           </div>
           <HexField value={cfg.accent} onChange={(v) => set({ accent: v })} />
-          <p className="tiny muted" style={{ marginTop: 10 }}>Used for buttons and highlights in their workspace.</p>
+          <div className="row" style={{ marginTop: 10, alignItems: "center" }}>
+            <p className="tiny muted grow" style={{ margin: 0 }}>Used for buttons and highlights in their workspace and new hire emails. Light colors are darkened automatically where they&apos;re used as text.</p>
+            {cfg.logo && (
+              <button
+                className="btn ghost sm"
+                onClick={async () => {
+                  const { png, color } = await logoInfo(cfg.logo!).catch(() => ({ png: undefined, color: null }));
+                  if (!color) return toast.show("Couldn't find a color in the logo");
+                  set({ accent: color, ...(cfg.logo!.startsWith("data:image/svg") && png ? { logoEmail: png } : {}) });
+                  toast.show(`Matched to the logo: ${color}`);
+                }}
+              >
+                Match logo
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="section-head section"><h2>Logo</h2></div>
@@ -155,17 +171,19 @@ export default function ClientSetup() {
                   e.target.value = "";
                   if (!f) return;
                   try {
-                    set({ logo: await shrinkLogo(f) });
-                    toast.show("Logo updated");
+                    const logo = await shrinkLogo(f);
+                    const { png, color } = await logoInfo(logo);
+                    set({ logo, logoEmail: logo.startsWith("data:image/svg") ? png : undefined, ...(color ? { accent: color } : {}) });
+                    toast.show(color ? "Logo updated. Brand color matched to it." : "Logo updated");
                   } catch {
                     toast.show("Couldn't read that image");
                   }
                 }}
               />
             </label>
-            {cfg.logo && <button className="btn ghost sm" style={{ color: "var(--red)" }} onClick={() => set({ logo: undefined })}>Remove</button>}
+            {cfg.logo && <button className="btn ghost sm" style={{ color: "var(--red)" }} onClick={() => set({ logo: undefined, logoEmail: undefined })}>Remove</button>}
           </div>
-          <p className="tiny muted" style={{ marginTop: 8 }}>A transparent PNG or SVG looks best.</p>
+          <p className="tiny muted" style={{ marginTop: 8 }}>A transparent PNG or SVG looks best. It also goes at the top of their new hire emails, and the brand color is matched to it.</p>
         </div>
 
         <div className="section-head section"><h2>People with access</h2></div>
@@ -252,5 +270,31 @@ function shrinkLogo(file: File): Promise<string> {
       img.src = src;
     };
     r.readAsDataURL(file);
+  });
+}
+
+/** Render a logo on a canvas: a PNG copy (for email) and its main color. */
+function logoInfo(src: string): Promise<{ png?: string; color: string | null }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onerror = reject;
+    img.onload = () => {
+      const h = 120;
+      const w = Math.max(1, Math.round(((img.naturalWidth || img.width || 300) / (img.naturalHeight || img.height || 120)) * h));
+      const c = document.createElement("canvas");
+      c.width = w;
+      c.height = h;
+      const ctx = c.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, w, h);
+      let color: string | null = null;
+      let png: string | undefined;
+      try {
+        color = dominantColor(ctx.getImageData(0, 0, w, h).data);
+        png = c.toDataURL("image/png");
+      } catch {}
+      resolve({ png, color });
+    };
+    img.src = src;
   });
 }
