@@ -5,8 +5,24 @@
 
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+
+/** Accepts the project URL in any common form and returns https://<ref>.supabase.co */
+export function cleanSupabaseUrl(raw?: string): string | undefined {
+  if (!raw) return undefined;
+  const v = raw.trim().replace(/^["']|["']$/g, "");
+  try {
+    const u = new URL(v.startsWith("http") ? v : `https://${v}`);
+    // dashboard link: https://supabase.com/dashboard/project/<ref>/...
+    const m = u.pathname.match(/\/project\/([a-z0-9]{10,})/i);
+    if (/(^|\.)supabase\.com$/i.test(u.hostname) && m) return `https://${m[1]}.supabase.co`;
+    return u.origin; // drops /rest/v1/ and anything else after the domain
+  } catch {
+    return v;
+  }
+}
+
+const url = cleanSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
 
 export const LIVE = !!(url && anon);
 
