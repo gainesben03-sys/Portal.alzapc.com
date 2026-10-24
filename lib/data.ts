@@ -55,15 +55,45 @@ export interface Action {
   history: HistoryEntry[];
   extension?: { requested: string; reason: string };
   completedAt?: string;
+  subtasks?: Subtask[];
+  reminders?: PersonalReminder[];
+}
+
+export interface Subtask {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
+export interface PersonalReminder {
+  sendAt: string; // ISO datetime
+  label: string;
+  to: string;
+  by: string;
+  scheduled: boolean; // true when the email provider accepted it
+}
+
+export function subtaskProgress(a: { subtasks?: Subtask[]; status?: Status }): number | null {
+  if (a.status === "completed") return 100;
+  if (!a.subtasks?.length) return null;
+  return Math.round((a.subtasks.filter((x) => x.done).length / a.subtasks.length) * 100);
 }
 
 export interface Project {
   id: string;
   clientId: string;
   name: string;
-  progress: number; // 0-100
+  status: "active" | "planned" | "done";
+  summary: string;
+  steps: Subtask[]; // progress is computed from these
   nextMilestone: string;
-  milestoneDue: string;
+  milestoneDue: string; // target date (planned: start target, done: completion date)
+}
+
+export function projectProgress(p: Project): number {
+  if (p.status === "done") return 100;
+  if (!p.steps.length) return 0;
+  return Math.round((p.steps.filter((x) => x.done).length / p.steps.length) * 100);
 }
 
 export interface Rules {
@@ -303,6 +333,12 @@ export function seed(): { actions: Action[]; projects: Project[] } {
       due: due(-4),
       status: "not_started",
       projectId: "bp-p1",
+      subtasks: [
+        { id: "s1", text: "Review JD: Lead Producer", done: true },
+        { id: "s2", text: "Review JD: Producer", done: true },
+        { id: "s3", text: "Review JD: Production Coordinator", done: false },
+        { id: "s4", text: "Review JD: Warehouse Lead", done: false },
+      ],
       attachments: [
         { name: "Production JDs v3.pdf", from: "Ben Gaines" },
         { name: "JD change summary.pdf", from: "Ben Gaines" },
@@ -326,6 +362,11 @@ export function seed(): { actions: Action[]; projects: Project[] } {
       due: due(0),
       status: "in_progress",
       projectId: "bp-p2",
+      subtasks: [
+        { id: "s1", text: "Feedback on Jamie", done: false },
+        { id: "s2", text: "Feedback on Morgan", done: true },
+        { id: "s3", text: "Feedback on Chris", done: false },
+      ],
       attachments: [{ name: "Finalist summaries.pdf", from: "Ben Gaines" }],
       history: [
         { at: at(-5), by: "Ben Gaines", text: "Request created and assigned to Marcus Cole" },
@@ -345,6 +386,11 @@ export function seed(): { actions: Action[]; projects: Project[] } {
       due: due(2),
       status: "not_started",
       projectId: "bp-p3",
+      subtasks: [
+        { id: "s1", text: "Export balances from payroll", done: false },
+        { id: "s2", text: "Include part-time staff", done: false },
+        { id: "s3", text: "Upload the file here", done: false },
+      ],
       attachments: [],
       history: [{ at: at(-3), by: "Ben Gaines", text: "Request created and assigned to Dana Ortiz" }],
     },
@@ -389,6 +435,11 @@ export function seed(): { actions: Action[]; projects: Project[] } {
       due: due(4),
       status: "in_progress",
       projectId: "bp-p3",
+      subtasks: [
+        { id: "s1", text: "Confirm California accrual and cap rules", done: true },
+        { id: "s2", text: "Draft policy language", done: false },
+        { id: "s3", text: "Leadership review", done: false },
+      ],
       attachments: [],
       history: [{ at: at(-3), by: "Ben Gaines", text: "Started drafting" }],
     },
@@ -479,7 +530,9 @@ export function seed(): { actions: Action[]; projects: Project[] } {
       id: "bp-p1",
       clientId: "blueprint",
       name: "Org structure refresh",
-      progress: 60,
+      status: "active",
+      summary: "New reporting lines and updated job descriptions for production.",
+      steps: [{ id: "st0", text: "Interview department leads", done: true }, { id: "st1", text: "Draft proposed structure", done: true }, { id: "st2", text: "Leadership workshop", done: true }, { id: "st3", text: "Updated job descriptions approved", done: false }, { id: "st4", text: "Finalize org chart", done: false }],
       nextMilestone: "Finalize org chart",
       milestoneDue: due(5),
     },
@@ -487,7 +540,9 @@ export function seed(): { actions: Action[]; projects: Project[] } {
       id: "bp-p2",
       clientId: "blueprint",
       name: "Senior Producer search",
-      progress: 75,
+      status: "active",
+      summary: "Full-cycle search for a senior producer.",
+      steps: [{ id: "st0", text: "Intake and scorecard", done: true }, { id: "st1", text: "Sourcing", done: true }, { id: "st2", text: "Screening", done: true }, { id: "st3", text: "Finalists to client", done: true }, { id: "st4", text: "Client feedback", done: false }, { id: "st5", text: "Offer and close", done: false }],
       nextMilestone: "Offer extended",
       milestoneDue: due(4),
     },
@@ -495,9 +550,81 @@ export function seed(): { actions: Action[]; projects: Project[] } {
       id: "bp-p3",
       clientId: "blueprint",
       name: "PTO policy update",
-      progress: 30,
+      status: "active",
+      summary: "Move to a clearer, California-compliant PTO policy.",
+      steps: [{ id: "st0", text: "Collect current balances", done: false }, { id: "st1", text: "Draft policy", done: false }, { id: "st2", text: "Leadership review", done: false }, { id: "st3", text: "Employee announcement", done: false }],
       nextMilestone: "Policy approved",
       milestoneDue: due(10),
+    },
+    {
+      id: "bp-r1",
+      clientId: "blueprint",
+      name: "Open enrollment prep",
+      status: "planned",
+      summary: "Plan comparison, employee session and enrollment reminders.",
+      steps: [],
+      nextMilestone: "Kickoff",
+      milestoneDue: due(15),
+    },
+    {
+      id: "bp-r2",
+      clientId: "blueprint",
+      name: "Handbook refresh",
+      status: "planned",
+      summary: "Annual update for new California laws taking effect Jan 1.",
+      steps: [],
+      nextMilestone: "Kickoff",
+      milestoneDue: due(35),
+    },
+    {
+      id: "bp-r3",
+      clientId: "blueprint",
+      name: "Annual performance reviews",
+      status: "planned",
+      summary: "Self reviews, manager reviews and calibration.",
+      steps: [],
+      nextMilestone: "Kickoff",
+      milestoneDue: due(55),
+    },
+    {
+      id: "bp-r4",
+      clientId: "blueprint",
+      name: "Pay equity check",
+      status: "planned",
+      summary: "Review pay bands against market and internal equity.",
+      steps: [],
+      nextMilestone: "Kickoff",
+      milestoneDue: due(90),
+    },
+    {
+      id: "bp-d1",
+      clientId: "blueprint",
+      name: "Offer letter template refresh",
+      status: "done",
+      summary: "Updated offer letter with current at-will and arbitration language.",
+      steps: [{ id: "st0", text: "Draft", done: true }, { id: "st1", text: "Legal review", done: true }, { id: "st2", text: "Approved", done: true }],
+      nextMilestone: "Approved",
+      milestoneDue: due(-6),
+    },
+    {
+      id: "bp-d2",
+      clientId: "blueprint",
+      name: "Leave of absence process",
+      status: "done",
+      summary: "Step-by-step process and forms for PDL, CFRA and FMLA requests.",
+      steps: [{ id: "st0", text: "Process map", done: true }, { id: "st1", text: "Forms", done: true }, { id: "st2", text: "Manager walkthrough", done: true }],
+      nextMilestone: "Rolled out",
+      milestoneDue: due(-28),
+    },
+    {
+      id: "bp-d3",
+      clientId: "blueprint",
+      name: "Manager onboarding training",
+      status: "done",
+      summary: "Two-hour session for new and existing managers.",
+      steps: [{ id: "st0", text: "Content", done: true }, { id: "st1", text: "Session delivered", done: true }, { id: "st2", text: "Follow-up resources shared", done: true }],
+      nextMilestone: "Delivered",
+      milestoneDue: due(-45),
     },
   ];
 

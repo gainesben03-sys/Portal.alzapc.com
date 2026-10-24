@@ -5,91 +5,144 @@
 // row-level security per client.
 
 import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
-import { Action, ADVISOR, CLIENTS, DEFAULT_RULES, Person, Project, Rules, seed, toISO } from "./data";
+import { Action, ADVISOR, Client, CLIENTS, DEFAULT_RULES, Person, Project, Rules, seed, toISO } from "./data";
+import {
+  Announcement,
+  Benefit,
+  Candidate,
+  ClientConfig,
+  PortalUser,
+  Note,
+  Resource,
+  Role,
+  seedModules,
+} from "./modules";
 
 export type Viewer = { kind: "advisor" } | { kind: "client"; clientId: string; person: Person };
 
-interface Store {
-  ready: boolean;
-  viewer: Viewer | null;
-  setViewer: (v: Viewer | null) => void;
+interface State {
   actions: Action[];
   projects: Project[];
   rules: Rules;
+  config: Record<string, ClientConfig>;
+  roles: Role[];
+  candidates: Candidate[];
+  resources: Resource[];
+  benefits: Benefit[];
+  announcements: Announcement[];
+  notes: Note[];
+  helpful: Record<string, "up" | "down">;
+}
+
+interface Store extends State {
+  ready: boolean;
+  viewer: Viewer | null;
+  who: string;
+  setViewer: (v: Viewer | null) => void;
   setRules: (r: Rules) => void;
   update: (id: string, patch: Partial<Action>, log: string) => void;
+  patch: (p: Partial<State>) => void;
+  getClient: (id: string) => Client | undefined;
+  /** The signed-in client user's record (null for Ben). */
+  me: PortalUser | null;
   reset: () => void;
 }
 
 const Ctx = createContext<Store | null>(null);
-const KEY = "alza-portal-demo-v1";
+const KEY = "alza-portal-demo-v3";
+
+function fresh(): State {
+  const a = seed();
+  const m = seedModules();
+  return { ...a, rules: DEFAULT_RULES, ...m, helpful: {} };
+}
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [viewer, setViewer] = useState<Viewer | null>(null);
-  const [actions, setActions] = useState<Action[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [rules, setRules] = useState<Rules>(DEFAULT_RULES);
+  const [state, setState] = useState<State>(() => ({
+    actions: [],
+    projects: [],
+    rules: DEFAULT_RULES,
+    config: {},
+    roles: [],
+    candidates: [],
+    resources: [],
+    benefits: [],
+    announcements: [],
+    notes: [],
+    helpful: {},
+  }));
 
   useEffect(() => {
-    let loaded = false;
+    let next = fresh();
     try {
       const raw = localStorage.getItem(KEY);
       if (raw) {
         const s = JSON.parse(raw);
-        setActions(s.actions);
-        setProjects(s.projects);
-        setRules(s.rules ?? DEFAULT_RULES);
+        next = { ...next, ...s.state };
         setViewer(s.viewer ?? null);
-        loaded = true;
       }
     } catch {}
-    if (!loaded) {
-      const s = seed();
-      setActions(s.actions);
-      setProjects(s.projects);
-    }
+    setState(next);
     setReady(true);
   }, []);
 
   useEffect(() => {
     if (!ready) return;
     try {
-      localStorage.setItem(KEY, JSON.stringify({ actions, projects, rules, viewer }));
+      localStorage.setItem(KEY, JSON.stringify({ state, viewer }));
     } catch {}
-  }, [ready, actions, projects, rules, viewer]);
+  }, [ready, state, viewer]);
 
   const value = useMemo<Store>(() => {
     const who = viewer?.kind === "client" ? viewer.person.name : ADVISOR.name;
+    const getClient = (id: string): Client | undefined => {
+      const base = CLIENTS.find((c) => c.id === id);
+      if (!base) return undefined;
+      const cfg = state.config[id];
+      if (!cfg) return base;
+      const esc = cfg.users.find((u) => u.email === cfg.escalationEmail);
+      return {
+        ...base,
+        accent: cfg.accent,
+        logo: cfg.logo,
+        contacts: cfg.users.map(({ name, role }) => ({ name, role })),
+        escalation: esc ? { name: esc.name, role: esc.role } : base.escalation,
+      };
+    };
+    const me =
+      viewer?.kind === "client"
+        ? state.config[viewer.clientId]?.users.find((u) => u.name === viewer.person.name) ?? null
+        : null;
     return {
+      ...state,
+      me,
       ready,
       viewer,
+      who,
       setViewer,
-      actions,
-      projects,
-      rules,
-      setRules,
+      getClient,
+      setRules: (rules) => setState((s) => ({ ...s, rules })),
+      patch: (p) => setState((s) => ({ ...s, ...p })),
       update: (id, patch, log) =>
-        setActions((list) =>
-          list.map((a) =>
+        setState((s) => ({
+          ...s,
+          actions: s.actions.map((a) =>
             a.id === id
               ? {
                   ...a,
                   ...patch,
-                  completedAt: patch.status === "completed" ? new Date().toISOString() : patch.completedAt ?? a.completedAt,
+                  completedAt:
+                    patch.status === "completed" ? new Date().toISOString() : patch.completedAt ?? a.completedAt,
                   history: [...a.history, { at: new Date().toISOString(), by: who, text: log }],
                 }
               : a
-          )
-        ),
-      reset: () => {
-        const s = seed();
-        setActions(s.actions);
-        setProjects(s.projects);
-        setRules(DEFAULT_RULES);
-      },
+          ),
+        })),
+      reset: () => setState(fresh()),
     };
-  }, [ready, viewer, actions, projects, rules]);
+  }, [ready, viewer, state]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
@@ -100,5 +153,21 @@ export function useStore() {
   return s;
 }
 
+/** Static lookup (base data). Prefer useStore().getClient for configured values. */
 export const clientById = (id: string) => CLIENTS.find((c) => c.id === id);
 export { toISO };
+
+/** Send an email notification to Ben via the server route. Never throws. */
+export async function notifyBen(subject: string, text: string): Promise<boolean> {
+  try {
+    const r = await fetch("/api/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subject, text }),
+    });
+    const j = await r.json();
+    return !!j.sent;
+  } catch {
+    return false;
+  }
+}

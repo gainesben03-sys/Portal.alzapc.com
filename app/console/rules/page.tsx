@@ -1,13 +1,12 @@
 "use client";
 
-import Link from "next/link";
-import { AlzaTopbar, useGuard } from "@/components/ui";
+import { AlzaNav, AlzaTopbar, useGuard } from "@/components/ui";
 import { CLIENTS, DEFAULT_RULES, Rules } from "@/lib/data";
 import { useStore } from "@/lib/store";
 
 export default function RulesPage() {
   const ok = useGuard("advisor");
-  const { rules, setRules } = useStore();
+  const { rules, setRules, getClient } = useStore();
   if (!ok) return null;
 
   const set = (k: keyof Rules, v: number | boolean) => setRules({ ...rules, [k]: v });
@@ -24,12 +23,10 @@ export default function RulesPage() {
 
   return (
     <>
-      <AlzaTopbar title="Reminder rules" />
+      <AlzaTopbar />
+      <AlzaNav />
       <main className="wrap">
-        <Link href="/console" className="small" style={{ color: "var(--blue)" }}>
-          ← Console
-        </Link>
-        <h1 style={{ marginTop: 10 }}>Reminder rules</h1>
+        <h1>Reminder rules</h1>
         <p className="muted" style={{ marginTop: 6 }}>
           Default policy for every client action. All counts are business days. Changes apply right away across the
           console and client workspaces.
@@ -77,7 +74,7 @@ export default function RulesPage() {
           <h2>Escalation contacts</h2>
         </div>
         <div className="card">
-          {CLIENTS.map((c) => (
+          {CLIENTS.map((b) => getClient(b.id)!).map((c) => (
             <div className="row" key={c.id}>
               <div className="grow title">{c.name}</div>
               <div className="small muted">

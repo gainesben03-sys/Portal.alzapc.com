@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ReactNode, useEffect, useState } from "react";
-import { Action, Client, dueLabel, reminderStage, urgency, Urgency } from "@/lib/data";
-import { clientById, useStore } from "@/lib/store";
+import { Action, Client, CLIENTS, dueLabel, reminderStage, subtaskProgress, urgency, Urgency } from "@/lib/data";
+import { useStore } from "@/lib/store";
+import { usePathname } from "next/navigation";
+import { canSee, MODULES } from "@/lib/modules";
 
 export function UrgencyPill({ a }: { a: Action }) {
   const { rules } = useStore();
@@ -29,8 +31,8 @@ export function ActionCard({
   showClient?: boolean;
   children?: ReactNode;
 }) {
-  const { rules } = useStore();
-  const client = clientById(a.clientId)!;
+  const { rules, getClient } = useStore();
+  const client = getClient(a.clientId)!;
   const u: Urgency = urgency(a, rules);
   return (
     <div className={`card action u-${u}`}>
@@ -54,6 +56,16 @@ export function ActionCard({
             <b>Why it matters:</b> {a.impact}
           </div>
         )}
+        {a.subtasks?.length ? (
+          <div style={{ marginTop: 10 }}>
+            <div className="tiny muted">
+              {a.subtasks.filter((x) => x.done).length} of {a.subtasks.length} steps done
+            </div>
+            <div className="bar" style={{ marginTop: 4 }}>
+              <div style={{ width: `${subtaskProgress(a)}%` }} />
+            </div>
+          </div>
+        ) : null}
       </Link>
       <div className="action-foot">
         {children}
@@ -75,14 +87,37 @@ export function useGuard(kind: "advisor" | "client", clientId?: string) {
   return ready && ok;
 }
 
-export function AlzaTopbar({ title = "Master Console" }: { title?: string }) {
+export function CompanySwitcher({ current }: { current?: string }) {
+  const router = useRouter();
+  const { getClient } = useStore();
+  return (
+    <select
+      className="company-switch"
+      value={current ?? ""}
+      aria-label="Switch company"
+      onChange={(e) => router.push(e.target.value ? `/c/${e.target.value}` : "/console")}
+    >
+      <option value="">All companies</option>
+      {CLIENTS.map((c) => (
+        <option key={c.id} value={c.id}>
+          {getClient(c.id)?.name}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+export function AlzaTopbar({ title = "Console" }: { title?: string }) {
   const { setViewer } = useStore();
   const router = useRouter();
   return (
     <header className="topbar">
-      <Link href="/console" className="wordmark">
-        alza<span>{title}</span>
-      </Link>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+        <Link href="/console" className="wordmark">
+          alza<span className="hide-sm">{title}</span>
+        </Link>
+        <CompanySwitcher />
+      </div>
       <button
         className="viewer-switch"
         onClick={() => {
@@ -90,7 +125,7 @@ export function AlzaTopbar({ title = "Master Console" }: { title?: string }) {
           router.push("/");
         }}
       >
-        Ben · Sign out
+        Sign out
       </button>
     </header>
   );
@@ -101,6 +136,17 @@ export function ClientTopbar({ client }: { client: Client }) {
   const router = useRouter();
   const isAdvisor = viewer?.kind === "advisor";
   return (
+    <>
+    {isAdvisor && (
+      <div className="advisor-strip">
+        <Link href="/console" className="wordmark" style={{ fontSize: 16 }}>alza</Link>
+        <span className="tiny" style={{ opacity: 0.8 }}>Viewing</span>
+        <CompanySwitcher current={client.id} />
+        <Link href={`/console/clients/${client.id}`} className="tiny" style={{ marginLeft: "auto", color: "#9fc0e8" }}>
+          Customize
+        </Link>
+      </div>
+    )}
     <header className="topbar client">
       <Link href={`/c/${client.id}`} style={{ display: "flex", alignItems: "center", gap: 10 }}>
         {client.logo ? <img src={client.logo} alt={client.name} className="client-logo" /> : <b>{client.name}</b>}
@@ -109,11 +155,7 @@ export function ClientTopbar({ client }: { client: Client }) {
         <span className="powered">
           powered by <b>alza</b>
         </span>
-        {isAdvisor ? (
-          <Link href="/console" className="viewer-switch">
-            Back to console
-          </Link>
-        ) : (
+        {isAdvisor ? null : (
           <button
             className="viewer-switch"
             onClick={() => {
@@ -126,6 +168,7 @@ export function ClientTopbar({ client }: { client: Client }) {
         )}
       </div>
     </header>
+    </>
   );
 }
 
@@ -151,5 +194,63 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
         {children}
       </div>
     </div>
+  );
+}
+
+export function ClientNav({ clientId }: { clientId: string }) {
+  const { config, notes, viewer, me } = useStore();
+  const path = usePathname();
+  const cfg = config[clientId];
+  const base = `/c/${clientId}`;
+  const unread = viewer?.kind === "advisor" ? notes.filter((n) => n.clientId === clientId && n.status === "new").length : 0;
+  const access = me?.access;
+  const items = [
+    ...(access === "hiring" ? [] : [{ href: base, label: "Home" }, { href: `${base}/projects`, label: "Projects" }]),
+    ...MODULES.filter((m) => cfg?.modules[m.key] && canSee(access, m.key)).map((m) => ({ href: `${base}/${m.key}`, label: m.label })),
+    ...(canSee(access, "team") ? [{ href: `${base}/team`, label: "Team" }] : []),
+  ];
+  return (
+    <nav className="subnav">
+      <div className="subnav-inner">
+        {items.map((i) => {
+          const on = i.href === base ? path === base || path.startsWith(`${base}/a/`) : path.startsWith(i.href);
+          return (
+            <Link key={i.href} href={i.href} className={on ? "on" : ""}>
+              {i.label}
+              {i.label === "Note board" && unread > 0 && <span className="badge">{unread}</span>}
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
+
+export function AlzaNav() {
+  const { notes, resources } = useStore();
+  const path = usePathname();
+  const unread = notes.filter((n) => n.status === "new").length;
+  const stale = resources.filter((r) => r.outdated).length;
+  const items = [
+    { href: "/console", label: "Overview" },
+    { href: "/console/board", label: "Notes", badge: unread },
+    { href: "/console/library", label: "Library", badge: stale },
+    { href: "/console/clients", label: "Clients" },
+    { href: "/console/rules", label: "Reminder rules" },
+  ];
+  return (
+    <nav className="subnav dark">
+      <div className="subnav-inner wide">
+        {items.map((i) => {
+          const on = i.href === "/console" ? path === "/console" : path.startsWith(i.href);
+          return (
+            <Link key={i.href} href={i.href} className={on ? "on" : ""}>
+              {i.label}
+              {!!i.badge && <span className="badge">{i.badge}</span>}
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
   );
 }

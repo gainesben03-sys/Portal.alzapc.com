@@ -2,18 +2,19 @@
 
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import { ActionCard, ClientTopbar, Toast, useGuard, useToast } from "@/components/ui";
-import { fmt, parseDay, urgency } from "@/lib/data";
-import { clientById, useStore } from "@/lib/store";
+import Link from "next/link";
+import { ActionCard, ClientNav, ClientTopbar, Toast, useGuard, useToast } from "@/components/ui";
+import { fmt, parseDay, projectProgress, urgency } from "@/lib/data";
+import { useStore } from "@/lib/store";
 
 type Tab = "you" | "team" | "alza" | "done";
 const ORDER = { blocker: 0, overdue: 1, today: 2, soon: 3, later: 4, done: 5 } as const;
 
 export default function Workspace() {
   const { client: clientId } = useParams<{ client: string }>();
-  const client = clientById(clientId);
   const ok = useGuard("client", clientId);
-  const { actions, projects, rules, viewer, update } = useStore();
+  const { actions, projects, rules, viewer, update, getClient, config } = useStore();
+  const client = getClient(clientId);
   const [tab, setTab] = useState<Tab>("you");
   const toast = useToast();
 
@@ -44,6 +45,7 @@ export default function Workspace() {
   return (
     <div style={{ ["--accent" as string]: client.accent }}>
       <ClientTopbar client={client} />
+      <ClientNav clientId={client.id} />
       <main className="wrap">
         <div className="hero">
           <h1>Hi {firstName}</h1>
@@ -69,7 +71,7 @@ export default function Workspace() {
           {lists[tab].length === 0 && <div className="card muted small">Nothing here right now.</div>}
           {lists[tab].map((a) => (
             <ActionCard key={a.id} a={a} href={`/c/${client.id}/a/${a.id}`}>
-              {a.side === "client" && a.kind === "approval" && a.status !== "completed" && (
+              {a.side === "client" && a.kind === "approval" && a.status !== "completed" && !a.subtasks?.some((x) => !x.done) && (
                 <button
                   className="btn sm primary"
                   onClick={() => {
@@ -87,10 +89,11 @@ export default function Workspace() {
         </div>
 
         <div className="section-head section">
-          <h2>Projects</h2>
+          <h2>Projects in progress</h2>
+          <Link href={`/c/${client.id}/projects`}>Roadmap and completed</Link>
         </div>
         {projects
-          .filter((p) => p.clientId === client.id)
+          .filter((p) => p.clientId === client.id && p.status === "active")
           .map((p) => {
             const blockers = openClient.filter(
               (a) => a.projectId === p.id && ["overdue", "blocker", "today"].includes(urgency(a, rules))
@@ -99,10 +102,10 @@ export default function Workspace() {
               <div className="card" key={p.id}>
                 <div className="row" style={{ alignItems: "baseline" }}>
                   <h3>{p.name}</h3>
-                  <span className="small muted">{p.progress}%</span>
+                  <span className="small muted">{projectProgress(p)}%</span>
                 </div>
                 <div className="bar">
-                  <div style={{ width: `${p.progress}%` }} />
+                  <div style={{ width: `${projectProgress(p)}%` }} />
                 </div>
                 <div className="tiny muted" style={{ marginTop: 8 }}>
                   Next: {p.nextMilestone} · target {fmt(p.milestoneDue)}
@@ -115,6 +118,14 @@ export default function Workspace() {
               </div>
             );
           })}
+        {config[client.id]?.modules.board && (
+          <Link href={`/c/${client.id}/board`} className="card" style={{ display: "block", marginTop: 22 }}>
+            <h3>Need something from Alza?</h3>
+            <p className="small muted" style={{ marginTop: 4 }}>
+              Leave a note or a request on the note board. Ben gets an email right away.
+            </p>
+          </Link>
+        )}
         <p className="demo-note">Fictional sample data for the prototype.</p>
       </main>
       <Toast msg={toast.msg} onDone={toast.clear} />
