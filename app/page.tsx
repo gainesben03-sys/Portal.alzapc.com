@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CLIENTS } from "@/lib/data";
 import { useStore } from "@/lib/store";
+import { ThemeToggle } from "@/components/ui";
 
 export default function Login() {
   const { setViewer, reset, config, patch, getClient } = useStore();
@@ -48,7 +49,10 @@ export default function Login() {
   return (
     <main className="login">
       <div className="card">
-        <div className="wordmark">alza</div>
+        <div className="row" style={{ alignItems: "center" }}>
+          <div className="wordmark">alza</div>
+          <span className="login-theme"><ThemeToggle /></span>
+        </div>
         <h1 style={{ marginTop: 18 }}>Client portal</h1>
         <p className="muted" style={{ marginTop: 6 }}>
           Sign in to see what's in motion, what needs your sign-off, and everything Alza has shared with your team.

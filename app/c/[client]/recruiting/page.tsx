@@ -20,7 +20,7 @@ function Score({ n }: { n: number }) {
 export default function Recruiting() {
   const { client: clientId } = useParams<{ client: string }>();
   const ok = useGuard("client", clientId);
-  const { getClient, roles, candidates, patch, actions, update, who, config } = useStore();
+  const { getClient, roles, candidates, patch, actions, update, who, config, notice, viewer } = useStore();
   const client = getClient(clientId);
   const [view, setView] = useState<Record<string, "cards" | "compare">>({});
   const [fb, setFb] = useState<Candidate | null>(null);
@@ -57,6 +57,8 @@ export default function Recruiting() {
       );
     }
     setFb(null);
+    if (viewer?.kind === "client")
+      notice({ clientId: client.id, kind: "feedback", text: `${who}: ${DECISION_LABEL[decision]} on ${c.name} (${role.title})`, href: `/c/${client.id}/recruiting` });
     const sent = await notifyBen(
       `${client.name}: ${DECISION_LABEL[decision]} on ${c.name} (${role.title})`,
       `${who} marked ${c.name} as "${DECISION_LABEL[decision]}" for ${role.title}.\n\n${note || "(no note)"}`

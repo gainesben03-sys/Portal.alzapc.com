@@ -23,6 +23,15 @@ Clickable prototype of the Alza client portal: the Master Console for Ben and a 
 - **Team** (client executives): invite by email or generate single-use invite codes (7-day expiry); join with a code from the sign-in page. Access levels: Executive, Manager, Hiring manager (recruiting only).
 - **Client setup** (console): turn modules on or off, brand color, logo upload, users and access, escalation contact.
 
+**Added in round 3**
+
+- **HR Huddle** (`/console/huddle`): one recap email per client (weekly, every 2 weeks, or monthly, on a chosen weekday at 8 AM). Covers what needs them, project progress, wins, what Ben is working on, and what's coming. Skips quiet weeks, bundles friendly and due-date nudges, optional personal note, live preview, "Send me a test", per-person opt in from the client Home page.
+- **Share with HR** (`/c/[client]/share`): clients upload documents, link them to a document Ben asked for, add a note, mark confidential. Ben gets an email (file names only, never attachments) and a bell notification.
+- **Notification bell** in the console: uploads, notes, approvals, extension and change requests, recruiting feedback.
+- **Files** inbox (`/console/files`) with mark reviewed.
+- **Light and dark mode** toggle on every screen (remembers your choice, follows the phone setting by default).
+- **HEX color** field in Client setup, with a readability warning for colors too light for white button text.
+
 Reminder logic (business days, configurable): friendly reminder 3 before, due-date reminder, overdue notice 1 after, escalation 3 after, blocker flag on the console 7 after. When a client requests changes, the item moves to Alza's side so the client is never shown as the holdup.
 
 ## Run locally

@@ -2,10 +2,55 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlzaNav, AlzaTopbar, Toast, useGuard, useToast } from "@/components/ui";
 import { Access, ACCESS_LABEL, ClientConfig, MODULES, PortalUser } from "@/lib/modules";
 import { useStore } from "@/lib/store";
+
+function luminance(hex: string) {
+  const n = parseInt(hex.slice(1), 16);
+  const ch = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2];
+}
+
+function HexField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [draft, setDraft] = useState(value.toUpperCase());
+  const [bad, setBad] = useState(false);
+  useEffect(() => setDraft(value.toUpperCase()), [value]);
+  const commit = (raw: string) => {
+    let v = raw.trim().replace(/^#?/, "#");
+    if (/^#[0-9a-f]{3}$/i.test(v)) v = "#" + v.slice(1).split("").map((c) => c + c).join("");
+    if (/^#[0-9a-f]{6}$/i.test(v)) {
+      setBad(false);
+      onChange(v.toLowerCase());
+    } else setBad(true);
+  };
+  const contrast = (1.05) / (luminance(value) + 0.05); // white text on the accent
+  return (
+    <div style={{ marginTop: 12 }}>
+      <label className="f" style={{ marginTop: 0 }}>HEX code</label>
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <input
+          className="f hex"
+          value={draft}
+          maxLength={7}
+          placeholder="#2B3FF5"
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => commit(draft)}
+          onKeyDown={(e) => e.key === "Enter" && commit(draft)}
+          aria-invalid={bad}
+        />
+        <button className="btn sm" onClick={() => commit(draft)}>Apply</button>
+        <span className="btn sm primary" style={{ pointerEvents: "none" }}>Button preview</span>
+      </div>
+      {bad && <p className="tiny" style={{ color: "var(--red)", marginTop: 6 }}>Use a 6-digit HEX like #2B3FF5.</p>}
+      {!bad && contrast < 3 && <p className="tiny" style={{ color: "var(--amber)", marginTop: 6 }}>This color is light, so white button text will be hard to read. A darker shade works better.</p>}
+    </div>
+  );
+}
 
 const SWATCHES = ["#2b3ff5", "#1a2b4a", "#4a7ab5", "#6b8c6b", "#8a6d3b", "#b4345c", "#0f766e", "#6d28d9"];
 
@@ -32,7 +77,7 @@ export default function ClientSetup() {
         <Link href="/console/clients" className="small" style={{ color: "var(--blue)" }}>← All clients</Link>
         <div className="row" style={{ marginTop: 10, alignItems: "center" }}>
           <div className="grow" style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {client.logo ? <img src={client.logo} alt="" style={{ height: 34 }} /> : <h1>{client.name}</h1>}
+            {client.logo ? <img src={client.logo} alt="" className="logo-img" style={{ height: 34 }} /> : <h1>{client.name}</h1>}
           </div>
           <Link href={`/c/${id}`} className="btn sm">Preview workspace</Link>
         </div>
@@ -62,6 +107,7 @@ export default function ClientSetup() {
             ))}
             <input type="color" value={cfg.accent} onChange={(e) => set({ accent: e.target.value })} aria-label="Custom color" style={{ width: 38, height: 34, border: 0, background: "none" }} />
           </div>
+          <HexField value={cfg.accent} onChange={(v) => set({ accent: v })} />
           <p className="tiny muted" style={{ marginTop: 10 }}>Used for buttons and highlights in their workspace.</p>
         </div>
 
@@ -69,7 +115,7 @@ export default function ClientSetup() {
         <div className="card">
           <div className="row">
             <div className="grow" style={{ minHeight: 40, display: "flex", alignItems: "center" }}>
-              {cfg.logo ? <img src={cfg.logo} alt="" style={{ maxHeight: 44, maxWidth: 200 }} /> : <span className="small muted">No logo yet. Their name shows instead.</span>}
+              {cfg.logo ? <img src={cfg.logo} alt="" className="logo-img" style={{ maxHeight: 44, maxWidth: 200 }} /> : <span className="small muted">No logo yet. Their name shows instead.</span>}
             </div>
             <label className="btn sm" style={{ cursor: "pointer" }}>
               Upload

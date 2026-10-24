@@ -39,7 +39,71 @@ export interface InviteCode {
   usedBy?: string;
 }
 
+export type Cadence = "weekly" | "biweekly" | "monthly" | "off";
+export interface HuddleSettings {
+  cadence: Cadence;
+  day: number; // 1 = Monday ... 5 = Friday
+  recipients: string[]; // user emails opted in
+  skipIfQuiet: boolean; // don't send when nothing is due or changed
+  bundleReminders: boolean; // fold friendly/due-date nudges into the Huddle
+  personalNote: string;
+  lastSent?: string;
+}
+
+export const DAY_NAMES = ["", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+export const CADENCE_LABEL: Record<Cadence, string> = {
+  weekly: "Every week",
+  biweekly: "Every 2 weeks",
+  monthly: "First week of the month",
+  off: "Off",
+};
+
+/** Next send time at 8:00 AM local for the given settings. */
+export function nextHuddle(h: HuddleSettings, from = new Date()): Date | null {
+  if (h.cadence === "off") return null;
+  const d = new Date(from);
+  d.setHours(8, 0, 0, 0);
+  if (d <= from) d.setDate(d.getDate() + 1);
+  for (let i = 0; i < 70; i++) {
+    const ok =
+      d.getDay() === h.day &&
+      (h.cadence !== "monthly" || d.getDate() <= 7) &&
+      (h.cadence !== "biweekly" || !h.lastSent || d.getTime() - new Date(h.lastSent).getTime() >= 13 * 86400000);
+    if (ok) return d;
+    d.setDate(d.getDate() + 1);
+  }
+  return null;
+}
+
+export interface SharedFile {
+  id: string;
+  clientId: string;
+  name: string;
+  size: number;
+  type: string;
+  category: string;
+  note: string;
+  confidential: boolean;
+  by: string;
+  at: string;
+  reviewed: boolean;
+  requestId?: string; // the document request it answers
+}
+export const FILE_CATEGORIES = ["Signed document", "Employee file", "Payroll or benefits", "Policy or handbook", "Other"];
+
+export type NoticeKind = "upload" | "note" | "completed" | "extension" | "revision" | "feedback";
+export interface Notice {
+  id: string;
+  clientId: string;
+  kind: NoticeKind;
+  text: string;
+  href: string;
+  at: string;
+  read: boolean;
+}
+
 export interface ClientConfig {
+  huddle: HuddleSettings;
   modules: Record<ModuleKey, boolean>;
   accent: string;
   logo?: string; // URL or data URL
@@ -181,6 +245,7 @@ export function seedModules() {
 
   const config: Record<string, ClientConfig> = {
     blueprint: {
+      huddle: { cadence: "weekly", day: 1, recipients: ["alex@example.com", "priya@example.com"], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
       modules: { recruiting: true, resources: true, wellness: true, board: true },
       accent: "#2b3ff5",
       logo: "/blueprint-logo.png",
@@ -194,6 +259,7 @@ export function seedModules() {
       ],
     },
     harbor: {
+      huddle: { cadence: "weekly", day: 1, recipients: ["sam@example.com"], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
       modules: { recruiting: false, resources: true, wellness: false, board: true },
       accent: "#6b8c6b",
       codes: [],
@@ -201,6 +267,7 @@ export function seedModules() {
       users: [{ name: "Sam Patel", role: "Owner", email: "sam@example.com", access: "exec" }],
     },
     northgate: {
+      huddle: { cadence: "weekly", day: 1, recipients: ["rae@example.com"], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
       modules: { recruiting: false, resources: true, wellness: true, board: true },
       accent: "#4a7ab5",
       codes: [],
@@ -211,6 +278,7 @@ export function seedModules() {
       ],
     },
     cedar: {
+      huddle: { cadence: "weekly", day: 1, recipients: ["jo@example.com"], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
       modules: { recruiting: true, resources: false, wellness: false, board: true },
       accent: "#8a6d3b",
       codes: [],
@@ -344,7 +412,15 @@ export function seedModules() {
     },
   ];
 
-  return { config, roles, candidates, resources, benefits, announcements, notes };
+  const files: SharedFile[] = [
+    { id: "f1", clientId: "blueprint", name: "Signed offer - M. Diaz.pdf", size: 184000, type: "application/pdf", category: "Signed document", note: "Signed copy for the file.", confidential: true, by: "Priya Shah", at: at(-3, 15), reviewed: true },
+  ];
+  const notices: Notice[] = [
+    { id: "x1", clientId: "blueprint", kind: "note", text: "Dana Ortiz asked a question on the note board", href: "/console/board", at: at(0, 9), read: false },
+    { id: "x2", clientId: "blueprint", kind: "feedback", text: "Marcus Cole advanced Morgan Lee (Senior Producer)", href: "/c/blueprint/recruiting", at: at(-2, 14), read: true },
+  ];
+
+  return { config, roles, candidates, resources, benefits, announcements, notes, files, notices };
 }
 
 export const DAY_MS = 86400000;

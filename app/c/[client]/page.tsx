@@ -13,14 +13,14 @@ const ORDER = { blocker: 0, overdue: 1, today: 2, soon: 3, later: 4, done: 5 } a
 export default function Workspace() {
   const { client: clientId } = useParams<{ client: string }>();
   const ok = useGuard("client", clientId);
-  const { actions, projects, rules, viewer, update, getClient, config } = useStore();
+  const { actions, projects, rules, viewer, update, getClient, config, me, patch } = useStore();
   const client = getClient(clientId);
   const [tab, setTab] = useState<Tab>("you");
   const toast = useToast();
 
   if (!ok || !client) return null;
 
-  const me = viewer?.kind === "client" ? viewer.person.name : null;
+  const meName = viewer?.kind === "client" ? viewer.person.name : null;
   const mine = actions.filter((a) => a.clientId === client.id);
   const sort = (l: typeof mine) =>
     [...l].sort(
@@ -29,16 +29,16 @@ export default function Workspace() {
 
   const openClient = mine.filter((a) => a.side === "client" && a.status !== "completed");
   const lists: Record<Tab, typeof mine> = {
-    you: sort(openClient.filter((a) => !me || a.owner.name === me)),
-    team: sort(openClient.filter((a) => me && a.owner.name !== me)),
+    you: sort(openClient.filter((a) => !meName || a.owner.name === meName)),
+    team: sort(openClient.filter((a) => meName && a.owner.name !== meName)),
     alza: sort(mine.filter((a) => a.side === "alza" && a.status !== "completed")),
     done: sort(mine.filter((a) => a.status === "completed")),
   };
   const overdueCount = openClient.filter((a) => ["overdue", "blocker"].includes(urgency(a, rules))).length;
   const todayCount = openClient.filter((a) => urgency(a, rules) === "today").length;
-  const firstName = me?.split(" ")[0] ?? "Ben";
+  const firstName = meName?.split(" ")[0] ?? "Ben";
 
-  const tabs: [Tab, string][] = me
+  const tabs: [Tab, string][] = meName
     ? [["you", "Needs you"], ["team", "Your team"], ["alza", "Alza is on it"], ["done", "Done"]]
     : [["you", "Waiting on client"], ["alza", "Alza is on it"], ["done", "Done"]];
 
@@ -118,6 +118,10 @@ export default function Workspace() {
               </div>
             );
           })}
+        <Link href={`/c/${client.id}/share`} className="card" style={{ display: "block", marginTop: 22 }}>
+          <h3>Share with HR</h3>
+          <p className="small muted" style={{ marginTop: 4 }}>Send Ben signed forms, employee documents or anything he asked for. No email attachments needed.</p>
+        </Link>
         {config[client.id]?.modules.board && (
           <Link href={`/c/${client.id}/board`} className="card" style={{ display: "block", marginTop: 22 }}>
             <h3>Need something from Alza?</h3>
@@ -125,6 +129,26 @@ export default function Workspace() {
               Leave a note or a request on the note board. Ben gets an email right away.
             </p>
           </Link>
+        )}
+        {me && config[client.id] && (
+          <label className="card rule" style={{ marginTop: 22, cursor: "pointer" }}>
+            <span className="switch">
+              <input
+                type="checkbox"
+                checked={config[client.id].huddle.recipients.includes(me.email)}
+                onChange={(e) => {
+                  const cfg = config[client.id];
+                  const r = cfg.huddle.recipients;
+                  patch({ config: { ...config, [client.id]: { ...cfg, huddle: { ...cfg.huddle, recipients: e.target.checked ? [...r, me.email] : r.filter((x) => x !== me.email) } } } });
+                }}
+              />
+              <span />
+            </span>
+            <div>
+              <b>HR Huddle email</b>
+              <div className="tiny muted">A short recap of what needs you and where projects stand. Quiet weeks are skipped.</div>
+            </div>
+          </label>
         )}
         <p className="demo-note">Fictional sample data for the prototype.</p>
       </main>

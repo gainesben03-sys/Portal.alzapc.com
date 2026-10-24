@@ -204,13 +204,13 @@ export interface ReminderStep {
   state: "sent" | "next" | "upcoming" | "skipped";
 }
 
-export function reminderPlan(a: Action, client: Client, rules: Rules): ReminderStep[] {
+export function reminderPlan(a: Action, client: Client, rules: Rules, bundled = false): ReminderStep[] {
   const due = parseDay(a.due);
   const now = today();
   const steps: Omit<ReminderStep, "state">[] = [
-    { label: "Friendly reminder", date: addBusinessDays(due, -rules.friendlyBefore), to: a.owner.name },
+    { label: bundled ? "Friendly reminder (in HR Huddle)" : "Friendly reminder", date: addBusinessDays(due, -rules.friendlyBefore), to: a.owner.name },
   ];
-  if (rules.dueDay) steps.push({ label: "Due-date reminder", date: due, to: a.owner.name });
+  if (rules.dueDay) steps.push({ label: bundled ? "Due-date reminder (in HR Huddle)" : "Due-date reminder", date: due, to: a.owner.name });
   steps.push(
     { label: "Overdue notice", date: addBusinessDays(due, rules.overdueNotice), to: a.owner.name },
     {

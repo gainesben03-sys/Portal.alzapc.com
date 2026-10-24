@@ -13,7 +13,9 @@ import {
   ClientConfig,
   PortalUser,
   Note,
+  Notice,
   Resource,
+  SharedFile,
   Role,
   seedModules,
 } from "./modules";
@@ -31,6 +33,8 @@ interface State {
   benefits: Benefit[];
   announcements: Announcement[];
   notes: Note[];
+  files: SharedFile[];
+  notices: Notice[];
   helpful: Record<string, "up" | "down">;
 }
 
@@ -42,6 +46,8 @@ interface Store extends State {
   setRules: (r: Rules) => void;
   update: (id: string, patch: Partial<Action>, log: string) => void;
   patch: (p: Partial<State>) => void;
+  /** Add an item to Ben's notification bell. */
+  notice: (n: Omit<Notice, "id" | "at" | "read">) => void;
   getClient: (id: string) => Client | undefined;
   /** The signed-in client user's record (null for Ben). */
   me: PortalUser | null;
@@ -49,7 +55,7 @@ interface Store extends State {
 }
 
 const Ctx = createContext<Store | null>(null);
-const KEY = "alza-portal-demo-v3";
+const KEY = "alza-portal-demo-v4";
 
 function fresh(): State {
   const a = seed();
@@ -71,6 +77,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     benefits: [],
     announcements: [],
     notes: [],
+    files: [],
+    notices: [],
     helpful: {},
   }));
 
@@ -125,9 +133,29 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       getClient,
       setRules: (rules) => setState((s) => ({ ...s, rules })),
       patch: (p) => setState((s) => ({ ...s, ...p })),
-      update: (id, patch, log) =>
+      notice: (n) =>
         setState((s) => ({
           ...s,
+          notices: [{ ...n, id: `x${Date.now()}${Math.random().toString(36).slice(2, 6)}`, at: new Date().toISOString(), read: false }, ...s.notices],
+        })),
+      update: (id, patch, log) =>
+        setState((s) => {
+          const before = s.actions.find((a) => a.id === id);
+          let notices = s.notices;
+          if (before && viewer?.kind === "client" && patch.status && patch.status !== before.status) {
+            const kind =
+              patch.status === "completed" ? "completed" : patch.status === "extension_requested" ? "extension" : patch.status === "needs_revision" ? "revision" : patch.status === "submitted" ? "upload" : null;
+            if (kind) {
+              const verb = { completed: "completed", extension: "asked for more time on", revision: "requested changes on", upload: "uploaded a file to" }[kind];
+              notices = [
+                { id: `x${Date.now()}`, clientId: before.clientId, kind, text: `${who} ${verb} "${before.title}"`, href: `/c/${before.clientId}/a/${before.id}`, at: new Date().toISOString(), read: false },
+                ...notices,
+              ];
+            }
+          }
+          return {
+          ...s,
+          notices,
           actions: s.actions.map((a) =>
             a.id === id
               ? {
@@ -139,7 +167,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 }
               : a
           ),
-        })),
+          };
+        }),
       reset: () => setState(fresh()),
     };
   }, [ready, viewer, state]);

@@ -17,7 +17,7 @@ const KINDS: { k: NoteKind; hint: string }[] = [
 export default function Board() {
   const { client: clientId } = useParams<{ client: string }>();
   const ok = useGuard("client", clientId);
-  const { getClient, notes, patch, viewer, config } = useStore();
+  const { getClient, notes, patch, viewer, config, notice } = useStore();
   const client = getClient(clientId);
   const [kind, setKind] = useState<NoteKind>("Need");
   const [text, setText] = useState("");
@@ -57,6 +57,8 @@ export default function Board() {
       `${author.name} (${author.role}) at ${client.name} posted a ${kind.toLowerCase()} on the note board:\n\n${n.text}\n\nOpen the portal: https://portal.alzapc.com/console/board`
     );
     patch({ notes: [{ ...n, emailed: sent }, ...notes] });
+    if (viewer?.kind === "client")
+      notice({ clientId: client.id, kind: "note", text: `${author.name} posted a ${kind.toLowerCase()}${urgent ? " (time-sensitive)" : ""}`, href: "/console/board" });
     setText("");
     setUrgent(false);
     setBusy(false);
@@ -69,6 +71,7 @@ export default function Board() {
         x.id === n.id ? { ...x, status: x.status === "done" ? "seen" : x.status, replies: [...x.replies, { by: author.name, text: t, at: new Date().toISOString() }] } : x
       ),
     });
+    if (viewer?.kind === "client") notice({ clientId: client.id, kind: "note", text: `${author.name} replied on the note board`, href: "/console/board" });
     await notifyBen(`${client.name}: reply from ${author.name}`, `${author.name} replied on the note board:\n\n${t}`);
   };
 

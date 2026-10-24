@@ -11,7 +11,7 @@ const ORDER = { blocker: 0, overdue: 1, today: 2, soon: 3, later: 4, done: 5 } a
 
 export default function Console() {
   const ok = useGuard("advisor");
-  const { actions, rules, update, notes, candidates, roles, getClient } = useStore();
+  const { actions, rules, update, notes, candidates, roles, getClient, files } = useStore();
   const toast = useToast();
 
   const open = useMemo(() => actions.filter((a) => a.status !== "completed"), [actions]);
@@ -29,6 +29,7 @@ export default function Console() {
 
   const newNotes = notes.filter((n) => n.status === "new");
   const awaiting = candidates.filter((c) => !c.decision);
+  const newFiles = files.filter((f) => !f.reviewed);
 
   if (!ok) return null;
 
@@ -93,12 +94,21 @@ export default function Console() {
           </section>
 
           <aside>
-            {(newNotes.length > 0 || awaiting.length > 0) && (
+            {(newNotes.length > 0 || awaiting.length > 0 || newFiles.length > 0) && (
               <div style={{ marginBottom: 22 }}>
                 <div className="section-head">
                   <h2>Needs a look</h2>
                 </div>
                 <div className="card">
+                  {newFiles.map((f) => (
+                    <Link className="row" key={f.id} href="/console/files">
+                      <div className="grow">
+                        <div className="title ellipsis">{f.name}</div>
+                        <div className="tiny muted ellipsis">{getClient(f.clientId)?.name} · shared by {f.by}{f.confidential ? " · confidential" : ""}</div>
+                      </div>
+                      <span className="pill alza">New file</span>
+                    </Link>
+                  ))}
                   {newNotes.map((n) => (
                     <Link className="row" key={n.id} href="/console/board">
                       <div className="grow">

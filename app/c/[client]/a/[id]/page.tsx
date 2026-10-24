@@ -10,7 +10,7 @@ import { useStore } from "@/lib/store";
 export default function ActionDetail() {
   const { client: clientId, id } = useParams<{ client: string; id: string }>();
   const ok = useGuard("client", clientId);
-  const { actions, rules, viewer, update, getClient, me } = useStore();
+  const { actions, rules, viewer, update, getClient, me, config } = useStore();
   const client = getClient(clientId);
   const toast = useToast();
   const [sheet, setSheet] = useState<null | "extension" | "revision" | "remind">(null);
@@ -32,7 +32,8 @@ export default function ActionDetail() {
   const isAdvisor = viewer?.kind === "advisor";
   const open = a.status !== "completed";
   const clientCanAct = !isAdvisor && a.side === "client" && open;
-  const plan = a.side === "client" ? reminderPlan(a, client, rules) : [];
+  const hud = config[clientId]?.huddle;
+  const plan = a.side === "client" ? reminderPlan(a, client, rules, !!hud && hud.bundleReminders && hud.cadence !== "off") : [];
   const subs = a.subtasks ?? [];
   const left = subs.filter((x) => !x.done).length;
   const canCheck = open && (isAdvisor || a.side === "client");
