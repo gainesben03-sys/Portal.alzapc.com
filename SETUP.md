@@ -48,6 +48,8 @@ Vercel → your project → **Settings → Environment Variables**. Add each for
 | `NOTIFY_FROM` | `AlzaHR Portal <portal@alzapc.com>` |
 | `NOTIFY_TO` | `ben@alzapc.com` (where your alerts go) |
 | `PORTAL_URL` | `https://portal.alzapc.com` |
+| `ANTHROPIC_API_KEY` | From console.anthropic.com (turns on Claude drafting) |
+| `ANTHROPIC_MODEL` | Optional. Defaults to `claude-sonnet-5-5` |
 
 Then **Deployments → ⋯ on the latest → Redeploy**.
 

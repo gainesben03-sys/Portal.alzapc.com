@@ -28,7 +28,7 @@ export default function ShareWithHR() {
 
   const requests = actions.filter((a) => a.clientId === client.id && a.side === "client" && a.kind !== "approval" && a.kind !== "feedback" && a.status !== "completed");
   const mine = files
-    .filter((f) => f.clientId === client.id && (!f.confidential || f.by === who || viewer?.kind === "advisor"))
+    .filter((f) => f.clientId === client.id && !f.fromAdvisor && (!f.confidential || f.by === who || viewer?.kind === "advisor"))
     .sort((a, b) => b.at.localeCompare(a.at));
 
   const add = (list: FileList | null) => {

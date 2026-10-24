@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AlzaNav, AlzaTopbar, Toast, useGuard, useToast } from "@/components/ui";
 import { NoteCard } from "@/components/notes";
+import { DraftPanel } from "@/components/draft";
 import { useStore } from "@/lib/store";
 import { authHeader } from "@/lib/supabase";
 
@@ -29,6 +30,7 @@ export default function ConsoleBoard() {
   const ok = useGuard("advisor");
   const { notes, patch, getClient, live } = useStore();
   const [f, setF] = useState<F>("open");
+  const [drafting, setDrafting] = useState<string | null>(null);
   const toast = useToast();
   if (!ok) return null;
 
@@ -53,29 +55,48 @@ export default function ConsoleBoard() {
         </div>
         <div style={{ marginTop: 14 }}>
           {list.length === 0 && <div className="card small muted">Nothing here.</div>}
-          {list.map((n) => (
-            <NoteCard
-              key={n.id}
-              n={n}
-              advisor
-              clientName={getClient(n.clientId)?.name}
-              onStatus={(status) => patch({ notes: notes.map((x) => (x.id === n.id ? { ...x, status } : x)) })}
-              onReply={(text) => {
-                patch({
-                  notes: notes.map((x) =>
-                    x.id === n.id
-                      ? { ...x, status: x.status === "new" ? "seen" : x.status, replies: [...x.replies, { by: "Ben Gaines", text, at: new Date().toISOString() }] }
-                      : x
-                  ),
-                });
-                if (live && n.author.email) {
-                  replyEmail(n.clientId, n.author.email, getClient(n.clientId)?.name ?? "", text).then((ok) =>
-                    toast.show(ok ? `Reply sent. ${n.author.name.split(" ")[0]} got an email.` : "Reply posted. Email didn't send.")
-                  );
-                } else toast.show("Reply posted");
-              }}
-            />
-          ))}
+          {list.map((n) => {
+            const reply = (text: string) => {
+              patch({
+                notes: notes.map((x) =>
+                  x.id === n.id
+                    ? { ...x, status: x.status === "new" ? "seen" : x.status, replies: [...x.replies, { by: "Ben Gaines", text, at: new Date().toISOString() }] }
+                    : x
+                ),
+              });
+              if (live && n.author.email) {
+                replyEmail(n.clientId, n.author.email, getClient(n.clientId)?.name ?? "", text).then((ok) =>
+                  toast.show(ok ? `Reply sent. ${n.author.name.split(" ")[0]} got an email.` : "Reply posted. Email didn't send.")
+                );
+              } else toast.show("Reply posted");
+            };
+            return (
+              <div key={n.id}>
+                <NoteCard
+                  n={n}
+                  advisor
+                  clientName={getClient(n.clientId)?.name}
+                  onStatus={(status) => patch({ notes: notes.map((x) => (x.id === n.id ? { ...x, status } : x)) })}
+                  onReply={reply}
+                  onDraft={live && n.author.name !== "Ben Gaines" ? () => setDrafting(drafting === n.id ? null : n.id) : undefined}
+                />
+                {drafting === n.id && (
+                  <DraftPanel
+                    clientId={n.clientId}
+                    mode="reply"
+                    noteId={n.id}
+                    title={`Draft a reply to ${n.author.name.split(" ")[0]}`}
+                    primaryLabel="Send reply"
+                    onClose={() => setDrafting(null)}
+                    onUse={(text) => {
+                      reply(text);
+                      setDrafting(null);
+                    }}
+                  />
+                )}
+              </div>
+            );
+          })}
         </div>
       </main>
       <Toast msg={toast.msg} onDone={toast.clear} />

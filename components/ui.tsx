@@ -314,7 +314,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
 export function AlzaNav() {
   const { notes, resources, files } = useStore();
   const path = usePathname();
-  const newFiles = files.filter((f) => !f.reviewed).length;
+  const newFiles = files.filter((f) => !f.reviewed && !f.fromAdvisor).length;
   const unread = notes.filter((n) => n.status === "new").length;
   const stale = resources.filter((r) => r.outdated).length;
   const items = [

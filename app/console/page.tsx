@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { NewTaskSheet } from "@/components/newtask";
+import { DraftPanel } from "@/components/draft";
 import { ActionCard, AlzaNav, AlzaTopbar, Toast, useGuard, useToast } from "@/components/ui";
 import { daysSince } from "@/lib/modules";
 import { fmt, parseDay, urgency } from "@/lib/data";
@@ -12,9 +13,10 @@ const ORDER = { blocker: 0, overdue: 1, today: 2, soon: 3, later: 4, done: 5 } a
 
 export default function Console() {
   const ok = useGuard("advisor");
-  const { actions, rules, update, notes, candidates, roles, getClient, files, clients } = useStore();
+  const { actions, rules, update, notes, candidates, roles, getClient, files, clients, live } = useStore();
   const toast = useToast();
   const [creating, setCreating] = useState(false);
+  const [freeDraft, setFreeDraft] = useState<string | null>(null);
 
   const open = useMemo(() => actions.filter((a) => a.status !== "completed"), [actions]);
   const sort = (list: typeof actions) =>
@@ -31,7 +33,7 @@ export default function Console() {
 
   const newNotes = notes.filter((n) => n.status === "new");
   const awaiting = candidates.filter((c) => !c.decision);
-  const newFiles = files.filter((f) => !f.reviewed);
+  const newFiles = files.filter((f) => !f.reviewed && !f.fromAdvisor);
 
   if (!ok) return null;
 
@@ -55,7 +57,12 @@ export default function Console() {
             {mineLate.length > 0 && `${mineLate.length} of your own deliverables need attention.`}
           </p>
           </div>
-          {clients.length > 0 && <button className="btn primary sm" onClick={() => setCreating(true)}>New request</button>}
+          {clients.length > 0 && (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+              {live && <button className="btn sm" onClick={() => setFreeDraft(clients[0].id)}><span className="spark" aria-hidden="true">✦</span> Draft with Claude</button>}
+              <button className="btn primary sm" onClick={() => setCreating(true)}>New request</button>
+            </div>
+          )}
         </div>
 
         <div className="kpis section" style={{ marginTop: 16 }}>
@@ -216,6 +223,29 @@ export default function Console() {
         </div>
         <p className="demo-note">Fictional sample data for the prototype.</p>
       </main>
+      {freeDraft && (
+        <div className="scrim" onClick={() => setFreeDraft(null)}>
+          <div className="sheet" style={{ maxWidth: 720 }} onClick={(e) => e.stopPropagation()}>
+            <label className="f" style={{ marginTop: 0 }}>For which client</label>
+            <select className="f" value={freeDraft} onChange={(e) => setFreeDraft(e.target.value)}>
+              {clients.map((c) => <option key={c.id} value={c.id}>{getClient(c.id)?.name}</option>)}
+            </select>
+            <div style={{ maxHeight: "65vh", overflow: "auto", marginTop: 10 }}>
+              <DraftPanel
+                key={freeDraft}
+                clientId={freeDraft}
+                mode="document"
+                title={`Document for ${getClient(freeDraft)?.name}`}
+                askForInstructions
+                primaryLabel="Done"
+                onClose={() => setFreeDraft(null)}
+                onUse={() => setFreeDraft(null)}
+              />
+            </div>
+            <p className="tiny muted" style={{ marginTop: 8 }}>To share it with the client, draft it from a task instead, or download it and upload it to their folder.</p>
+          </div>
+        </div>
+      )}
       {creating && <NewTaskSheet onClose={() => setCreating(false)} onCreated={(m) => { setCreating(false); toast.show(m); }} />}
       <Toast msg={toast.msg} onDone={toast.clear} />
     </>

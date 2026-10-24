@@ -6,16 +6,18 @@ import { useRef, useState } from "react";
 import { ClientNav, ClientTopbar, Sheet, Toast, UrgencyPill, useGuard, useToast } from "@/components/ui";
 import { Action, addBusinessDays, escalationTarget, fmt, fmtTime, parseDay, reminderPlan, STATUS_LABEL, subtaskProgress, toISO, today } from "@/lib/data";
 import { useStore } from "@/lib/store";
+import { DraftPanel, wordBlob } from "@/components/draft";
 import { LIVE, openStored, uploadToStorage, authHeader } from "@/lib/supabase";
 
 export default function ActionDetail() {
   const { client: clientId, id } = useParams<{ client: string; id: string }>();
   const ok = useGuard("client", clientId);
-  const { actions, rules, viewer, update, getClient, me, config, patch, files } = useStore();
+  const { actions, rules, viewer, update, getClient, me, config, patch, files, live } = useStore();
   const client = getClient(clientId);
   const toast = useToast();
   const [sheet, setSheet] = useState<null | "extension" | "revision" | "remind">(null);
   const [comment, setComment] = useState("");
+  const [drafting, setDrafting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const a = actions.find((x) => x.id === id && x.clientId === clientId);
@@ -40,6 +42,34 @@ export default function ActionDetail() {
   const canCheck = open && (isAdvisor || a.side === "client");
   const primaryLabel =
     left > 0 ? `${left} step${left === 1 ? "" : "s"} left` : a.kind === "approval" ? "Approve" : a.kind === "feedback" ? "Submit feedback" : "Mark as sent";
+  const attachFile = async (f: File) => {
+    if (f.size > 25e6) return toast.show("Files can be up to 25 MB");
+    const who = viewer?.kind === "client" ? viewer.person.name : "Ben Gaines";
+    const fid = `f${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+    let path: string | undefined;
+    if (LIVE) {
+      toast.show("Uploading...");
+      try {
+        path = await uploadToStorage(client.id, fid, f);
+      } catch {
+        return toast.show("Upload failed. Try again.");
+      }
+    }
+    update(
+      a.id,
+      { attachments: [...a.attachments, { name: f.name, from: who, path }], status: a.side === "client" && !isAdvisor ? "submitted" : a.status },
+      `Uploaded ${f.name}`
+    );
+    // A files record lets the right people open it. Ben's files are marked so they stay out of his own inbox.
+    patch({
+      files: [
+        { id: fid, clientId: client.id, name: f.name, size: f.size, type: f.type, category: isAdvisor ? "From Ben" : "Other", note: `For: ${a.title}`, confidential: false, by: who, at: new Date().toISOString(), reviewed: isAdvisor, requestId: a.id, path, fromAdvisor: isAdvisor || undefined },
+        ...files,
+      ],
+    });
+    toast.show(isAdvisor ? "Shared on this task" : "File added. Ben has been notified.");
+  };
+
   const toggle = (sid: string) => {
     const next = subs.map((x) => (x.id === sid ? { ...x, done: !x.done } : x));
     const t = subs.find((x) => x.id === sid)!;
@@ -90,6 +120,35 @@ export default function ActionDetail() {
               ))}
             </div>
           </div>
+        )}
+
+        {isAdvisor && open && live && (
+          drafting ? (
+            <div className="section">
+              <DraftPanel
+                clientId={client.id}
+                mode="document"
+                actionId={a.id}
+                title={a.title}
+                askForInstructions
+                primaryLabel="Attach to task"
+                onClose={() => setDrafting(false)}
+                onUse={async (text) => {
+                  const name = `${a.title.replace(/[^\w\- ]+/g, "").trim() || "Draft"}.doc`;
+                  await attachFile(new File([wordBlob(a.title, text)], name, { type: "application/msword" }));
+                  setDrafting(false);
+                }}
+              />
+            </div>
+          ) : (
+            <div className="card section" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <b><span className="spark" aria-hidden="true">✦</span> Draft with Claude</b>
+                <div className="tiny muted">A first version of the document for this task, using this client's details. You edit and approve.</div>
+              </div>
+              <button className="btn sm primary" onClick={() => setDrafting(true)}>Draft</button>
+            </div>
+          )
         )}
 
         {open && (
@@ -213,33 +272,7 @@ export default function ActionDetail() {
           onChange={async (e) => {
             const f = e.target.files?.[0];
             e.target.value = "";
-            if (!f) return;
-            if (f.size > 25e6) return toast.show("Files can be up to 25 MB");
-            const who = viewer?.kind === "client" ? viewer.person.name : "Ben Gaines";
-            const fid = `f${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
-            let path: string | undefined;
-            if (LIVE) {
-              toast.show("Uploading...");
-              try {
-                path = await uploadToStorage(client.id, fid, f);
-              } catch {
-                return toast.show("Upload failed. Try again.");
-              }
-            }
-            update(
-              a.id,
-              { attachments: [...a.attachments, { name: f.name, from: who, path }], status: a.side === "client" ? "submitted" : a.status },
-              `Uploaded ${f.name}`
-            );
-            if (!isAdvisor) {
-              patch({
-                files: [
-                  { id: fid, clientId: client.id, name: f.name, size: f.size, type: f.type, category: "Other", note: `For: ${a.title}`, confidential: false, by: who, at: new Date().toISOString(), reviewed: false, requestId: a.id, path },
-                  ...files,
-                ],
-              });
-            }
-            toast.show(isAdvisor ? "File shared" : "File added. Ben has been notified.");
+            if (f) await attachFile(f);
           }}
         />
       </main>

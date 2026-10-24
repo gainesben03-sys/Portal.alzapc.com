@@ -89,6 +89,7 @@ export interface SharedFile {
   reviewed: boolean;
   requestId?: string; // the document request it answers
   path?: string; // where the file lives in private storage
+  fromAdvisor?: boolean; // Ben shared it on a task (not part of his inbox)
 }
 export const FILE_CATEGORIES = ["Signed document", "Employee file", "Payroll or benefits", "Policy or handbook", "Other"];
 

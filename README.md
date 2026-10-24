@@ -86,7 +86,7 @@ Real sign-in, a Supabase database with row-level security, private file storage 
 ## Roadmap
 
 1. ~~Foundation~~
-2. Claude drafting in the console (drafts replies and documents, Ben approves)
+2. ~~Claude drafting~~: "Draft reply" on client notes, "Draft with Claude" on tasks (attaches a Word file to the task) and on the console. Context comes only from that one client, loaded server-side. Ben approves everything. Needs `ANTHROPIC_API_KEY`.
 3. Hire flow: offer letters, agreements, e-signature, onboarding checklist, payroll handoff
 4. AlzaPitch link
 5. PEO and benefits calculator

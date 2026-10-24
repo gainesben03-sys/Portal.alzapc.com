@@ -12,12 +12,14 @@ export function NoteCard({
   onReply,
   advisor,
   onStatus,
+  onDraft,
 }: {
   n: Note;
   clientName?: string;
   onReply: (text: string) => void;
   advisor?: boolean;
   onStatus?: (s: Note["status"]) => void;
+  onDraft?: () => void;
 }) {
   const [text, setText] = useState("");
   const [open, setOpen] = useState(false);
@@ -60,6 +62,7 @@ export function NoteCard({
         </form>
       ) : (
         <div className="action-foot">
+          {onDraft && <button className="btn sm primary" onClick={onDraft}><span aria-hidden="true">✦</span> Draft reply</button>}
           <button className="btn sm" onClick={() => setOpen(true)}>Reply</button>
           {advisor && onStatus && n.status === "new" && (
             <button className="btn sm" onClick={() => onStatus("seen")}>Mark seen</button>

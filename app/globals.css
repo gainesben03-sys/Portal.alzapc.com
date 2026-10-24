@@ -359,3 +359,12 @@ html, body { overflow-x: hidden; }
 .dash > div { display: flex; }
 .dash > div > .tile-card { flex: 1; }
 .save-error { position: fixed; left: 50%; transform: translateX(-50%); top: 64px; z-index: 60; background: var(--red-bg); color: var(--red); border: 1px solid var(--red); border-radius: 12px; padding: 8px 8px 8px 14px; font-size: 13px; display: flex; gap: 8px; align-items: center; max-width: calc(100% - 24px); }
+
+/* ---------- Claude drafting ---------- */
+.spark { color: var(--gold); }
+.draft-panel { background: var(--card); border: 1px solid var(--gold); border-radius: var(--radius); padding: 14px; margin-top: 8px; box-shadow: 0 8px 30px -10px hsl(35 65% 55% / .35); }
+textarea.f.draft-text { min-height: 260px; margin-top: 10px; line-height: 1.5; }
+.for-ben { margin-top: 10px; background: var(--amber-bg); color: var(--ink); border-radius: 10px; padding: 10px 12px; font-size: 13px; }
+.for-ben b { color: var(--amber); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+.chip-btn { border: 1px solid var(--line); cursor: pointer; }
+.chip-btn:disabled { opacity: .5; cursor: default; }

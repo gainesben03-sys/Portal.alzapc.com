@@ -15,7 +15,8 @@ export default function Files() {
   const [f, setF] = useState<"new" | "all">("new");
   const [err, setErr] = useState("");
   if (!ok) return null;
-  const list = files.filter((x) => f === "all" || !x.reviewed).sort((a, b) => b.at.localeCompare(a.at));
+  const inbox = files.filter((x) => !x.fromAdvisor);
+  const list = inbox.filter((x) => f === "all" || !x.reviewed).sort((a, b) => b.at.localeCompare(a.at));
   const mark = (id: string, reviewed: boolean) => patch({ files: files.map((x) => (x.id === id ? { ...x, reviewed } : x)) });
 
   return (
@@ -26,8 +27,8 @@ export default function Files() {
         <h1>Shared with HR</h1>
         <p className="muted" style={{ marginTop: 6 }}>Everything clients have sent you through the portal.</p>
         <div className="tabs section" style={{ marginTop: 14 }}>
-          <button className={`tab ${f === "new" ? "on" : ""}`} onClick={() => setF("new")}>To review<span className="count">{files.filter((x) => !x.reviewed).length}</span></button>
-          <button className={`tab ${f === "all" ? "on" : ""}`} onClick={() => setF("all")}>All<span className="count">{files.length}</span></button>
+          <button className={`tab ${f === "new" ? "on" : ""}`} onClick={() => setF("new")}>To review<span className="count">{inbox.filter((x) => !x.reviewed).length}</span></button>
+          <button className={`tab ${f === "all" ? "on" : ""}`} onClick={() => setF("all")}>All<span className="count">{inbox.length}</span></button>
         </div>
         {err && <p className="small" style={{ color: "var(--red)", marginTop: 10 }}>{err}</p>}
         <div style={{ marginTop: 14 }}>
