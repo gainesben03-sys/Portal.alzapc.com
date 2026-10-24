@@ -4,12 +4,30 @@ import { useState } from "react";
 import { AlzaNav, AlzaTopbar, Toast, useGuard, useToast } from "@/components/ui";
 import { NoteCard } from "@/components/notes";
 import { useStore } from "@/lib/store";
+import { authHeader } from "@/lib/supabase";
+
+async function replyEmail(clientId: string, email: string, clientName: string, text: string) {
+  try {
+    const r = await fetch("/api/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(await authHeader()) },
+      body: JSON.stringify({
+        subject: `Ben replied to your note`,
+        text: `${text}\n\nSee the conversation in your ${clientName} portal: ${window.location.origin}/c/${clientId}/board`,
+        toMember: { clientId, email },
+      }),
+    });
+    return !!(await r.json()).sent;
+  } catch {
+    return false;
+  }
+}
 
 type F = "open" | "new" | "all";
 
 export default function ConsoleBoard() {
   const ok = useGuard("advisor");
-  const { notes, patch, getClient } = useStore();
+  const { notes, patch, getClient, live } = useStore();
   const [f, setF] = useState<F>("open");
   const toast = useToast();
   if (!ok) return null;
@@ -50,7 +68,11 @@ export default function ConsoleBoard() {
                       : x
                   ),
                 });
-                toast.show(`Reply posted. ${n.author.name.split(" ")[0]} gets an email in the full build.`);
+                if (live && n.author.email) {
+                  replyEmail(n.clientId, n.author.email, getClient(n.clientId)?.name ?? "", text).then((ok) =>
+                    toast.show(ok ? `Reply sent. ${n.author.name.split(" ")[0]} got an email.` : "Reply posted. Email didn't send.")
+                  );
+                } else toast.show("Reply posted");
               }}
             />
           ))}

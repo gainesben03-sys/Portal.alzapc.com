@@ -1,12 +1,12 @@
 "use client";
 
 import { AlzaNav, AlzaTopbar, useGuard } from "@/components/ui";
-import { CLIENTS, DEFAULT_RULES, Rules } from "@/lib/data";
+import { DEFAULT_RULES, Rules } from "@/lib/data";
 import { useStore } from "@/lib/store";
 
 export default function RulesPage() {
   const ok = useGuard("advisor");
-  const { rules, setRules, getClient } = useStore();
+  const { rules, setRules, getClient, clients } = useStore();
   if (!ok) return null;
 
   const set = (k: keyof Rules, v: number | boolean) => setRules({ ...rules, [k]: v });
@@ -74,7 +74,7 @@ export default function RulesPage() {
           <h2>Escalation contacts</h2>
         </div>
         <div className="card">
-          {CLIENTS.map((b) => getClient(b.id)!).map((c) => (
+          {clients.map((b) => getClient(b.id)!).map((c) => (
             <div className="row" key={c.id}>
               <div className="grow title">{c.name}</div>
               <div className="small muted">

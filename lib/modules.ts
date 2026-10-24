@@ -88,6 +88,7 @@ export interface SharedFile {
   at: string;
   reviewed: boolean;
   requestId?: string; // the document request it answers
+  path?: string; // where the file lives in private storage
 }
 export const FILE_CATEGORIES = ["Signed document", "Employee file", "Payroll or benefits", "Policy or handbook", "Other"];
 

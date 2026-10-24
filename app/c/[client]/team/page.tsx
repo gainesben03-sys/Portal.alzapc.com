@@ -6,6 +6,7 @@ import { ClientNav, ClientTopbar, Toast, useGuard, useToast } from "@/components
 import { fmt } from "@/lib/data";
 import { Access, ACCESS_LABEL, canSee, newCode, PortalUser } from "@/lib/modules";
 import { useStore } from "@/lib/store";
+import { sendInvite } from "@/lib/invite";
 
 export default function Team() {
   const { client: clientId } = useParams<{ client: string }>();
@@ -82,9 +83,10 @@ export default function Team() {
             const email = nu.email.trim();
             if (!nu.name.trim() || !email) return;
             if (cfg.users.some((u) => u.email.toLowerCase() === email.toLowerCase())) return toast.show("That email already has access");
-            save({ users: [...cfg.users, { ...nu, email, name: nu.name.trim(), role: nu.role.trim() || "Team member", invited: true, addedBy: who }] });
+            const lower = email.toLowerCase();
+            save({ users: [...cfg.users, { ...nu, email: lower, name: nu.name.trim(), role: nu.role.trim() || "Team member", invited: true, addedBy: who }], huddle: { ...cfg.huddle, recipients: [...cfg.huddle.recipients, lower] } });
             setNu({ name: "", role: "", email: "", access: "manager" });
-            toast.show("Invite created. They get a one-time sign-in link in the full build.");
+            sendInvite(client.id, lower, nu.name.trim()).then(toast.show);
           }}
         >
           <div style={{ display: "grid", gap: 8, gridTemplateColumns: "1fr 1fr" }}>
@@ -137,7 +139,7 @@ export default function Team() {
               </button>
             </div>
           ))}
-          <p className="tiny muted" style={{ marginTop: 12 }}>In the full build, anyone joining with a code also confirms their email before getting in.</p>
+          <p className="tiny muted" style={{ marginTop: 12 }}>Anyone joining with a code confirms their email before getting in.</p>
         </div>
       </main>
       <Toast msg={toast.msg} onDone={toast.clear} />

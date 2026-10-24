@@ -158,11 +158,12 @@ export default function Projects() {
       {adding && (
         <AddSheet
           onClose={() => setAdding(false)}
-          onAdd={(name, summary, date) => {
-            patch({ projects: [...projects, { id: `p${Date.now()}`, clientId: client.id, name, summary, status: "planned", steps: [], nextMilestone: "Kickoff", milestoneDue: date }] });
+          onAdd={(name, summary, date, steps, active) => {
+            const st = steps.map((text, i) => ({ id: `st${i}`, text, done: false }));
+            patch({ projects: [...projects, { id: `p${Date.now().toString(36)}`, clientId: client.id, name, summary, status: active ? "active" : "planned", steps: st, nextMilestone: st[0]?.text ?? "Kickoff", milestoneDue: date }] });
             setAdding(false);
-            setTab("planned");
-            toast.show("Added to the roadmap");
+            setTab(active ? "active" : "planned");
+            toast.show(active ? "Project started" : "Added to the roadmap");
           }}
         />
       )}
@@ -171,21 +172,29 @@ export default function Projects() {
   );
 }
 
-function AddSheet({ onClose, onAdd }: { onClose: () => void; onAdd: (n: string, s: string, d: string) => void }) {
+function AddSheet({ onClose, onAdd }: { onClose: () => void; onAdd: (n: string, s: string, d: string, steps: string[], active: boolean) => void }) {
   const [name, setName] = useState("");
   const [summary, setSummary] = useState("");
   const [date, setDate] = useState(toISO(addBusinessDays(today(), 20)));
+  const [active, setActive] = useState(false);
+  const [steps, setSteps] = useState("");
   return (
-    <Sheet title="Add to HR roadmap" onClose={onClose}>
+    <Sheet title="Add a project" onClose={onClose}>
+      <div className="seg" style={{ gridTemplateColumns: "1fr 1fr", marginTop: 0 }}>
+        <button className={!active ? "on" : ""} onClick={() => setActive(false)}>On the roadmap</button>
+        <button className={active ? "on" : ""} onClick={() => setActive(true)}>Starting now</button>
+      </div>
       <label className="f">Project</label>
       <input className="f" value={name} onChange={(e) => setName(e.target.value)} placeholder="Benefits renewal" />
       <label className="f">One-line summary</label>
       <input className="f" value={summary} onChange={(e) => setSummary(e.target.value)} />
-      <label className="f">Target start</label>
+      <label className="f">{active ? "Target finish" : "Target start"}</label>
       <input className="f" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+      <label className="f">Steps (one per line, these drive the % complete)</label>
+      <textarea className="f" value={steps} onChange={(e) => setSteps(e.target.value)} placeholder={"Kickoff\nDraft\nClient review\nRoll out"} />
       <div className="sheet-actions">
         <button className="btn" onClick={onClose}>Cancel</button>
-        <button className="btn primary" disabled={!name.trim()} onClick={() => onAdd(name.trim(), summary.trim(), date)}>Add</button>
+        <button className="btn primary" disabled={!name.trim()} onClick={() => onAdd(name.trim(), summary.trim(), date, steps.split("\n").map((x) => x.trim()).filter(Boolean), active)}>Add</button>
       </div>
     </Sheet>
   );

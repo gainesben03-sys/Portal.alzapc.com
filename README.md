@@ -74,10 +74,20 @@ Set these in Vercel → Settings → Environment Variables, then redeploy:
 
 Notes: note-board alerts only ever go to `NOTIFY_TO`. Reminders can be scheduled up to 30 days ahead. Until the key is set, everything still saves and the app says email isn't connected.
 
-## Path to production
+## Going live (step 1 of the full build: done)
 
-1. Supabase auth (magic link) with invite-only accounts and single-use invite codes.
-2. Tables for clients, contacts, actions, projects, files, history, with row-level security so each client only sees its own workspace.
-3. Scheduled reminder job (Vercel Cron) sending email via Resend, using the same rules.
-4. File storage in Supabase Storage or R2 with signed URLs.
-5. Remove the demo shortcuts and sample data.
+Real sign-in, a Supabase database with row-level security, private file storage and a daily email job are built in. See **SETUP.md** for the 20-minute setup. Without the Supabase keys the site runs in demo mode with sample data.
+
+- `supabase/schema.sql`: tables, security rules, storage bucket, invite-code redemption
+- `lib/live.ts`: loads from and saves to Supabase (only what changed)
+- `app/api/cron/daily`: reminders, escalations and HR Huddles every morning (`vercel.json`)
+- `app/api/invite`: invite emails
+
+## Roadmap
+
+1. ~~Foundation~~
+2. Claude drafting in the console (drafts replies and documents, Ben approves)
+3. Hire flow: offer letters, agreements, e-signature, onboarding checklist, payroll handoff
+4. AlzaPitch link
+5. PEO and benefits calculator
+6. Ask HR (answers only from each client's own policies)

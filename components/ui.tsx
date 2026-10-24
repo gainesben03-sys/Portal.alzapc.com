@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ReactNode, useEffect, useState } from "react";
-import { Action, Client, CLIENTS, dueLabel, reminderStage, subtaskProgress, urgency, Urgency } from "@/lib/data";
+import { Action, Client, dueLabel, reminderStage, subtaskProgress, urgency, Urgency } from "@/lib/data";
 import { useStore } from "@/lib/store";
 import { usePathname } from "next/navigation";
 import { canSee, MODULES } from "@/lib/modules";
@@ -89,7 +89,7 @@ export function useGuard(kind: "advisor" | "client", clientId?: string) {
 
 export function CompanySwitcher({ current }: { current?: string }) {
   const router = useRouter();
-  const { getClient } = useStore();
+  const { getClient, clients } = useStore();
   return (
     <select
       className="company-switch"
@@ -98,7 +98,7 @@ export function CompanySwitcher({ current }: { current?: string }) {
       onChange={(e) => router.push(e.target.value ? `/c/${e.target.value}` : "/console")}
     >
       <option value="">All companies</option>
-      {CLIENTS.map((c) => (
+      {clients.map((c) => (
         <option key={c.id} value={c.id}>
           {getClient(c.id)?.name}
         </option>

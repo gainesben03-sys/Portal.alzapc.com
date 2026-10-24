@@ -6,6 +6,7 @@ import { ClientNav, ClientTopbar, Toast, useGuard, useToast } from "@/components
 import { fmt, fmtTime } from "@/lib/data";
 import { FILE_CATEGORIES, SharedFile } from "@/lib/modules";
 import { notifyBen, useStore } from "@/lib/store";
+import { LIVE, openStored, uploadToStorage } from "@/lib/supabase";
 
 const MAX_MB = 25;
 const size = (n: number) => (n > 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1e3))} KB`);
@@ -45,25 +46,40 @@ export default function ShareWithHR() {
     setBusy(true);
     const at = new Date().toISOString();
     const req = requests.find((r) => r.id === requestId);
-    const newFiles: SharedFile[] = picked.map((f, i) => ({
-      id: `f${Date.now()}${i}`,
-      clientId: client.id,
-      name: f.name,
-      size: f.size,
-      type: f.type,
-      category,
-      note: note.trim(),
-      confidential,
-      by: who,
-      at,
-      reviewed: false,
-      requestId: req?.id,
-    }));
+    const newFiles: SharedFile[] = [];
+    for (const [i, f] of picked.entries()) {
+      const id = `f${Date.now().toString(36)}${i}${Math.random().toString(36).slice(2, 5)}`;
+      let path: string | undefined;
+      if (LIVE) {
+        try {
+          path = await uploadToStorage(client.id, id, f);
+        } catch {
+          toast.show(`Couldn't upload ${f.name}. Try again.`);
+          setBusy(false);
+          return;
+        }
+      }
+      newFiles.push({
+        id,
+        clientId: client.id,
+        name: f.name,
+        size: f.size,
+        type: f.type,
+        category,
+        note: note.trim(),
+        confidential,
+        by: who,
+        at,
+        reviewed: false,
+        requestId: req?.id,
+        path,
+      });
+    }
     patch({ files: [...newFiles, ...files] });
     if (req) {
       update(
         req.id,
-        { status: "submitted", attachments: [...req.attachments, ...newFiles.map((f) => ({ name: f.name, from: who }))] },
+        { status: "submitted", attachments: [...req.attachments, ...newFiles.map((f) => ({ name: f.name, from: who, path: f.path }))] },
         `Shared ${newFiles.length} file${newFiles.length === 1 ? "" : "s"} through Share with HR`
       );
     }
@@ -168,11 +184,12 @@ export default function ShareWithHR() {
                   <div className="title ellipsis">{f.name}</div>
                   <div className="tiny muted">{f.by} · {fmtTime(f.at)} · {f.category}{f.confidential ? " · confidential" : ""}</div>
                 </div>
+                {f.path && <button className="btn sm" onClick={() => openStored(f.path!).catch(() => toast.show("Couldn't open that file"))}>Open</button>}
                 <span className={`pill ${f.reviewed ? "done" : "later"}`}>{f.reviewed ? "Reviewed" : "Received"}</span>
               </div>
             ))}
         </div>
-        <p className="demo-note">Prototype: file names are recorded, file contents are stored once the full build adds secure storage.</p>
+        {!LIVE && <p className="demo-note">Demo mode: file names are recorded, contents aren't stored.</p>}
       </main>
       <Toast msg={toast.msg} onDone={toast.clear} />
     </div>

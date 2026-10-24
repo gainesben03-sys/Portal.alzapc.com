@@ -1,18 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { NewTaskSheet } from "@/components/newtask";
 import { ActionCard, AlzaNav, AlzaTopbar, Toast, useGuard, useToast } from "@/components/ui";
 import { daysSince } from "@/lib/modules";
-import { CLIENTS, fmt, parseDay, urgency } from "@/lib/data";
+import { fmt, parseDay, urgency } from "@/lib/data";
 import { useStore } from "@/lib/store";
 
 const ORDER = { blocker: 0, overdue: 1, today: 2, soon: 3, later: 4, done: 5 } as const;
 
 export default function Console() {
   const ok = useGuard("advisor");
-  const { actions, rules, update, notes, candidates, roles, getClient, files } = useStore();
+  const { actions, rules, update, notes, candidates, roles, getClient, files, clients } = useStore();
   const toast = useToast();
+  const [creating, setCreating] = useState(false);
 
   const open = useMemo(() => actions.filter((a) => a.status !== "completed"), [actions]);
   const sort = (list: typeof actions) =>
@@ -38,7 +40,8 @@ export default function Console() {
       <AlzaTopbar />
       <AlzaNav />
       <main className="wrap wide">
-        <div className="hero">
+        <div className="hero row" style={{ alignItems: "flex-start" }}>
+          <div>
           <h1>Good {greeting()}, Ben</h1>
           <p>
             {overdue.length > 0 ? (
@@ -51,11 +54,13 @@ export default function Console() {
             )}
             {mineLate.length > 0 && `${mineLate.length} of your own deliverables need attention.`}
           </p>
+          </div>
+          {clients.length > 0 && <button className="btn primary sm" onClick={() => setCreating(true)}>New request</button>}
         </div>
 
         <div className="kpis section" style={{ marginTop: 16 }}>
           <div className="kpi">
-            <div className="n">{CLIENTS.length}</div>
+            <div className="n">{clients.length}</div>
             <div className="l">Active clients</div>
           </div>
           <div className={`kpi ${overdue.length ? "alert" : ""}`}>
@@ -185,7 +190,7 @@ export default function Console() {
               <Link href="/console/clients">Set up</Link>
             </div>
             <div className="card">
-              {CLIENTS.map((b) => getClient(b.id)!).map((c) => {
+              {clients.map((b) => getClient(b.id)!).map((c) => {
                 const cOpen = open.filter((a) => a.clientId === c.id && a.side === "client");
                 const cLate = cOpen.filter((a) => ["overdue", "blocker"].includes(urgency(a, rules)));
                 return (
@@ -211,6 +216,7 @@ export default function Console() {
         </div>
         <p className="demo-note">Fictional sample data for the prototype.</p>
       </main>
+      {creating && <NewTaskSheet onClose={() => setCreating(false)} onCreated={(m) => { setCreating(false); toast.show(m); }} />}
       <Toast msg={toast.msg} onDone={toast.clear} />
     </>
   );

@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { ActionCard, ClientNav, ClientTopbar, Toast, useGuard, useToast } from "@/components/ui";
 import { parseDay, urgency } from "@/lib/data";
+import { NewTaskSheet } from "@/components/newtask";
 import { useStore } from "@/lib/store";
 
 type Tab = "you" | "team" | "alza" | "done";
@@ -16,6 +17,7 @@ export default function Tasks() {
   const client = getClient(clientId);
   const [tab, setTab] = useState<Tab>("you");
   const toast = useToast();
+  const [creating, setCreating] = useState(false);
 
   if (!ok || !client) return null;
 
@@ -45,7 +47,10 @@ export default function Tasks() {
       <ClientTopbar client={client} />
       <ClientNav clientId={client.id} />
       <main className="wrap">
-        <h1>Tasks</h1>
+        <div className="row" style={{ alignItems: "flex-start" }}>
+          <h1>Tasks</h1>
+          {viewer?.kind === "advisor" && <button className="btn primary sm" onClick={() => setCreating(true)}>New request</button>}
+        </div>
         <p className="muted" style={{ marginTop: 6 }}>
           {overdueCount > 0 ? <><span style={{ color: "var(--red)", fontWeight: 600 }}>{overdueCount} overdue</span>{todayCount > 0 && <> · <b>{todayCount} due today</b></>}</> : todayCount > 0 ? <b>{todayCount} due today</b> : "You're all caught up."}
         </p>
@@ -82,6 +87,7 @@ export default function Tasks() {
 
         <p className="demo-note">Fictional sample data for the prototype.</p>
       </main>
+      {creating && <NewTaskSheet clientId={client.id} onClose={() => setCreating(false)} onCreated={(m) => { setCreating(false); toast.show(m); }} />}
       <Toast msg={toast.msg} onDone={toast.clear} />
     </div>
   );

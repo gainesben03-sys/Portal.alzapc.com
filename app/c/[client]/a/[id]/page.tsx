@@ -6,11 +6,12 @@ import { useRef, useState } from "react";
 import { ClientNav, ClientTopbar, Sheet, Toast, UrgencyPill, useGuard, useToast } from "@/components/ui";
 import { Action, addBusinessDays, escalationTarget, fmt, fmtTime, parseDay, reminderPlan, STATUS_LABEL, subtaskProgress, toISO, today } from "@/lib/data";
 import { useStore } from "@/lib/store";
+import { LIVE, openStored, uploadToStorage, authHeader } from "@/lib/supabase";
 
 export default function ActionDetail() {
   const { client: clientId, id } = useParams<{ client: string; id: string }>();
   const ok = useGuard("client", clientId);
-  const { actions, rules, viewer, update, getClient, me, config } = useStore();
+  const { actions, rules, viewer, update, getClient, me, config, patch, files } = useStore();
   const client = getClient(clientId);
   const toast = useToast();
   const [sheet, setSheet] = useState<null | "extension" | "revision" | "remind">(null);
@@ -142,10 +143,11 @@ export default function ActionDetail() {
               {a.attachments.map((f, i) => (
                 <div className="file" key={i}>
                   <div className="ic">{f.name.split(".").pop()?.toUpperCase()}</div>
-                  <div className="grow">
+                  <div className="grow" style={{ flex: 1 }}>
                     <div>{f.name}</div>
                     <div className="tiny muted">From {f.from}</div>
                   </div>
+                  {f.path && <button className="btn sm" onClick={() => openStored(f.path!).catch(() => toast.show("You don't have access to that file"))}>Open</button>}
                 </div>
               ))}
             </div>
@@ -208,17 +210,36 @@ export default function ActionDetail() {
           ref={fileRef}
           type="file"
           hidden
-          onChange={(e) => {
+          onChange={async (e) => {
             const f = e.target.files?.[0];
+            e.target.value = "";
             if (!f) return;
+            if (f.size > 25e6) return toast.show("Files can be up to 25 MB");
             const who = viewer?.kind === "client" ? viewer.person.name : "Ben Gaines";
+            const fid = `f${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+            let path: string | undefined;
+            if (LIVE) {
+              toast.show("Uploading...");
+              try {
+                path = await uploadToStorage(client.id, fid, f);
+              } catch {
+                return toast.show("Upload failed. Try again.");
+              }
+            }
             update(
               a.id,
-              { attachments: [...a.attachments, { name: f.name, from: who }], status: a.side === "client" ? "submitted" : a.status },
+              { attachments: [...a.attachments, { name: f.name, from: who, path }], status: a.side === "client" ? "submitted" : a.status },
               `Uploaded ${f.name}`
             );
-            toast.show("File added. Ben has been notified.");
-            e.target.value = "";
+            if (!isAdvisor) {
+              patch({
+                files: [
+                  { id: fid, clientId: client.id, name: f.name, size: f.size, type: f.type, category: "Other", note: `For: ${a.title}`, confidential: false, by: who, at: new Date().toISOString(), reviewed: false, requestId: a.id, path },
+                  ...files,
+                ],
+              });
+            }
+            toast.show(isAdvisor ? "File shared" : "File added. Ben has been notified.");
           }}
         />
       </main>
@@ -314,7 +335,7 @@ export default function ActionDetail() {
             try {
               const r = await fetch("/api/remind", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json", ...(await authHeader()) },
                 body: JSON.stringify({
                   to,
                   sendAt: sendAt.toISOString(),

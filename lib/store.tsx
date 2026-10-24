@@ -1,49 +1,29 @@
 "use client";
 
-// Prototype state. Everything lives in the browser (localStorage) so the demo
-// works with no backend. In the real build this becomes Supabase tables with
-// row-level security per client.
+// App state.
+//   Live mode (Supabase keys set): real sign-in, data loads from the database and
+//   every change is saved back automatically. Row-level security decides who sees what.
+//   Demo mode (no keys): fictional sample data kept in this browser only.
 
-import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
-import { Action, ADVISOR, Client, CLIENTS, DEFAULT_RULES, Person, Project, Rules, seed, toISO } from "./data";
-import {
-  Announcement,
-  Benefit,
-  Candidate,
-  ClientConfig,
-  PortalUser,
-  Note,
-  Notice,
-  Resource,
-  SharedFile,
-  Role,
-  seedModules,
-} from "./modules";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, ReactNode } from "react";
+import { Action, ADVISOR, Client, Person, Rules, toISO } from "./data";
+import { Notice, PortalUser } from "./modules";
+import { demoState, emptyState, State } from "./state";
+import { authHeader, LIVE, sb } from "./supabase";
+import { loadAll, saveDiff } from "./live";
 
 export type Viewer = { kind: "advisor" } | { kind: "client"; clientId: string; person: Person };
-
-interface State {
-  actions: Action[];
-  projects: Project[];
-  rules: Rules;
-  config: Record<string, ClientConfig>;
-  roles: Role[];
-  candidates: Candidate[];
-  resources: Resource[];
-  benefits: Benefit[];
-  announcements: Announcement[];
-  notes: Note[];
-  files: SharedFile[];
-  notices: Notice[];
-  helpful: Record<string, "up" | "down">;
-  bookingUrl: string; // Ben's scheduling link (Calendly)
-  layouts: Record<string, string[]>; // per-person dashboard tiles, key `${clientId}:${email}`
-}
+export type { State };
 
 interface Store extends State {
   ready: boolean;
+  live: boolean;
   viewer: Viewer | null;
   who: string;
+  /** Live mode: signed in but not on any client's team yet. */
+  noAccess: string | null;
+  saving: boolean;
+  saveError: string | null;
   setViewer: (v: Viewer | null) => void;
   setRules: (r: Rules) => void;
   update: (id: string, patch: Partial<Action>, log: string) => void;
@@ -54,46 +34,41 @@ interface Store extends State {
   /** The signed-in client user's record (null for Ben). */
   me: PortalUser | null;
   reset: () => void;
+  signOut: () => Promise<void>;
+  refresh: () => Promise<void>;
 }
 
 const Ctx = createContext<Store | null>(null);
-const KEY = "alza-portal-demo-v4";
+const KEY = "alza-portal-demo-v5";
+export const PENDING_INVITE = "alza-pending-invite";
 
-function fresh(): State {
-  const a = seed();
-  const m = seedModules();
-  return { ...a, rules: DEFAULT_RULES, ...m, helpful: {}, bookingUrl: "", layouts: {} };
-}
+type Who = { email: string; advisor: boolean; memberships: { clientId: string; name: string; role: string; access: string }[] };
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
-  const [viewer, setViewer] = useState<Viewer | null>(null);
-  const [state, setState] = useState<State>(() => ({
-    actions: [],
-    projects: [],
-    rules: DEFAULT_RULES,
-    config: {},
-    roles: [],
-    candidates: [],
-    resources: [],
-    benefits: [],
-    announcements: [],
-    notes: [],
-    files: [],
-    notices: [],
-    helpful: {},
-    bookingUrl: "",
-    layouts: {},
-  }));
+  const [viewer, setViewerState] = useState<Viewer | null>(null);
+  const [state, setState] = useState<State>(emptyState);
+  const [noAccess, setNoAccess] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
+  // live-mode bookkeeping
+  const synced = useRef<State | null>(null); // what the database has
+  const whoRef = useRef<Who | null>(null);
+  const dirtyAt = useRef(0);
+  const savingRef = useRef(false);
+  const [kick, setKick] = useState(0);
+
+  // ------------------------------------------------ demo mode
   useEffect(() => {
-    let next = fresh();
+    if (LIVE) return;
+    let next = demoState();
     try {
       const raw = localStorage.getItem(KEY);
       if (raw) {
         const s = JSON.parse(raw);
         next = { ...next, ...s.state };
-        setViewer(s.viewer ?? null);
+        setViewerState(s.viewer ?? null);
       }
     } catch {}
     setState(next);
@@ -101,38 +76,168 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!ready) return;
+    if (LIVE || !ready) return;
     try {
       localStorage.setItem(KEY, JSON.stringify({ state, viewer }));
     } catch {}
   }, [ready, state, viewer]);
 
+  // ------------------------------------------------ live mode
+  const load = useCallback(async () => {
+    const db = sb();
+    const w = whoRef.current;
+    if (!w) return;
+    const s = await loadAll(db, w.email);
+    synced.current = s;
+    setState(s);
+  }, []);
+
+  const boot = useCallback(async () => {
+    const db = sb();
+    const { data } = await db.auth.getSession();
+    if (!data.session) {
+      whoRef.current = null;
+      synced.current = null;
+      setViewerState(null);
+      setState(emptyState());
+      setNoAccess(null);
+      setReady(true);
+      return;
+    }
+    // finish an invite-code join that started before the email link was clicked
+    try {
+      const pending = localStorage.getItem(PENDING_INVITE);
+      if (pending) {
+        const p = JSON.parse(pending);
+        await db.rpc("redeem_invite", { p_code: p.code, p_name: p.name, p_role: p.role });
+        localStorage.removeItem(PENDING_INVITE);
+      }
+    } catch {}
+    await db.rpc("mark_signed_in");
+    const { data: who, error } = await db.rpc("whoami");
+    if (error || !who) {
+      setNoAccess(data.session.user.email ?? "");
+      setReady(true);
+      return;
+    }
+    const w = who as Who;
+    whoRef.current = w;
+    if (w.advisor) {
+      setViewerState({ kind: "advisor" });
+      setNoAccess(null);
+    } else if (w.memberships.length) {
+      const m = w.memberships[0];
+      setViewerState({ kind: "client", clientId: m.clientId, person: { name: m.name, role: m.role, email: w.email } });
+      setNoAccess(null);
+    } else {
+      setViewerState(null);
+      setNoAccess(w.email);
+    }
+    if (w.advisor || w.memberships.length) {
+      try {
+        await load();
+      } catch (e) {
+        setSaveError(e instanceof Error ? e.message : "Couldn't load your data");
+      }
+    }
+    setReady(true);
+  }, [load]);
+
+  useEffect(() => {
+    if (!LIVE) return;
+    boot();
+    const { data: sub } = sb().auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT") boot();
+    });
+    return () => sub.subscription.unsubscribe();
+  }, [boot]);
+
+  // save changes shortly after they happen
+  useEffect(() => {
+    if (!LIVE || !ready || !synced.current || !whoRef.current) return;
+    if (state === synced.current) return;
+    dirtyAt.current = Date.now();
+    const t = setTimeout(async () => {
+      if (savingRef.current || !synced.current || !whoRef.current) return;
+      savingRef.current = true;
+      setSaving(true);
+      const target = state;
+      const errs = await saveDiff(sb(), synced.current, target, { email: whoRef.current.email, advisor: whoRef.current.advisor });
+      synced.current = target;
+      savingRef.current = false;
+      setSaving(false);
+      setKick((k) => k + 1); // save anything that changed while this save was running
+      if (errs.length) {
+        console.warn("Save problems:", errs);
+        setSaveError("Some changes didn't save. Showing the latest saved version.");
+        try {
+          await load();
+        } catch {}
+      } else setSaveError(null);
+    }, 500);
+    return () => clearTimeout(t);
+  }, [state, ready, load, kick]);
+
+  // pick up changes made by other people / devices
+  useEffect(() => {
+    if (!LIVE || !ready) return;
+    const tick = async () => {
+      if (document.hidden || savingRef.current || Date.now() - dirtyAt.current < 4000 || !whoRef.current) return;
+      if (synced.current && state !== synced.current) return; // unsaved local edits
+      try {
+        await load();
+      } catch {}
+    };
+    const iv = setInterval(tick, 20000);
+    window.addEventListener("focus", tick);
+    return () => {
+      clearInterval(iv);
+      window.removeEventListener("focus", tick);
+    };
+  }, [ready, load, state]);
+
+  const setViewer = useCallback(
+    (v: Viewer | null) => {
+      if (LIVE && v === null) {
+        sb().auth.signOut();
+      }
+      setViewerState(v);
+    },
+    []
+  );
+
   const value = useMemo<Store>(() => {
     const who = viewer?.kind === "client" ? viewer.person.name : ADVISOR.name;
     const getClient = (id: string): Client | undefined => {
-      const base = CLIENTS.find((c) => c.id === id);
+      const base = state.clients.find((c) => c.id === id);
       if (!base) return undefined;
       const cfg = state.config[id];
       if (!cfg) return base;
-      const esc = cfg.users.find((u) => u.email === cfg.escalationEmail);
+      const esc = cfg.users.find((u) => u.email.toLowerCase() === (cfg.escalationEmail || "").toLowerCase());
       return {
         ...base,
         accent: cfg.accent,
         logo: cfg.logo,
-        contacts: cfg.users.map(({ name, role }) => ({ name, role })),
-        escalation: esc ? { name: esc.name, role: esc.role } : base.escalation,
+        contacts: cfg.users.map(({ name, role, email }) => ({ name, role, email })),
+        escalation: esc ? { name: esc.name, role: esc.role, email: esc.email } : base.escalation,
       };
     };
     const me =
       viewer?.kind === "client"
-        ? state.config[viewer.clientId]?.users.find((u) => u.name === viewer.person.name) ?? null
+        ? state.config[viewer.clientId]?.users.find((u) =>
+            viewer.person.email ? u.email.toLowerCase() === viewer.person.email.toLowerCase() : u.name === viewer.person.name
+          ) ?? null
         : null;
     return {
       ...state,
+      live: LIVE,
       me,
       ready,
       viewer,
       who,
+      noAccess,
+      saving,
+      saveError,
       setViewer,
       getClient,
       setRules: (rules) => setState((s) => ({ ...s, rules })),
@@ -158,26 +263,44 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             }
           }
           return {
-          ...s,
-          notices,
-          actions: s.actions.map((a) =>
-            a.id === id
-              ? {
-                  ...a,
-                  ...patch,
-                  completedAt:
-                    patch.status === "completed" ? new Date().toISOString() : patch.completedAt ?? a.completedAt,
-                  history: [...a.history, { at: new Date().toISOString(), by: who, text: log }],
-                }
-              : a
-          ),
+            ...s,
+            notices,
+            actions: s.actions.map((a) =>
+              a.id === id
+                ? {
+                    ...a,
+                    ...patch,
+                    completedAt: patch.status === "completed" ? new Date().toISOString() : patch.completedAt ?? a.completedAt,
+                    history: [...a.history, { at: new Date().toISOString(), by: who, text: log }],
+                  }
+                : a
+            ),
           };
         }),
-      reset: () => setState(fresh()),
+      reset: () => {
+        if (!LIVE) setState(demoState());
+      },
+      signOut: async () => {
+        if (LIVE) await sb().auth.signOut();
+        setViewerState(null);
+      },
+      refresh: async () => {
+        if (LIVE) await load();
+      },
     };
-  }, [ready, viewer, state]);
+  }, [ready, viewer, state, noAccess, saving, saveError, setViewer, load]);
 
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  return (
+    <Ctx.Provider value={value}>
+      {children}
+      {LIVE && saveError && (
+        <div className="save-error" role="status">
+          {saveError}
+          <button className="btn ghost sm" onClick={() => setSaveError(null)}>Dismiss</button>
+        </div>
+      )}
+    </Ctx.Provider>
+  );
 }
 
 export function useStore() {
@@ -186,8 +309,6 @@ export function useStore() {
   return s;
 }
 
-/** Static lookup (base data). Prefer useStore().getClient for configured values. */
-export const clientById = (id: string) => CLIENTS.find((c) => c.id === id);
 export { toISO };
 
 /** Send an email notification to Ben via the server route. Never throws. */
@@ -195,7 +316,7 @@ export async function notifyBen(subject: string, text: string): Promise<boolean>
   try {
     const r = await fetch("/api/notify", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await authHeader()) },
       body: JSON.stringify({ subject, text }),
     });
     const j = await r.json();

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AlzaNav, AlzaTopbar, Sheet, Toast, useGuard, useToast } from "@/components/ui";
-import { CLIENTS, fmt, toISO, today } from "@/lib/data";
+import { fmt, toISO, today } from "@/lib/data";
 import { FOLDERS, Resource, ResourceType } from "@/lib/modules";
 import { useStore } from "@/lib/store";
 
@@ -10,7 +10,7 @@ const TYPES: ResourceType[] = ["Template", "Guide", "Checklist", "Policy", "Vide
 
 export default function Library() {
   const ok = useGuard("advisor");
-  const { resources, patch, config, getClient } = useStore();
+  const { resources, patch, config, getClient, clients } = useStore();
   const [cat, setCat] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [share, setShare] = useState<Resource | null>(null);
@@ -76,7 +76,7 @@ export default function Library() {
       {share && (
         <ShareSheet
           r={share}
-          clients={CLIENTS.filter((c) => config[c.id]?.modules.resources).map((c) => getClient(c.id)!)}
+          clients={clients.filter((c) => config[c.id]?.modules.resources).map((c) => getClient(c.id)!)}
           onClose={() => setShare(null)}
           onShare={(clientId, folder) => {
             if (share.shares.some((s) => s.clientId === clientId && s.folder === folder)) {

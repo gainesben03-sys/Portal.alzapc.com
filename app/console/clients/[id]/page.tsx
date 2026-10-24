@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { AlzaNav, AlzaTopbar, Toast, useGuard, useToast } from "@/components/ui";
 import { Access, ACCESS_LABEL, ClientConfig, MODULES, PortalUser } from "@/lib/modules";
 import { useStore } from "@/lib/store";
+import { sendInvite } from "@/lib/invite";
 
 function luminance(hex: string) {
   const n = parseInt(hex.slice(1), 16);
@@ -179,9 +180,10 @@ export default function ClientSetup() {
               e.preventDefault();
               if (!nu.name.trim() || !nu.email.trim()) return;
               if (cfg.users.some((u) => u.email.toLowerCase() === nu.email.trim().toLowerCase())) return toast.show("That email already has access");
-              set({ users: [...cfg.users, { ...nu, name: nu.name.trim(), role: nu.role.trim() || "Team member", email: nu.email.trim() }] });
+              const invitee = { ...nu, name: nu.name.trim(), role: nu.role.trim() || "Team member", email: nu.email.trim().toLowerCase(), invited: true };
+              set({ users: [...cfg.users, invitee], escalationEmail: cfg.escalationEmail || (invitee.access === "exec" ? invitee.email : ""), huddle: { ...cfg.huddle, recipients: [...cfg.huddle.recipients, invitee.email] } });
               setNu({ name: "", role: "", email: "", access: "manager" });
-              toast.show("Invite created. A single-use sign-in link is emailed in the full build.");
+              sendInvite(id, invitee.email, invitee.name).then(toast.show);
             }}
           >
             <label className="f">Invite someone</label>

@@ -7,11 +7,12 @@ import { AlzaNav, AlzaTopbar, Toast, useGuard, useToast } from "@/components/ui"
 import { buildHuddle } from "@/lib/huddle";
 import { Cadence, CADENCE_LABEL, DAY_NAMES, HuddleSettings, nextHuddle } from "@/lib/modules";
 import { useStore } from "@/lib/store";
+import { authHeader } from "@/lib/supabase";
 
 export default function HuddleSetup() {
   const { id } = useParams<{ id: string }>();
   const ok = useGuard("advisor");
-  const { config, patch, getClient, actions, projects, files, rules } = useStore();
+  const { config, patch, getClient, actions, projects, files, rules, live } = useStore();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const client = getClient(id);
@@ -29,12 +30,13 @@ export default function HuddleSetup() {
     try {
       const r = await fetch("/api/huddle", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode, subject: out.subject, html: out.html, text: out.text, to: h.recipients }),
+        headers: { "Content-Type": "application/json", ...(await authHeader()) },
+        body: JSON.stringify({ mode, subject: out.subject, html: out.html, text: out.text, to: h.recipients, clientId: id }),
       });
       const j = await r.json();
       if (j.reason === "not_configured") toast.show("Email isn't connected yet. Add the Resend key in Vercel.");
       else if (j.reason === "recipient_not_allowed") toast.show("None of these emails are approved yet (REMIND_ALLOWED).");
+      else if (j.reason === "no_recipients") toast.show("Nobody at this client has the Huddle turned on.");
       else if (mode === "test") toast.show(j.sent ? "Test sent to your inbox" : "Couldn't send. Check the Resend sender.");
       else {
         if (j.sent) set({ lastSent: new Date().toISOString() });
@@ -118,7 +120,7 @@ export default function HuddleSetup() {
           <button className="btn" disabled={busy} onClick={() => send("test")}>Send me a test</button>
           <button className="btn primary" disabled={busy || !h.recipients.length} onClick={() => send("send")}>Send to client now</button>
         </div>
-        <p className="demo-note">In the prototype, sends happen when you tap. The full build sends automatically on the schedule above.</p>
+        <p className="demo-note">{live ? "Sends automatically on the schedule above. Use these buttons for a test or an extra send." : "Demo mode: sends happen only when you tap."}</p>
       </main>
       <Toast msg={toast.msg} onDone={toast.clear} />
     </div>

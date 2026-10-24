@@ -5,6 +5,7 @@ import { useState } from "react";
 import { AlzaNav, AlzaTopbar, useGuard } from "@/components/ui";
 import { fmtTime } from "@/lib/data";
 import { useStore } from "@/lib/store";
+import { LIVE, openStored } from "@/lib/supabase";
 
 const size = (n: number) => (n > 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1e3))} KB`);
 
@@ -12,6 +13,7 @@ export default function Files() {
   const ok = useGuard("advisor");
   const { files, patch, getClient, actions } = useStore();
   const [f, setF] = useState<"new" | "all">("new");
+  const [err, setErr] = useState("");
   if (!ok) return null;
   const list = files.filter((x) => f === "all" || !x.reviewed).sort((a, b) => b.at.localeCompare(a.at));
   const mark = (id: string, reviewed: boolean) => patch({ files: files.map((x) => (x.id === id ? { ...x, reviewed } : x)) });
@@ -27,6 +29,7 @@ export default function Files() {
           <button className={`tab ${f === "new" ? "on" : ""}`} onClick={() => setF("new")}>To review<span className="count">{files.filter((x) => !x.reviewed).length}</span></button>
           <button className={`tab ${f === "all" ? "on" : ""}`} onClick={() => setF("all")}>All<span className="count">{files.length}</span></button>
         </div>
+        {err && <p className="small" style={{ color: "var(--red)", marginTop: 10 }}>{err}</p>}
         <div style={{ marginTop: 14 }}>
           {list.length === 0 && <div className="card small muted">You're caught up.</div>}
           {list.map((x) => {
@@ -48,7 +51,11 @@ export default function Files() {
                 </div>
                 {x.note && <div className="reply">{x.note}</div>}
                 <div className="action-foot">
-                  <button className="btn sm" onClick={() => alert("Opens the file from secure storage in the full build.")}>Open</button>
+                  {x.path ? (
+                    <button className="btn sm" onClick={() => openStored(x.path!).catch(() => setErr("Couldn't open that file"))}>Open</button>
+                  ) : (
+                    <span className="tiny muted">{LIVE ? "No file stored" : "Demo file"}</span>
+                  )}
                   {x.reviewed ? (
                     <button className="btn ghost sm" onClick={() => mark(x.id, false)}>Mark unreviewed</button>
                   ) : (

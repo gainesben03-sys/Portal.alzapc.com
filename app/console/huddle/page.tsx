@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import { AlzaNav, AlzaTopbar, useGuard } from "@/components/ui";
-import { CLIENTS } from "@/lib/data";
 import { buildHuddle } from "@/lib/huddle";
 import { CADENCE_LABEL, DAY_NAMES, nextHuddle } from "@/lib/modules";
 import { useStore } from "@/lib/store";
 
 export default function HuddleList() {
   const ok = useGuard("advisor");
-  const { config, getClient, actions, projects, files, rules } = useStore();
+  const { config, getClient, actions, projects, files, rules, clients } = useStore();
   if (!ok) return null;
   return (
     <>
@@ -21,7 +20,7 @@ export default function HuddleList() {
           One recap email per client on a set day: what needs them, project progress, wins and what's next. Quiet weeks are skipped so it never feels like nagging.
         </p>
         <div style={{ marginTop: 16 }}>
-          {CLIENTS.map((b) => {
+          {clients.map((b) => {
             const c = getClient(b.id)!;
             const h = config[c.id]?.huddle;
             if (!h) return null;

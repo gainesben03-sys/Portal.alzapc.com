@@ -1,32 +1,39 @@
-// Sends portal notifications to Ben via Resend.
-// Recipient is fixed server-side (NOTIFY_TO), so this can't be used to email anyone else.
-// Env vars (set in Vercel → Settings → Environment Variables):
-//   RESEND_API_KEY  required
-//   NOTIFY_FROM     required, a sender on a domain verified in Resend, e.g. "Alza Portal <portal@alzapc.com>"
-//   NOTIFY_TO       optional, defaults to ben@alzapc.com
-
+// Portal notifications.
+//   Default: an email to Ben (NOTIFY_TO). Any signed-in portal user can trigger it.
+//   toMember: Ben emails one person at a client (for example a reply on the note board).
+// In demo mode (no Supabase keys) it behaves like before: email to Ben if Resend is set up.
 import { NextResponse } from "next/server";
+import { admin, caller, sendEmail, SERVER_LIVE } from "@/lib/server";
 
 export async function POST(req: Request) {
-  const key = process.env.RESEND_API_KEY;
-  const from = process.env.NOTIFY_FROM;
-  const to = process.env.NOTIFY_TO || "ben@alzapc.com";
-  if (!key || !from) return NextResponse.json({ sent: false, reason: "not_configured" });
-
-  let body: { subject?: unknown; text?: unknown };
+  let b: { subject?: unknown; text?: unknown; toMember?: { clientId?: string; email?: string } };
   try {
-    body = await req.json();
+    b = await req.json();
   } catch {
     return NextResponse.json({ sent: false, reason: "bad_request" }, { status: 400 });
   }
-  const subject = String(body.subject ?? "").slice(0, 200).replace(/[\r\n]+/g, " ");
-  const text = String(body.text ?? "").slice(0, 5000);
+  const subject = String(b.subject ?? "").slice(0, 200);
+  const text = String(b.text ?? "").slice(0, 5000);
   if (!subject || !text) return NextResponse.json({ sent: false, reason: "bad_request" }, { status: 400 });
+  const ben = process.env.NOTIFY_TO || "ben@alzapc.com";
 
-  const r = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from, to: [to], subject: `[Portal] ${subject}`, text }),
-  });
-  return NextResponse.json({ sent: r.ok, reason: r.ok ? undefined : `resend_${r.status}` });
+  if (!SERVER_LIVE) {
+    const r = await sendEmail({ to: [ben], subject: `[Portal] ${subject}`, text });
+    return NextResponse.json({ sent: r.ok, reason: r.reason });
+  }
+
+  const me = await caller(req);
+  if (!me) return NextResponse.json({ sent: false, reason: "signed_out" }, { status: 401 });
+
+  if (b.toMember) {
+    if (!me.advisor) return NextResponse.json({ sent: false, reason: "forbidden" }, { status: 403 });
+    const email = String(b.toMember.email ?? "").toLowerCase();
+    const { data } = await admin().from("members").select("email").eq("client_id", String(b.toMember.clientId ?? "")).eq("email", email).maybeSingle();
+    if (!data) return NextResponse.json({ sent: false, reason: "not_a_member" }, { status: 400 });
+    const r = await sendEmail({ to: [email], subject, text });
+    return NextResponse.json({ sent: r.ok, reason: r.reason });
+  }
+
+  const r = await sendEmail({ to: [ben], subject: `[Portal] ${subject}`, text: `${text}\n\nSent by ${me.email}` });
+  return NextResponse.json({ sent: r.ok, reason: r.reason });
 }

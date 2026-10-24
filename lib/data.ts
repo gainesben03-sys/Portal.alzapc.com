@@ -15,6 +15,7 @@ export type Kind = "approval" | "information" | "feedback" | "document";
 export interface Person {
   name: string;
   role: string;
+  email?: string;
 }
 
 export interface Client {
@@ -37,6 +38,7 @@ export interface HistoryEntry {
 export interface Attachment {
   name: string;
   from: string;
+  path?: string; // storage path when the file is really stored
 }
 
 export interface Action {
