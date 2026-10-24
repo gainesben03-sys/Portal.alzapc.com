@@ -375,5 +375,5 @@ insert into public.advisors (email, name) values
 on conflict (email) do nothing;
 
 insert into public.app_settings (key, data) values
-  ('global', '{"rules": {"friendlyBefore": 3, "dueDay": true, "overdueNotice": 1, "escalateAfter": 3, "blockerAfter": 7}, "bookingUrl": ""}'::jsonb)
+  ('global', '{"rules": {"friendlyBefore": 3, "dueDay": true, "overdueNotice": 1, "escalateAfter": 3, "blockerAfter": 7}, "bookingUrl": "https://calendly.com/ben-alzapc/30min"}'::jsonb)
 on conflict (key) do nothing;

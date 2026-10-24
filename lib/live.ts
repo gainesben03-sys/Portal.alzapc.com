@@ -7,7 +7,7 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { Client, DEFAULT_RULES } from "./data";
 import { ClientConfig, InviteCode, PortalUser } from "./modules";
-import { emptyState, State } from "./state";
+import { DEFAULT_BOOKING_URL, emptyState, State } from "./state";
 
 type Row = { id: string; client_id?: string; data: Record<string, unknown> };
 const ENTITY = ["actions", "projects", "notes", "files", "notices", "roles", "candidates"] as const;
@@ -92,7 +92,7 @@ export async function loadAll(db: SupabaseClient, email: string): Promise<State>
 
   const g = settings.find((x) => x.key === "global")?.data ?? {};
   s.rules = { ...DEFAULT_RULES, ...(g.rules ?? {}) };
-  s.bookingUrl = g.bookingUrl ?? "";
+  s.bookingUrl = g.bookingUrl || DEFAULT_BOOKING_URL;
   const p = prefs[0]?.data ?? {};
   s.layouts = p.layouts ?? {};
   s.helpful = p.helpful ?? {};

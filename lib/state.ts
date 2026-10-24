@@ -1,6 +1,8 @@
 import { Action, Client, CLIENTS, DEFAULT_RULES, Project, Rules, seed } from "./data";
 import { Announcement, Benefit, Candidate, ClientConfig, Note, Notice, Resource, Role, SharedFile, seedModules } from "./modules";
 
+export const DEFAULT_BOOKING_URL = "https://calendly.com/ben-alzapc/30min";
+
 export interface State {
   clients: Client[]; // base info; getClient() merges in config
   actions: Action[];
@@ -36,7 +38,7 @@ export function emptyState(): State {
     files: [],
     notices: [],
     helpful: {},
-    bookingUrl: "",
+    bookingUrl: DEFAULT_BOOKING_URL,
     layouts: {},
   };
 }
