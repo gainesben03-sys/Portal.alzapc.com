@@ -70,5 +70,11 @@ export async function sendEmail(opts: { to: string[]; subject: string; text: str
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({ from, to: opts.to, subject: opts.subject.replace(/[\r\n]+/g, " ").slice(0, 200), text: opts.text, html: opts.html, scheduled_at: opts.scheduledAt }),
   });
-  return r.ok ? { ok: true } : { ok: false, reason: `resend_${r.status}` };
+  if (r.ok) return { ok: true };
+  let msg = "";
+  try {
+    const j = await r.json();
+    msg = String(j?.message ?? j?.error ?? "");
+  } catch {}
+  return { ok: false, reason: `resend_${r.status}${msg ? `: ${msg.slice(0, 200)}` : ""}` };
 }

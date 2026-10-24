@@ -15,6 +15,7 @@ export default function HuddleSetup() {
   const { config, patch, getClient, actions, projects, files, rules, live } = useStore();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
+  const [sendErr, setSendErr] = useState("");
   const client = getClient(id);
   const cfg = config[id];
   if (!ok) return null;
@@ -34,18 +35,30 @@ export default function HuddleSetup() {
         body: JSON.stringify({ mode, subject: out.subject, html: out.html, text: out.text, to: h.recipients, clientId: id }),
       });
       const j = await r.json();
+      setSendErr("");
+      if (!j.sent && j.reason && !["recipient_not_allowed", "no_recipients"].includes(j.reason)) setSendErr(explain(String(j.reason)));
       if (j.reason === "not_configured") toast.show("Email isn't connected yet. Add the Resend key in Vercel.");
       else if (j.reason === "recipient_not_allowed") toast.show("None of these emails are approved yet (REMIND_ALLOWED).");
       else if (j.reason === "no_recipients") toast.show("Nobody at this client has the Huddle turned on.");
-      else if (mode === "test") toast.show(j.sent ? "Test sent to your inbox" : "Couldn't send. Check the Resend sender.");
+      else if (mode === "test") toast.show(j.sent ? "Test sent. Check your inbox (and spam)." : "Didn't send. See the reason below.");
       else {
         if (j.sent) set({ lastSent: new Date().toISOString() });
-        toast.show(`Sent to ${j.sent}${j.skipped?.length ? `, ${j.skipped.length} not approved yet` : ""}`);
+        toast.show(j.sent ? `Sent to ${j.sent}${j.skipped?.length ? `, ${j.skipped.length} not approved yet` : ""}` : "Didn't send. See the reason below.");
       }
     } catch {
       toast.show("Couldn't reach the email service");
     }
     setBusy(false);
+  };
+
+  const explain = (reason: string) => {
+    if (reason === "not_configured") return "RESEND_API_KEY or NOTIFY_FROM is missing in Vercel. Add both, then redeploy.";
+    if (reason === "forbidden") return "You need to be signed in as Ben to send Huddles.";
+    if (/resend_401|resend_403.*(api key|invalid)/i.test(reason)) return "Resend rejected the API key. Put your current Resend key in Vercel as RESEND_API_KEY, then redeploy.";
+    if (/resend_403/i.test(reason)) return `Resend refused the sender. Check that alzapc.com is verified in Resend and NOTIFY_FROM uses it. (${reason})`;
+    if (/resend_422/i.test(reason)) return `Resend didn't accept the sender format. NOTIFY_FROM should look like: AlzaHR Portal <portal@alzapc.com>. (${reason})`;
+    if (/resend_429/i.test(reason)) return "Too many emails at once. Wait a minute and try again.";
+    return `Email failed: ${reason}`;
   };
 
   return (
@@ -120,6 +133,7 @@ export default function HuddleSetup() {
           <button className="btn" disabled={busy} onClick={() => send("test")}>Send me a test</button>
           <button className="btn primary" disabled={busy || !h.recipients.length} onClick={() => send("send")}>Send to client now</button>
         </div>
+        {sendErr && <div className="impact" style={{ marginTop: 10, color: "var(--red)", background: "var(--red-bg)" }}>{sendErr}</div>}
         <p className="demo-note">{live ? "Sends automatically on the schedule above. Use these buttons for a test or an extra send." : "Demo mode: sends happen only when you tap."}</p>
       </main>
       <Toast msg={toast.msg} onDone={toast.clear} />
