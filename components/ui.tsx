@@ -191,8 +191,8 @@ export function AlzaTopbar({ title = "Console" }: { title?: string }) {
   return (
     <header className="topbar">
       <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-        <Link href="/console" className="wordmark">
-          alza<span className="hide-sm">{title}</span>
+        <Link href="/console" className="wordmark" aria-label="AlzaHR console">
+          Alza<span className="hr">HR</span>
         </Link>
         <CompanySwitcher />
       </div>
@@ -221,7 +221,7 @@ export function ClientTopbar({ client }: { client: Client }) {
     <>
     {isAdvisor && (
       <div className="advisor-strip">
-        <Link href="/console" className="wordmark" style={{ fontSize: 16 }}>alza</Link>
+        <Link href="/console" className="wordmark" style={{ fontSize: 17 }}>Alza<span className="hr">HR</span></Link>
         <span className="tiny" style={{ opacity: 0.8 }}>Viewing</span>
         <CompanySwitcher current={client.id} />
         <Link href={`/console/clients/${client.id}`} className="tiny" style={{ marginLeft: "auto", color: "#9fc0e8" }}>
@@ -236,7 +236,7 @@ export function ClientTopbar({ client }: { client: Client }) {
       </Link>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <span className="powered hide-sm">
-          powered by <b>alza</b>
+          powered by <span className="wordmark">Alza<span className="hr">HR</span></span>
         </span>
         <ThemeToggle />
         {isAdvisor ? null : (

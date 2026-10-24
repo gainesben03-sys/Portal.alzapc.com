@@ -123,12 +123,12 @@ export function buildHuddle({ client, settings, actions, projects, files, rules,
       ? `A few things need your team this week. Everything else is moving.`
       : `Nothing needs you this week. Here's a quick look at where things stand.`;
 
-  const html = `<!doctype html><html><body style="margin:0;padding:0;background:#eef2f8">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef2f8"><tr><td align="center" style="padding:20px 12px">
+  const html = `<!doctype html><html><body style="margin:0;padding:0;background:#faf8f4">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#faf8f4"><tr><td align="center" style="padding:20px 12px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:14px;overflow:hidden">
 <tr><td style="height:5px;background:${accent};font-size:0;line-height:0">&nbsp;</td></tr>
 <tr><td style="padding:20px 24px 0"><table role="presentation" width="100%"><tr><td>${logo}</td><td align="right" style="font:12px Arial,sans-serif;color:#5b6b85">HR Huddle · ${now.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</td></tr></table></td></tr>
-<tr><td style="padding:18px 24px 0;font:700 22px/1.3 Arial,sans-serif;color:#16213a">${overdue.length || needs.length ? "Your week in HR" : "All caught up"}</td></tr>
+<tr><td style="padding:18px 24px 0;font:600 24px/1.3 Georgia,serif;color:#16213a">${overdue.length || needs.length ? "Your week in HR" : "All caught up"}</td></tr>
 <tr><td style="padding:6px 24px 0;font:15px/1.5 Arial,sans-serif;color:#5b6b85">${intro}</td></tr>
 ${note}
 ${section("Needs your team", needsHtml ? needsHtml + needsFoot : "")}
@@ -141,9 +141,9 @@ ${section("Coming up", roadmapHtml)}
 <td style="width:10px"></td>
 <td style="border:1px solid #dbe2ee;border-radius:10px"><a href="${PORTAL}/c/${client.id}/share" style="display:inline-block;padding:11px 16px;font:700 15px Arial,sans-serif;color:#16213a;text-decoration:none">Share with HR</a></td>
 </tr></table></td></tr>
-<tr><td style="padding:0 24px 22px;font:12px/1.5 Arial,sans-serif;color:#8a97ad">You get this ${settings.cadence === "weekly" ? "weekly" : settings.cadence === "biweekly" ? "every two weeks" : "monthly"} from Alza. Quiet weeks are skipped. <a href="${PORTAL}/c/${client.id}/team" style="color:#8a97ad">Change email settings</a></td></tr>
+<tr><td style="padding:0 24px 22px;font:12px/1.5 Arial,sans-serif;color:#8a97ad">You get this from AlzaHR ${settings.cadence === "weekly" ? "weekly" : settings.cadence === "biweekly" ? "every two weeks" : "monthly"}. Quiet weeks are skipped. <a href="${PORTAL}/c/${client.id}/team" style="color:#8a97ad">Change email settings</a></td></tr>
 </table>
-<p style="font:11px Arial,sans-serif;color:#8a97ad;margin:12px 0 0">Powered by alza</p>
+<p style="font:11px Arial,sans-serif;color:#8a97ad;margin:12px 0 0">Powered by <span style="font-family:Georgia,serif;font-weight:700;color:#19283c">Alza</span><span style="font-family:Georgia,serif;font-weight:700;color:#d9a046">HR</span></p>
 </td></tr></table></body></html>`;
 
   const lines = (title: string, items: string[]) => (items.length ? `\n${title.toUpperCase()}\n${items.map((x) => `- ${x}`).join("\n")}\n` : "");

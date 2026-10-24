@@ -50,12 +50,12 @@ export default function Login() {
     <main className="login">
       <div className="card">
         <div className="row" style={{ alignItems: "center" }}>
-          <div className="wordmark">alza</div>
+          <div className="wordmark">Alza<span className="hr">HR</span><span className="tag hide-sm">People Collective</span></div>
           <span className="login-theme"><ThemeToggle /></span>
         </div>
         <h1 style={{ marginTop: 18 }}>Client portal</h1>
         <p className="muted" style={{ marginTop: 6 }}>
-          Sign in to see what's in motion, what needs your sign-off, and everything Alza has shared with your team.
+          Sign in to see what's in motion, what needs your sign-off, and everything AlzaHR has shared with your team.
         </p>
 
         {sent ? (
@@ -78,7 +78,7 @@ export default function Login() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
-            <button className="btn primary block" style={{ marginTop: 12 }}>
+            <button className="btn gold block" style={{ marginTop: 12 }}>
               Email me a sign-in link
             </button>
           </form>
@@ -124,7 +124,7 @@ export default function Login() {
             router.push("/console");
           }}
         >
-          View as Ben (Alza Master Console)
+          View as Ben (AlzaHR console)
         </button>
         <button className="btn ghost block tiny" style={{ marginTop: 8 }} onClick={reset}>
           Reset demo data

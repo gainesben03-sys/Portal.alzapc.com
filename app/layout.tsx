@@ -3,16 +3,19 @@ import "./globals.css";
 import { StoreProvider } from "@/lib/store";
 
 export const metadata: Metadata = {
-  title: "Alza Client Portal",
+  title: "AlzaHR Client Portal",
   description: "Client workspaces and accountability tracking for Alza advisory clients.",
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#1a2b4a" };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#19283c" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
         <script
           dangerouslySetInnerHTML={{
             __html: `try{var t=localStorage.getItem("alza-theme");if(!t){t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}document.documentElement.dataset.theme=t}catch(e){}`,
