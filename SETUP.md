@@ -17,6 +17,7 @@ insert into public.advisors (email, name) values ('you@example.com', 'Ben Gaines
 If you set up the database before these existed, also run each of these the same way (new installs get them automatically from `schema.sql`):
 - `supabase/002_knowledge.sql`: the documents Claude reads when drafting
 - `supabase/003_hires.sql`: new hires
+- `supabase/004_esign.sql`: built-in e-signature
 
 ## 2. Sign-in settings
 

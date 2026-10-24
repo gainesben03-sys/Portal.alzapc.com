@@ -95,7 +95,8 @@ Real sign-in, a Supabase database with row-level security, private file storage 
    - **Offer signed** creates two client tasks automatically: add them to payroll (3 business days before start) and get ready for day one (owned by the manager when they're on the portal).
    - **Emails in the client's colors**: welcome email when the offer is signed, first-day email N days before the start date (both automatic, or by hand), preview and "Send me a test". Started is set on the start date, and Ben gets a 30-day check-in reminder.
    - **Client setup → New hire onboarding**: payroll system, office address, contact, benefits line, mission, values, leadership note, video, timing.
-   - E-signature (Anvil) and payroll integrations come later; for now stages are marked by hand.
+   - **Built-in e-signature** (`supabase/004_esign.sql`, free, no outside service): "Send for e-signature" on an offer letter or agreement emails the new hire a private link in the client's colors. They read it on any device, agree to sign electronically, and type their name. The signed PDF (with a signature certificate: SHA-256 of the exact text, time, IP, browser, activity) goes on the hire and into Files, a copy is emailed to them, and Ben gets an email and a bell notice. A signed offer moves the hire to Signed, creates the payroll and first-day tasks, and sends the welcome email. Links expire in 30 days; resending cancels the old link; they can decline with a note.
+   - Payroll integrations come later.
 4. AlzaPitch link
 5. PEO and benefits calculator
 6. Ask HR (answers only from each client's own policies)
