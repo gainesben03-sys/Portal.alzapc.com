@@ -172,7 +172,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setKick((k) => k + 1); // save anything that changed while this save was running
       if (errs.length) {
         console.warn("Save problems:", errs);
-        setSaveError("Some changes didn't save. Showing the latest saved version.");
+        const missingHires = errs.some((e) => /hires/i.test(e) && /does not exist|schema cache|not find/i.test(e));
+        setSaveError(
+          missingHires
+            ? "New hires can't save yet: run supabase/003_hires.sql in the Supabase SQL Editor, then try again."
+            : "Some changes didn't save. Showing the latest saved version."
+        );
         try {
           await load();
         } catch {}
