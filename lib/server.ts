@@ -61,6 +61,21 @@ export async function caller(req: Request): Promise<Caller | null> {
 
 export const PORTAL_URL = (process.env.PORTAL_URL || "https://portal.alzapc.com").replace(/\/$/, "");
 
+/**
+ * The address the person is using right now (e.g. the .vercel.app address before the
+ * custom domain is connected), so links in emails always open. Only trusted hosts are used.
+ */
+export function siteUrl(req: Request): string {
+  const host = (req.headers.get("x-forwarded-host") || req.headers.get("host") || "").split(",")[0].trim().toLowerCase();
+  let configured = "";
+  try {
+    configured = new URL(PORTAL_URL).host;
+  } catch {}
+  const ok = host && (host === configured || /\.vercel\.app$/.test(host) || /(^|\.)alzapc\.com$/.test(host) || /^localhost(:\d+)?$/.test(host));
+  if (!ok) return PORTAL_URL;
+  return `${/^localhost/.test(host) ? "http" : "https"}://${host}`;
+}
+
 export async function sendEmail(opts: { to: string[]; subject: string; text: string; html?: string; scheduledAt?: string; attachments?: { filename: string; content: string }[]; replyTo?: string }): Promise<{ ok: boolean; reason?: string }> {
   const key = process.env.RESEND_API_KEY;
   const from = process.env.NOTIFY_FROM;

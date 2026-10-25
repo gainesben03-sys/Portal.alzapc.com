@@ -3,7 +3,7 @@
 import { NextResponse } from "next/server";
 import { buildSignedPdf, headerImage, loadClient, loadHire, saveHire, SigEvent, SigRow, who } from "@/lib/esign";
 import { afterSignedTasks, safeFileName } from "@/lib/esign-after";
-import { admin, SERVER_LIVE } from "@/lib/server";
+import { admin, SERVER_LIVE, siteUrl } from "@/lib/server";
 
 export const maxDuration = 60;
 
@@ -58,7 +58,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   const now = new Date().toISOString();
   const { ip, agent } = who(req);
   const h = await loadHire(db, row.hire_id);
-  const c = await loadClient(db, row.client_id);
+  const c = await loadClient(db, row.client_id, siteUrl(req));
   if (!h || !c) return NextResponse.json({ ok: false, reason: "not_found" }, { status: 404 });
 
   if (b.action === "decline") {

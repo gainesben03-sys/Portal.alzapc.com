@@ -47,7 +47,7 @@ export interface SigRow {
 }
 
 /** Everything about a client the signing flow needs: brand, settings, and a Client with its escalation contact. */
-export async function loadClient(db: SupabaseClient, clientId: string) {
+export async function loadClient(db: SupabaseClient, clientId: string, base: string = PORTAL_URL) {
   const { data: c } = await db.from("clients").select("id, name, engagement, pilot, config").eq("id", clientId).maybeSingle();
   if (!c) return null;
   const cfg = (c.config ?? {}) as ClientConfig;
@@ -58,8 +58,8 @@ export async function loadClient(db: SupabaseClient, clientId: string) {
   const client: Client = { id: c.id, name: c.name, accent: cfg.accent || "#19283c", logo: cfg.logo, pilot: !!c.pilot, engagement: c.engagement ?? "", escalation, contacts: users };
   const fullCfg: ClientConfig = { ...cfg, users: users.map((u) => ({ ...u, access: u.access as "exec" })), codes: [] };
   const s: OnboardingSettings = onboardingFor(cfg.onboarding);
-  const brand = { company: c.name, accent: cfg.accent || "#19283c", logoUrl: emailLogoUrl(c.id, cfg.logo, cfg.logoEmail, PORTAL_URL) };
-  return { client, cfg: fullCfg, s, brand, logo: cfg.logoEmail || cfg.logo };
+  const brand = { company: c.name, accent: cfg.accent || "#19283c", logoUrl: emailLogoUrl(c.id, cfg.logo, cfg.logoEmail, base) };
+  return { client, cfg: fullCfg, s, brand, logo: cfg.logoEmail || cfg.logo, base };
 }
 
 export async function loadHire(db: SupabaseClient, hireId: string): Promise<Hire | null> {

@@ -3,7 +3,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { loadClient, saveHire, SigRow } from "./esign";
 import { Hire, signedCopyEmail, stageIndex, welcomeEmail } from "./hires";
 import { signedTasks } from "./hiretasks";
-import { PORTAL_URL, sendEmail } from "./server";
+import { sendEmail } from "./server";
 import { advisorEmails, pushTo } from "./push";
 
 type C = NonNullable<Awaited<ReturnType<typeof loadClient>>>;
@@ -16,7 +16,7 @@ async function notify(db: SupabaseClient, c: C, h: Hire, subject: string, text: 
   await db.from("notices").insert({ id, client_id: c.client.id, created_by: "esign@portal", data: { clientId: c.client.id, kind: "hire", text: `${c.client.name}: ${subject}`, href: `/c/${c.client.id}/hires/${h.id}`, at, read: false } });
   await pushTo(db, await advisorEmails(db), "hires", { title: `${c.client.name}: ${h.name}`, body: subject.replace(`${h.name} `, ""), url: `/c/${c.client.id}/hires/${h.id}`, tag: `hire-${h.id}` });
   const to = (process.env.NOTIFY_TO || "ben@alzapc.com").trim();
-  await sendEmail({ to: [to], subject: `[Portal] ${c.client.name}: ${subject}`, text: `${subject}.\n\n${text}\n\n${PORTAL_URL}/c/${c.client.id}/hires/${h.id}` });
+  await sendEmail({ to: [to], subject: `[Portal] ${c.client.name}: ${subject}`, text: `${subject}.\n\n${text}\n\n${c.base}/c/${c.client.id}/hires/${h.id}` });
 }
 
 async function run(

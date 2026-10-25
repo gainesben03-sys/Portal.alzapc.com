@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 import { loadClient, loadHire, newToken, saveHire, sha256 } from "@/lib/esign";
 import { extractText } from "@/lib/extract";
 import { signRequestEmail, stageIndex } from "@/lib/hires";
-import { admin, caller, PORTAL_URL, sendEmail, SERVER_LIVE } from "@/lib/server";
+import { admin, caller, sendEmail, SERVER_LIVE, siteUrl } from "@/lib/server";
 
 export const maxDuration = 60;
 
@@ -46,7 +46,8 @@ export async function POST(req: Request) {
   const body = (await extractText(Buffer.from(await blob.arrayBuffer()), doc.name, blob.type || "")).replace(/\r/g, "").replace(/\n{3,}/g, "\n\n").trim();
   if (body.length < 40) return NextResponse.json({ ok: false, reason: "unreadable" });
 
-  const c = await loadClient(db, h.clientId);
+  const base = siteUrl(req);
+  const c = await loadClient(db, h.clientId, base);
   if (!c) return NextResponse.json({ ok: false, reason: "no_client" }, { status: 404 });
   const title = kind === "offer" ? "Offer Letter" : "Employment Agreement";
   const id = newToken();
@@ -58,7 +59,7 @@ export async function POST(req: Request) {
   });
   if (error) return NextResponse.json({ ok: false, reason: /signatures/.test(error.message) ? "no_table" : "save_failed", detail: error.message });
 
-  const link = `${PORTAL_URL}/sign/${id}`;
+  const link = `${base}/sign/${id}`;
   const mail = signRequestEmail(h, title, link, c.s, c.brand, expires.slice(0, 10));
   const r = await sendEmail({ to: [to], subject: mail.subject, html: mail.html, text: mail.text, replyTo: c.s.hrEmail });
   if (!r.ok) {
