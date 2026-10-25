@@ -4,8 +4,10 @@
 import { authHeader, LIVE } from "./supabase";
 import type { PushTopic } from "./pushtopics";
 
-const VAPID = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim() ?? "";
-export const PUSH_CONFIGURED = LIVE && !!VAPID;
+const VAPID = (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "").trim().replace(/^["']|["']$/g, "").replace(/\s+/g, "");
+// a real public key is 87 characters and starts with "B"
+const VAPID_OK = /^B[A-Za-z0-9_-]{86}$/.test(VAPID);
+export const PUSH_CONFIGURED = LIVE && VAPID_OK;
 
 export function isIOS() {
   if (typeof navigator === "undefined") return false;

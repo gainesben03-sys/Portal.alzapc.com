@@ -4,10 +4,33 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { PushTopic, topicOn } from "./pushtopics";
 import { PORTAL_URL } from "./server";
 
-const pub = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim();
-const priv = process.env.VAPID_PRIVATE_KEY?.trim();
-export const PUSH_READY = !!(pub && priv);
-if (PUSH_READY) webpush.setVapidDetails(process.env.VAPID_SUBJECT?.trim() || "mailto:ben@alzapc.com", pub!, priv!);
+// Keys are cleaned of stray quotes/spaces. A bad key turns alerts off (and says why in the logs);
+// it never breaks the build or any other part of the portal.
+const clean = (v?: string) => (v ?? "").trim().replace(/^["']|["']$/g, "").replace(/\s+/g, "");
+const pub = clean(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY);
+const priv = clean(process.env.VAPID_PRIVATE_KEY);
+let subject = clean(process.env.VAPID_SUBJECT) || "mailto:ben@alzapc.com";
+if (!/^(mailto:|https:)/.test(subject)) subject = `mailto:${subject.replace(/^mailto:/, "")}`;
+
+let configured: boolean | null = null;
+export let PUSH_PROBLEM = "";
+function ready() {
+  if (configured !== null) return configured;
+  if (!pub || !priv) {
+    PUSH_PROBLEM = "not_configured";
+    return (configured = false);
+  }
+  try {
+    webpush.setVapidDetails(subject, pub, priv);
+    configured = true;
+  } catch (e) {
+    PUSH_PROBLEM = `bad_keys: ${(e as Error).message}`;
+    console.error("Alerts are off:", PUSH_PROBLEM);
+    configured = false;
+  }
+  return configured;
+}
+export const pushReady = () => ready();
 
 export interface PushMsg {
   title: string;
@@ -18,7 +41,7 @@ export interface PushMsg {
 
 /** Push to these people (by email) if they have devices and haven't turned the topic off. Never throws. */
 export async function pushTo(db: SupabaseClient, emails: string[], topic: PushTopic, msg: PushMsg): Promise<number> {
-  if (!PUSH_READY) return 0;
+  if (!ready()) return 0;
   const list = Array.from(new Set(emails.map((e) => e.trim().toLowerCase()).filter(Boolean)));
   if (!list.length) return 0;
   try {

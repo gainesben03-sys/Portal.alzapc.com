@@ -2,7 +2,7 @@
 // and two triggers from the browser (a heads-up to Ben, a new request for a client).
 // Recipients are always worked out here on the server.
 import { NextResponse } from "next/server";
-import { advisorEmails, PUSH_READY, pushTo } from "@/lib/push";
+import { advisorEmails, PUSH_PROBLEM, pushReady, pushTo } from "@/lib/push";
 import { PushTopic } from "@/lib/pushtopics";
 import { admin, caller, SERVER_LIVE } from "@/lib/server";
 import { fmt } from "@/lib/data";
@@ -19,7 +19,7 @@ export async function GET(req: Request) {
     db.from("push_prefs").select("topics").eq("email", email).maybeSingle(),
     db.from("push_subs").select("endpoint", { count: "exact", head: true }).eq("email", email),
   ]);
-  return NextResponse.json({ ok: true, ready: PUSH_READY, topics: p?.topics ?? {}, devices: count ?? 0 });
+  return NextResponse.json({ ok: true, ready: pushReady(), problem: pushReady() ? undefined : PUSH_PROBLEM, topics: p?.topics ?? {}, devices: count ?? 0 });
 }
 
 export async function POST(req: Request) {
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
     }
     case "test": {
       const n = await pushTo(db, [email], (me.advisor ? "activity" : "requests") as PushTopic, { title: "Alerts are on", body: "This is what a portal alert looks like. You can change what you get any time.", url: "/", tag: "test" });
-      return NextResponse.json({ ok: n > 0, sent: n, reason: PUSH_READY ? (n ? undefined : "no_device") : "not_configured" });
+      return NextResponse.json({ ok: n > 0, sent: n, reason: pushReady() ? (n ? undefined : "no_device") : PUSH_PROBLEM || "not_configured" });
     }
     case "ben": {
       // any signed-in portal user can give Ben a heads-up; the text comes from the app's own events
