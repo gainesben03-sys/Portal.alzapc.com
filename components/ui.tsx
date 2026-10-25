@@ -47,7 +47,7 @@ export function ActionCard({
             )}
             <h3>{a.title}</h3>
             <div className="action-meta">
-              {a.side === "alza" ? "Owner: Alza (Ben)" : `Owner: ${a.owner.name}, ${a.owner.role}`}
+              {a.side === "alza" ? (a.requestedBy ? `Asked by ${a.requestedBy.name}` : "Owner: Alza (Ben)") : `Owner: ${a.owner.name}, ${a.owner.role}`}
             </div>
           </div>
           <UrgencyPill a={a} />

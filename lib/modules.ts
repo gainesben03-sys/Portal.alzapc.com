@@ -95,7 +95,7 @@ export interface SharedFile {
 }
 export const FILE_CATEGORIES = ["Signed document", "Employee file", "Payroll or benefits", "Policy or handbook", "Other"];
 
-export type NoticeKind = "upload" | "note" | "completed" | "extension" | "revision" | "feedback" | "hire";
+export type NoticeKind = "upload" | "note" | "completed" | "extension" | "revision" | "feedback" | "hire" | "request";
 export interface Notice {
   id: string;
   clientId: string;

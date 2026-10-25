@@ -59,6 +59,7 @@ export interface Action {
   completedAt?: string;
   subtasks?: Subtask[];
   reminders?: PersonalReminder[];
+  requestedBy?: Person; // a client asked Ben for this
 }
 
 export interface Subtask {

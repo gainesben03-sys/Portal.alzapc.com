@@ -7,7 +7,7 @@ import { admin, caller, sendEmail, SERVER_LIVE } from "@/lib/server";
 import { pushTo } from "@/lib/push";
 
 export async function POST(req: Request) {
-  let b: { subject?: unknown; text?: unknown; toMember?: { clientId?: string; email?: string } };
+  let b: { subject?: unknown; text?: unknown; toMember?: { clientId?: string; email?: string }; push?: { title?: string; url?: string } };
   try {
     b = await req.json();
   } catch {
@@ -32,7 +32,13 @@ export async function POST(req: Request) {
     const { data } = await admin().from("members").select("email").eq("client_id", String(b.toMember.clientId ?? "")).eq("email", email).maybeSingle();
     if (!data) return NextResponse.json({ sent: false, reason: "not_a_member" }, { status: 400 });
     const r = await sendEmail({ to: [email], subject, text });
-    await pushTo(admin(), [email], "replies", { title: "Ben replied", body: subject, url: `/c/${String(b.toMember.clientId ?? "")}/board`, tag: "reply" });
+    const pushUrl = String(b.push?.url ?? "");
+    await pushTo(admin(), [email], "replies", {
+      title: String(b.push?.title ?? "Ben replied").slice(0, 80),
+      body: subject,
+      url: pushUrl.startsWith(`/c/${String(b.toMember.clientId ?? "")}/`) ? pushUrl : `/c/${String(b.toMember.clientId ?? "")}/board`,
+      tag: b.push ? undefined : "reply",
+    });
     return NextResponse.json({ sent: r.ok, reason: r.reason });
   }
 

@@ -172,6 +172,7 @@ export default function ActionDetail() {
           <dl className="kv" style={{ margin: 0 }}>
             <dt>Owner</dt>
             <dd>{a.side === "alza" ? "Ben Gaines, Alza" : `${a.owner.name}, ${a.owner.role}`}</dd>
+            {a.requestedBy && (<><dt>Asked by</dt><dd>{a.requestedBy.name}</dd></>)}
             <dt>Due</dt>
             <dd>{fmt(a.due)}</dd>
             <dt>Status</dt>
@@ -341,7 +342,10 @@ export default function ActionDetail() {
               title={left > 0 ? "Check off every step first" : undefined}
               onClick={() => {
                 update(a.id, { status: "completed" }, "Marked complete by Alza");
-                toast.show("Marked complete");
+                if (a.requestedBy?.email) {
+                  tellRequester(a.clientId, a.requestedBy.email, `Done: ${a.title}`, `Hi ${a.requestedBy.name.split(" ")[0]},\n\nWhat you asked for is done: "${a.title}".\n\nSee it here: ${window.location.origin}/c/${a.clientId}/a/${a.id}\n\nBen`, `/c/${a.clientId}/a/${a.id}`);
+                  toast.show(`Marked complete. ${a.requestedBy.name.split(" ")[0]} has been told.`);
+                } else toast.show("Marked complete");
               }}
             >
               {left > 0 ? `${left} left` : "Complete"}
@@ -493,4 +497,14 @@ function RemindSheet({ a, onClose, onSave }: { a: Action; onClose: () => void; o
       </div>
     </Sheet>
   );
+}
+
+async function tellRequester(clientId: string, email: string, subject: string, text: string, url: string) {
+  try {
+    await fetch("/api/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(await authHeader()) },
+      body: JSON.stringify({ subject, text, toMember: { clientId, email }, push: { title: "Ben finished your request", url } }),
+    });
+  } catch {}
 }

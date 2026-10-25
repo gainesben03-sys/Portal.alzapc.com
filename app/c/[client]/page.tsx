@@ -7,6 +7,7 @@ import { ClientNav, ClientTopbar, Sheet, Toast, UrgencyPill, useGuard, useToast 
 import { ADVISOR, fmt, fmtTime, parseDay, projectProgress, today, urgency } from "@/lib/data";
 import { canSee, daysSince, DEFAULT_TILES, Note, TILES } from "@/lib/modules";
 import { notifyBen, useStore } from "@/lib/store";
+import { AskBenSheet } from "@/components/askben";
 import { Tracker, startsIn } from "@/components/hires";
 import { shortDate } from "@/lib/hires";
 
@@ -34,6 +35,7 @@ export default function Home() {
   const { actions, projects, rules, viewer, update, getClient, config, me, patch, notes, candidates, roles, files, resources, announcements, bookingUrl, layouts, notice, who, hires } = s;
   const client = getClient(clientId);
   const [editing, setEditing] = useState(false);
+  const [asking, setAsking] = useState(false);
   const [msg, setMsg] = useState("");
   const toast = useToast();
   if (!ok || !client) return null;
@@ -106,6 +108,7 @@ export default function Home() {
             {isAdvisor && <Link href="/console/clients" className="tiny" style={{ color: "var(--blue)", display: "block", marginTop: 8 }}>Add your Calendly link</Link>}
           </>
         )}
+        {!isAdvisor && <button className="btn block" style={{ marginTop: 8 }} onClick={() => setAsking(true)}>Ask Ben for something</button>}
         {cfg?.modules.board && <Link href={`${base}/board`} className="tiny muted" style={{ display: "block", marginTop: 10, textAlign: "center" }}>Or leave Ben a note</Link>}
       </Tile>
     ),
@@ -213,6 +216,7 @@ export default function Home() {
             </Link>
           ))}
           {list.length === 0 && <p className="small muted">No one in progress. Start a new hire when you&apos;re ready to make an offer.</p>}
+          {(isAdvisor || me?.access === "exec") && <Link href={`${base}/hires/new`} className="btn block" style={{ marginTop: 10 }}>Add a new hire</Link>}
         </Tile>
       );
     },
@@ -255,6 +259,7 @@ export default function Home() {
       return (
         <Tile title="Ben is working on" count={list.length} href={`${base}/tasks`}>
           {list.length === 0 && <p className="small muted">Nothing outstanding from Ben.</p>}
+          {!isAdvisor && <button className="btn block" style={{ marginTop: 10 }} onClick={() => setAsking(true)}>Ask Ben for something</button>}
           {list.map((a) => (
             <Link href={`${base}/a/${a.id}`} className="row" key={a.id}>
               <div className="grow">
@@ -361,6 +366,7 @@ export default function Home() {
           }}
         />
       )}
+      {asking && <AskBenSheet clientId={client.id} onClose={() => setAsking(false)} onDone={(m) => { setAsking(false); toast.show(m); }} />}
       <Toast msg={toast.msg} onDone={toast.clear} />
     </div>
   );

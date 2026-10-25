@@ -5,6 +5,7 @@ import { useState } from "react";
 import { ActionCard, ClientNav, ClientTopbar, Toast, useGuard, useToast } from "@/components/ui";
 import { parseDay, urgency } from "@/lib/data";
 import { NewTaskSheet } from "@/components/newtask";
+import { AskBenSheet } from "@/components/askben";
 import { useStore } from "@/lib/store";
 
 type Tab = "you" | "team" | "alza" | "done";
@@ -18,6 +19,7 @@ export default function Tasks() {
   const [tab, setTab] = useState<Tab>("you");
   const toast = useToast();
   const [creating, setCreating] = useState(false);
+  const [asking, setAsking] = useState(false);
 
   if (!ok || !client) return null;
 
@@ -49,7 +51,11 @@ export default function Tasks() {
       <main className="wrap">
         <div className="row" style={{ alignItems: "flex-start" }}>
           <h1>Tasks</h1>
-          {viewer?.kind === "advisor" && <button className="btn primary sm" onClick={() => setCreating(true)}>New request</button>}
+          {viewer?.kind === "advisor" ? (
+            <button className="btn primary sm" onClick={() => setCreating(true)}>New request</button>
+          ) : (
+            <button className="btn primary sm" onClick={() => setAsking(true)}>Ask Ben</button>
+          )}
         </div>
         <p className="muted" style={{ marginTop: 6 }}>
           {overdueCount > 0 ? <><span style={{ color: "var(--red)", fontWeight: 600 }}>{overdueCount} overdue</span>{todayCount > 0 && <> · <b>{todayCount} due today</b></>}</> : todayCount > 0 ? <b>{todayCount} due today</b> : "You're all caught up."}
@@ -88,6 +94,7 @@ export default function Tasks() {
         <p className="demo-note">Fictional sample data for the prototype.</p>
       </main>
       {creating && <NewTaskSheet clientId={client.id} onClose={() => setCreating(false)} onCreated={(m) => { setCreating(false); toast.show(m); }} />}
+      {asking && <AskBenSheet clientId={client.id} onClose={() => setAsking(false)} onDone={(m) => { setAsking(false); setTab("alza"); toast.show(m); }} />}
       <Toast msg={toast.msg} onDone={toast.clear} />
     </div>
   );
