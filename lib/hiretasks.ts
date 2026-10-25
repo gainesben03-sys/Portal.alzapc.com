@@ -11,7 +11,7 @@ function ownerFor(h: Hire, cfg: ClientConfig, client: Client): Person {
   return client.escalation;
 }
 
-/** The client's two to-dos once an offer is signed: payroll setup and first-day prep. */
+/** Once an offer is signed: Ben adds them to payroll; the client gets ready for day one. */
 export function signedTasks(h: Hire, cfg: ClientConfig, client: Client): Action[] {
   const s = onboardingFor(cfg.onboarding);
   const now = new Date().toISOString();
@@ -26,12 +26,12 @@ export function signedTasks(h: Hire, cfg: ClientConfig, client: Client): Action[
     {
       id: newId("a"),
       clientId: h.clientId,
-      side: "client",
-      kind: "information",
+      side: "alza",
+      kind: "document",
       title: `Add ${h.name} to ${s.payroll}`,
-      detail: `${h.name} starts ${h.startDate || "soon"} as ${h.title}. Set them up in ${s.payroll} so they're paid on the first payroll and can enroll in benefits.`,
+      detail: `${h.name} starts ${h.startDate || "soon"} as ${h.title}. Ben sets them up in ${s.payroll} so they're paid on the first payroll and can enroll in benefits.`,
       impact: "If this slips, their first paycheck and benefits enrollment slip with it.",
-      owner: client.escalation,
+      owner: ADVISOR,
       due: toISO(payDue),
       status: "not_started",
       attachments: [],

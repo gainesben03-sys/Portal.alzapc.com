@@ -47,7 +47,7 @@ async function run(
         await db.from("actions").insert({ id, client_id: c.client.id, created_by: "esign@portal", data });
       }
       h.tasksCreated = true;
-      h.history.push({ at: o.now, by: "Portal", text: `Payroll and first-day tasks sent to ${Array.from(new Set(tasks.map((t) => t.owner.name))).join(" and ")}` });
+      h.history.push({ at: o.now, by: "Portal", text: `Payroll setup added to Ben's list; first-day prep sent to ${tasks.find((t) => t.side === "client")?.owner.name ?? "the client"}` });
     }
     if (c.s.autoSend && !h.emails?.welcome && h.personalEmail) {
       const m = welcomeEmail(h, c.s, c.brand);

@@ -80,13 +80,14 @@ function HireInner() {
       patch({ actions: [...actions, ...tasks] });
       if (isAdvisor) tasks.forEach((t) => pingTask(t.id));
     }
-    const owners = Array.from(new Set(tasks.map((t) => t.owner.name)));
-    updateHire(h.id, { status: "Offer signed", tasksCreated: true }, `Offer signed${owners.length ? `. Payroll and first-day tasks sent to ${owners.join(" and ")}` : ""}`);
+    const prep = tasks.find((t) => t.side === "client");
+    const owners = prep ? [prep.owner.name] : [];
+    updateHire(h.id, { status: "Offer signed", tasksCreated: true }, `Offer signed${tasks.length ? `. Payroll setup added to Ben's list${prep ? `; first-day prep sent to ${prep.owner.name}` : ""}` : ""}`);
     if (s.autoSend && !h.emails?.welcome && h.personalEmail) {
       toast.show("Offer signed. Sending the welcome email...");
       await wait(LIVE ? 1800 : 300); // let the change save first
       await send("welcome");
-    } else toast.show(owners.length ? `Offer signed. Tasks sent to ${owners.join(" and ")}.` : "Offer signed");
+    } else toast.show(owners.length ? `Offer signed. Payroll setup is on Ben's list; first-day prep went to ${owners[0]}.` : "Offer signed");
   };
 
   const addDoc = async (file: File, kind: "offer" | "agreement" | "signed") => {
@@ -428,7 +429,7 @@ function HireInner() {
             {first} gets an email in {client.name}&apos;s colors with a private link to read and sign <b>{confirmSign.name}</b>. They sign by typing their name; no account needed.
           </p>
           <p className="small" style={{ marginTop: 8 }}>To: <b>{h.personalEmail}</b></p>
-          <p className="tiny muted" style={{ marginTop: 8 }}>When they sign: the signed PDF (with a signature certificate) lands on this hire and in Files, they get a copy, you get an email{confirmSign.kind === "offer" ? `, the hire moves to Signed, and the payroll and first-day tasks go out` : ""}. Any earlier link for this document stops working.</p>
+          <p className="tiny muted" style={{ marginTop: 8 }}>When they sign: the signed PDF (with a signature certificate) lands on this hire and in Files, they get a copy, you get an email{confirmSign.kind === "offer" ? `, the hire moves to Signed, payroll setup goes on your list, and the first-day prep task goes to the client` : ""}. Any earlier link for this document stops working.</p>
           <div className="sheet-actions">
             <button className="btn ghost sm" onClick={() => setConfirmSign(null)}>Cancel</button>
             <button className="btn primary sm" onClick={() => sendForSignature(confirmSign)}>Send</button>
