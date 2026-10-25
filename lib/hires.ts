@@ -322,3 +322,12 @@ ${big(`Thank you, <i>${esc(first)}.</i>`)}
 ${signoff(s, brand.accent, "We're so glad you're joining us.")}`;
   return { subject: `Signed: your ${docTitle.toLowerCase()} from ${brand.company}`, html: frame(brand, inner), text: `Hi ${first},\n\nThank you for signing. Your signed ${docTitle.toLowerCase()} is attached for your records.\n\n${s.hrName}` };
 }
+
+/** A short branded note (used for candidate confirmations). Paragraphs are plain text. */
+export function noticeEmail(b: Brand, kicker: string, headlineHtml: string, paragraphs: string[]) {
+  const brand: Brand = { ...b, bar: b.bar ?? b.accent, accent: readableInk(b.accent) };
+  const inner = `${label(kicker, "#6B645E").replace("margin:0", "margin:40px 0 0 0")}
+${big(headlineHtml.replace(/<(?!\/?i>)[^>]*>/g, ""))}<!--HERO_END-->
+${section("#F4F1EC", paragraphs.map((p) => `<p style="margin:0 0 12px 0">${esc(p)}</p>`).join(""))}`;
+  return { html: frame(brand, inner), text: paragraphs.join("\n\n") };
+}

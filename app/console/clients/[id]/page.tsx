@@ -101,6 +101,15 @@ export default function ClientSetup() {
               <div><b>{m.label}</b><div className="tiny muted">{m.blurb}</div></div>
             </label>
           ))}
+          {cfg.modules.recruiting && (
+            <label className="rule" style={{ cursor: "pointer" }}>
+              <span className="switch">
+                <input type="checkbox" checked={!!cfg.videoScreening} onChange={(e) => set({ videoScreening: e.target.checked })} />
+                <span />
+              </span>
+              <div><b>Video screening <span className="pill alza" style={{ marginLeft: 4 }}>Add-on</span></b><div className="tiny muted">Pitch links on Recruiting roles: candidates send a 90-second video, you screen and share the best</div></div>
+            </label>
+          )}
         </div>
 
         <div className="section-head section"><h2>Documents for Claude</h2></div>

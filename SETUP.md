@@ -19,6 +19,7 @@ If you set up the database before these existed, also run each of these the same
 - `supabase/003_hires.sql`: new hires
 - `supabase/004_esign.sql`: built-in e-signature
 - `supabase/005_push.sql`: phone and computer alerts
+- `supabase/006_pitch.sql`: video screening (also raises the file limit to 50 MB)
 
 ## 2. Sign-in settings
 

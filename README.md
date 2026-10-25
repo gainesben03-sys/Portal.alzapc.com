@@ -99,6 +99,8 @@ Real sign-in, a Supabase database with row-level security, private file storage 
    - Payroll integrations come later.
 **Alerts (push notifications)** (`supabase/005_push.sql`): phone and computer alerts without an app store. The first time someone signs in they're asked once, kindly, to turn alerts on (on iPhone it shows how to add the portal to the Home Screen first). "Not now" asks once more two weeks later, then never on its own. The phone icon in the top bar turns alerts on or off per device and picks what to get. Ben: client activity, new hires, escalations. Clients: new requests and approvals, due date reminders, replies from Ben. Email still goes out either way.
 
-4. AlzaPitch link
+**Video screening** (add-on, `supabase/006_pitch.sql`): the portal's simplified AlzaPitch. Turn it on per client in Client setup → Modules. Ben or an executive adds a role in Recruiting (New role) and creates a pitch link. Candidates open a branded page, record a pitch of up to 90 seconds with the prompts on screen (or upload a video, send audio, or write it), and send. Built for reliability: records MP4 where supported so it plays everywhere, caps length and bitrate (about 10-18 MB), keeps the recording on the device until the server confirms it arrived, uploads straight to private storage with progress, waits out dropped connections and retries, and offers "send it now" if they come back later. Ben screens first by default: pitches are invisible to the client (enforced in the database) until he shares one with notes and scores, which creates the hiring manager's feedback task. Candidates get a "Thanks for applying to [Role] at [Company]" email; Ben gets an email, bell notice and alert.
+
+4. AlzaPitch link (the standalone product stays separate)
 5. PEO and benefits calculator
 6. Ask HR (answers only from each client's own policies)

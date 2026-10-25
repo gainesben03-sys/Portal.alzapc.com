@@ -7,6 +7,8 @@ import { ClientNav, ClientTopbar, Sheet, Toast, useGuard, useToast } from "@/com
 import { fmtTime } from "@/lib/data";
 import { Candidate, daysSince, Decision, DECISION_LABEL } from "@/lib/modules";
 import { notifyBen, useStore } from "@/lib/store";
+import { PitchLinkCard, PitchView, RoleSheet, ShareSheet } from "@/components/pitch";
+import { Role } from "@/lib/modules";
 
 function Score({ n }: { n: number }) {
   return (
@@ -21,10 +23,13 @@ function Score({ n }: { n: number }) {
 export default function Recruiting() {
   const { client: clientId } = useParams<{ client: string }>();
   const ok = useGuard("client", clientId);
-  const { getClient, roles, candidates, patch, actions, update, who, config, notice, viewer, me, hires } = useStore();
+  const { getClient, roles, candidates, patch, actions, update, who, config, notice, viewer, me, hires, live } = useStore();
   const client = getClient(clientId);
   const [view, setView] = useState<Record<string, "cards" | "compare">>({});
   const [fb, setFb] = useState<Candidate | null>(null);
+  const [roleEdit, setRoleEdit] = useState<Role | "new" | null>(null);
+  const [sharing, setSharing] = useState<{ c: Candidate; role: Role } | null>(null);
+  const [showPassed, setShowPassed] = useState<Record<string, boolean>>({});
   const toast = useToast();
 
   if (!ok || !client) return null;
@@ -38,6 +43,13 @@ export default function Recruiting() {
     );
 
   const myRoles = roles.filter((r) => r.clientId === client.id);
+  const isAdvisor = viewer?.kind === "advisor";
+  const canEdit = isAdvisor || me?.access === "exec";
+  const cfg = config[clientId];
+  const pass = (c: Candidate) => {
+    patch({ candidates: candidates.map((x) => (x.id === c.id ? { ...x, screened: "passed" as const, stage: "Not moving forward" } : x)) });
+    toast.show(`${c.name.split(" ")[0]} passed. Only you can see this.`);
+  };
 
   const saveFeedback = async (c: Candidate, decision: Decision, note: string) => {
     const at = new Date().toISOString();
@@ -72,10 +84,19 @@ export default function Recruiting() {
       <ClientTopbar client={client} />
       <ClientNav clientId={client.id} />
       <main className="wrap">
-        <h1>Recruiting</h1>
+        <div className="row" style={{ alignItems: "center" }}>
+          <h1 className="grow" style={{ margin: 0 }}>Recruiting</h1>
+          {canEdit && <button className="btn primary sm" onClick={() => setRoleEdit("new")}>New role</button>}
+        </div>
+        {myRoles.length === 0 && (
+          <div className="card section small muted">No open roles yet.{canEdit ? " Add one with New role" + (cfg?.videoScreening ? ", then create a pitch link to share with candidates." : ".") : " Ben adds roles here when a search starts."}</div>
+        )}
         {myRoles.map((role) => {
-          const list = candidates.filter((c) => c.roleId === role.id);
-          const pending = list.filter((c) => !c.decision);
+          const all = candidates.filter((c) => c.roleId === role.id);
+          const list = all.filter((c) => !c.hidden || (isAdvisor && c.screened !== "passed") || (isAdvisor && showPassed[role.id]));
+          const toScreen = all.filter((c) => c.hidden && !c.screened).length;
+          const passedCount = all.filter((c) => c.hidden && c.screened === "passed").length;
+          const pending = list.filter((c) => !c.decision && !c.hidden);
           const atRisk = pending.filter((c) => c.otherOffers);
           const mode = view[role.id] ?? "cards";
           return (
@@ -85,26 +106,33 @@ export default function Recruiting() {
                   <div className="grow">
                     <h3>{role.title}</h3>
                     <div className="small muted" style={{ marginTop: 4 }}>
-                      {role.dept} · {role.location} · {role.type}
+                      {[role.dept, role.location, role.type].filter(Boolean).join(" · ")}
                     </div>
                     <div className="small muted">
-                      Hiring manager: {role.hiringManager.name} · Range: {role.compRange}
+                      Hiring manager: {role.hiringManager.name}{role.compRange ? ` · Range: ${role.compRange}` : ""}
                     </div>
                   </div>
                   <span className="pill later">{role.status}</span>
+                  {canEdit && <button className="btn ghost sm" onClick={() => setRoleEdit(role)}>Edit</button>}
                 </div>
+                {cfg?.videoScreening && <PitchLinkCard role={role} canEdit={canEdit} toScreen={isAdvisor ? toScreen : 0} onToast={toast.show} />}
                 {pending.length > 0 && (
                   <div className="impact" style={{ marginTop: 12 }}>
                     <b>
                       {pending.length} candidate{pending.length === 1 ? "" : "s"} waiting on feedback
                     </b>{" "}
-                    for {Math.max(...pending.map((c) => daysSince(c.sentAt)))} days.
+                    {(() => { const d = Math.max(...pending.map((c) => daysSince(c.sentAt))); return d === 0 ? "since today." : `for ${d} day${d === 1 ? "" : "s"}.`; })()}
                     {atRisk.length > 0 && (
                       <span style={{ color: "var(--red)" }}> {atRisk.length} {atRisk.length === 1 ? "has" : "have"} other offers in play.</span>
                     )}
                   </div>
                 )}
-                {list.length === 0 && <p className="small muted" style={{ marginTop: 10 }}>Alza is sourcing. Candidates will appear here.</p>}
+                {list.length === 0 && <p className="small muted" style={{ marginTop: 10 }}>{role.pitch && cfg?.videoScreening ? "No pitches yet. Share the link above and they'll show up here." : "Alza is sourcing. Candidates will appear here."}</p>}
+                {isAdvisor && passedCount > 0 && (
+                  <button className="linklike tiny" style={{ marginTop: 8 }} onClick={() => setShowPassed({ ...showPassed, [role.id]: !showPassed[role.id] })}>
+                    {showPassed[role.id] ? "Hide" : "Show"} {passedCount} passed pitch{passedCount === 1 ? "" : "es"}
+                  </button>
+                )}
               </div>
 
               {list.length > 0 && (
@@ -120,13 +148,15 @@ export default function Recruiting() {
 
               {mode === "cards" &&
                 list.map((c) => (
-                  <div className="card" key={c.id} style={{ marginTop: 10 }}>
+                  <div className={`card ${c.hidden ? "screening" : ""}`} key={c.id} style={{ marginTop: 10 }}>
                     <div className="action-top">
                       <div>
                         <h3>{c.name}</h3>
                         <div className="small muted">{c.headline}</div>
                       </div>
-                      {c.decision ? (
+                      {c.hidden ? (
+                        <span className={`pill ${c.screened === "passed" ? "later" : "soon"}`}>{c.screened === "passed" ? "Passed" : "To screen"}</span>
+                      ) : c.decision ? (
                         <span className={`pill ${c.decision === "pass" ? "later" : "done"}`}>{DECISION_LABEL[c.decision]}</span>
                       ) : (
                         <span className={`pill ${c.otherOffers ? "overdue" : "soon"}`}>
@@ -135,15 +165,21 @@ export default function Recruiting() {
                         </span>
                       )}
                     </div>
-                    <p className="small" style={{ marginTop: 10 }}>{c.summary}</p>
-                    <div className="chips">
-                      {c.strengths.map((s) => (
-                        <span className="chip" key={s}>{s}</span>
-                      ))}
-                    </div>
-                    <div className="impact">
-                      <b>Alza assessment:</b> {c.assessment}
-                    </div>
+                    {c.hidden && <div className="tiny" style={{ marginTop: 6, color: "var(--amber)" }}>Only you can see this pitch until you share it.</div>}
+                    {c.summary && <p className="small" style={{ marginTop: 10 }}>{c.summary}</p>}
+                    {c.strengths.length > 0 && (
+                      <div className="chips">
+                        {c.strengths.map((s) => (
+                          <span className="chip" key={s}>{s}</span>
+                        ))}
+                      </div>
+                    )}
+                    {c.pitch && <PitchView c={c} />}
+                    {c.assessment && (
+                      <div className="impact">
+                        <b>Alza assessment:</b> {c.assessment}
+                      </div>
+                    )}
                     {c.feedback !== undefined && c.decision && (
                       <div className="reply">
                         <b>{c.feedbackBy}:</b> {c.feedback || "No note"}
@@ -152,24 +188,31 @@ export default function Recruiting() {
                     )}
                     <div className="action-foot">
                       <span className="tiny muted">Stage: {c.stage}</span>
+                      {c.hidden ? (
+                        <>
+                          {c.screened !== "passed" && <button className="btn ghost sm" style={{ marginLeft: "auto" }} onClick={() => pass(c)}>Pass</button>}
+                          <button className={`btn sm primary`} style={c.screened === "passed" ? { marginLeft: "auto" } : undefined} onClick={() => setSharing({ c, role })}>Share with {role.hiringManager.name.split(" ")[0]}</button>
+                        </>
+                      ) : (
                       <button className={`btn sm ${c.decision ? "" : "primary"}`} style={{ marginLeft: "auto" }} onClick={() => setFb(c)}>
                         {c.decision ? "Update feedback" : "Give feedback"}
                       </button>
-                      {c.decision === "offer" && config[clientId]?.modules.hires && (viewer?.kind === "advisor" || me?.access === "exec") && !hires.some((h) => h.clientId === clientId && h.name === c.name) && (
+                      )}
+                      {!c.hidden && c.decision === "offer" && config[clientId]?.modules.hires && (viewer?.kind === "advisor" || me?.access === "exec") && !hires.some((h) => h.clientId === clientId && h.name === c.name) && (
                         <Link href={`/c/${clientId}/hires/new?candidate=${c.id}`} className="btn sm primary">Start the hire</Link>
                       )}
                     </div>
                   </div>
                 ))}
 
-              {mode === "compare" && list.length > 0 && (
+              {mode === "compare" && list.some((x) => !x.hidden) && (
                 <div className="card" style={{ marginTop: 10 }}>
                   <div className="scroll-x">
                     <table className="compare">
                       <thead>
                         <tr>
                           <th>Criteria</th>
-                          {list.map((c) => (
+                          {list.filter((x) => !x.hidden).map((c) => (
                             <th key={c.id}>{c.name.split(" ")[0]}</th>
                           ))}
                         </tr>
@@ -178,14 +221,14 @@ export default function Recruiting() {
                         {role.criteria.map((cr, i) => (
                           <tr key={cr}>
                             <td>{cr}</td>
-                            {list.map((c) => (
+                            {list.filter((x) => !x.hidden).map((c) => (
                               <td key={c.id}><Score n={c.scores[i] ?? 0} /></td>
                             ))}
                           </tr>
                         ))}
                         <tr>
                           <td><b>Your call</b></td>
-                          {list.map((c) => (
+                          {list.filter((x) => !x.hidden).map((c) => (
                             <td key={c.id}>
                               {c.decision ? DECISION_LABEL[c.decision] : (
                                 <button className="btn sm" onClick={() => setFb(c)}>Decide</button>
@@ -202,9 +245,11 @@ export default function Recruiting() {
             </section>
           );
         })}
-        <p className="demo-note">Fictional candidates for the prototype.</p>
+        {!live && <p className="demo-note">Fictional candidates for the prototype.</p>}
       </main>
 
+      {roleEdit && <RoleSheet clientId={client.id} role={roleEdit === "new" ? undefined : roleEdit} people={cfg?.users ?? []} onClose={() => setRoleEdit(null)} onSaved={(m) => { setRoleEdit(null); toast.show(m); }} />}
+      {sharing && <ShareSheet c={sharing.c} role={sharing.role} onClose={() => setSharing(null)} onDone={(m) => { setSharing(null); toast.show(m); }} />}
       {fb && <FeedbackSheet c={fb} onClose={() => setFb(null)} onSave={saveFeedback} />}
       <Toast msg={toast.msg} onDone={toast.clear} />
     </div>

@@ -454,3 +454,39 @@ ul.flags li.warn { background: var(--amber-bg); color: var(--amber); }
 :root[data-theme="dark"] .sign-preview { color: #c9d4ff; }
 .linklike { background: none; border: 0; padding: 0; font: inherit; color: var(--blue); cursor: pointer; text-decoration: underline; }
 .push-steps { margin: 10px 0 0; padding-left: 20px; font-size: 14px; line-height: 1.5; display: grid; gap: 6px; }
+
+/* ---------- Pitch (video screening) ---------- */
+.pitch-prompts { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 4px; font-size: 15px; }
+.pitch-modes { margin: 0 0 14px; }
+.pitch-modes button { font-size: 12px; padding: 9px 2px; }
+.pitch-stage { position: relative; border-radius: 14px; overflow: hidden; background: #111; aspect-ratio: 3 / 4; max-height: 62vh; width: 100%; margin: 0 auto; }
+@media (min-width: 700px) { .pitch-stage { aspect-ratio: 16 / 10; } }
+.pitch-stage.audio { aspect-ratio: auto; height: 220px; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 12%, #111); }
+.pitch-live { width: 100%; height: 100%; object-fit: cover; display: block; background: #111; border-radius: 14px; }
+.pitch-stage .pitch-live { transform: scaleX(-1); border-radius: 0; }
+video.pitch-live[controls] { height: auto; max-height: 62vh; object-fit: contain; }
+.pitch-overlay { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; background: rgba(0,0,0,.45); padding: 16px; }
+.pitch-count { position: absolute; inset: 0; display: grid; place-items: center; font: 700 96px/1 Fraunces, Georgia, serif; color: #fff; text-shadow: 0 4px 24px rgba(0,0,0,.5); }
+.pitch-rec { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,.6); color: #fff; padding: 5px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; display: flex; gap: 6px; align-items: center; }
+.pitch-dot { width: 9px; height: 9px; border-radius: 50%; background: #e5484d; animation: tracker-pulse 1.4s infinite; box-shadow: 0 0 0 0 rgba(229,72,77,.6); }
+.pitch-cue { position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 14px 12px; background: linear-gradient(transparent, rgba(0,0,0,.75)); color: #fff; font-size: 14px; line-height: 1.45; }
+.pitch-audio-dot { width: 90px; height: 90px; border-radius: 50%; background: var(--accent); transition: transform .08s linear; opacity: .9; }
+.pitch-meter { height: 6px; border-radius: 6px; background: var(--soft2); margin-top: 8px; overflow: hidden; }
+.pitch-meter > div { height: 100%; background: var(--green); transition: width .08s linear; }
+.pitch-saved { border-left: 3px solid var(--amber); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+@media (max-width: 480px) { .two { grid-template-columns: 1fr; } }
+.pitch-link { margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: var(--soft2); }
+.pitch-link.empty { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.pitch-link.empty .grow { flex: 1 1 220px; }
+.pitch-url { display: flex; align-items: center; gap: 6px; margin: 8px 0 4px; flex-wrap: wrap; }
+.pitch-url code { flex: 1 1 200px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
+.pitch-view { margin-top: 10px; }
+.pitch-play { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; font-weight: 600; cursor: pointer; text-align: left; }
+.pitch-play:hover { border-color: var(--accent); }
+.pitch-play-icon { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 13px; padding-left: 2px; flex-shrink: 0; }
+.pitch-view video.pitch-live { max-height: 420px; }
+.pitch-written { padding: 12px 14px; border-radius: 12px; background: var(--soft2); font-size: 14.5px; line-height: 1.55; white-space: pre-wrap; }
+.pitch-contact { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 2px 4px; align-items: center; }
+.pitch-contact a { color: var(--blue); }
+.card.screening { border-left: 3px solid var(--amber); }

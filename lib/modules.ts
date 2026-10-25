@@ -95,7 +95,7 @@ export interface SharedFile {
 }
 export const FILE_CATEGORIES = ["Signed document", "Employee file", "Payroll or benefits", "Policy or handbook", "Other"];
 
-export type NoticeKind = "upload" | "note" | "completed" | "extension" | "revision" | "feedback" | "hire" | "request";
+export type NoticeKind = "upload" | "note" | "completed" | "extension" | "revision" | "feedback" | "hire" | "request" | "pitch";
 export interface Notice {
   id: string;
   clientId: string;
@@ -127,6 +127,7 @@ export interface ClientConfig {
   onboarding?: Partial<import("./hires").OnboardingSettings>;
   tiles?: string[]; // default dashboard for everyone at this client (set by Ben)
   softAsks?: boolean; // show the quiet referral / add-on lines (default on)
+  videoScreening?: boolean; // add-on: pitch links on Recruiting roles
   huddle: HuddleSettings;
   modules: Record<ModuleKey, boolean>;
   accent: string;
@@ -168,6 +169,7 @@ export interface Role {
   status: string;
   criteria: string[];
   feedbackActionId?: string;
+  pitch?: import("./pitch").PitchSettings; // video screening link
 }
 
 export interface Candidate {
@@ -186,6 +188,10 @@ export interface Candidate {
   feedback?: string;
   feedbackBy?: string;
   feedbackAt?: string;
+  source?: "pitch";
+  pitch?: import("./pitch").PitchSubmission;
+  hidden?: boolean; // a pitch Ben hasn't shared with the client yet
+  screened?: "shared" | "passed";
 }
 
 // ---------- resources ----------
@@ -272,6 +278,7 @@ export function seedModules() {
     blueprint: {
       huddle: { cadence: "weekly", day: 1, recipients: ["alex@example.com", "priya@example.com"], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
       modules: { recruiting: true, resources: true, wellness: true, board: true, hires: true },
+      videoScreening: true,
       accent: "#2b3ff5",
       logo: "/blueprint-logo.png",
       codes: [],
@@ -337,6 +344,7 @@ export function seedModules() {
       hiringManager: { name: "Dana Ortiz", role: "Office Manager" },
       status: "Sourcing",
       criteria: ["Inventory systems", "Forklift certified", "Reliability"],
+      pitch: { slug: "warehouse-coordinator-k7m2", open: true, prompts: ["Who you are and what you do best", "Why this role, and why now", "One result you're proud of"], maxSeconds: 90, intro: "Thanks for your interest. Instead of a cover letter, we'd love a short video so we can get to know you.", allowUpload: true, allowAudio: true, allowWritten: true, askResume: true, askLinkedin: true, review: "ben", createdAt: at(-5) },
     },
   ];
 
@@ -383,6 +391,8 @@ export function seedModules() {
       sentAt: d(-5),
       otherOffers: true,
     },
+    { id: "c-pitch1", roleId: "r-coord", name: "Riley Santos", headline: "Video pitch, 74s", summary: "", strengths: [], assessment: "", scores: [], stage: "Pitch received", sentAt: d(-1), source: "pitch", hidden: true, pitch: { kind: "video", seconds: 74, email: "riley@example.com", phone: "(415) 555-0199", linkedin: "https://linkedin.com/in/example", resumeName: "Riley Santos Resume.pdf", resumePath: "demo", mediaPath: "demo", submittedAt: at(-1, 15) } },
+    { id: "c-pitch2", roleId: "r-coord", name: "Avery Brooks", headline: "Written intro", summary: "", strengths: [], assessment: "", scores: [], stage: "Pitch received", sentAt: d(0), source: "pitch", hidden: true, pitch: { kind: "written", text: "I've run receiving and inventory for a 40,000 sq ft event rental warehouse for four years. I'm forklift certified, I know Asset Panda and NetSuite, and I'm the person who stays until the last truck is checked in. I'd love to bring that to Blueprint.", email: "avery@example.com", submittedAt: at(0, 9) } },
   ];
 
   const resources: Resource[] = [
