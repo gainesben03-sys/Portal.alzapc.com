@@ -47,14 +47,14 @@ export default function Recruiting() {
   const canEdit = isAdvisor || me?.access === "exec";
   const cfg = config[clientId];
   const pass = (c: Candidate) => {
-    patch({ candidates: candidates.map((x) => (x.id === c.id ? { ...x, screened: "passed" as const, stage: "Not moving forward" } : x)) });
+    patch({ candidates: candidates.map((x) => (x.id === c.id ? { ...x, screened: "passed" as const, stage: "Not moving forward", decidedAt: new Date().toISOString() } : x)) });
     toast.show(`${c.name.split(" ")[0]} passed. Only you can see this.`);
   };
 
   const saveFeedback = async (c: Candidate, decision: Decision, note: string) => {
     const at = new Date().toISOString();
     const nextCands = candidates.map((x) =>
-      x.id === c.id ? { ...x, decision, feedback: note, feedbackBy: who, feedbackAt: at } : x
+      x.id === c.id ? { ...x, decision, feedback: note, feedbackBy: who, feedbackAt: at, decidedAt: decision === "hold" ? undefined : x.decidedAt && x.decision === decision ? x.decidedAt : at } : x
     );
     patch({ candidates: nextCands });
     const role = roles.find((r) => r.id === c.roleId)!;

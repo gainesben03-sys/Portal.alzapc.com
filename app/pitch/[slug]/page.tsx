@@ -305,7 +305,7 @@ export default function PitchPage() {
             <p>{info.intro}</p>
             <h2 style={{ marginTop: 16 }}>What to cover</h2>
             <ul className="pitch-prompts">{info.prompts.map((p, i) => <li key={i}>{p}</li>)}</ul>
-            <p className="small muted" style={{ marginTop: 12 }}>Up to {fmtSec(info.maxSeconds)}. Be yourself; no script needed. You can watch it back and re-record before you send.</p>
+            <p className="small muted" style={{ marginTop: 12 }}>Up to {fmtSec(info.maxSeconds)}. Be yourself; no script needed. You can watch it back and re-record before you send. Your video is private to the hiring team and deleted soon after a decision.</p>
             <button className="btn primary block" style={{ marginTop: 14 }} onClick={() => setStep("details")}>Get started</button>
           </div>
         </>

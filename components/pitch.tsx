@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Action, addBusinessDays, Person, toISO, today } from "@/lib/data";
 import { Candidate, PortalUser, Role } from "@/lib/modules";
-import { DEFAULT_PROMPTS, newPitch, PitchSettings, pitchOpen } from "@/lib/pitch";
+import { DEFAULT_PROMPTS, newPitch, pitchDeleteOn, PitchSettings, pitchOpen } from "@/lib/pitch";
 import { pingTask } from "@/lib/pushclient";
 import { useStore } from "@/lib/store";
 import { authHeader, LIVE } from "@/lib/supabase";
@@ -180,9 +180,13 @@ export function PitchView({ c }: { c: Candidate }) {
     }
     setBusy(false);
   };
+  const delOn = pitchDeleteOn(c);
+  const day = (d: Date | string) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
   return (
     <div className="pitch-view">
-      {p.kind === "written" ? (
+      {c.mediaDeletedAt && p.kind !== "written" ? (
+        <div className="pitch-written tiny muted">Video deleted {day(c.mediaDeletedAt)}, a week after the decision. Notes, scores and contact details stay.</div>
+      ) : p.kind === "written" ? (
         <div className="pitch-written">{p.text}</div>
       ) : src ? (
         p.kind === "video" ? <video src={src} controls autoPlay playsInline className="pitch-live" /> : <audio src={src} controls autoPlay style={{ width: "100%" }} />
@@ -199,6 +203,11 @@ export function PitchView({ c }: { c: Candidate }) {
         {p.resumePath && <> · <button className="linklike" onClick={() => open("resume")}>Resume</button></>}
         {" · "}sent {new Date(p.submittedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
       </div>
+      {!c.mediaDeletedAt && p.kind !== "written" && delOn && (
+        <div className="tiny muted" style={{ marginTop: 4 }}>
+          {c.decidedAt || c.screened === "passed" ? `Video deletes ${day(delOn)} (a week after the decision)` : `Video deletes ${day(delOn)} if no decision is made`}
+        </div>
+      )}
       {err && <p className="tiny" style={{ color: "var(--amber)" }}>{err}</p>}
     </div>
   );

@@ -192,6 +192,8 @@ export interface Candidate {
   pitch?: import("./pitch").PitchSubmission;
   hidden?: boolean; // a pitch Ben hasn't shared with the client yet
   screened?: "shared" | "passed";
+  decidedAt?: string; // when passed / advanced / offered (starts the video deletion clock)
+  mediaDeletedAt?: string;
 }
 
 // ---------- resources ----------

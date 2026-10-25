@@ -5,7 +5,8 @@
 import { NextResponse } from "next/server";
 import { Action, Client, DEFAULT_RULES, fmt, Project, reminderPlan, Rules, toISO, today } from "@/lib/data";
 import { buildHuddle } from "@/lib/huddle";
-import { ClientConfig, HuddleSettings, SharedFile } from "@/lib/modules";
+import { Candidate, ClientConfig, HuddleSettings, SharedFile } from "@/lib/modules";
+import { pitchDeleteOn } from "@/lib/pitch";
 import { addDaysISO, firstDayEmail, Hire, onboardingFor, stageIndex, welcomeEmail } from "@/lib/hires";
 import { emailLogoUrl } from "@/lib/brand";
 import { admin, PORTAL_URL, sendEmail } from "@/lib/server";
@@ -207,6 +208,25 @@ export async function GET(req: Request) {
       });
     }
     if (changed) await db.from("hires").update({ data }).eq("id", row.id);
+  }
+
+  // ---------- 4. Pitch videos: delete a week after a decision (30 days if nobody decides)
+  const candR = await db.from("candidates").select("id, client_id, data").eq("data->>source", "pitch");
+  for (const row of candR.data ?? []) {
+    const c = row.data as Candidate;
+    if (!c.pitch?.mediaPath || c.mediaDeletedAt) continue;
+    const due = pitchDeleteOn(c);
+    if (!due || due > new Date()) continue;
+    const path = c.pitch.mediaPath;
+    if (!path.startsWith(`${row.client_id}/pitch/${row.id}/`)) continue;
+    const { error } = await db.storage.from("client-files").remove([path]);
+    if (error) {
+      log.push(`pitch delete failed ${row.id}: ${error.message}`);
+      continue;
+    }
+    const data = { ...c, mediaDeletedAt: new Date().toISOString(), pitch: { ...c.pitch, mediaPath: undefined } };
+    await db.from("candidates").update({ data }).eq("id", row.id);
+    log.push(`pitch video deleted ${row.id}`);
   }
 
   return NextResponse.json({ ok: true, day, log });

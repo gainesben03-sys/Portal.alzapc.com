@@ -55,4 +55,21 @@ export function newPitch(title: string): PitchSettings {
 export const pitchOpen = (p?: PitchSettings) => !!p && p.open && (!p.closesAt || p.closesAt >= new Date().toISOString().slice(0, 10));
 
 export const MAX_UPLOAD_MB = 50;
+
+/** Pitch videos are deleted this long after a decision (passed, advanced to interview, or offer). */
+export const DELETE_AFTER_DECISION_DAYS = 7;
+/** Safety net: pitches nobody decides on are deleted after this long. */
+export const DELETE_UNDECIDED_DAYS = 30;
+const DECIDED = ["pass", "advance", "offer"];
+
+/** When this candidate's pitch video will be (or was due to be) deleted, or null if it waits on a decision. */
+export function pitchDeleteOn(c: { decision?: string; decidedAt?: string; feedbackAt?: string; screened?: string; pitch?: { submittedAt: string } }): Date | null {
+  if (!c.pitch) return null;
+  const decided = c.screened === "passed" || (c.decision && DECIDED.includes(c.decision));
+  const from = decided ? c.decidedAt || c.feedbackAt : c.pitch.submittedAt;
+  if (!from) return null;
+  const d = new Date(from);
+  d.setDate(d.getDate() + (decided ? DELETE_AFTER_DECISION_DAYS : DELETE_UNDECIDED_DAYS));
+  return d;
+}
 export const MAX_RESUME_MB = 10;
