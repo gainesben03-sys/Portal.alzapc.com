@@ -7,7 +7,7 @@ import { ClientNav, ClientTopbar, Sheet, Toast, useGuard, useToast } from "@/com
 import { fmtTime } from "@/lib/data";
 import { Candidate, daysSince, Decision, DECISION_LABEL } from "@/lib/modules";
 import { notifyBen, useStore } from "@/lib/store";
-import { PitchLinkCard, PitchView, RoleSheet, ShareSheet } from "@/components/pitch";
+import { deletePitchFiles, PitchLinkCard, PitchView, RoleSheet, ShareSheet } from "@/components/pitch";
 import { Role } from "@/lib/modules";
 
 function Score({ n }: { n: number }) {
@@ -30,6 +30,7 @@ export default function Recruiting() {
   const [roleEdit, setRoleEdit] = useState<Role | "new" | null>(null);
   const [sharing, setSharing] = useState<{ c: Candidate; role: Role } | null>(null);
   const [showPassed, setShowPassed] = useState<Record<string, boolean>>({});
+  const [removing, setRemoving] = useState<Candidate | null>(null);
   const toast = useToast();
 
   if (!ok || !client) return null;
@@ -201,6 +202,7 @@ export default function Recruiting() {
                       {!c.hidden && c.decision === "offer" && config[clientId]?.modules.hires && (viewer?.kind === "advisor" || me?.access === "exec") && !hires.some((h) => h.clientId === clientId && h.name === c.name) && (
                         <Link href={`/c/${clientId}/hires/new?candidate=${c.id}`} className="btn sm primary">Start the hire</Link>
                       )}
+                      {isAdvisor && <button className="btn ghost sm" style={{ color: "var(--red)" }} onClick={() => setRemoving(c)}>Remove</button>}
                     </div>
                   </div>
                 ))}
@@ -248,6 +250,27 @@ export default function Recruiting() {
         {!live && <p className="demo-note">Fictional candidates for the prototype.</p>}
       </main>
 
+      {removing && (
+        <Sheet title={`Remove ${removing.name}?`} onClose={() => setRemoving(null)}>
+          <p className="small">This deletes the candidate and any feedback on them for everyone.{removing.pitch ? " Their pitch video and resume are deleted too." : ""} It can't be undone.</p>
+          <div className="sheet-actions">
+            <button className="btn ghost sm" onClick={() => setRemoving(null)}>Cancel</button>
+            <button
+              className="btn sm"
+              style={{ background: "var(--red)", borderColor: "var(--red)", color: "#fff" }}
+              onClick={async () => {
+                const c = removing;
+                setRemoving(null);
+                if (c.pitch && live) await deletePitchFiles(c.id);
+                patch({ candidates: candidates.filter((x) => x.id !== c.id) });
+                toast.show(`${c.name} removed`);
+              }}
+            >
+              Remove
+            </button>
+          </div>
+        </Sheet>
+      )}
       {roleEdit && <RoleSheet clientId={client.id} role={roleEdit === "new" ? undefined : roleEdit} people={cfg?.users ?? []} onClose={() => setRoleEdit(null)} onSaved={(m) => { setRoleEdit(null); toast.show(m); }} />}
       {sharing && <ShareSheet c={sharing.c} role={sharing.role} onClose={() => setSharing(null)} onDone={(m) => { setSharing(null); toast.show(m); }} />}
       {fb && <FeedbackSheet c={fb} onClose={() => setFb(null)} onSave={saveFeedback} />}

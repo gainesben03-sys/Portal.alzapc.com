@@ -11,10 +11,18 @@ import { Sheet } from "./ui";
 
 const fmtSec = (s?: number) => (s ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : "");
 
+/** Ben removes a pitch candidate: delete their stored video and resume first. */
+export async function deletePitchFiles(candidateId: string) {
+  try {
+    await fetch(`/api/pitch/media?c=${encodeURIComponent(candidateId)}`, { method: "DELETE", headers: await authHeader() });
+  } catch {}
+}
+
 // ------------------------------------------------------------------ roles
 
 export function RoleSheet({ clientId, role, people, onClose, onSaved }: { clientId: string; role?: Role; people: PortalUser[]; onClose: () => void; onSaved: (msg: string) => void }) {
-  const { roles, patch } = useStore();
+  const { roles, candidates, patch, viewer, live } = useStore();
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [title, setTitle] = useState(role?.title ?? "");
   const [dept, setDept] = useState(role?.dept ?? "");
   const [location, setLocation] = useState(role?.location ?? "");
@@ -63,7 +71,30 @@ export function RoleSheet({ clientId, role, people, onClose, onSaved }: { client
         <textarea className="f" value={criteria} onChange={(e) => setCriteria(e.target.value)} placeholder={"Runs large events end to end\nCalm with clients\nBudget ownership"} />
       </label>
       {err && <p className="small" style={{ color: "var(--red)" }}>{err}</p>}
+      {confirmDelete && role && (
+        <div className="impact" style={{ marginTop: 12, borderLeft: "3px solid var(--red)" }}>
+          Delete <b>{role.title}</b> and its {candidates.filter((c) => c.roleId === role.id).length} candidate(s), including any pitch videos? This can&apos;t be undone.
+          <div className="chips" style={{ marginTop: 8 }}>
+            <button className="btn ghost sm" onClick={() => setConfirmDelete(false)}>Keep it</button>
+            <button
+              className="btn sm"
+              style={{ background: "var(--red)", borderColor: "var(--red)", color: "#fff" }}
+              onClick={async () => {
+                const mine = candidates.filter((c) => c.roleId === role.id);
+                if (live) for (const c of mine.filter((x) => x.pitch)) await deletePitchFiles(c.id);
+                patch({ roles: roles.filter((r) => r.id !== role.id), candidates: candidates.filter((c) => c.roleId !== role.id) });
+                onSaved("Role deleted");
+              }}
+            >
+              Delete role
+            </button>
+          </div>
+        </div>
+      )}
       <div className="sheet-actions">
+        {role && viewer?.kind === "advisor" && !confirmDelete && (
+          <button className="btn ghost sm" style={{ color: "var(--red)", marginRight: "auto" }} onClick={() => setConfirmDelete(true)}>Delete role</button>
+        )}
         <button className="btn ghost sm" onClick={onClose}>Cancel</button>
         <button className="btn primary sm" onClick={save}>{role ? "Save" : "Add role"}</button>
       </div>

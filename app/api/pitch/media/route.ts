@@ -23,3 +23,18 @@ export async function GET(req: Request) {
   if (error || !s) return NextResponse.json({ ok: false, reason: "storage" }, { status: 500 });
   return NextResponse.json({ ok: true, url: s.signedUrl });
 }
+
+/** Ben removes a candidate: delete everything stored for their pitch. */
+export async function DELETE(req: Request) {
+  if (!SERVER_LIVE) return NextResponse.json({ ok: false, reason: "demo" });
+  const me = await caller(req);
+  if (!me?.advisor) return NextResponse.json({ ok: false, reason: "forbidden" }, { status: 403 });
+  const id = String(new URL(req.url).searchParams.get("c") ?? "");
+  const db = admin();
+  const { data } = await db.from("candidates").select("client_id").eq("id", id).maybeSingle();
+  if (!data) return NextResponse.json({ ok: true });
+  const folder = `${data.client_id}/pitch/${id}`;
+  const { data: list } = await db.storage.from("client-files").list(folder, { limit: 100 });
+  if (list?.length) await db.storage.from("client-files").remove(list.map((f) => `${folder}/${f.name}`));
+  return NextResponse.json({ ok: true, removed: list?.length ?? 0 });
+}
