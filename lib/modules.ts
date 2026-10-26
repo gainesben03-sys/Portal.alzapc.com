@@ -16,7 +16,7 @@ export const MODULES: { key: ModuleKey; label: string; blurb: string }[] = [
   { key: "recruiting", label: "Recruiting", blurb: "Open roles, candidates and hiring feedback" },
   { key: "resources", label: "Resources", blurb: "Templates, guides and deliverables shared by Alza" },
   { key: "wellness", label: "Wellness", blurb: "Benefits and wellbeing programs by pillar" },
-  { key: "board", label: "Note board", blurb: "Messages and requests that go straight to Ben" },
+  { key: "board", label: "Messages", blurb: "A message thread with Ben, under Ask Ben" },
 ];
 
 export type Access = "exec" | "manager" | "hiring";
@@ -108,10 +108,10 @@ export interface Notice {
 
 export const TILES: { id: string; label: string; blurb: string; module?: ModuleKey; wide?: boolean }[] = [
   { id: "tasks", label: "Your tasks", blurb: "What needs you and your team", wide: true },
-  { id: "schedule", label: "Talk to Ben", blurb: "Book time on Ben's calendar" },
+  { id: "schedule", label: "Ask Ben", blurb: "Send Ben a request or book a call" },
   { id: "projects", label: "Projects", blurb: "Progress on current work", wide: true },
   { id: "chat", label: "Chat with Ben", blurb: "Quick messages and requests", module: "board" },
-  { id: "share", label: "Share with HR", blurb: "Upload documents for Ben" },
+  { id: "share", label: "Send files to Ben", blurb: "Upload documents for Ben" },
   { id: "recruiting", label: "Hiring", blurb: "Open roles and candidates waiting on you", module: "recruiting" },
   { id: "hires", label: "New hires", blurb: "Where each new hire is, start to day one", module: "hires", wide: true },
   { id: "upcoming", label: "Coming up", blurb: "Next items on your HR roadmap" },
@@ -121,7 +121,8 @@ export const TILES: { id: string; label: string; blurb: string; module?: ModuleK
   { id: "wellness", label: "Wellness", blurb: "Latest benefits news", module: "wellness" },
   { id: "huddle", label: "HR Huddle email", blurb: "Turn your recap email on or off" },
 ];
-export const DEFAULT_TILES = ["tasks", "schedule", "hires", "projects", "chat", "share", "recruiting", "upcoming", "wins", "huddle"];
+/** A busy executive's Home: what needs me, people in motion, what Ben is on, and one way to reach him. The rest is opt-in under Customize. */
+export const DEFAULT_TILES = ["tasks", "schedule", "hires", "recruiting", "alza"];
 
 export interface ClientConfig {
   onboarding?: Partial<import("./hires").OnboardingSettings>;

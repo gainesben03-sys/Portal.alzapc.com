@@ -9,7 +9,6 @@ import { notifyBen, useStore } from "@/lib/store";
 import { ADVISOR } from "@/lib/data";
 
 const KINDS: { k: NoteKind; hint: string }[] = [
-  { k: "Need", hint: "Something you need from Alza" },
   { k: "Question", hint: "A quick HR question" },
   { k: "Message", hint: "An update or FYI" },
 ];
@@ -19,7 +18,7 @@ export default function Board() {
   const ok = useGuard("client", clientId);
   const { getClient, notes, patch, viewer, config, notice } = useStore();
   const client = getClient(clientId);
-  const [kind, setKind] = useState<NoteKind>("Need");
+  const [kind, setKind] = useState<NoteKind>("Question");
   const [text, setText] = useState("");
   const [urgent, setUrgent] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -80,11 +79,11 @@ export default function Board() {
       <ClientTopbar client={client} />
       <ClientNav clientId={client.id} />
       <main className="wrap">
-        <h1>Note board</h1>
-        <p className="muted" style={{ marginTop: 6 }}>Leave Ben a note, a question or a request. He gets an email as soon as you post.</p>
+        <h1>Messages</h1>
+        <p className="muted" style={{ marginTop: 6 }}>Quick questions and FYIs. Need something done? Use <b>Ask Ben for something</b> so it&apos;s tracked with a due date.</p>
 
         <div className="card section" style={{ marginTop: 16 }}>
-          <div className="seg" style={{ gridTemplateColumns: "repeat(3, 1fr)", marginTop: 0 }}>
+          <div className="seg" style={{ gridTemplateColumns: "repeat(2, 1fr)", marginTop: 0 }}>
             {KINDS.map(({ k }) => (
               <button key={k} className={kind === k ? "on" : ""} onClick={() => setKind(k)}>
                 {k}

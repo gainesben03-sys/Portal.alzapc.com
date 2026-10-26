@@ -80,7 +80,7 @@ export default function ShareWithHR() {
       update(
         req.id,
         { status: "submitted", attachments: [...req.attachments, ...newFiles.map((f) => ({ name: f.name, from: who, path: f.path }))] },
-        `Shared ${newFiles.length} file${newFiles.length === 1 ? "" : "s"} through Share with HR`
+        `Shared ${newFiles.length} file${newFiles.length === 1 ? "" : "s"} through Send files`
       );
     }
     if (viewer?.kind === "client")
@@ -103,7 +103,7 @@ export default function ShareWithHR() {
       <ClientTopbar client={client} />
       <ClientNav clientId={client.id} />
       <main className="wrap">
-        <h1>Share with HR</h1>
+        <h1>Send files to Ben</h1>
         <p className="muted" style={{ marginTop: 6 }}>Send documents to Ben securely instead of over email. He's notified as soon as they land.</p>
 
         {requests.length > 0 && (

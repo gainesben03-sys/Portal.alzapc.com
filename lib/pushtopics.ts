@@ -9,9 +9,11 @@ export const BEN_TOPICS: { key: PushTopic; label: string; sub: string }[] = [
 
 export const CLIENT_TOPICS: { key: PushTopic; label: string; sub: string }[] = [
   { key: "requests", label: "New requests from Ben", sub: "Approvals and anything that needs you" },
-  { key: "reminders", label: "Due date reminders", sub: "The day before and the day something is due" },
+  { key: "reminders", label: "Due today and overdue", sub: "Only when something is due or late" },
   { key: "replies", label: "Replies from Ben", sub: "When Ben answers your note or question" },
 ];
 
 /** Everything is on until someone turns it off. */
-export const topicOn = (topics: Partial<Record<PushTopic, boolean>> | null | undefined, t: PushTopic) => topics?.[t] !== false;
+/** Defaults are quiet: alerts for things that need you; everything else is opt-in. */
+const DEFAULT_ON: Record<PushTopic, boolean> = { activity: true, hires: true, reminders: true, requests: true, replies: false };
+export const topicOn = (topics: Partial<Record<PushTopic, boolean>> | null | undefined, t: PushTopic) => topics?.[t] ?? DEFAULT_ON[t];

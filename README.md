@@ -42,6 +42,10 @@ Clickable prototype of the Alza client portal: the Master Console for Ben and a 
 
 Reminder logic (business days, configurable): friendly reminder 3 before, due-date reminder, overdue notice 1 after, escalation 3 after, blocker flag on the console 7 after. When a client requests changes, the item moves to Alza's side so the client is never shown as the holdup.
 
+## Simplified layout (round 5)
+
+Clients see five tabs: **Home, To-dos** (Tasks, Projects), **People** (New hires, Recruiting, Team), **Ask Ben** (Messages, Send files, and an "Ask Ben for something" button) and **Library** (Resources, Wellness). Related pages sit as small sub-tabs. Home defaults to Needs you, Ask Ben, New hires, Hiring and Ben is working on; everything else is opt-in under Customize. Ask Ben is the one door for requests (with an optional file). Phone alerts default to what needs the person; replies and 3-day heads-ups are email only unless they opt in.
+
 ## Run locally
 
 ```bash

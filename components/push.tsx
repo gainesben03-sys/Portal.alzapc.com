@@ -81,7 +81,7 @@ export function PushPrompt() {
       <p className="small">
         {isBen
           ? "A quick alert when a client posts a note, uploads a document, approves something, or a new hire signs. Email still comes too."
-          : "Turn on alerts and your phone lets you know when Ben needs your approval, something is due, or he replies. Only the important things. You can change this any time."}
+          : "Turn on alerts and your phone lets you know when Ben needs your approval or something is due. Only the things that need you. You can change this any time."}
       </p>
       {open === "ios" && (
         <>

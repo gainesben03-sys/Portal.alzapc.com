@@ -53,7 +53,7 @@ export default function Clients() {
 
         <div className="card section">
           <b>Your booking link</b>
-          <div className="tiny muted" style={{ marginTop: 2 }}>Powers the "Talk to Ben" tile on every client dashboard. Paste your Calendly link.</div>
+          <div className="tiny muted" style={{ marginTop: 2 }}>Powers the "Book a call" button on every client dashboard. Paste your Calendly link.</div>
           <form
             style={{ display: "flex", gap: 8, marginTop: 10 }}
             onSubmit={(e) => {

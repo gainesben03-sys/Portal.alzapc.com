@@ -490,3 +490,9 @@ video.pitch-live[controls] { height: auto; max-height: 62vh; object-fit: contain
 .pitch-contact { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 2px 4px; align-items: center; }
 .pitch-contact a { color: var(--blue); }
 .card.screening { border-left: 3px solid var(--amber); }
+.subnav-sub { border-top: 1px solid var(--line); background: var(--bg, var(--card)); }
+.subnav-sub-inner { max-width: 720px; margin: 0 auto; display: flex; align-items: center; gap: 6px; overflow-x: auto; padding: 7px 12px; scrollbar-width: none; }
+.subnav-sub-inner::-webkit-scrollbar { display: none; }
+.subnav .subnav-sub a { padding: 5px 12px; font-size: 13px; border: 1px solid var(--line); border-radius: 999px; border-bottom-width: 1px; color: var(--muted); background: var(--card); }
+.subnav .subnav-sub a.on { color: #fff; background: var(--accent); border-color: var(--accent); }
+.subnav-sub .btn { white-space: nowrap; }

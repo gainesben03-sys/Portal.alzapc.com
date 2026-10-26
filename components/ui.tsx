@@ -6,8 +6,9 @@ import { ReactNode, useEffect, useState } from "react";
 import { Action, Client, dueLabel, reminderStage, subtaskProgress, urgency, Urgency } from "@/lib/data";
 import { useStore } from "@/lib/store";
 import { usePathname } from "next/navigation";
-import { canSee, MODULES } from "@/lib/modules";
+import { canSee, ModuleKey } from "@/lib/modules";
 import { PushButton, PushPrompt } from "./push";
+import { AskBenSheet } from "./askben";
 
 export function UrgencyPill({ a }: { a: Action }) {
   const { rules } = useStore();
@@ -286,32 +287,94 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
   );
 }
 
+/**
+ * Five top tabs. Related pages sit underneath as small sub-tabs, so nothing is lost
+ * but only what a busy executive uses is in front of them.
+ */
 export function ClientNav({ clientId }: { clientId: string }) {
   const { config, notes, viewer, me } = useStore();
   const path = usePathname();
   const cfg = config[clientId];
   const base = `/c/${clientId}`;
-  const unread = viewer?.kind === "advisor" ? notes.filter((n) => n.clientId === clientId && n.status === "new").length : 0;
+  const isAdvisor = viewer?.kind === "advisor";
+  const unread = isAdvisor ? notes.filter((n) => n.clientId === clientId && n.status === "new").length : 0;
   const access = me?.access;
-  const items = [
-    ...(access === "hiring" ? [] : [{ href: base, label: "Home" }, { href: `${base}/tasks`, label: "Tasks" }, { href: `${base}/projects`, label: "Projects" }]),
-    ...MODULES.filter((m) => cfg?.modules[m.key] && canSee(access, m.key)).map((m) => ({ href: `${base}/${m.key}`, label: m.label })),
-    ...(access === "hiring" ? [] : [{ href: `${base}/share`, label: "Share with HR" }]),
-    ...(canSee(access, "team") ? [{ href: `${base}/team`, label: "Team" }] : []),
-  ];
+  const mod = (k: ModuleKey) => !!cfg?.modules[k] && canSee(access, k);
+  const [asking, setAsking] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  type Sub = { href: string; label: string; match: string[]; badge?: number };
+  const groups: { key: string; label: string; subs: Sub[] }[] = [
+    { key: "home", label: "Home", subs: access === "hiring" ? [] : [{ href: base, label: "Home", match: [] }] },
+    {
+      key: "todo",
+      label: "To-dos",
+      subs: access === "hiring" ? [] : [
+        { href: `${base}/tasks`, label: "Tasks", match: [`${base}/tasks`, `${base}/a/`] },
+        { href: `${base}/projects`, label: "Projects", match: [`${base}/projects`] },
+      ],
+    },
+    {
+      key: "people",
+      label: "People",
+      subs: [
+        ...(mod("hires") ? [{ href: `${base}/hires`, label: "New hires", match: [`${base}/hires`] }] : []),
+        ...(mod("recruiting") ? [{ href: `${base}/recruiting`, label: "Recruiting", match: [`${base}/recruiting`] }] : []),
+        ...(canSee(access, "team") ? [{ href: `${base}/team`, label: "Team", match: [`${base}/team`] }] : []),
+      ],
+    },
+    {
+      key: "ask",
+      label: "Ask Ben",
+      subs: access === "hiring" ? [] : [
+        ...(mod("board") ? [{ href: `${base}/board`, label: "Messages", match: [`${base}/board`], badge: unread }] : []),
+        { href: `${base}/share`, label: "Send files", match: [`${base}/share`] },
+      ],
+    },
+    {
+      key: "library",
+      label: "Library",
+      subs: [
+        ...(mod("resources") ? [{ href: `${base}/resources`, label: "Resources", match: [`${base}/resources`] }] : []),
+        ...(mod("wellness") ? [{ href: `${base}/wellness`, label: "Wellness", match: [`${base}/wellness`] }] : []),
+      ],
+    },
+  ].filter((g) => g.subs.length);
+
+  const subOn = (x: Sub) => (x.match.length ? x.match.some((m) => path.startsWith(m)) : path === base);
+  const current = groups.find((g) => g.subs.some(subOn));
+  const groupBadge = (g: (typeof groups)[number]) => g.subs.reduce((n, x) => n + (x.badge ?? 0), 0);
+
   return (
     <nav className="subnav">
       <div className="subnav-inner">
-        {items.map((i) => {
-          const on = i.href === base ? path === base : i.href === `${base}/tasks` ? path.startsWith(i.href) || path.startsWith(`${base}/a/`) : path.startsWith(i.href);
-          return (
-            <Link key={i.href} href={i.href} className={on ? "on" : ""}>
-              {i.label}
-              {i.label === "Note board" && unread > 0 && <span className="badge">{unread}</span>}
-            </Link>
-          );
-        })}
+        {groups.map((g) => (
+          <Link key={g.key} href={g.subs[0].href} className={current?.key === g.key ? "on" : ""}>
+            {g.label}
+            {groupBadge(g) > 0 && <span className="badge">{groupBadge(g)}</span>}
+          </Link>
+        ))}
       </div>
+      {current && (current.subs.length > 1 || current.key === "ask") && (
+        <div className="subnav-sub">
+          <div className="subnav-sub-inner">
+            {current.subs.length > 1 &&
+              current.subs.map((x) => (
+                <Link key={x.href} href={x.href} className={subOn(x) ? "on" : ""}>
+                  {x.label}
+                  {!!x.badge && <span className="badge">{x.badge}</span>}
+                </Link>
+              ))}
+            {current.key === "ask" && !isAdvisor && (
+              <button className="btn primary sm" style={{ marginLeft: "auto" }} onClick={() => setAsking(true)}>
+                Ask Ben for something
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      {asking && <AskBenSheet clientId={clientId} onClose={() => setAsking(false)} onDone={(m) => { setAsking(false); setMsg(m); }} />}
+      <Toast msg={msg} onDone={() => setMsg(null)} />
     </nav>
   );
 }

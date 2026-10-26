@@ -98,18 +98,14 @@ export default function Home() {
       );
     },
     schedule: () => (
-      <Tile title="Talk to Ben" tone="accent">
-        <p className="small" style={{ marginBottom: 12 }}>Need to talk something through? Grab a time on Ben's calendar.</p>
+      <Tile title="Ask Ben" tone="accent">
+        <p className="small" style={{ marginBottom: 12 }}>A document, a question, an employee situation: send it here and it&apos;s on Ben&apos;s list.</p>
+        <button className="btn primary block" disabled={isAdvisor} onClick={() => setAsking(true)}>Ask Ben for something</button>
         {bookingUrl ? (
-          <a className="btn primary block" href={bookingUrl} target="_blank" rel="noopener noreferrer">Book a time</a>
+          <a className="btn block" style={{ marginTop: 8 }} href={bookingUrl} target="_blank" rel="noopener noreferrer">Book a call</a>
         ) : (
-          <>
-            <button className="btn primary block" disabled>Calendar link coming soon</button>
-            {isAdvisor && <Link href="/console/clients" className="tiny" style={{ color: "var(--blue)", display: "block", marginTop: 8 }}>Add your Calendly link</Link>}
-          </>
+          isAdvisor && <Link href="/console/clients" className="tiny" style={{ color: "var(--blue)", display: "block", marginTop: 8 }}>Add your Calendly link</Link>
         )}
-        {!isAdvisor && <button className="btn block" style={{ marginTop: 8 }} onClick={() => setAsking(true)}>Ask Ben for something</button>}
-        {cfg?.modules.board && <Link href={`${base}/board`} className="tiny muted" style={{ display: "block", marginTop: 10, textAlign: "center" }}>Or leave Ben a note</Link>}
       </Tile>
     ),
     projects: () => {
@@ -165,7 +161,7 @@ export default function Home() {
       const reqs = openClient.filter((a) => a.kind === "document" || a.kind === "information");
       const sent = files.filter((f) => f.clientId === client.id).length;
       return (
-        <Tile title="Share with HR" href={`${base}/share`} linkLabel="Upload">
+        <Tile title="Send files to Ben" href={`${base}/share`} linkLabel="Upload">
           <p className="small muted" style={{ marginBottom: 10 }}>Send documents securely. No email attachments.</p>
           {reqs.slice(0, 2).map((r) => (
             <Link href={`${base}/share`} className="row" key={r.id}>
@@ -259,7 +255,6 @@ export default function Home() {
       return (
         <Tile title="Ben is working on" count={list.length} href={`${base}/tasks`}>
           {list.length === 0 && <p className="small muted">Nothing outstanding from Ben.</p>}
-          {!isAdvisor && <button className="btn block" style={{ marginTop: 10 }} onClick={() => setAsking(true)}>Ask Ben for something</button>}
           {list.map((a) => (
             <Link href={`${base}/a/${a.id}`} className="row" key={a.id}>
               <div className="grow">
