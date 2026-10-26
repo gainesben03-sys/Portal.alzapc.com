@@ -17,7 +17,7 @@ export function Tracker({ h, compact }: { h: Pick<Hire, "status" | "startDate">;
         {STAGES.map((s, i) => (
           <li key={s} className={i < cur ? "done" : i === cur ? "now" : ""}>
             <span className="dot">{i < cur ? "✓" : i + 1}</span>
-            {!compact && <span className="lbl">{STAGE_SHORT[s]}</span>}
+            <span className="lbl">{STAGE_SHORT[s]}</span>
           </li>
         ))}
       </ol>

@@ -61,7 +61,7 @@ p { margin: 0; }
 .wordmark .hr { color: var(--gold); }
 .wordmark .tag { font-family: "Inter", sans-serif; font-size: 10px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: hsl(38 20% 75%); margin-left: 8px; }
 
-.client-logo { height: 30px; width: auto; display: block; }
+.client-logo { height: 30px; width: auto; max-width: min(180px, 42vw); object-fit: contain; object-position: left center; display: block; }
 .powered { font-size: 11px; color: var(--muted); }
 .powered b { color: var(--navy-ink); }
 .viewer-switch {
@@ -391,9 +391,19 @@ textarea.f.draft-text { min-height: 260px; margin-top: 10px; line-height: 1.5; }
 .tracker.compact li { width: 18px; }
 .tracker.compact .dot { width: 18px; height: 18px; font-size: 0; border-width: 2px; }
 .tracker.compact li.done .dot { font-size: 10px; }
+.tracker.compact li { gap: 4px; }
+.tracker.compact .lbl { font-size: 10px; line-height: 1.15; white-space: normal; width: 54px; }
+/* equal columns: each label centered under its dot, line runs dot center to dot center */
+.tracker ol { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.tracker li { width: auto; min-width: 0; }
+.tracker .lbl { width: 100%; white-space: normal; line-height: 1.2; padding: 0 2px; box-sizing: border-box; }
+.tracker .tracker-line { left: calc(100% / 12); right: calc(100% / 12); }
+.tracker.compact .tracker-line { left: calc(100% / 12); right: calc(100% / 12); }
+.tracker.compact li { width: auto; }
+.tracker.compact .lbl { width: 100%; }
 @keyframes tracker-pulse { 70% { box-shadow: 0 0 0 9px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
 @media (prefers-reduced-motion: reduce) { .tracker li.now .dot { animation: none; } .tracker-fill { transition: none; } }
-@media (max-width: 520px) { .tracker:not(.compact) .lbl { font-size: 10px; white-space: normal; width: 52px; line-height: 1.2; } }
+@media (max-width: 520px) { .tracker:not(.compact) .lbl { font-size: 10px; } }
 
 .hire-list { display: grid; gap: 10px; }
 @media (min-width: 900px) { .wrap.wide .hire-list { grid-template-columns: 1fr 1fr; } }
