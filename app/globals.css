@@ -496,3 +496,5 @@ video.pitch-live[controls] { height: auto; max-height: 62vh; object-fit: contain
 .subnav .subnav-sub a { padding: 5px 12px; font-size: 13px; border: 1px solid var(--line); border-radius: 999px; border-bottom-width: 1px; color: var(--muted); background: var(--card); }
 .subnav .subnav-sub a.on { color: #fff; background: var(--accent); border-color: var(--accent); }
 .subnav-sub .btn { white-space: nowrap; }
+.work-with { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); position: relative; }
+.work-with.compact { margin-top: 16px; }

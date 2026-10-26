@@ -6,6 +6,7 @@ import { CLIENTS } from "@/lib/data";
 import { PENDING_INVITE, useStore } from "@/lib/store";
 import { LIVE, sb } from "@/lib/supabase";
 import { ThemeToggle } from "@/components/ui";
+import { WorkWithUs } from "@/components/workwithus";
 
 export default function Login() {
   const { setViewer, reset, config, patch, getClient, viewer, ready, me, noAccess, signOut } = useStore();
@@ -25,13 +26,21 @@ export default function Login() {
     else router.replace(me?.access === "hiring" ? `/c/${viewer.clientId}/recruiting` : `/c/${viewer.clientId}`);
   }, [ready, viewer, me, router]);
 
-  const sendLink = async (to: string) => {
+  // The server decides who gets a link; the reply is the same either way.
+  const sendLink = async (to: string, inviteCode?: string) => {
     setBusy(true);
     setErr("");
-    const { error } = await sb().auth.signInWithOtp({ email: to.trim(), options: { emailRedirectTo: window.location.origin, shouldCreateUser: true } });
-    setBusy(false);
-    if (error) {
-      setErr(/rate/i.test(error.message) ? "Too many sign-in emails just now. Wait a minute and try again." : error.message);
+    try {
+      const r = await fetch("/api/signin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: to.trim(), code: inviteCode }) });
+      const j = await r.json();
+      setBusy(false);
+      if (!j.ok) {
+        setErr(j.reason === "rate" ? "Too many sign-in emails just now. Wait a minute and try again." : j.reason === "code" ? "That invite code isn't valid or has expired. Ask for a new one." : j.reason === "email" ? "Check the email address." : "Something went wrong. Try again.");
+        return false;
+      }
+    } catch {
+      setBusy(false);
+      setErr("Couldn't connect. Check your internet and try again.");
       return false;
     }
     setSent(to.trim());
@@ -66,7 +75,7 @@ export default function Login() {
       try {
         localStorage.setItem(PENDING_INVITE, JSON.stringify({ code: code.trim().toUpperCase(), name: j.name.trim(), role: j.role.trim() }));
       } catch {}
-      await sendLink(j.email);
+      await sendLink(j.email, code.trim().toUpperCase());
       return;
     }
     const f = findCode(code);
@@ -106,6 +115,7 @@ export default function Login() {
             </p>
             <button className="btn block" style={{ marginTop: 14 }} onClick={() => setJoining(true)}>I have an invite code</button>
             <button className="btn ghost block" style={{ marginTop: 6 }} onClick={() => signOut()}>Use a different email</button>
+            <WorkWithUs compact />
           </>
         ) : (
           <p className="muted" style={{ marginTop: 6 }}>
@@ -115,7 +125,7 @@ export default function Login() {
 
         {sent ? (
           <div className="impact" style={{ marginTop: 18 }}>
-            Check <b>{sent}</b> for a sign-in link. Open it on this device or any other. It works once and expires soon.
+            If <b>{sent}</b> has access to a portal, a sign-in link is on its way. Open it on this device or any other. It works once and expires soon. Nothing after a few minutes? Check spam, or ask Ben to confirm your email is on your team.
             <div style={{ marginTop: 8 }}>
               <button className="btn ghost sm" onClick={() => setSent(null)}>Use a different email</button>
             </div>
@@ -166,6 +176,7 @@ export default function Login() {
           )
         )}
         {err && <p className="small" style={{ color: "var(--red)", marginTop: 8 }}>{err}</p>}
+        {!noAccess && <WorkWithUs />}
 
         {!LIVE && (
           <>
