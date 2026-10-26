@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { ClientNav, ClientTopbar, Sheet, Toast, UrgencyPill, useGuard, useToast } from "@/components/ui";
 import { Action, addBusinessDays, escalationTarget, fmt, fmtTime, parseDay, reminderPlan, STATUS_LABEL, subtaskProgress, toISO, today } from "@/lib/data";
@@ -19,6 +19,8 @@ export default function ActionDetail() {
   const [sheet, setSheet] = useState<null | "extension" | "revision" | "remind">(null);
   const [comment, setComment] = useState("");
   const [drafting, setDrafting] = useState(false);
+  const [confirmDel, setConfirmDel] = useState(false);
+  const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const a = actions.find((x) => x.id === id && x.clientId === clientId);
@@ -86,6 +88,11 @@ export default function ActionDetail() {
         <Link href={isAdvisor ? "/console" : `/c/${client.id}/tasks`} className="small" style={{ color: "var(--blue)" }}>
           ← {isAdvisor ? "Console" : "All tasks"}
         </Link>
+        {isAdvisor && (
+          <button className="linklike tiny" style={{ float: "right", color: "var(--red)", marginTop: 4 }} onClick={() => setConfirmDel(true)}>
+            Delete task
+          </button>
+        )}
 
         <div style={{ marginTop: 12 }}>
           <UrgencyPill a={a} />
@@ -414,6 +421,24 @@ export default function ActionDetail() {
         />
       )}
 
+      {confirmDel && (
+        <Sheet title="Delete this task?" onClose={() => setConfirmDel(false)}>
+          <p className="small">&ldquo;{a.title}&rdquo; is removed for everyone, along with its steps, comments and reminders. Shared files stay in Files. It can&apos;t be undone.</p>
+          <div className="sheet-actions">
+            <button className="btn ghost sm" onClick={() => setConfirmDel(false)}>Cancel</button>
+            <button
+              className="btn sm"
+              style={{ background: "var(--red)", borderColor: "var(--red)", color: "#fff" }}
+              onClick={() => {
+                patch({ actions: actions.filter((x) => x.id !== a.id) });
+                router.push(`/c/${client.id}/tasks`);
+              }}
+            >
+              Delete
+            </button>
+          </div>
+        </Sheet>
+      )}
       <Toast msg={toast.msg} onDone={toast.clear} />
     </div>
   );

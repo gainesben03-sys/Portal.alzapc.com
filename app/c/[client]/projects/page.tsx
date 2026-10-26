@@ -11,10 +11,11 @@ type Tab = "active" | "planned" | "done";
 export default function Projects() {
   const { client: clientId } = useParams<{ client: string }>();
   const ok = useGuard("client", clientId);
-  const { getClient, projects, actions, patch, viewer } = useStore();
+  const { getClient, projects, actions, patch, viewer, live } = useStore();
   const client = getClient(clientId);
   const [tab, setTab] = useState<Tab>("active");
   const [adding, setAdding] = useState(false);
+  const [del, setDel] = useState<Project | null>(null);
   const toast = useToast();
   if (!ok || !client) return null;
 
@@ -69,6 +70,7 @@ export default function Projects() {
                     <span className="small muted">{pct}%</span>
                   </div>
                   <p className="small muted" style={{ marginTop: 4 }}>{p.summary}</p>
+                  {isAdvisor && <button className="linklike tiny" style={{ color: "var(--red)", marginTop: 4 }} onClick={() => setDel(p)}>Delete project</button>}
                   <div className="bar"><div style={{ width: `${pct}%` }} /></div>
                   <div style={{ marginTop: 8 }}>
                     {p.steps.map((s) => (
@@ -112,6 +114,7 @@ export default function Projects() {
                         <div className="grow">
                           <h3>{p.name}</h3>
                           <p className="small muted" style={{ marginTop: 4 }}>{p.summary}</p>
+                  {isAdvisor && <button className="linklike tiny" style={{ color: "var(--red)", marginTop: 4 }} onClick={() => setDel(p)}>Delete project</button>}
                         </div>
                         <span className="pill later">Starts {fmt(p.milestoneDue)}</span>
                       </div>
@@ -146,13 +149,14 @@ export default function Projects() {
                   <div className="grow">
                     <h3>{p.name}</h3>
                     <p className="small muted" style={{ marginTop: 4 }}>{p.summary}</p>
+                  {isAdvisor && <button className="linklike tiny" style={{ color: "var(--red)", marginTop: 4 }} onClick={() => setDel(p)}>Delete project</button>}
                   </div>
                   <span className="pill done">Done {fmt(p.milestoneDue)}</span>
                 </div>
               </div>
             ))}
         </div>
-        <p className="demo-note">Sample projects for the prototype.</p>
+        {!live && <p className="demo-note">Sample projects for the prototype.</p>}
       </main>
 
       {adding && (
@@ -166,6 +170,26 @@ export default function Projects() {
             toast.show(active ? "Project started" : "Added to the roadmap");
           }}
         />
+      )}
+      {del && (
+        <Sheet title={`Delete ${del.name}?`} onClose={() => setDel(null)}>
+          <p className="small">This removes the project and its steps for everyone. Tasks linked to it stay, just without the project. It can&apos;t be undone.</p>
+          <div className="sheet-actions">
+            <button className="btn ghost sm" onClick={() => setDel(null)}>Cancel</button>
+            <button
+              className="btn sm"
+              style={{ background: "var(--red)", borderColor: "var(--red)", color: "#fff" }}
+              onClick={() => {
+                const d = del;
+                setDel(null);
+                patch({ projects: projects.filter((x) => x.id !== d.id), actions: actions.map((a) => (a.projectId === d.id ? { ...a, projectId: undefined } : a)) });
+                toast.show("Project deleted");
+              }}
+            >
+              Delete
+            </button>
+          </div>
+        </Sheet>
       )}
       <Toast msg={toast.msg} onDone={toast.clear} />
     </div>
