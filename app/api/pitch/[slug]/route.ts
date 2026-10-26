@@ -3,7 +3,7 @@
 // finish: checks the files arrived, then adds the candidate to the role.
 import { NextResponse } from "next/server";
 import { emailLogoUrl } from "@/lib/brand";
-import { noticeEmail } from "@/lib/hires";
+import { noticeEmail, onboardingFor, senderFor } from "@/lib/hires";
 import { Candidate, ClientConfig } from "@/lib/modules";
 import { MAX_RESUME_MB, MAX_UPLOAD_MB, pitchOpen, PitchSubmission } from "@/lib/pitch";
 import { extFor, newCandidateId, readTicket, roleBySlug, signTicket } from "@/lib/pitchserver";
@@ -164,7 +164,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     }
     const brand = { company, accent: cfg.accent || "#19283c", logoUrl: emailLogoUrl(role.clientId, cfg.logo, cfg.logoEmail, base) };
     const mail = noticeEmail(brand, "Received", `Thanks, <i>${t.n.split(" ")[0].replace(/[&<>"]/g, "")}.</i>`, [`Thanks for applying to ${role.title} at ${company}. Your ${t.k === "written" ? "introduction" : "pitch"} came through.`, "If it's a fit, someone from the team will reach out about next steps."]);
-    await sendEmail({ to: [t.e], subject: `Thanks for applying to ${role.title} at ${company}`, html: mail.html, text: mail.text });
+    await sendEmail({ to: [t.e], subject: `Thanks for applying to ${role.title} at ${company}`, html: mail.html, text: mail.text, ...senderFor(onboardingFor(cfg.onboarding), company) });
     return NextResponse.json({ ok: true });
   }
 

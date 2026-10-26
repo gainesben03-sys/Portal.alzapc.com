@@ -2,7 +2,7 @@
 // The text signed is read from the stored file on the server, and the link goes only to
 // the hire's personal email on file.
 import { NextResponse } from "next/server";
-import { loadClient, loadHire, newToken, saveHire, sha256 } from "@/lib/esign";
+import { forHire, loadClient, loadHire, newToken, saveHire, sha256 } from "@/lib/esign";
 import { extractText } from "@/lib/extract";
 import { signRequestEmail, stageIndex } from "@/lib/hires";
 import { admin, caller, sendEmail, SERVER_LIVE, siteUrl } from "@/lib/server";
@@ -47,8 +47,9 @@ export async function POST(req: Request) {
   if (body.length < 40) return NextResponse.json({ ok: false, reason: "unreadable" });
 
   const base = siteUrl(req);
-  const c = await loadClient(db, h.clientId, base);
-  if (!c) return NextResponse.json({ ok: false, reason: "no_client" }, { status: 404 });
+  const c0 = await loadClient(db, h.clientId, base);
+  if (!c0) return NextResponse.json({ ok: false, reason: "no_client" }, { status: 404 });
+  const c = forHire(c0, h);
   const title = kind === "offer" ? "Offer Letter" : "Employment Agreement";
   const id = newToken();
   const expires = new Date(Date.now() + 30 * 864e5).toISOString();
@@ -61,7 +62,7 @@ export async function POST(req: Request) {
 
   const link = `${base}/sign/${id}`;
   const mail = signRequestEmail(h, title, link, c.s, c.brand, expires.slice(0, 10));
-  const r = await sendEmail({ to: [to], subject: mail.subject, html: mail.html, text: mail.text, replyTo: c.s.hrEmail });
+  const r = await sendEmail({ to: [to], subject: mail.subject, html: mail.html, text: mail.text, ...c.sender });
   if (!r.ok) {
     await db.from("signatures").update({ status: "voided" }).eq("id", id);
     return NextResponse.json({ ok: false, reason: r.reason });

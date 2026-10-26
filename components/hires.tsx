@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { addDaysISO, analyze, daysUntil, Hire, OnboardingSettings, payLine, shortDate, STAGES, STAGE_SHORT, stageIndex } from "@/lib/hires";
+import { addDaysISO, analyze, daysUntil, Hire, officeList, OnboardingSettings, payLine, shortDate, STAGES, STAGE_SHORT, stageIndex } from "@/lib/hires";
 import { PortalUser } from "@/lib/modules";
 
 /** Pizza-tracker style progress: six stops, the current one pulses. */
@@ -112,18 +112,34 @@ export function HireForm({
   onChange,
   s,
   people,
+  clientName,
 }: {
   value: HireDraft;
   onChange: (v: HireDraft) => void;
   s: OnboardingSettings;
   people: PortalUser[];
+  clientName?: string;
 }) {
   const set = <K extends keyof HireDraft>(k: K, v: HireDraft[K]) => onChange({ ...value, [k]: v });
-  const [otherLoc, setOtherLoc] = useState(!!value.location && value.location !== s.hqAddress);
+  const offices = officeList(s);
+  const companies = (s.companies ?? []).filter((c) => c.name.trim());
+  const [otherLoc, setOtherLoc] = useState(!!value.location && value.location !== s.hqAddress && !offices.includes(value.location));
+  const locValue = otherLoc ? "__other" : value.location && offices.includes(value.location) ? value.location : s.hqAddress ? "__hq" : offices.length ? "" : "__other";
   const managerOptions = useMemo(() => people.map((p) => ({ name: p.name, title: p.role })), [people]);
 
   return (
     <div className="hire-form">
+      {companies.length > 0 && (
+        <fieldset>
+          <legend>Company</legend>
+          <label className="f full">Hiring company <span className="tiny muted">(sets the name and logo on their emails)</span>
+            <select className="f" value={value.companyId ?? ""} onChange={(e) => set("companyId", e.target.value || undefined)}>
+              <option value="">{clientName || "Main company"}</option>
+              {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </label>
+        </fieldset>
+      )}
       <fieldset>
         <legend>Role</legend>
         <label className="f full">Position title<input className="f" value={value.title} onChange={(e) => set("title", e.target.value)} placeholder="Exactly as it will read on the offer letter" /></label>
@@ -182,17 +198,19 @@ export function HireForm({
           <span className="flabel">Where to report</span>
           <select
             className="f"
-            value={otherLoc || !s.hqAddress ? "other" : "hq"}
+            value={locValue}
             onChange={(e) => {
-              const o = e.target.value === "other";
-              setOtherLoc(o);
-              set("location", o ? "" : "");
+              const v = e.target.value;
+              setOtherLoc(v === "__other");
+              set("location", v === "__other" || v === "__hq" ? "" : v);
             }}
           >
-            {s.hqAddress && <option value="hq">Main office: {s.hqAddress}</option>}
-            <option value="other">{s.hqAddress ? "Somewhere else" : "Enter an address"}</option>
+            {!s.hqAddress && offices.length > 0 && <option value="">Choose...</option>}
+            {s.hqAddress && <option value="__hq">Main office: {s.hqAddress}</option>}
+            {offices.map((o) => <option key={o} value={o}>{o}</option>)}
+            <option value="__other">{s.hqAddress || offices.length ? "Other (type it in)" : "Enter an address"}</option>
           </select>
-          {(otherLoc || !s.hqAddress) && <input className="f" style={{ marginTop: 8 }} value={value.location ?? ""} onChange={(e) => set("location", e.target.value)} placeholder="Address, suite, and anything about parking" />}
+          {locValue === "__other" && <input className="f" style={{ marginTop: 8 }} value={value.location ?? ""} onChange={(e) => set("location", e.target.value)} placeholder="Address, suite, and anything about parking" />}
         </div>
       </fieldset>
 

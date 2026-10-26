@@ -52,6 +52,8 @@ export interface Hire {
   createdAt: string;
   history: { at: string; by: string; text: string }[];
   tasksCreated?: boolean;
+  /** For accounts with sister companies: which one is hiring (sets the name, logo and sender). */
+  companyId?: string;
   /** Built-in e-signature requests, by document type. */
   esign?: { offer?: EsignState; agreement?: EsignState };
 }
@@ -61,6 +63,20 @@ export interface EsignState {
   status: "sent" | "viewed" | "signed" | "declined";
   at: string;
   note?: string;
+}
+
+/** A sister company on the same account (e.g. Presidio Bay and The Main Post). */
+export interface HireCompany {
+  id: string;
+  name: string;
+  logo?: string; // data URL shown in the portal
+  logoEmail?: string; // PNG copy for email apps
+  color?: string;
+  hrName?: string;
+  hrEmail?: string;
+  hrPhone?: string;
+  /** Sending address before the @, e.g. "tmphr" -> tmphr@alzapc.com */
+  senderBox?: string;
 }
 
 export interface OnboardingSettings {
@@ -82,6 +98,48 @@ export interface OnboardingSettings {
   values?: string; // one per line
   clockingSection: boolean; // add clocking in/out rules for non-exempt
   idNote: string; // accepted ID line
+  /** Sister companies. When set, each hire picks one. */
+  companies?: HireCompany[];
+  /** What candidates and new hires see as the sender: name, and the part before the @. */
+  senderName?: string;
+  senderBox?: string;
+  /** Places new hires report to, one per line. */
+  officeLocations?: string;
+}
+
+export function hireCompany(h: Pick<Hire, "companyId">, s: Pick<OnboardingSettings, "companies">): HireCompany | undefined {
+  return h.companyId ? (s.companies ?? []).find((c) => c.id === h.companyId && c.name.trim()) : undefined;
+}
+
+/** Brand and contact details for one hire's emails: the sister company's when one is picked. */
+export function forCompany(h: Pick<Hire, "companyId">, s: OnboardingSettings, brand: Brand, logoUrl?: string): { s: OnboardingSettings; brand: Brand; company?: HireCompany } {
+  const co = hireCompany(h, s);
+  if (!co) return { s, brand };
+  return {
+    company: co,
+    s: { ...s, hrName: co.hrName?.trim() || s.hrName, hrEmail: co.hrEmail?.trim() || s.hrEmail, hrPhone: co.hrPhone?.trim() || s.hrPhone, senderName: `${co.name.trim()} HR`, senderBox: co.senderBox },
+    brand: { company: co.name.trim(), accent: co.color || brand.accent, logoUrl },
+  };
+}
+
+/** Clean the part before the @ to letters, numbers, dots, dashes. */
+export const cleanBox = (v: string) => v.toLowerCase().replace(/@.*$/, "").replace(/[^a-z0-9._-]/g, "").replace(/^[._-]+|[._-]+$/g, "").slice(0, 40);
+
+/** e.g. "Students Run LA" -> "srlahr", "The Main Post" -> "tmphr", "Hensley" -> "hensleyhr" */
+export function suggestBox(name?: string) {
+  const words = (name ?? "").replace(/[^A-Za-z0-9 ]/g, " ").split(/\s+/).filter(Boolean);
+  if (!words.length) return "";
+  const base = words.length > 1 ? words.map((w) => (/^[A-Z]{2,4}$/.test(w) ? w : w[0])).join("") : words[0]; // "LA" stays whole: srla
+  return cleanBox(base + "hr");
+}
+
+/** Sender for candidate and new hire emails: "Students Run LA HR <slrahr@alzapc.com>". Replies go to the HR email. */
+export function senderFor(s: Pick<OnboardingSettings, "senderName" | "senderBox" | "hrEmail">, company: string) {
+  return { fromName: s.senderName?.trim() || `${company} HR`, fromBox: cleanBox(s.senderBox ?? "") || suggestBox(company) || undefined, replyTo: s.hrEmail };
+}
+
+export function officeList(s: Pick<OnboardingSettings, "officeLocations">): string[] {
+  return (s.officeLocations ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
 }
 
 export function defaultOnboarding(): OnboardingSettings {

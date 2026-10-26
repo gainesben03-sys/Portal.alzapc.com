@@ -10,7 +10,7 @@ import { DraftPanel } from "@/components/draft";
 import { FillPanel } from "@/components/fillpanel";
 import { fmtTime } from "@/lib/data";
 import { docxBlob, docxName, DOCX_MIME } from "@/lib/docx";
-import { addDaysISO, firstDayEmail, firstName, Hire, longDate, onboardingFor, payLine, shortDate, Stage, STAGES, stageIndex, welcomeEmail } from "@/lib/hires";
+import { addDaysISO, firstDayEmail, firstName, forCompany, Hire, hireCompany, senderFor, longDate, onboardingFor, payLine, shortDate, Stage, STAGES, stageIndex, welcomeEmail } from "@/lib/hires";
 import { useStore } from "@/lib/store";
 import { pingTask } from "@/lib/pushclient";
 import { LIVE, openStored } from "@/lib/supabase";
@@ -229,7 +229,9 @@ function HireInner() {
     );
   };
 
-  const mail = preview ? (preview === "welcome" ? welcomeEmail(h, s, brand) : firstDayEmail(h, s, brand)) : null;
+  const co = hireCompany(h, s);
+  const own = forCompany(h, s, brand, co?.logo);
+  const mail = preview ? (preview === "welcome" ? welcomeEmail(h, own.s, own.brand) : firstDayEmail(h, own.s, own.brand)) : null;
 
   return (
     <div style={{ ["--accent" as string]: client.accent }}>
@@ -368,7 +370,7 @@ function HireInner() {
               {emailRow("welcome")}
               {emailRow("firstDay")}
               <div className="tiny muted" style={{ marginTop: 8 }}>
-                Sent from the portal in {client.name}&apos;s colors to {h.personalEmail || "their personal email (not added yet)"}.{" "}
+                From {senderFor(own.s, own.brand.company).fromName} in {own.brand.company}&apos;s colors, to {h.personalEmail || "their personal email (not added yet)"}.{" "}
                 {isAdvisor && <Link href={`/console/clients/${clientId}#onboarding`} style={{ color: "var(--blue)" }}>Edit what they say</Link>}
               </div>
             </div>
@@ -381,7 +383,7 @@ function HireInner() {
             </div>
             {editing ? (
               <div className="card">
-                <HireForm value={editing} onChange={setEditing} s={s} people={cfg.users} />
+                <HireForm value={editing} onChange={setEditing} s={s} people={cfg.users} clientName={client?.name} />
                 {isAdvisor && (
                   <label className="f">Stage (to correct it)
                     <select className="f" value={editing.status} onChange={(e) => setEditing({ ...editing, status: e.target.value as Stage })}>

@@ -1,11 +1,14 @@
 "use client";
 
-import { onboardingFor, OnboardingSettings } from "@/lib/hires";
+import { useState } from "react";
+import { cleanBox, HireCompany, suggestBox, onboardingFor, OnboardingSettings } from "@/lib/hires";
+import { logoInfo, shrinkLogo } from "@/lib/logoimg";
 
+const domain = process.env.NEXT_PUBLIC_MAIL_DOMAIN || "alzapc.com";
 const PAYROLL = ["ADP", "Rippling", "Gusto", "Paychex", "TriNet", "Justworks"];
 
 /** What a client's welcome and first-day emails say. Stored on the client's config. */
-export function OnboardingSettingsCard({ value, onChange }: { value?: Partial<OnboardingSettings>; onChange: (v: Partial<OnboardingSettings>) => void }) {
+export function OnboardingSettingsCard({ value, onChange, clientName }: { value?: Partial<OnboardingSettings>; onChange: (v: Partial<OnboardingSettings>) => void; clientName?: string }) {
   const s = onboardingFor(value);
   const set = <K extends keyof OnboardingSettings>(k: K, v: OnboardingSettings[K]) => onChange({ ...(value ?? {}), [k]: v });
   const txt = (k: keyof OnboardingSettings, label: string, ph?: string, area?: boolean) => (
@@ -45,6 +48,7 @@ export function OnboardingSettingsCard({ value, onChange }: { value?: Partial<On
           </label>
           {custom && <div className="full">{txt("payroll", "Payroll system name", "e.g. Paylocity")}</div>}
           <div className="full">{txt("hqAddress", "Main office address", "Street, city, suite. Used as the default place to report.")}</div>
+          <div className="full">{txt("officeLocations", "Other office locations", "One per line, e.g. The Main Post, 1 Main St, Sausalito. Each new hire picks where they report.", true)}</div>
           {txt("defaultArrival", "Usual arrival time")}
           <label className="f">Benefits enrollment window (days)
             <input className="f" inputMode="numeric" value={value?.enrollDays ?? ""} placeholder={String(s.enrollDays)} onChange={(e) => set("enrollDays", (e.target.value ? Math.max(1, Number(e.target.value.replace(/\D/g, "")) || 30) : undefined) as never)} />
@@ -56,6 +60,18 @@ export function OnboardingSettingsCard({ value, onChange }: { value?: Partial<On
           {txt("hrEmail", "Email")}
           {txt("hrPhone", "Phone", "Optional")}
         </fieldset>
+        <fieldset>
+          <legend className="full">Emails to candidates and new hires come from</legend>
+          {txt("senderName", "Sender name", `${clientName ? clientName + " HR" : "Company HR"}`)}
+          <label className="f">Sender address
+            <span className="box-field">
+              <input className="f" value={value?.senderBox ?? ""} placeholder={suggestBox(clientName)} onChange={(e) => set("senderBox", cleanBox(e.target.value) as never)} />
+              <span className="small muted">@{domain}</span>
+            </span>
+          </label>
+          <p className="tiny muted full" style={{ margin: "4px 0 0" }}>Replies go to the HR email above, not this address. Leave blank to use {suggestBox(clientName) || "the portal address"}{suggestBox(clientName) ? `@${domain}` : ""}.</p>
+        </fieldset>
+        <Companies list={value?.companies ?? []} clientName={clientName} onChange={(companies) => set("companies", companies.length ? companies : (undefined as never))} />
         <fieldset>
           <legend className="full">What the emails say</legend>
           <div className="full">{txt("benefitsNote", "Benefits line", undefined, true)}</div>
@@ -70,5 +86,68 @@ export function OnboardingSettingsCard({ value, onChange }: { value?: Partial<On
       {sw("orientation", "Mention HR orientation in week one", "Adds a line to the first-day email.")}
       {sw("clockingSection", "Clocking in and out section for hourly staff", "Meal and rest break basics in the first-day email for non-exempt hires.")}
     </div>
+  );
+}
+
+const newCoId = () => `co${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+
+/** Sister companies on one account. Each hire picks one, and its emails use that name and logo. */
+function Companies({ list, clientName, onChange }: { list: HireCompany[]; clientName?: string; onChange: (l: HireCompany[]) => void }) {
+  const [err, setErr] = useState("");
+  const upd = (i: number, patch: Partial<HireCompany>) => onChange(list.map((c, k) => (k === i ? { ...c, ...patch } : c)));
+  return (
+    <fieldset>
+      <legend className="full">Sister companies <span className="tiny muted" style={{ fontFamily: "inherit", fontWeight: 400 }}>(optional)</span></legend>
+      <p className="tiny muted full" style={{ margin: "0 0 6px" }}>
+        Only if this account hires for more than one company. Each new hire then picks a company, and their emails and signed documents use that company&apos;s name and logo. Hires with no company picked use {clientName || "this account"}.
+      </p>
+      {list.map((c, i) => (
+        <div key={c.id} className="full co-card">
+          <div className="row" style={{ alignItems: "center", gap: 10 }}>
+            <div className="co-logo">{c.logo ? <img src={c.logo} alt="" /> : <span className="tiny muted">No logo</span>}</div>
+            <label className="btn ghost sm" style={{ cursor: "pointer" }}>
+              {c.logo ? "Change logo" : "Add logo"}
+              <input
+                type="file"
+                hidden
+                accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!f) return;
+                  try {
+                    setErr("");
+                    const logo = await shrinkLogo(f);
+                    const { png, color } = await logoInfo(logo);
+                    upd(i, { logo, logoEmail: logo.startsWith("data:image/svg") ? png : undefined, ...(color && !c.color ? { color } : {}) });
+                  } catch {
+                    setErr("Couldn't read that image.");
+                  }
+                }}
+              />
+            </label>
+            <input type="color" aria-label="Brand color" value={c.color || "#19283c"} onChange={(e) => upd(i, { color: e.target.value })} style={{ width: 38, height: 34, border: 0, background: "none" }} />
+            <span className="grow" />
+            <button className="btn ghost sm" style={{ color: "var(--red)" }} onClick={() => onChange(list.filter((_, k) => k !== i))}>Remove</button>
+          </div>
+          <label className="f">Company name<input className="f" value={c.name} onChange={(e) => upd(i, { name: e.target.value })} placeholder="As it should appear in emails" /></label>
+          <div className="co-grid">
+            <label className="f">HR contact <span className="tiny muted">(if different)</span><input className="f" value={c.hrName ?? ""} onChange={(e) => upd(i, { hrName: e.target.value })} /></label>
+            <label className="f">HR email <span className="tiny muted">(replies go here)</span><input className="f" type="email" value={c.hrEmail ?? ""} onChange={(e) => upd(i, { hrEmail: e.target.value })} /></label>
+            <label className="f">HR phone<input className="f" value={c.hrPhone ?? ""} onChange={(e) => upd(i, { hrPhone: e.target.value })} /></label>
+            <label className="f">Sender address
+              <span className="box-field">
+                <input className="f" value={c.senderBox ?? ""} placeholder={suggestBox(c.name)} onChange={(e) => upd(i, { senderBox: cleanBox(e.target.value) })} />
+                <span className="small muted">@{domain}</span>
+              </span>
+            </label>
+          </div>
+        </div>
+      ))}
+      {err && <p className="small full" style={{ color: "var(--red)" }}>{err}</p>}
+      <div className="full">
+        <button className="btn sm" onClick={() => onChange([...list, { id: newCoId(), name: "" }])}>{list.length ? "Add another company" : "Add a sister company"}</button>
+      </div>
+    </fieldset>
   );
 }

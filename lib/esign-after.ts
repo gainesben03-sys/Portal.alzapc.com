@@ -51,7 +51,7 @@ async function run(
     }
     if (c.s.autoSend && !h.emails?.welcome && h.personalEmail) {
       const m = welcomeEmail(h, c.s, c.brand);
-      const r = await sendEmail({ to: [h.personalEmail], subject: m.subject, html: m.html, text: m.text, replyTo: c.s.hrEmail });
+      const r = await sendEmail({ to: [h.personalEmail], subject: m.subject, html: m.html, text: m.text, ...c.sender });
       if (r.ok) {
         h.emails = { ...(h.emails ?? {}), welcome: o.now };
         h.history.push({ at: o.now, by: "Portal", text: `Welcome email sent to ${h.personalEmail}` });
@@ -62,7 +62,7 @@ async function run(
 
   // copy to the signer, heads-up to Ben
   const m = signedCopyEmail(h, row.title, c.s, c.brand);
-  await sendEmail({ to: [row.signer_email], subject: m.subject, html: m.html, text: m.text, replyTo: c.s.hrEmail, attachments: [{ filename: o.fileName, content: Buffer.from(o.pdf).toString("base64") }] });
+  await sendEmail({ to: [row.signer_email], subject: m.subject, html: m.html, text: m.text, ...c.sender, attachments: [{ filename: o.fileName, content: Buffer.from(o.pdf).toString("base64") }] });
   await notify(db, c, h, `${h.name} signed the ${row.title.toLowerCase()}`, `Signed as "${o.name}". The signed PDF is in Files and on the hire.`);
 }
 

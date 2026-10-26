@@ -7,7 +7,7 @@ import { AlzaNav, AlzaTopbar, Toast, useGuard, useToast } from "@/components/ui"
 import { Access, ACCESS_LABEL, ClientConfig, MODULES, PortalUser } from "@/lib/modules";
 import { useStore } from "@/lib/store";
 import { sendInvite } from "@/lib/invite";
-import { dominantColor } from "@/lib/brand";
+import { logoInfo, shrinkLogo } from "@/lib/logoimg";
 import { OnboardingSettingsCard } from "@/components/onboarding";
 import { KnowledgePanel } from "@/components/knowledge";
 
@@ -124,7 +124,7 @@ export default function ClientSetup() {
             <p className="small muted" style={{ marginTop: -4, marginBottom: 10 }}>
               What {client.name}&apos;s welcome and first-day emails say. Same flow as the Presidio Bay emails, in their colors and logo.
             </p>
-            <OnboardingSettingsCard value={cfg.onboarding} onChange={(onboarding) => set({ onboarding })} />
+            <OnboardingSettingsCard value={cfg.onboarding} clientName={client?.name} onChange={(onboarding) => set({ onboarding })} />
           </>
         )}
 
@@ -256,54 +256,4 @@ export default function ClientSetup() {
       <Toast msg={toast.msg} onDone={toast.clear} />
     </div>
   );
-}
-
-/** Read an image and scale it to at most 120px tall so it stays small. */
-function shrinkLogo(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onerror = reject;
-    r.onload = () => {
-      const src = String(r.result);
-      if (file.type === "image/svg+xml") return resolve(src);
-      const img = new Image();
-      img.onerror = reject;
-      img.onload = () => {
-        const scale = Math.min(1, 120 / img.height);
-        const c = document.createElement("canvas");
-        c.width = Math.round(img.width * scale);
-        c.height = Math.round(img.height * scale);
-        c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
-        resolve(c.toDataURL("image/png"));
-      };
-      img.src = src;
-    };
-    r.readAsDataURL(file);
-  });
-}
-
-/** Render a logo on a canvas: a PNG copy (for email) and its main color. */
-function logoInfo(src: string): Promise<{ png?: string; color: string | null }> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onerror = reject;
-    img.onload = () => {
-      const h = 120;
-      const w = Math.max(1, Math.round(((img.naturalWidth || img.width || 300) / (img.naturalHeight || img.height || 120)) * h));
-      const c = document.createElement("canvas");
-      c.width = w;
-      c.height = h;
-      const ctx = c.getContext("2d")!;
-      ctx.drawImage(img, 0, 0, w, h);
-      let color: string | null = null;
-      let png: string | undefined;
-      try {
-        color = dominantColor(ctx.getImageData(0, 0, w, h).data);
-        png = c.toDataURL("image/png");
-      } catch {}
-      resolve({ png, color });
-    };
-    img.src = src;
-  });
 }

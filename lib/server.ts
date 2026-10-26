@@ -76,10 +76,16 @@ export function siteUrl(req: Request): string {
   return `${/^localhost/.test(host) ? "http" : "https"}://${host}`;
 }
 
-export async function sendEmail(opts: { to: string[]; subject: string; text: string; html?: string; scheduledAt?: string; attachments?: { filename: string; content: string }[]; replyTo?: string }): Promise<{ ok: boolean; reason?: string }> {
+export async function sendEmail(opts: { to: string[]; subject: string; text: string; html?: string; scheduledAt?: string; attachments?: { filename: string; content: string }[]; replyTo?: string; fromName?: string; fromBox?: string }): Promise<{ ok: boolean; reason?: string }> {
   const key = process.env.RESEND_API_KEY;
-  const from = process.env.NOTIFY_FROM;
+  let from = process.env.NOTIFY_FROM;
   if (!key || !from) return { ok: false, reason: "not_configured" };
+  // Same sending address, different display name (e.g. "The Main Post")
+  const name = (opts.fromName ?? "").replace(/[<>"\r\n,;]/g, "").trim().slice(0, 60);
+  const addr = /<([^>]+)>/.exec(from)?.[1] ?? from.trim();
+  const box = (opts.fromBox ?? "").toLowerCase().replace(/[^a-z0-9._-]/g, "").replace(/^[._-]+|[._-]+$/g, "").slice(0, 40);
+  const finalAddr = box && addr.includes("@") ? `${box}@${addr.split("@")[1]}` : addr;
+  if (name || finalAddr !== addr) from = `${name || /^([^<]+)</.exec(from)?.[1]?.trim() || "HR"} <${finalAddr}>`;
   const r = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },

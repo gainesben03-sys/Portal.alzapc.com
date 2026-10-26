@@ -1,7 +1,7 @@
 // Public signing endpoint. The long random token in the link is the only key: no sign-in.
 // GET: what to show the signer. POST: sign or decline.
 import { NextResponse } from "next/server";
-import { buildSignedPdf, headerImage, loadClient, loadHire, saveHire, SigEvent, SigRow, who } from "@/lib/esign";
+import { buildSignedPdf, forHire, headerImage, loadClient, loadHire, saveHire, SigEvent, SigRow, who } from "@/lib/esign";
 import { afterSignedTasks, safeFileName } from "@/lib/esign-after";
 import { admin, SERVER_LIVE, siteUrl } from "@/lib/server";
 
@@ -19,9 +19,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ token: s
   const row = await getRow(token);
   if (!row) return NextResponse.json({ ok: false, reason: "not_found" }, { status: 404 });
   const db = admin();
-  const c = await loadClient(db, row.client_id);
+  const c0 = await loadClient(db, row.client_id);
+  const hire0 = await loadHire(db, row.hire_id);
+  const c = c0 && hire0 ? forHire(c0, hire0) : c0 ? { ...c0, company: c0.client.name } : null;
   const expired = new Date(row.expires_at) < new Date() && row.status !== "signed";
-  const base = { ok: true, status: expired ? "expired" : row.status, company: c?.client.name ?? "", accent: c?.client.accent ?? "#19283c", logo: c?.logo ?? null, hrEmail: c?.s.hrEmail ?? "", title: row.title, signer: row.signer_name };
+  const base = { ok: true, status: expired ? "expired" : row.status, company: c?.company ?? "", accent: c?.brand.accent ?? "#19283c", logo: c?.logo ?? null, hrEmail: c?.s.hrEmail ?? "", title: row.title, signer: row.signer_name };
   if (row.status === "voided" || expired) return NextResponse.json(base);
   if (row.status === "signed") {
     const { data: u } = row.signed_path ? await db.storage.from("client-files").createSignedUrl(row.signed_path, 3600) : { data: null };
@@ -58,7 +60,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   const now = new Date().toISOString();
   const { ip, agent } = who(req);
   const h = await loadHire(db, row.hire_id);
-  const c = await loadClient(db, row.client_id, siteUrl(req));
+  const c0 = await loadClient(db, row.client_id, siteUrl(req));
+  if (!h || !c0) return NextResponse.json({ ok: false, reason: "not_found" }, { status: 404 });
+  const c = forHire(c0, h);
   if (!h || !c) return NextResponse.json({ ok: false, reason: "not_found" }, { status: 404 });
 
   if (b.action === "decline") {
@@ -81,8 +85,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
     { at: now, what: "Agreed to sign electronically and receive documents electronically", ip },
     { at: now, what: `Signed as "${name}"`, ip, agent },
   ];
-  const header = await headerImage(db, row.client_id, c.logo);
-  const pdf = await buildSignedPdf({ row, company: c.client.name, header, signedName: name, signedAt: now, ip, agent, events });
+  const header = await headerImage(db, row.client_id, c.logo, c.ownLogo);
+  const pdf = await buildSignedPdf({ row, company: c.company, header, signedName: name, signedAt: now, ip, agent, events });
   const fileId = `f${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   const fileName = safeFileName(`Signed ${row.title} - ${row.signer_name}.pdf`);
   const path = `${row.client_id}/${fileId}/${fileName}`;

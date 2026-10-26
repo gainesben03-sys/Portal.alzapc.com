@@ -2,7 +2,7 @@
 // Ben or an executive at that client can send. The recipient is always the hire's
 // personal email on file (or the sender, for a test), never an address from the browser.
 import { NextResponse } from "next/server";
-import { firstDayEmail, Hire, onboardingFor, welcomeEmail } from "@/lib/hires";
+import { firstDayEmail, forCompany, Hire, hireCompany, onboardingFor, senderFor, welcomeEmail } from "@/lib/hires";
 import { ClientConfig } from "@/lib/modules";
 import { emailLogoUrl } from "@/lib/brand";
 import { admin, caller, sendEmail, SERVER_LIVE, siteUrl } from "@/lib/server";
@@ -27,12 +27,13 @@ export async function POST(req: Request) {
 
   const hire = { ...(row.data as Hire), id: row.id, clientId: row.client_id };
   const cfg = (client.config ?? {}) as ClientConfig;
-  const s = onboardingFor(cfg.onboarding);
-  const brand = { company: client.name, accent: cfg.accent || "#19283c", logoUrl: emailLogoUrl(row.client_id, cfg.logo, cfg.logoEmail, siteUrl(req)) };
+  const s0 = onboardingFor(cfg.onboarding);
+  const co = hireCompany(hire, s0);
+  const { s, brand } = forCompany(hire, s0, { company: client.name, accent: cfg.accent || "#19283c", logoUrl: emailLogoUrl(row.client_id, cfg.logo, cfg.logoEmail, siteUrl(req)) }, co ? emailLogoUrl(row.client_id, co.logo, co.logoEmail, siteUrl(req), co.id) : undefined);
   const to = b.test ? me.email : (hire.personalEmail || "").trim().toLowerCase();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) return NextResponse.json({ sent: false, reason: "no_email" });
   const mail = kind === "welcome" ? welcomeEmail(hire, s, brand) : firstDayEmail(hire, s, brand);
-  const r = await sendEmail({ to: [to], subject: b.test ? `[Test] ${mail.subject}` : mail.subject, html: mail.html, text: mail.text });
+  const r = await sendEmail({ to: [to], subject: b.test ? `[Test] ${mail.subject}` : mail.subject, html: mail.html, text: mail.text, ...senderFor(s, brand.company) });
   if (!r.ok) return NextResponse.json({ sent: false, reason: r.reason });
 
   if (!b.test) {

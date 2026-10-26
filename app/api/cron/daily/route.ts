@@ -7,7 +7,7 @@ import { Action, Client, DEFAULT_RULES, fmt, Project, reminderPlan, Rules, toISO
 import { buildHuddle } from "@/lib/huddle";
 import { Candidate, ClientConfig, HuddleSettings, SharedFile } from "@/lib/modules";
 import { pitchDeleteOn } from "@/lib/pitch";
-import { addDaysISO, firstDayEmail, Hire, onboardingFor, stageIndex, welcomeEmail } from "@/lib/hires";
+import { addDaysISO, firstDayEmail, forCompany, Hire, hireCompany, onboardingFor, senderFor, stageIndex, welcomeEmail } from "@/lib/hires";
 import { emailLogoUrl } from "@/lib/brand";
 import { admin, PORTAL_URL, sendEmail } from "@/lib/server";
 import { advisorEmails, pushTo } from "@/lib/push";
@@ -158,9 +158,11 @@ export async function GET(req: Request) {
     const c = (clientsR.data ?? []).find((x) => x.id === row.client_id);
     if (!c) continue;
     const cfg = (c.config ?? {}) as Partial<ClientConfig>;
-    const s = onboardingFor(cfg.onboarding);
-    const brand = { company: c.name, accent: cfg.accent || "#19283c", logoUrl: emailLogoUrl(c.id, cfg.logo, cfg.logoEmail, PORTAL_URL) };
     const h = { ...(row.data as Hire), id: row.id, clientId: row.client_id };
+    const s0 = onboardingFor(cfg.onboarding);
+    const co = hireCompany(h, s0);
+    const { s, brand } = forCompany(h, s0, { company: c.name, accent: cfg.accent || "#19283c", logoUrl: emailLogoUrl(c.id, cfg.logo, cfg.logoEmail, PORTAL_URL) }, co ? emailLogoUrl(c.id, co.logo, co.logoEmail, PORTAL_URL, co.id) : undefined);
+    const sender = senderFor(s, brand.company);
     if (!h.startDate) continue;
     const data = { ...(row.data as Hire) };
     let changed = false;
@@ -173,7 +175,7 @@ export async function GET(req: Request) {
     if (s.autoSend && signed && to && !h.emails?.welcome) {
       const m = welcomeEmail(h, s, brand);
       await once(`hire:welcome:${h.id}`, async () => {
-        const r = await sendEmail({ to: [to], subject: m.subject, html: m.html, text: m.text });
+        const r = await sendEmail({ to: [to], subject: m.subject, html: m.html, text: m.text, ...sender });
         if (r.ok) {
           data.emails = { ...(data.emails ?? {}), welcome: new Date().toISOString() };
           note(`Welcome email sent to ${to}`);
@@ -184,7 +186,7 @@ export async function GET(req: Request) {
     if (s.autoSend && signed && to && !h.emails?.firstDay && day >= addDaysISO(h.startDate, -s.firstDayDaysBefore) && day <= h.startDate) {
       const m = firstDayEmail(h, s, brand);
       await once(`hire:firstday:${h.id}`, async () => {
-        const r = await sendEmail({ to: [to], subject: m.subject, html: m.html, text: m.text });
+        const r = await sendEmail({ to: [to], subject: m.subject, html: m.html, text: m.text, ...sender });
         if (r.ok) {
           data.emails = { ...(data.emails ?? {}), firstDay: new Date().toISOString() };
           if (stageIndex(data.status) < 4) data.status = "First-day email sent";

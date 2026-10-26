@@ -60,12 +60,12 @@ export function dominantColor(px: Uint8ClampedArray): string | null {
 }
 
 /** Where emails load the logo from. Email apps can't show logos stored inside the page, so those are served from the portal. */
-export function emailLogoUrl(clientId: string, logo: string | undefined, logoEmail: string | undefined, portalUrl: string) {
+export function emailLogoUrl(clientId: string, logo: string | undefined, logoEmail: string | undefined, portalUrl: string, companyId?: string) {
   if (logoEmail || (logo && logo.startsWith("data:image/") && !logo.startsWith("data:image/svg"))) {
     const src = logoEmail || logo!;
     let h = 0;
     for (let i = 0; i < src.length; i += 97) h = (h * 31 + src.charCodeAt(i)) | 0;
-    return `${portalUrl}/api/logo/${encodeURIComponent(clientId)}?v=${(h >>> 0).toString(36)}`;
+    return `${portalUrl}/api/logo/${encodeURIComponent(clientId)}?${companyId ? `co=${encodeURIComponent(companyId)}&` : ""}v=${(h >>> 0).toString(36)}`;
   }
   if (logo && /^https?:\/\//.test(logo) && !/\.svg(\?|$)/i.test(logo)) return logo;
   if (logo && logo.startsWith("/") && !/\.svg(\?|$)/i.test(logo)) return portalUrl + logo;

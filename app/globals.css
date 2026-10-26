@@ -506,3 +506,11 @@ video.pitch-live[controls] { height: auto; max-height: 62vh; object-fit: contain
 .work-with.compact { margin-top: 16px; }
 .demo-bar { position: relative; z-index: 30; display: flex; gap: 14px; justify-content: center; align-items: center; flex-wrap: wrap; padding: 7px 12px; background: #0f766e; color: #fff; font-size: 13px; }
 .demo-bar a { color: #fff; font-weight: 600; text-decoration: underline; }
+
+.co-card { box-sizing: border-box; min-width: 0; max-width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+.co-logo { width: 96px; height: 40px; display: flex; align-items: center; }
+.co-logo img { max-width: 96px; max-height: 40px; object-fit: contain; }
+.co-grid { display: grid; gap: 0 12px; grid-template-columns: 1fr; }
+@media (min-width: 600px) { .co-grid { grid-template-columns: 1fr 1fr 1fr; } }
+.box-field { display: flex; align-items: center; gap: 6px; }
+.box-field input.f { flex: 1; min-width: 0; }

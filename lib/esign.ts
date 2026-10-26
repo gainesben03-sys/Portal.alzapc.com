@@ -6,7 +6,7 @@ import { PDFDocument, PDFFont, rgb, StandardFonts } from "pdf-lib";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { emailLogoUrl } from "./brand";
 import { Client, Person } from "./data";
-import { Hire, onboardingFor, OnboardingSettings } from "./hires";
+import { Brand, forCompany, Hire, hireCompany, onboardingFor, OnboardingSettings, senderFor } from "./hires";
 import { ClientConfig } from "./modules";
 import { letterheadImage } from "./extract";
 import { PORTAL_URL } from "./server";
@@ -58,8 +58,17 @@ export async function loadClient(db: SupabaseClient, clientId: string, base: str
   const client: Client = { id: c.id, name: c.name, accent: cfg.accent || "#19283c", logo: cfg.logo, pilot: !!c.pilot, engagement: c.engagement ?? "", escalation, contacts: users };
   const fullCfg: ClientConfig = { ...cfg, users: users.map((u) => ({ ...u, access: u.access as "exec" })), codes: [] };
   const s: OnboardingSettings = onboardingFor(cfg.onboarding);
-  const brand = { company: c.name, accent: cfg.accent || "#19283c", logoUrl: emailLogoUrl(c.id, cfg.logo, cfg.logoEmail, base) };
-  return { client, cfg: fullCfg, s, brand, logo: cfg.logoEmail || cfg.logo, base };
+  const brand: Brand = { company: c.name, accent: cfg.accent || "#19283c", logoUrl: emailLogoUrl(c.id, cfg.logo, cfg.logoEmail, base) };
+  return { client, cfg: fullCfg, s, brand, logo: cfg.logoEmail || cfg.logo, base, sender: senderFor(s, c.name) };
+}
+
+export type LoadedClient = NonNullable<Awaited<ReturnType<typeof loadClient>>>;
+
+/** The client as one hire sees it: their sister company's name, logo, colors and HR contact when one is picked. */
+export function forHire(c: LoadedClient, h: Pick<Hire, "companyId">) {
+  const co = hireCompany(h, c.s);
+  const r = forCompany(h, c.s, c.brand, co ? emailLogoUrl(c.client.id, co.logo, co.logoEmail, c.base, co.id) : undefined);
+  return { ...c, s: r.s, brand: r.brand, logo: co ? co.logoEmail || co.logo : c.logo, company: co ? co.name.trim() : c.client.name, sender: senderFor(r.s, r.brand.company), ownLogo: !!co };
 }
 
 export async function loadHire(db: SupabaseClient, hireId: string): Promise<Hire | null> {
@@ -73,8 +82,8 @@ export async function saveHire(db: SupabaseClient, h: Hire) {
 }
 
 /** Header image for the PDF: the client's letterhead if Ben uploaded one, else their logo. */
-export async function headerImage(db: SupabaseClient, clientId: string, logo?: string): Promise<{ data: Uint8Array; png: boolean } | null> {
-  try {
+export async function headerImage(db: SupabaseClient, clientId: string, logo?: string, logoOnly = false): Promise<{ data: Uint8Array; png: boolean } | null> {
+  if (!logoOnly) try {
     const { data: k } = await db.from("knowledge").select("path, mime, file_name").eq("client_id", clientId).eq("kind", "letterhead").order("created_at", { ascending: false }).limit(1);
     const row = k?.[0];
     if (row?.path) {

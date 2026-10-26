@@ -81,7 +81,7 @@ function NewHireInner() {
             : "Tell Ben who you're hiring. He prepares the offer letter and agreement for you to approve, then handles the welcome and first-day emails."}
         </p>
         <div className="hire-new">
-          <div className="card"><HireForm value={v} onChange={setV} s={s} people={cfg.users} /></div>
+          <div className="card"><HireForm value={v} onChange={setV} s={s} people={cfg.users} clientName={client?.name} /></div>
           <div className="hire-side">
             <Checks h={v} s={s} />
             {err && <p className="small" style={{ color: "var(--red)" }}>{err}</p>}
