@@ -18,6 +18,7 @@ export default function Login() {
   const [err, setErr] = useState("");
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState<string | null>(null);
+  const [otp, setOtp] = useState("");
   const [busy, setBusy] = useState(false);
 
   // Live mode: once signed in, go straight to the right place.
@@ -166,9 +167,33 @@ export default function Login() {
 
         {sent ? (
           <div className="impact" style={{ marginTop: 18 }}>
-            If <b>{sent}</b> has access to a portal, a sign-in link is on its way. Open it on this device or any other. It works once and expires soon. Nothing after a few minutes? Check spam, or ask Ben to confirm your email is on your team.
+            If <b>{sent}</b> has access to a portal, an email is on its way with a sign-in link and a 6-digit code.
+            <form
+              style={{ marginTop: 12 }}
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const token = otp.replace(/\D/g, "");
+                if (token.length < 6) return setErr("Enter the 6-digit code from the email.");
+                if (!LIVE) return;
+                setBusy(true);
+                setErr("");
+                const { error } = await sb().auth.verifyOtp({ email: sent, token, type: "email" });
+                setBusy(false);
+                if (error) setErr(/expired|invalid/i.test(error.message) ? "That code didn't work or has expired. Send a new one." : error.message);
+              }}
+            >
+              <label className="f" htmlFor="otp" style={{ marginTop: 0 }}>Enter the code here to sign in on this device</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input id="otp" className="f code" inputMode="numeric" autoComplete="one-time-code" maxLength={8} placeholder="123456" value={otp} onChange={(e) => setOtp(e.target.value)} style={{ fontSize: 20, letterSpacing: 4, textAlign: "center" }} />
+                <button className="btn primary" disabled={busy}>{busy ? "..." : "Sign in"}</button>
+              </div>
+            </form>
+            <p className="tiny muted" style={{ marginTop: 10 }}>
+              Or tap the link in the email, ideally on this device. Once you&apos;re in, you stay signed in here until you sign out. Nothing after a few minutes? Check spam, or ask Ben to confirm your email is on your team.
+            </p>
             <div style={{ marginTop: 8 }}>
-              <button className="btn ghost sm" onClick={() => setSent(null)}>Use a different email</button>
+              <button className="btn ghost sm" onClick={() => { setSent(null); setOtp(""); }}>Use a different email</button>
+              {LIVE && <button className="btn ghost sm" disabled={busy} onClick={() => sendLink(sent, code.trim() ? code.trim().toUpperCase() : undefined)}>Send a new code</button>}
             </div>
           </div>
         ) : (
