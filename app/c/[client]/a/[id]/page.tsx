@@ -7,6 +7,7 @@ import { ClientNav, ClientTopbar, Sheet, Toast, UrgencyPill, useGuard, useToast 
 import { Action, addBusinessDays, escalationTarget, fmt, fmtTime, parseDay, reminderPlan, STATUS_LABEL, subtaskProgress, toISO, today } from "@/lib/data";
 import { useStore } from "@/lib/store";
 import { DraftPanel } from "@/components/draft";
+import { FillPanel } from "@/components/fillpanel";
 import { docxBlob, docxName, DOCX_MIME } from "@/lib/docx";
 import { LIVE, openStored, uploadToStorage, authHeader } from "@/lib/supabase";
 
@@ -18,7 +19,7 @@ export default function ActionDetail() {
   const toast = useToast();
   const [sheet, setSheet] = useState<null | "extension" | "revision" | "remind">(null);
   const [comment, setComment] = useState("");
-  const [drafting, setDrafting] = useState(false);
+  const [drafting, setDrafting] = useState<false | "new" | "fill">(false);
   const [confirmDel, setConfirmDel] = useState(false);
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -131,7 +132,21 @@ export default function ActionDetail() {
         )}
 
         {isAdvisor && open && live && (
-          drafting ? (
+          drafting === "fill" ? (
+            <div className="section">
+              <FillPanel
+                clientId={client.id}
+                actionId={a.id}
+                hint={a.title.match(/offer|termination|separation|promotion|warning|agreement|transfer|raise/i)?.[0]}
+                primaryLabel="Attach to task"
+                onClose={() => setDrafting(false)}
+                onUse={async (file) => {
+                  await attachFile(file);
+                  setDrafting(false);
+                }}
+              />
+            </div>
+          ) : drafting ? (
             <div className="section">
               <DraftPanel
                 clientId={client.id}
@@ -150,10 +165,13 @@ export default function ActionDetail() {
           ) : (
             <div className="card section" style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ flex: 1 }}>
-                <b><span className="spark" aria-hidden="true">✦</span> Draft with Claude</b>
-                <div className="tiny muted">A first version of the document for this task, using this client's details. You edit and approve.</div>
+                <b><span className="spark" aria-hidden="true">✦</span> Make the document</b>
+                <div className="tiny muted">Reuse a past letter with only the details changed, or have Claude draft a new one. You check it before anything goes out.</div>
               </div>
-              <button className="btn sm primary" onClick={() => setDrafting(true)}>Draft</button>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                <button className="btn sm" onClick={() => setDrafting("fill")}>Fill a past one</button>
+                <button className="btn sm primary" onClick={() => setDrafting("new")}>Draft new</button>
+              </div>
             </div>
           )
         )}

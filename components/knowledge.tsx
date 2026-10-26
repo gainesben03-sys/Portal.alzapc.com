@@ -17,7 +17,7 @@ interface Doc {
 const KIND_LABEL: Record<Kind, string> = {
   handbook: "Handbook",
   policy: "Policy",
-  template: "Template",
+  template: "Template or past letter",
   letterhead: "Letterhead",
   other: "Other",
 };

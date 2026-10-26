@@ -366,6 +366,12 @@ html, body { overflow-x: hidden; }
 textarea.f.draft-text { min-height: 260px; margin-top: 10px; line-height: 1.5; }
 .for-ben { margin-top: 10px; background: var(--amber-bg); color: var(--ink); border-radius: 10px; padding: 10px 12px; font-size: 13px; }
 .for-ben b { color: var(--amber); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+.fill-list { margin-top: 10px; display: grid; gap: 8px; }
+.fill-row { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
+.fill-row > input[type=checkbox] { margin-top: 3px; flex: none; width: 18px; height: 18px; }
+.fill-row.off { opacity: .55; }
+.fill-old { text-decoration: line-through; word-break: break-word; margin-bottom: 4px; }
+.fill-row input.f { margin: 0 0 4px; }
 .chip-btn { border: 1px solid var(--line); cursor: pointer; }
 .chip-btn:disabled { opacity: .5; cursor: default; }
 

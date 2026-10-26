@@ -114,7 +114,7 @@ export default function ClientSetup() {
 
         <div className="section-head section"><h2>Documents for Claude</h2></div>
         <p className="small muted" style={{ marginTop: -4, marginBottom: 10 }}>
-          Their handbook, policies, templates and letterhead. Claude follows these first, then your default templates, then best practice, and tells you which it used.
+          Their handbook, policies, templates and letterhead. Claude follows these first, then your default templates, then best practice. Past letters uploaded as Word files (offer, termination, promotion) can be reused as is: on a hire or task, tap Fill a past one and only the details change.
         </p>
         {live ? <KnowledgePanel clientId={id} onToast={toast.show} /> : <div className="card small muted">Available once the portal is live.</div>}
 

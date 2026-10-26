@@ -7,6 +7,7 @@ import { ClientNav, ClientTopbar, Sheet, Toast, useGuard, useToast } from "@/com
 import { Checks, HireDraft, HireForm, startsIn, Tracker } from "@/components/hires";
 import { afterSend, approvalTask, requestSignature, sendHireEmail, signedTasks, storeHireFile } from "@/components/hireops";
 import { DraftPanel } from "@/components/draft";
+import { FillPanel } from "@/components/fillpanel";
 import { fmtTime } from "@/lib/data";
 import { docxBlob, docxName, DOCX_MIME } from "@/lib/docx";
 import { addDaysISO, firstDayEmail, firstName, Hire, longDate, onboardingFor, payLine, shortDate, Stage, STAGES, stageIndex, welcomeEmail } from "@/lib/hires";
@@ -28,6 +29,7 @@ function HireInner() {
   const toast = useToast();
   const [editing, setEditing] = useState<HireDraft | null>(null);
   const [drafting, setDrafting] = useState<null | "offer" | "agreement">(null);
+  const [filling, setFilling] = useState<null | "offer" | "agreement">(null);
   const [preview, setPreview] = useState<null | "welcome" | "firstDay">(null);
   const [busy, setBusy] = useState("");
   const [confirmSign, setConfirmSign] = useState<NonNullable<Hire["docs"]>[number] | null>(null);
@@ -295,10 +297,28 @@ function HireInner() {
                   )}
                 </div>
               ))}
-              {isAdvisor && !drafting && (
+              {isAdvisor && !drafting && !filling && (
                 <div className="chips" style={{ marginTop: 12 }}>
-                  <button className="btn sm" onClick={() => setDrafting("offer")}><span className="spark" aria-hidden="true">✦</span> Draft offer letter</button>
-                  <button className="btn sm" onClick={() => setDrafting("agreement")}><span className="spark" aria-hidden="true">✦</span> Draft agreement</button>
+                  <button className="btn sm" onClick={() => setFilling("offer")}>Fill past offer letter</button>
+                  <button className="btn sm" onClick={() => setFilling("agreement")}>Fill past agreement</button>
+                  <button className="btn ghost sm" onClick={() => setDrafting("offer")}><span className="spark" aria-hidden="true">✦</span> Draft offer letter</button>
+                  <button className="btn ghost sm" onClick={() => setDrafting("agreement")}><span className="spark" aria-hidden="true">✦</span> Draft agreement</button>
+                </div>
+              )}
+              {filling && (
+                <div style={{ marginTop: 12 }}>
+                  <FillPanel
+                    clientId={clientId}
+                    hireId={h.id}
+                    hint={filling === "offer" ? "offer" : "agreement|contract|employment"}
+                    primaryLabel={`Save as ${filling === "offer" ? "offer letter" : "agreement"}`}
+                    onClose={() => setFilling(null)}
+                    onUse={async (file) => {
+                      const t = `${filling === "offer" ? "Offer Letter" : "Employment Agreement"} - ${h.name}`;
+                      const rec = await addDoc(new File([file], docxName(t), { type: DOCX_MIME }), filling);
+                      if (rec) setFilling(null);
+                    }}
+                  />
                 </div>
               )}
               {canManage && (
