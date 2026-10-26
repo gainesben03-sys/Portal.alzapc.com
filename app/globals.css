@@ -524,3 +524,7 @@ video.pitch-live[controls] { height: auto; max-height: 62vh; object-fit: contain
 @media (min-width: 600px) { .co-grid { grid-template-columns: 1fr 1fr 1fr; } }
 .box-field { display: flex; align-items: center; gap: 6px; }
 .box-field input.f { flex: 1; min-width: 0; }
+.email-edit { margin: 8px 0 10px; }
+.email-edit-row { display: grid; gap: 0 12px; grid-template-columns: 1fr; }
+@media (min-width: 600px) { .email-edit-row { grid-template-columns: 1fr 2fr; } }
+.email-edit + .email-frame { height: 46vh; }

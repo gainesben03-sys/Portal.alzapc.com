@@ -24,13 +24,13 @@ export function explainEmail(reason: string) {
   return `Didn't send (${reason}). Try again.`;
 }
 
-export async function sendHireEmail(hireId: string, kind: "welcome" | "firstDay", test: boolean): Promise<{ sent: boolean; to?: string; msg: string }> {
+export async function sendHireEmail(hireId: string, kind: "welcome" | "firstDay", test: boolean, edits?: Record<string, string>): Promise<{ sent: boolean; to?: string; msg: string }> {
   if (!LIVE) return { sent: false, msg: "Demo mode: emails go out once the portal is live." };
   try {
     const r = await fetch("/api/hire-email", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...(await authHeader()) },
-      body: JSON.stringify({ hireId, kind, test }),
+      body: JSON.stringify({ hireId, kind, test, edits }),
     });
     const j = await r.json();
     if (j.sent) return { sent: true, to: j.to, msg: test ? `Test sent to ${j.to}` : `Sent to ${j.to}` };

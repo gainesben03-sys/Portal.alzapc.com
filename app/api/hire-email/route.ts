@@ -11,7 +11,7 @@ export async function POST(req: Request) {
   if (!SERVER_LIVE) return NextResponse.json({ sent: false, reason: "demo" });
   const me = await caller(req);
   if (!me) return NextResponse.json({ sent: false, reason: "signed_out" }, { status: 401 });
-  let b: { hireId?: string; kind?: string; test?: boolean };
+  let b: { hireId?: string; kind?: string; test?: boolean; edits?: Record<string, unknown> };
   try {
     b = await req.json();
   } catch {
@@ -25,7 +25,18 @@ export async function POST(req: Request) {
   const { data: client } = await db.from("clients").select("name, config").eq("id", row.client_id).maybeSingle();
   if (!client) return NextResponse.json({ sent: false, reason: "no_client" }, { status: 404 });
 
-  const hire = { ...(row.data as Hire), id: row.id, clientId: row.client_id };
+  // Wording Ben or the exec changed in the preview. Plain text only; the email builder escapes it.
+  const str = (v: unknown, n: number) => (typeof v === "string" ? v.replace(/\r/g, "").slice(0, n) : undefined);
+  const e = b.edits && typeof b.edits === "object" ? b.edits : null;
+  const changes: Partial<Hire> = {};
+  if (e) {
+    const prev = (row.data as Hire).emailEdits ?? {};
+    changes.emailEdits = { ...prev, [kind]: { subject: str(e.subject, 200), message: str(e.message, 4000), closing: str(e.closing, 200) } };
+    if (kind === "welcome" && e.actionItems !== undefined) changes.actionItems = str(e.actionItems, 2000) ?? "";
+    if (kind === "firstDay" && e.arrivalTime !== undefined) changes.arrivalTime = str(e.arrivalTime, 60) ?? "";
+    if (kind === "firstDay" && e.location !== undefined) changes.location = str(e.location, 300) ?? "";
+  }
+  const hire = { ...(row.data as Hire), ...changes, id: row.id, clientId: row.client_id };
   const cfg = (client.config ?? {}) as ClientConfig;
   const s0 = onboardingFor(cfg.onboarding);
   const co = hireCompany(hire, s0);
@@ -38,7 +49,7 @@ export async function POST(req: Request) {
 
   if (!b.test) {
     const at = new Date().toISOString();
-    const data = { ...(row.data as Hire) };
+    const data = { ...(row.data as Hire), ...changes };
     data.emails = { ...(data.emails ?? {}), [kind]: at };
     data.history = [...(data.history ?? []), { at, by: me.name, text: kind === "welcome" ? `Welcome email sent to ${to}` : `First-day email sent to ${to}` }];
     if (kind === "firstDay" && ["Approved to hire", "Offer sent", "Offer signed", "Package ready"].includes(data.status)) data.status = "First-day email sent";

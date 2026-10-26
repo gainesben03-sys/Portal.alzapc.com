@@ -8,9 +8,10 @@ import { Checks, HireDraft, HireForm, startsIn, Tracker } from "@/components/hir
 import { afterSend, approvalTask, requestSignature, sendHireEmail, signedTasks, storeHireFile } from "@/components/hireops";
 import { DraftPanel } from "@/components/draft";
 import { FillPanel } from "@/components/fillpanel";
+import { EmailEditFields, EmailEditor } from "@/components/emaileditor";
 import { fmtTime } from "@/lib/data";
 import { docxBlob, docxName, DOCX_MIME } from "@/lib/docx";
-import { addDaysISO, firstDayEmail, firstName, forCompany, Hire, hireCompany, senderFor, longDate, onboardingFor, payLine, shortDate, Stage, STAGES, stageIndex, welcomeEmail } from "@/lib/hires";
+import { addDaysISO, firstName, forCompany, Hire, hireCompany, senderFor, longDate, onboardingFor, payLine, shortDate, Stage, STAGES, stageIndex } from "@/lib/hires";
 import { useStore } from "@/lib/store";
 import { pingTask } from "@/lib/pushclient";
 import { LIVE, openStored } from "@/lib/supabase";
@@ -57,23 +58,32 @@ function HireInner() {
   // ---------------------------------------------------------------- actions
   const setStage = (status: Stage, log: string) => updateHire(h.id, { status }, log);
 
-  const send = async (kind: "welcome" | "firstDay", test = false) => {
+  const send = async (kind: "welcome" | "firstDay", test = false, f?: EmailEditFields): Promise<boolean> => {
     const label = kind === "welcome" ? "Welcome email" : "First-day email";
-    if (!test && !h.personalEmail) return toast.show(`Add ${first}'s personal email first.`);
+    if (!test && !h.personalEmail) {
+      toast.show(`Add ${first}'s personal email first.`);
+      return false;
+    }
     if (!LIVE) {
-      if (test) return toast.show("Demo mode: test emails go out once the portal is live.");
+      if (test) {
+        toast.show("Demo mode: test emails go out once the portal is live.");
+        return false;
+      }
       const at = new Date().toISOString();
       updateHire(h.id, (x) => afterSend(x, kind, at), `${label} sent to ${h.personalEmail} (demo, not really sent)`);
-      return toast.show(`${label} marked as sent (demo mode)`);
+      toast.show(`${label} marked as sent (demo mode)`);
+      return true;
     }
     setBusy(kind + (test ? "t" : ""));
-    const r = await sendHireEmail(h.id, kind, test);
+    const edits = f ? { subject: f.subject, message: f.message, closing: f.closing, ...(kind === "welcome" ? { actionItems: f.actionItems } : { arrivalTime: f.arrivalTime, location: f.location }) } : undefined;
+    const r = await sendHireEmail(h.id, kind, test, edits);
     setBusy("");
     toast.show(r.msg);
     if (r.sent && !test) {
       const at = new Date().toISOString();
       updateHire(h.id, (x) => afterSend(x, kind, at), `${label} sent to ${r.to}`);
     }
+    return r.sent;
   };
 
   const markSigned = async () => {
@@ -222,16 +232,13 @@ function HireInner() {
           <b className="small">{title}</b>
           <div className={`tiny ${sent ? "" : "muted"}`} style={sent ? { color: "var(--green)" } : undefined}>{sent ? "✓ " : ""}{when}</div>
         </div>
-        <button className="btn ghost sm" onClick={() => setPreview(kind)}>Preview</button>
-        {canManage && LIVE && <button className="btn ghost sm" disabled={!!busy} onClick={() => send(kind, true)}>{busy === kind + "t" ? "Sending..." : "Send me a test"}</button>}
-        {canManage && <button className="btn sm" disabled={!!busy || stage < 2} title={stage < 2 ? "Available once the offer is signed" : undefined} onClick={() => send(kind)}>{busy === kind ? "Sending..." : sent ? "Send again" : "Send now"}</button>}
+        <button className="btn sm" onClick={() => setPreview(kind)}>{canManage ? (sent ? "Preview / send again" : "Preview & edit") : "Preview"}</button>
       </div>
     );
   };
 
   const co = hireCompany(h, s);
   const own = forCompany(h, s, brand, co?.logo);
-  const mail = preview ? (preview === "welcome" ? welcomeEmail(h, own.s, own.brand) : firstDayEmail(h, own.s, own.brand)) : null;
 
   return (
     <div style={{ ["--accent" as string]: client.accent }}>
@@ -435,15 +442,20 @@ function HireInner() {
         </div>
       </main>
 
-      {preview && mail && (
-        <Sheet title={preview === "welcome" ? "Welcome email" : "First-day email"} onClose={() => setPreview(null)}>
-          <div className="tiny muted">To: {h.personalEmail || "(no email yet)"}</div>
-          <div className="small" style={{ margin: "4px 0 10px" }}><b>Subject:</b> {mail.subject}</div>
-          <iframe className="email-frame" title="Email preview" srcDoc={mail.html} sandbox="" />
-          <div className="action-foot" style={{ justifyContent: "flex-end" }}>
-            <button className="btn ghost sm" onClick={() => setPreview(null)}>Close</button>
-          </div>
-        </Sheet>
+      {preview && (
+        <EmailEditor
+          key={preview}
+          kind={preview}
+          h={h}
+          s={own.s}
+          brand={own.brand}
+          canManage={canManage}
+          canSend={stage >= 2}
+          busy={busy}
+          onClose={() => setPreview(null)}
+          onSave={(changes) => updateHire(h.id, changes, `${preview === "welcome" ? "Welcome" : "First-day"} email wording edited`)}
+          onSend={(test, f) => send(preview, test, f)}
+        />
       )}
       {confirmSign && (
         <Sheet title={`Send for e-signature?`} onClose={() => setConfirmSign(null)}>

@@ -52,6 +52,8 @@ export interface Hire {
   createdAt: string;
   history: { at: string; by: string; text: string }[];
   tasksCreated?: boolean;
+  /** One-off wording changes to this hire's emails. Blank means the standard text. */
+  emailEdits?: { welcome?: EmailEdits; firstDay?: EmailEdits };
   /** For accounts with sister companies: which one is hiring (sets the name, logo and sender). */
   companyId?: string;
   /** Built-in e-signature requests, by document type. */
@@ -63,6 +65,42 @@ export interface EsignState {
   status: "sent" | "viewed" | "signed" | "declined";
   at: string;
   note?: string;
+}
+
+export interface EmailEdits {
+  subject?: string;
+  message?: string; // paragraphs separated by a blank line
+  closing?: string;
+}
+
+/** The standard wording, so the editor can start from it. */
+export function emailDefaults(kind: "welcome" | "firstDay", h: Pick<Hire, "name" | "firstName" | "managerName" | "startDate">, s: Pick<OnboardingSettings, "hrName">, company: string): Required<EmailEdits> {
+  const first = firstName(h);
+  const mgr = (h.managerName || "").split(/\s+/)[0];
+  if (kind === "welcome")
+    return {
+      subject: `Welcome to ${company}, ${first}!`,
+      message: `Hi ${first},\n\nI'm ${s.hrName}, and I'm part of the HR team. We're excited to have you joining us and look forward to welcoming you on your first day.\n\n${mgr ? `Your manager, ${mgr}, is looking forward to working with you. ` : ""}Here's what happens between now and then.`,
+      closing: "We're excited to have you on the team.",
+    };
+  return {
+    subject: `Your first day at ${company}: ${shortDate(h.startDate)}`,
+    message: "We're so glad you're joining us. Here's everything you need for a great first day.",
+    closing: "See you soon.",
+  };
+}
+
+/** Standard text unless this hire has an edit. */
+function wording(kind: "welcome" | "firstDay", h: Hire, s: OnboardingSettings, company: string): Required<EmailEdits> {
+  const d = emailDefaults(kind, h, s, company);
+  const e = h.emailEdits?.[kind] ?? {};
+  return { subject: e.subject?.trim() || d.subject, message: e.message?.trim() || d.message, closing: e.closing?.trim() || d.closing };
+}
+
+/** Plain text to email paragraphs: blank line = new paragraph, single line break kept. */
+function paras(t: string, style = "margin:0 0 14px 0") {
+  const ps = t.trim().split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+  return ps.map((p, i) => `<p style="${i === ps.length - 1 ? style.replace(/margin:[^;]+/, "margin:0") : style}">${esc(p).replace(/\n/g, "<br>")}</p>`).join("");
 }
 
 /** A sister company on the same account (e.g. Presidio Bay and The Main Post). */
@@ -301,15 +339,16 @@ export function welcomeEmail(h: Hire, s: OnboardingSettings, b: Brand) {
   ];
   if (s.orientation) steps.push(["Your first week", "<b>Join an HR orientation,</b> where we'll review important information, answer your questions, and help you settle in."]);
   const actions = (h.actionItems || "").split("\n").map((x) => x.trim()).filter(Boolean);
+  const w = wording("welcome", h, s, brand.company);
   const inner = `${label("Welcome aboard", "#6B645E").replace("margin:0", "margin:40px 0 0 0")}
 ${big(`Welcome, <i>${esc(first)}.</i>`)}
 <p style="margin:14px 0 0 0;font-family:Arial,sans-serif;font-size:16px;line-height:24px;color:#4A4441">Your first day at ${esc(brand.company)} is ${esc(longDate(h.startDate))}.</p><!--HERO_END-->
-${section("#F4F1EC", `<p style="margin:0 0 14px 0">Hi ${esc(first)},</p><p style="margin:0 0 14px 0">I'm ${esc(s.hrName)}, and I'm part of the HR team. We're excited to have you joining us and look forward to welcoming you on your first day.</p><p style="margin:0">${mgr ? `Your manager, ${esc(mgr)}, is looking forward to working with you. ` : ""}Here's what happens between now and then.</p>`)}
+${section("#F4F1EC", paras(w.message))}
 ${section("#F4F1EC", label("What happens next", brand.accent) + numbered(steps, brand.accent))}
 ${actions.length ? section("#F4F1EC", label(actions.length === 1 ? "Action item" : "Action items", brand.accent) + `<ul style="margin:10px 0 0 0;padding-left:18px">${actions.map((a) => `<li style="margin:4px 0">${esc(a)}</li>`).join("")}</ul>`) : ""}
 ${section("#EFECE8", label("Good to know", "#6B645E") + `<p style="margin:12px 0 0 0">${esc(s.benefitsNote)}</p><p style="margin:10px 0 0 0">Before your start date, we'll send your first-day details${mgr ? `, and ${esc(mgr)} will reach out too` : ""}.</p>`)}
-${signoff(s, brand.accent, "We're excited to have you on the team.")}`;
-  return { subject: `Welcome to ${brand.company}, ${first}!`, html: frame(brand, inner), text: `Hi ${first},\n\nWelcome to ${brand.company}! Your first day is ${longDate(h.startDate)}.\n\nIn the next few business days, watch for an email from ${s.payroll} to start your onboarding (check spam).${s.orientation ? "\nIn your first week, you'll join an HR orientation." : ""}${actions.length ? `\n\nAction items:\n${actions.map((a) => `- ${a}`).join("\n")}` : ""}\n\n${s.benefitsNote}\n\nQuestions? Reply or email ${s.hrEmail}.\n\n${s.hrName}` };
+${signoff(s, brand.accent, w.closing)}`;
+  return { subject: w.subject, html: frame(brand, inner), text: `${w.message.trim()}\n\nYour first day at ${brand.company} is ${longDate(h.startDate)}.\n\nIn the next few business days, watch for an email from ${s.payroll} to start your onboarding (check spam).${s.orientation ? "\nIn your first week, you'll join an HR orientation." : ""}${actions.length ? `\n\nAction items:\n${actions.map((a) => `- ${a}`).join("\n")}` : ""}\n\n${s.benefitsNote}\n\nQuestions? Reply or email ${s.hrEmail}.\n\n${w.closing}\n${s.hrName}` };
 }
 
 /** First-day email: goes out N days before the start date. */
@@ -317,6 +356,7 @@ export function firstDayEmail(h: Hire, s: OnboardingSettings, b: Brand) {
   const brand: Brand = { ...b, bar: b.bar ?? b.accent, accent: readableInk(b.accent) };
   const first = firstName(h);
   const where = (h.location || s.hqAddress || "").trim();
+  const w = wording("firstDay", h, s, brand.company);
   const grid = (pairs: [string, string][]) =>
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:2px solid ${brand.accent}">${[0, 2]
       .map((i) => `<tr>${pairs.slice(i, i + 2).map(([k, v]) => `<td width="50%" valign="top" style="padding:14px 10px 10px 0">${label(k, brand.accent)}<p style="margin:6px 0 0 0;font-family:Georgia,serif;font-size:19px;line-height:25px">${esc(v)}</p></td>`).join("")}</tr>`)
@@ -333,7 +373,7 @@ export function firstDayEmail(h: Hire, s: OnboardingSettings, b: Brand) {
       : "";
   const inner = `${label("You start soon", "#6B645E").replace("margin:0", "margin:40px 0 0 0")}
 ${big(`Welcome, <i>${esc(first)}.</i>`)}
-<p style="margin:14px 0 0 0;font-family:Arial,sans-serif;font-size:16px;line-height:24px;color:#4A4441">We're so glad you're joining us. Here's everything you need for a great first day.</p><!--HERO_END-->
+<div style="margin:14px 0 0 0;font-family:Arial,sans-serif;font-size:16px;line-height:24px;color:#4A4441">${paras(w.message, "margin:0 0 12px 0;font-family:Arial,sans-serif;font-size:16px;line-height:24px;color:#4A4441")}</div><!--HERO_END-->
 ${section("#F4F1EC", grid([["Start date", longDate(h.startDate)], ["Arrive by", h.arrivalTime || s.defaultArrival], ["Where", where || "Your manager will confirm"], ["Ask for", h.managerName || "Your manager"]]))}
 ${s.leaderQuote ? section("#F4F1EC", `<p style="margin:0;font-family:Georgia,serif;font-size:22px;font-style:italic;line-height:30px">&ldquo;${esc(s.leaderQuote)}&rdquo;</p>${s.leaderNames ? `<p style="margin:8px 0 0 0;font-size:13px;color:#6B645E">${esc(s.leaderNames)}</p>` : ""}`) : ""}
 ${s.videoUrl ? section("#F4F1EC", `<a href="${esc(s.videoUrl)}" style="display:inline-block;border:2px solid ${brand.accent};padding:12px 20px;color:${brand.accent};text-decoration:none;font-weight:bold">Watch the welcome video</a>`) : ""}
@@ -344,11 +384,11 @@ ${section("#F4F1EC", label("Bring on day one", brand.accent) + `<ul style="margi
 ${section("#F4F1EC", label("On day one", brand.accent) + `<ul style="margin:10px 0 0 0;padding-left:18px"><li>I-9 review with your manager and HR</li><li>${esc(s.payroll)} setup: direct deposit, emergency contact, tax forms</li><li>Handbook: review and acknowledge</li><li>Time off: ask your manager how to request it and who to tell when you're sick</li></ul>`)}
 ${section("#EFECE8", label("Don't miss this", "#6B645E") + `<p style="margin:10px 0 0 0;font-family:Georgia,serif;font-size:20px">You have ${s.enrollDays} days to enroll in benefits.</p><p style="margin:6px 0 0 0">Make your elections within ${s.enrollDays} days of your start date.</p>`)}
 ${clocking}
-${signoff(s, brand.accent, "See you soon.")}`;
+${signoff(s, brand.accent, w.closing)}`;
   return {
-    subject: `Your first day at ${brand.company}: ${shortDate(h.startDate)}`,
+    subject: w.subject,
     html: frame(brand, inner),
-    text: `Hi ${first},\n\nYour first day at ${brand.company} is ${longDate(h.startDate)}.\nArrive by: ${h.arrivalTime || s.defaultArrival}\nWhere: ${where}\nAsk for: ${h.managerName}\n\nBefore day one:\n- Find your ${s.payroll} invite (check spam)\n- Complete Section 1 of your I-9\n- Gather your I-9 documents and bank info\n\nBring: original unexpired ID, bank details, emergency contact.\n\nYou have ${s.enrollDays} days to enroll in benefits.\n\nSee you soon,\n${s.hrName}`,
+    text: `Hi ${first},\n\n${w.message.trim()}\n\nYour first day at ${brand.company} is ${longDate(h.startDate)}.\nArrive by: ${h.arrivalTime || s.defaultArrival}\nWhere: ${where}\nAsk for: ${h.managerName}\n\nBefore day one:\n- Find your ${s.payroll} invite (check spam)\n- Complete Section 1 of your I-9\n- Gather your I-9 documents and bank info\n\nBring: original unexpired ID, bank details, emergency contact.\n\nYou have ${s.enrollDays} days to enroll in benefits.\n\n${w.closing}\n${s.hrName}`,
   };
 }
 
