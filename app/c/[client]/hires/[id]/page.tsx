@@ -299,8 +299,8 @@ function HireInner() {
               ))}
               {isAdvisor && !drafting && !filling && (
                 <div className="chips" style={{ marginTop: 12 }}>
-                  <button className="btn sm" onClick={() => setFilling("offer")}>Fill past offer letter</button>
-                  <button className="btn sm" onClick={() => setFilling("agreement")}>Fill past agreement</button>
+                  <button className="btn sm" onClick={() => setFilling("offer")}>Offer letter</button>
+                  <button className="btn sm" onClick={() => setFilling("agreement")}>Contract</button>
                   <button className="btn ghost sm" onClick={() => setDrafting("offer")}><span className="spark" aria-hidden="true">✦</span> Draft offer letter</button>
                   <button className="btn ghost sm" onClick={() => setDrafting("agreement")}><span className="spark" aria-hidden="true">✦</span> Draft agreement</button>
                 </div>
@@ -311,11 +311,11 @@ function HireInner() {
                     clientId={clientId}
                     hireId={h.id}
                     hint={filling === "offer" ? "offer" : "agreement|contract|employment"}
-                    primaryLabel={`Save as ${filling === "offer" ? "offer letter" : "agreement"}`}
+                    fileName={`${h.name.trim().replace(/[^A-Za-z0-9]+/g, "_").replace(/^_|_$/g, "")}_${filling === "offer" ? "Offer" : "Contract"}.docx`}
+                    primaryLabel={`Save as ${filling === "offer" ? "offer letter" : "contract"}`}
                     onClose={() => setFilling(null)}
                     onUse={async (file) => {
-                      const t = `${filling === "offer" ? "Offer Letter" : "Employment Agreement"} - ${h.name}`;
-                      const rec = await addDoc(new File([file], docxName(t), { type: DOCX_MIME }), filling);
+                      const rec = await addDoc(file, filling);
                       if (rec) setFilling(null);
                     }}
                   />

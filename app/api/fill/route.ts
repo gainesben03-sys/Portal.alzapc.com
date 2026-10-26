@@ -38,10 +38,11 @@ Rules:
 - Match the document's style: if it writes "Sixty-Eight Thousand Dollars ($68,000.00)", the replacement does too. Keep date formats the same.
 - Use only facts from the new details or Ben's instructions. If the document needs a value you don't have, do not guess: put the find in with replace "[NEW VALUE NEEDED: what]" and add it to "missing".
 - If a whole sentence only made sense for the old situation (for example a relocation bonus the new person isn't getting), replace that sentence's text with the corrected sentence or with "" to remove it, and explain in "why".
+- "why" is a 1 to 3 word label for the field being changed (for example "Full name", "First name", "Start date", "Salary", "Manager"). Never include the old person's name or old values in it.
 - Never use em dashes.
 
 Answer with JSON only, no other text:
-{"changes":[{"find":"...","replace":"...","why":"old name -> new name"}],"notes":"1 to 4 short lines for Ben: what kind of document this is, what to double check, any risk (for example a final pay timing rule in a termination letter). Empty string if nothing.","missing":["values you need from Ben"]}`;
+{"changes":[{"find":"...","replace":"...","why":"Full name"}],"notes":"1 to 4 short lines for Ben: what kind of document this is, what to double check, any risk (for example a final pay timing rule in a termination letter). Empty string if nothing.","missing":["values you need from Ben"]}`;
 
 async function loadFile(db: ReturnType<typeof admin>, clientId: string, b: D): Promise<{ buf: Buffer; name: string } | { error: string }> {
   if (b.knowledgeId) {

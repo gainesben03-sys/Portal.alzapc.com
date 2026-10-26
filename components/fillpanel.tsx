@@ -34,6 +34,28 @@ async function call(body: Record<string, unknown>) {
   }
 }
 
+/** Show the kind of document, not the old person's name. */
+const KIND_LABELS: [RegExp, string][] = [
+  [/offer/i, "Offer letter"],
+  [/contract|agreement|employment/i, "Contract"],
+  [/terminat|separation|dismiss/i, "Termination letter"],
+  [/promot/i, "Promotion letter"],
+  [/warning|corrective|discipline/i, "Written warning"],
+  [/raise|compensation|pay change|salary/i, "Pay change letter"],
+  [/transfer/i, "Transfer letter"],
+  [/resign/i, "Resignation acceptance"],
+];
+function labelDocs(list: Doc[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  const used: Record<string, number> = {};
+  for (const d of list) {
+    const base = KIND_LABELS.find(([re]) => re.test(d.title))?.[1] ?? "Other document";
+    used[base] = (used[base] ?? 0) + 1;
+    out[d.id] = used[base] > 1 ? `${base} ${used[base]}` : base;
+  }
+  return out;
+}
+
 const toB64 = (f: File) =>
   new Promise<string>((res, rej) => {
     const r = new FileReader();
@@ -51,6 +73,7 @@ export function FillPanel({
   hireId,
   actionId,
   hint,
+  fileName,
   primaryLabel,
   onUse,
   onClose,
@@ -59,6 +82,8 @@ export function FillPanel({
   hireId?: string;
   actionId?: string;
   hint?: string;
+  /** Name for the finished file, e.g. Taylor_Brooks_Offer.docx */
+  fileName?: string;
   primaryLabel: string;
   onUse: (file: File) => Promise<void> | void;
   onClose: () => void;
@@ -122,16 +147,17 @@ export function FillPanel({
         .join(" "),
     );
     const bytes = Uint8Array.from(atob(j.file), (c) => c.charCodeAt(0));
-    return new File([bytes], j.fileName, { type: DOCX_MIME });
+    return new File([bytes], fileName || j.fileName, { type: DOCX_MIME });
   };
 
   const noSource = !upload && !pick;
-  const chosen = upload?.name ?? docs?.find((d) => d.id === pick)?.title;
+  const labels = { ...labelDocs((docs ?? []).filter((d) => d.client_id)), ...labelDocs((docs ?? []).filter((d) => !d.client_id)) };
+  const chosen = upload ? "your upload" : labels[pick];
 
   return (
     <div className="draft-panel">
       <div className="row" style={{ alignItems: "center" }}>
-        <b className="small">{changes ? `Changes to ${chosen}` : "Fill in a past document"}</b>
+        <b className="small">{changes ? `Changes to the ${chosen?.toLowerCase() ?? "document"}` : "Fill in a past document"}</b>
         <button className="btn ghost sm" onClick={onClose}>Close</button>
       </div>
 
@@ -156,15 +182,15 @@ export function FillPanel({
                 <option value="">Choose a Word document...</option>
                 {docs.filter((d) => d.client_id).length > 0 && (
                   <optgroup label="This client's documents">
-                    {docs.filter((d) => d.client_id).map((d) => <option key={d.id} value={d.id}>{d.title}</option>)}
+                    {docs.filter((d) => d.client_id).map((d) => <option key={d.id} value={d.id}>{labels[d.id]}</option>)}
                   </optgroup>
                 )}
                 {docs.filter((d) => !d.client_id).length > 0 && (
                   <optgroup label="Your templates">
-                    {docs.filter((d) => !d.client_id).map((d) => <option key={d.id} value={d.id}>{d.title}</option>)}
+                    {docs.filter((d) => !d.client_id).map((d) => <option key={d.id} value={d.id}>{labels[d.id]}</option>)}
                   </optgroup>
                 )}
-                {upload && <option value="__uploaded">{upload.name} (uploaded now)</option>}
+                {upload && <option value="__uploaded">Uploaded just now</option>}
                 <option value="__upload">Upload a past letter (.docx)...</option>
               </select>
             </label>
@@ -213,18 +239,19 @@ export function FillPanel({
                   onChange={(e) => setChanges(changes.map((x, k) => (k === i ? { ...x, on: e.target.checked } : x)))}
                 />
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <div className="tiny muted fill-old">{c.find}</div>
+                  <div className="tiny" style={{ fontWeight: 600, marginBottom: 4 }}>{c.why || "Change"}</div>
                   <input
                     className="f"
                     value={c.replace}
                     placeholder="(remove this text)"
                     onChange={(e) => setChanges(changes.map((x, k) => (k === i ? { ...x, replace: e.target.value } : x)))}
                   />
-                  <div className="tiny muted">
-                    {c.why}
-                    {c.found > 1 && ` · ${c.found} places`}
-                    {c.found === 0 && <span style={{ color: "var(--amber)" }}> · Not found word for word, so it may not apply</span>}
-                  </div>
+                  {(c.found > 1 || c.found === 0) && (
+                    <div className="tiny muted">
+                      {c.found > 1 && `Changes in ${c.found} places`}
+                      {c.found === 0 && <span style={{ color: "var(--amber)" }}>Not found word for word, so it may not apply</span>}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
