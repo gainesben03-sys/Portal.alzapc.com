@@ -60,6 +60,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const synced = useRef<State | null>(null); // what the database has
   const whoRef = useRef<Who | null>(null);
   const dirtyAt = useRef(0);
+  const stateRef = useRef<State | null>(null);
+  stateRef.current = state;
   const savingRef = useRef(false);
   const [kick, setKick] = useState(0);
 
@@ -193,9 +195,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!LIVE || !ready) return;
     const tick = async () => {
       if (document.hidden || savingRef.current || Date.now() - dirtyAt.current < 4000 || !whoRef.current) return;
-      if (synced.current && state !== synced.current) return; // unsaved local edits
+      const before = stateRef.current;
+      if (synced.current && before !== synced.current) return; // unsaved local edits
       try {
-        await load();
+        const s = await loadAll(sb(), whoRef.current.email);
+        // Something changed on this screen while we were fetching (a logo picked, a project added):
+        // keep the local change, and let it save; the next refresh catches up.
+        if (stateRef.current !== before || savingRef.current) return;
+        setState((cur) => {
+          if (cur !== before) return cur; // changed in the last instant: keep it
+          synced.current = s;
+          return s;
+        });
       } catch {}
     };
     const iv = setInterval(tick, 20000);
