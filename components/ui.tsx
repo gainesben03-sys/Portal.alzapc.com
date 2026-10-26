@@ -336,6 +336,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
       label: "Library",
       subs: [
         ...(mod("resources") ? [{ href: `${base}/resources`, label: "Resources", match: [`${base}/resources`] }] : []),
+        ...(access !== "hiring" ? [{ href: `${base}/newsletters`, label: "Newsletters", match: [`${base}/newsletters`] }] : []),
         ...(mod("wellness") ? [{ href: `${base}/wellness`, label: "Wellness", match: [`${base}/wellness`] }] : []),
       ],
     },
@@ -392,6 +393,7 @@ export function AlzaNav() {
     { href: "/console/files", label: "Files", badge: newFiles },
     { href: "/console/hires", label: "New hires", badge: newHires },
     { href: "/console/huddle", label: "HR Huddle" },
+    { href: "/console/newsletters", label: "Newsletters" },
     { href: "/console/library", label: "Library", badge: stale },
     { href: "/console/clients", label: "Clients" },
     { href: "/console/rules", label: "Reminder rules" },

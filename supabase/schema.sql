@@ -506,3 +506,33 @@ drop policy if exists candidates_update on public.candidates;
 create policy candidates_update on public.candidates for update
   using (public.is_advisor() or (public.is_member(client_id) and coalesce((data ->> 'hidden')::boolean, false) = false))
   with check (public.is_advisor() or (public.is_member(client_id) and coalesce((data ->> 'hidden')::boolean, false) = false));
+
+
+-- ===================================================================== newsletters (008)
+-- AlzaHR Client Portal: newsletters (Manager Minute, The Pause)
+--
+-- Ben queues, edits and copies each issue in the console. Clients only see an issue
+-- after Ben saves it to their Library.
+
+create table if not exists public.newsletters (
+  id text primary key,
+  client_id text not null references public.clients(id) on delete cascade,
+  data jsonb not null,
+  created_by text not null default public.me_email(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists newsletters_client_idx on public.newsletters (client_id);
+
+drop trigger if exists newsletters_touch on public.newsletters;
+create trigger newsletters_touch before update on public.newsletters for each row execute function public.touch();
+
+alter table public.newsletters enable row level security;
+drop policy if exists newsletters_read on public.newsletters;
+drop policy if exists newsletters_write on public.newsletters;
+-- Ben sees everything; a client's people see only issues saved to their Library
+create policy newsletters_read on public.newsletters for select
+  using (public.is_advisor() or (public.is_member(client_id) and coalesce((data->>'inLibrary')::boolean, false)));
+create policy newsletters_write on public.newsletters for all
+  using (public.is_advisor()) with check (public.is_advisor());
+
