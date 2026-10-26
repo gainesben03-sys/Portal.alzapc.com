@@ -3,7 +3,27 @@
 // page never reveals whether an email is registered.
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import { admin, cleanSupabaseUrl, SERVER_LIVE, siteUrl } from "@/lib/server";
+import { admin, cleanSupabaseUrl, sendEmail, SERVER_LIVE, siteUrl } from "@/lib/server";
+import { codeEmail } from "@/lib/signinemail";
+
+// Best-effort guard against repeat clicks: one email per address every 30 seconds per server.
+const recent = new Map<string, number>();
+
+/** Make the code and link ourselves and send our own email, so it never depends on Supabase's email template. */
+async function sendCode(email: string, redirectTo: string): Promise<"sent" | "fallback"> {
+  const db = admin();
+  let r = await db.auth.admin.generateLink({ type: "magiclink", email, options: { redirectTo } });
+  if (r.error && /not.*found|no user/i.test(r.error.message)) {
+    await db.auth.admin.createUser({ email, email_confirm: true });
+    r = await db.auth.admin.generateLink({ type: "magiclink", email, options: { redirectTo } });
+  }
+  const code = r.data?.properties?.email_otp;
+  const link = r.data?.properties?.action_link;
+  if (r.error || !code || !link) return "fallback";
+  const m = codeEmail(code, link);
+  const sent = await sendEmail({ to: [email], subject: m.subject, html: m.html, text: m.text, fromName: "AlzaHR" });
+  return sent.ok ? "sent" : "fallback";
+}
 
 export async function POST(req: Request) {
   if (!SERVER_LIVE) return NextResponse.json({ ok: true });
@@ -31,6 +51,14 @@ export async function POST(req: Request) {
   }
 
   if (allowed) {
+    const last = recent.get(email) ?? 0;
+    if (Date.now() - last < 30_000) return NextResponse.json({ ok: false, reason: "rate" });
+    recent.set(email, Date.now());
+    if (recent.size > 500) recent.clear();
+    try {
+      if ((await sendCode(email, siteUrl(req))) === "sent") return NextResponse.json({ ok: true });
+    } catch {}
+    // Fallback: Supabase sends its own email (needs {{ .Token }} in its template to show a code)
     const url = cleanSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL)!;
     const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.trim();
     const pub = createClient(url, anon, { auth: { persistSession: false, autoRefreshToken: false, flowType: "implicit" } });

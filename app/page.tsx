@@ -37,7 +37,7 @@ export default function Login() {
       const j = await r.json();
       setBusy(false);
       if (!j.ok) {
-        setErr(j.reason === "rate" ? "Too many sign-in emails just now. Wait a minute and try again." : j.reason === "code" ? "That invite code isn't valid or has expired. Ask for a new one." : j.reason === "email" ? "Check the email address." : "Something went wrong. Try again.");
+        setErr(j.reason === "rate" ? "A code was just sent. Give it a minute, and check spam, before asking for another." : j.reason === "code" ? "That invite code isn't valid or has expired. Ask for a new one." : j.reason === "email" ? "Check the email address." : "Something went wrong. Try again.");
         return false;
       }
     } catch {
@@ -177,7 +177,8 @@ export default function Login() {
                 if (!LIVE) return;
                 setBusy(true);
                 setErr("");
-                const { error } = await sb().auth.verifyOtp({ email: sent, token, type: "email" });
+                let { error } = await sb().auth.verifyOtp({ email: sent, token, type: "email" });
+                if (error && /expired|invalid/i.test(error.message)) ({ error } = await sb().auth.verifyOtp({ email: sent, token, type: "magiclink" }));
                 setBusy(false);
                 if (error) setErr(/expired|invalid/i.test(error.message) ? "That code didn't work or has expired. Send a new one." : error.message);
               }}
