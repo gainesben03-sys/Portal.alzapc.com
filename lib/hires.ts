@@ -73,21 +73,69 @@ export interface EmailEdits {
   closing?: string;
 }
 
-/** The standard wording, so the editor can start from it. */
-export function emailDefaults(kind: "welcome" | "firstDay", h: Pick<Hire, "name" | "firstName" | "managerName" | "startDate">, s: Pick<OnboardingSettings, "hrName">, company: string): Required<EmailEdits> {
-  const first = firstName(h);
-  const mgr = (h.managerName || "").split(/\s+/)[0];
-  if (kind === "welcome")
-    return {
-      subject: `Welcome to ${company}, ${first}!`,
-      message: `Hi ${first},\n\nI'm ${s.hrName}, and I'm part of the HR team. We're excited to have you joining us and look forward to welcoming you on your first day.\n\n${mgr ? `Your manager, ${mgr}, is looking forward to working with you. ` : ""}Here's what happens between now and then.`,
-      closing: "We're excited to have you on the team.",
-    };
-  return {
-    subject: `Your first day at ${company}: ${shortDate(h.startDate)}`,
+/** Fill-ins a template can use. */
+export const FILL_INS = ["{first name}", "{manager}", "{company}", "{start date}", "{HR name}"] as const;
+
+/** Built-in wording, written as a template. */
+export const BUILT_IN_TEMPLATES: Record<"welcome" | "firstDay", Required<EmailEdits>> = {
+  welcome: {
+    subject: "Welcome to {company}, {first name}!",
+    message: "Hi {first name},\n\nI'm {HR name}, and I'm part of the HR team. We're excited to have you joining us and look forward to welcoming you on your first day.\n\nYour manager, {manager}, is looking forward to working with you. Here's what happens between now and then.",
+    closing: "We're excited to have you on the team.",
+  },
+  firstDay: {
+    subject: "Your first day at {company}: {start date}",
     message: "We're so glad you're joining us. Here's everything you need for a great first day.",
     closing: "See you soon.",
+  },
+};
+
+/** The template in effect for this account (or sister company), falling back to the built-in wording. */
+export function templateFor(kind: "welcome" | "firstDay", s: Pick<OnboardingSettings, "emailTemplates">): Required<EmailEdits> {
+  const b = BUILT_IN_TEMPLATES[kind];
+  const t = s.emailTemplates?.[kind] ?? {};
+  return { subject: t.subject?.trim() || b.subject, message: t.message?.trim() || b.message, closing: t.closing?.trim() || b.closing };
+}
+
+function fillIn(t: string, h: Pick<Hire, "name" | "firstName" | "managerName" | "startDate">, s: Pick<OnboardingSettings, "hrName">, company: string, short = false) {
+  const mgr = (h.managerName || "").split(/\s+/)[0];
+  let out = t;
+  // no manager yet: drop a sentence built around {manager} rather than leave a gap
+  if (!mgr) out = out.replace(/[^.!?\n]*\{manager\}[^.!?\n]*[.!?]\s*/gi, "");
+  return out
+    .replace(/\{first name\}/gi, firstName(h))
+    .replace(/\{manager\}/gi, mgr)
+    .replace(/\{company\}/gi, company)
+    .replace(/\{start date\}/gi, short ? shortDate(h.startDate) : longDate(h.startDate))
+    .replace(/\{HR name\}/gi, s.hrName);
+}
+
+/** The wording for this hire before any one-off edits: the account template, filled in. */
+export function emailDefaults(kind: "welcome" | "firstDay", h: Pick<Hire, "name" | "firstName" | "managerName" | "startDate">, s: Pick<OnboardingSettings, "hrName" | "emailTemplates">, company: string): Required<EmailEdits> {
+  const t = templateFor(kind, s);
+  return { subject: fillIn(t.subject, h, s, company, true), message: fillIn(t.message, h, s, company), closing: fillIn(t.closing, h, s, company) };
+}
+
+/** Turn one hire's wording back into a template: their name, manager, dates become fill-ins. */
+export function toTemplate(e: Required<EmailEdits>, h: Pick<Hire, "name" | "firstName" | "managerName" | "startDate">, s: Pick<OnboardingSettings, "hrName">, company: string): Required<EmailEdits> {
+  const pairs: [string, string][] = [
+    [h.name?.trim() ?? "", "{first name}"],
+    [company, "{company}"],
+    [shortDate(h.startDate), "{start date}"],
+    [longDate(h.startDate), "{start date}"],
+    [s.hrName, "{HR name}"],
+    [(h.managerName || "").trim(), "{manager}"],
+    [(h.managerName || "").split(/\s+/)[0], "{manager}"],
+    [firstName(h), "{first name}"],
+  ];
+  const conv = (t: string) => {
+    let out = t;
+    for (const [from, to] of pairs.filter(([f]) => f && f.length > 1).sort((a, b) => b[0].length - a[0].length)) {
+      out = out.replace(new RegExp(`\\b${from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "g"), to);
+    }
+    return out;
   };
+  return { subject: conv(e.subject), message: conv(e.message), closing: conv(e.closing) };
 }
 
 /** Standard text unless this hire has an edit. */
@@ -115,6 +163,8 @@ export interface HireCompany {
   hrPhone?: string;
   /** Sending address before the @, e.g. "tmphr" -> tmphr@alzapc.com */
   senderBox?: string;
+  /** Its own email wording, if it differs from the main account's. */
+  emailTemplates?: { welcome?: EmailEdits; firstDay?: EmailEdits };
 }
 
 export interface OnboardingSettings {
@@ -141,6 +191,8 @@ export interface OnboardingSettings {
   /** What candidates and new hires see as the sender: name, and the part before the @. */
   senderName?: string;
   senderBox?: string;
+  /** This account's own wording for the welcome and first-day emails (with fill-ins). */
+  emailTemplates?: { welcome?: EmailEdits; firstDay?: EmailEdits };
   /** Places new hires report to, one per line. */
   officeLocations?: string;
 }
@@ -155,7 +207,7 @@ export function forCompany(h: Pick<Hire, "companyId">, s: OnboardingSettings, br
   if (!co) return { s, brand };
   return {
     company: co,
-    s: { ...s, hrName: co.hrName?.trim() || s.hrName, hrEmail: co.hrEmail?.trim() || s.hrEmail, hrPhone: co.hrPhone?.trim() || s.hrPhone, senderName: `${co.name.trim()} HR`, senderBox: co.senderBox },
+    s: { ...s, hrName: co.hrName?.trim() || s.hrName, hrEmail: co.hrEmail?.trim() || s.hrEmail, hrPhone: co.hrPhone?.trim() || s.hrPhone, senderName: `${co.name.trim()} HR`, senderBox: co.senderBox, emailTemplates: { welcome: co.emailTemplates?.welcome ?? s.emailTemplates?.welcome, firstDay: co.emailTemplates?.firstDay ?? s.emailTemplates?.firstDay } },
     brand: { company: co.name.trim(), accent: co.color || brand.accent, logoUrl },
   };
 }

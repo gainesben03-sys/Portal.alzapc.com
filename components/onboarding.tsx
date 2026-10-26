@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { cleanBox, HireCompany, suggestBox, onboardingFor, OnboardingSettings } from "@/lib/hires";
+import { BUILT_IN_TEMPLATES, cleanBox, EmailEdits, FILL_INS, HireCompany, onboardingFor, OnboardingSettings, suggestBox } from "@/lib/hires";
 import { logoInfo, shrinkLogo } from "@/lib/logoimg";
 
 const domain = process.env.NEXT_PUBLIC_MAIL_DOMAIN || "alzapc.com";
@@ -82,6 +82,7 @@ export function OnboardingSettingsCard({ value, onChange, clientName }: { value?
           {txt("videoUrl", "Welcome video link", "Optional https:// link")}
           <div className="full">{txt("idNote", "ID to bring on day one", undefined, true)}</div>
         </fieldset>
+        <Templates value={value?.emailTemplates} onChange={(t) => set("emailTemplates", t as never)} />
       </div>
       {sw("orientation", "Mention HR orientation in week one", "Adds a line to the first-day email.")}
       {sw("clockingSection", "Clocking in and out section for hourly staff", "Meal and rest break basics in the first-day email for non-exempt hires.")}
@@ -131,6 +132,12 @@ function Companies({ list, clientName, onChange }: { list: HireCompany[]; client
             <button className="btn ghost sm" style={{ color: "var(--red)" }} onClick={() => onChange(list.filter((_, k) => k !== i))}>Remove</button>
           </div>
           <label className="f">Company name<input className="f" value={c.name} onChange={(e) => upd(i, { name: e.target.value })} placeholder="As it should appear in emails" /></label>
+          {(c.emailTemplates?.welcome || c.emailTemplates?.firstDay) && (
+            <p className="tiny muted" style={{ margin: "6px 0 0" }}>
+              Has its own {[c.emailTemplates?.welcome && "welcome", c.emailTemplates?.firstDay && "first-day"].filter(Boolean).join(" and ")} email wording (saved from a hire).{" "}
+              <button className="linklike tiny" onClick={() => upd(i, { emailTemplates: undefined })}>Use the main wording instead</button>
+            </p>
+          )}
           <div className="co-grid">
             <label className="f">HR contact <span className="tiny muted">(if different)</span><input className="f" value={c.hrName ?? ""} onChange={(e) => upd(i, { hrName: e.target.value })} /></label>
             <label className="f">HR email <span className="tiny muted">(replies go here)</span><input className="f" type="email" value={c.hrEmail ?? ""} onChange={(e) => upd(i, { hrEmail: e.target.value })} /></label>
@@ -147,6 +154,48 @@ function Companies({ list, clientName, onChange }: { list: HireCompany[]; client
       {err && <p className="small full" style={{ color: "var(--red)" }}>{err}</p>}
       <div className="full">
         <button className="btn sm" onClick={() => onChange([...list, { id: newCoId(), name: "" }])}>{list.length ? "Add another company" : "Add a sister company"}</button>
+      </div>
+    </fieldset>
+  );
+}
+
+type Templates = { welcome?: EmailEdits; firstDay?: EmailEdits };
+
+/** The account's standard wording for the welcome and first-day emails. Blank fields use the built-in text. */
+function Templates({ value, onChange }: { value?: Templates; onChange: (t: Templates | undefined) => void }) {
+  const [kind, setKind] = useState<"welcome" | "firstDay">("welcome");
+  const cur = value?.[kind] ?? {};
+  const b = BUILT_IN_TEMPLATES[kind];
+  const set = (k: keyof EmailEdits, v: string) => {
+    const next: Templates = { ...(value ?? {}), [kind]: { ...cur, [k]: v || undefined } };
+    const empty = (e?: EmailEdits) => !e || !(e.subject || e.message || e.closing);
+    onChange(empty(next.welcome) && empty(next.firstDay) ? undefined : next);
+  };
+  const custom = !!(cur.subject || cur.message || cur.closing);
+  return (
+    <fieldset>
+      <legend className="full">Email templates</legend>
+      <p className="tiny muted full" style={{ margin: "0 0 6px" }}>
+        The standard wording for every new hire. Fill-ins are replaced for each person: {FILL_INS.join(", ")}. You can also tweak one hire&apos;s email from their page, or save it as the template there.
+      </p>
+      <div className="full seg" role="tablist" style={{ marginBottom: 4, gridTemplateColumns: "1fr 1fr" }}>
+        <button className={kind === "welcome" ? "on" : ""} onClick={() => setKind("welcome")}>Welcome email</button>
+        <button className={kind === "firstDay" ? "on" : ""} onClick={() => setKind("firstDay")}>First-day email</button>
+      </div>
+      <label className="f full">Subject<input className="f" value={cur.subject ?? ""} placeholder={b.subject} onChange={(e) => set("subject", e.target.value)} /></label>
+      <label className="f full">
+        Message <span className="tiny muted">(blank line between paragraphs)</span>
+        <textarea className="f" style={{ minHeight: 140 }} value={cur.message ?? ""} placeholder={b.message} onChange={(e) => set("message", e.target.value)} />
+      </label>
+      <label className="f full">Closing line<input className="f" value={cur.closing ?? ""} placeholder={b.closing} onChange={(e) => set("closing", e.target.value)} /></label>
+      <div className="full tiny muted" style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+        <span>{custom ? "Custom wording for this company." : "Using the standard wording (shown in gray). Type to change it."}</span>
+        {!custom && (
+          <button className="linklike tiny" onClick={() => onChange({ ...(value ?? {}), [kind]: { ...b } })}>Start from the standard wording</button>
+        )}
+        {custom && (
+          <button className="linklike tiny" onClick={() => onChange({ ...(value ?? {}), [kind]: undefined })}>Reset to standard</button>
+        )}
       </div>
     </fieldset>
   );

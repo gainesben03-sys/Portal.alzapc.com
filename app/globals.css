@@ -528,3 +528,4 @@ video.pitch-live[controls] { height: auto; max-height: 62vh; object-fit: contain
 .email-edit-row { display: grid; gap: 0 12px; grid-template-columns: 1fr; }
 @media (min-width: 600px) { .email-edit-row { grid-template-columns: 1fr 2fr; } }
 .email-edit + .email-frame { height: 46vh; }
+.tpl-box { margin-top: 10px; border: 1px solid var(--gold); border-radius: 12px; padding: 12px; background: var(--card); }

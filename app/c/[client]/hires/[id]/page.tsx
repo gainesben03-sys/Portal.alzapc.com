@@ -455,6 +455,21 @@ function HireInner() {
           onClose={() => setPreview(null)}
           onSave={(changes) => updateHire(h.id, changes, `${preview === "welcome" ? "Welcome" : "First-day"} email wording edited`)}
           onSend={(test, f) => send(preview, test, f)}
+          onSaveTemplate={
+            isAdvisor
+              ? (t) => {
+                  const ob = cfg.onboarding ?? {};
+                  const kind = preview;
+                  const onboarding = co
+                    ? { ...ob, companies: (ob.companies ?? []).map((c) => (c.id === co.id ? { ...c, emailTemplates: { ...(c.emailTemplates ?? {}), [kind]: t } } : c)) }
+                    : { ...ob, emailTemplates: { ...(ob.emailTemplates ?? {}), [kind]: t } };
+                  patch({ config: { ...config, [clientId]: { ...cfg, onboarding } } });
+                  // this hire now follows the template too
+                  updateHire(h.id, (x) => ({ emailEdits: { ...(x.emailEdits ?? {}), [kind]: {} } }), `Saved the ${kind === "welcome" ? "welcome" : "first-day"} email as ${own.brand.company}'s template`);
+                  toast.show(`Saved. Every new ${own.brand.company} hire starts from this wording.`);
+                }
+              : undefined
+          }
         />
       )}
       {confirmSign && (

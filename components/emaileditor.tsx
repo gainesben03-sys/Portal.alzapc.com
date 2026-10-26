@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Brand, EmailEdits, emailDefaults, firstDayEmail, firstName, Hire, officeList, OnboardingSettings, welcomeEmail } from "@/lib/hires";
+import { Brand, EmailEdits, emailDefaults, FILL_INS, firstDayEmail, firstName, Hire, officeList, OnboardingSettings, toTemplate, welcomeEmail } from "@/lib/hires";
 import { LIVE } from "@/lib/supabase";
 import { Sheet } from "./ui";
 
@@ -37,6 +37,7 @@ export function EmailEditor({
   onClose,
   onSave,
   onSend,
+  onSaveTemplate,
 }: {
   kind: Kind;
   h: Hire;
@@ -48,6 +49,8 @@ export function EmailEditor({
   onClose: () => void;
   onSave: (changes: Partial<Hire>) => void;
   onSend: (test: boolean, f: EmailEditFields) => Promise<boolean>;
+  /** Ben only: make this wording the standard for every hire at this company. */
+  onSaveTemplate?: (t: Required<EmailEdits>) => void;
 }) {
   const start = (): EmailEditFields => {
     const d = emailDefaults(kind, h, s, brand.company);
@@ -57,6 +60,7 @@ export function EmailEditor({
   const [f, setF] = useState<EmailEditFields>(start);
   const [saved, setSaved] = useState<EmailEditFields>(start);
   const [editing, setEditing] = useState(false);
+  const [tpl, setTpl] = useState<Required<EmailEdits> | null>(null);
   const set = (k: keyof EmailEditFields, v: string) => setF((x) => ({ ...x, [k]: v }));
   const first = firstName(h);
 
@@ -108,8 +112,35 @@ export function EmailEditor({
             >
               Use the standard wording
             </button>
-            <button className="btn ghost sm" onClick={() => setEditing(false)}>Done editing</button>
+            <span style={{ display: "flex", gap: 8 }}>
+              {onSaveTemplate && !tpl && <button className="btn ghost sm" onClick={() => setTpl(toTemplate({ subject: f.subject, message: f.message, closing: f.closing }, h, s, brand.company))}>Save as template</button>}
+              <button className="btn ghost sm" onClick={() => setEditing(false)}>Done editing</button>
+            </span>
           </div>
+          {tpl && onSaveTemplate && (
+            <div className="tpl-box">
+              <b className="small">Template for every {brand.company} hire</b>
+              <p className="tiny muted" style={{ margin: "2px 0 6px" }}>
+                Names and dates were swapped for fill-ins so it works for anyone: {FILL_INS.join(", ")}. Check it, then save.
+              </p>
+              <label className="f">Subject<input className="f" value={tpl.subject} onChange={(e) => setTpl({ ...tpl, subject: e.target.value })} /></label>
+              <label className="f">Message<textarea className="f" style={{ minHeight: 140 }} value={tpl.message} onChange={(e) => setTpl({ ...tpl, message: e.target.value })} /></label>
+              <label className="f">Closing line<input className="f" value={tpl.closing} onChange={(e) => setTpl({ ...tpl, closing: e.target.value })} /></label>
+              <p className="tiny muted" style={{ margin: "4px 0 0" }}>Action items, arrival time and location stay per hire.</p>
+              <div className="row" style={{ justifyContent: "flex-end", gap: 8, marginTop: 8 }}>
+                <button className="btn ghost sm" onClick={() => setTpl(null)}>Cancel</button>
+                <button
+                  className="btn primary sm"
+                  onClick={() => {
+                    onSaveTemplate(tpl);
+                    setTpl(null);
+                  }}
+                >
+                  Save template
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="small" style={{ margin: "4px 0 10px", display: "flex", gap: 8, alignItems: "center" }}>
