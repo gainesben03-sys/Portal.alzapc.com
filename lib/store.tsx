@@ -173,11 +173,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setKick((k) => k + 1); // save anything that changed while this save was running
       if (errs.length) {
         console.warn("Save problems:", errs);
-        const missingHires = errs.some((e) => /hires/i.test(e) && /does not exist|schema cache|not find/i.test(e));
+        const missingTable = errs.some((e) => /does not exist|schema cache|could not find/i.test(e));
+        const why = errs[0].replace(/\s+/g, " ").slice(0, 160);
         setSaveError(
-          missingHires
-            ? "New hires can't save yet: run supabase/003_hires.sql in the Supabase SQL Editor, then try again."
-            : "Some changes didn't save. Showing the latest saved version."
+          missingTable
+            ? "That didn't save because a database update hasn't been run yet. Run supabase/all_updates.sql in the Supabase SQL Editor, then try again."
+            : `That didn't save, so the page reloaded the last saved version. Try again; if it keeps happening, send Ben this: ${why}`
         );
         try {
           await load();
