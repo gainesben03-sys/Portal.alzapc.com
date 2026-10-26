@@ -47,8 +47,23 @@ export function emptyState(): State {
 }
 
 /** Demo data (fictional), used only when Supabase is not configured. */
+/** The public demo (demo.alzapc.com) never shows a real client: the pilot company becomes a fictional one. */
+export const DEMO_SITE = process.env.NEXT_PUBLIC_DEMO_SITE === "1";
+
 export function demoState(): State {
-  return { ...emptyState(), clients: CLIENTS, ...seed(), ...seedModules() };
+  const s: State = { ...emptyState(), clients: CLIENTS, ...seed(), ...seedModules() };
+  if (!DEMO_SITE) return s;
+  const out = JSON.parse(
+    JSON.stringify(s)
+      .replace(/Blueprint Studios/g, "Harborlight Events")
+      .replace(/Blueprint/g, "Harborlight")
+      .replace(/blueprint/g, "harborlight")
+      .replace(/"\/harborlight-logo\.png"/g, "null")
+  ) as State;
+  const accent = "#0f766e";
+  out.clients = out.clients.map((c) => (c.id === "harborlight" ? { ...c, accent, logo: undefined } : c));
+  if (out.config.harborlight) out.config.harborlight = { ...out.config.harborlight, accent, logo: undefined };
+  return out;
 }
 
 export function newClientConfig(): ClientConfig {

@@ -498,3 +498,5 @@ video.pitch-live[controls] { height: auto; max-height: 62vh; object-fit: contain
 .subnav-sub .btn { white-space: nowrap; }
 .work-with { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); position: relative; }
 .work-with.compact { margin-top: 16px; }
+.demo-bar { position: relative; z-index: 30; display: flex; gap: 14px; justify-content: center; align-items: center; flex-wrap: wrap; padding: 7px 12px; background: #0f766e; color: #fff; font-size: 13px; }
+.demo-bar a { color: #fff; font-weight: 600; text-decoration: underline; }
