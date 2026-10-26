@@ -61,6 +61,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const whoRef = useRef<Who | null>(null);
   const dirtyAt = useRef(0);
   const stateRef = useRef<State | null>(null);
+  const retries = useRef(0);
   stateRef.current = state;
   const savingRef = useRef(false);
   const [kick, setKick] = useState(0);
@@ -169,6 +170,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setSaving(true);
       const target = state;
       const errs = await saveDiff(sb(), synced.current, target, { email: whoRef.current.email, advisor: whoRef.current.advisor });
+      // A dropped connection ("Load failed", "Failed to fetch"): keep the change on screen and send it again.
+      // Every write is safe to resend, so parts that already landed aren't duplicated.
+      const network = errs.length > 0 && errs.every((e) => /load failed|failed to fetch|networkerror|network request failed|fetch failed|timed? ?out|aborted/i.test(e));
+      if (network && retries.current < 6) {
+        retries.current += 1;
+        savingRef.current = false;
+        setSaving(false);
+        setSaveError(navigator.onLine ? "Connection hiccup. Your change is safe; saving again..." : "You're offline. Your change is safe and will save when you're back online.");
+        const again = () => setKick((k) => k + 1);
+        if (!navigator.onLine) window.addEventListener("online", again, { once: true });
+        else setTimeout(again, Math.min(15000, 1500 * retries.current));
+        return;
+      }
+      retries.current = 0;
       synced.current = target;
       savingRef.current = false;
       setSaving(false);

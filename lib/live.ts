@@ -125,7 +125,7 @@ export async function saveDiff(db: SupabaseClient, prev: State, next: State, me:
       const cfg = next.config[c.id];
       if (!cfg) continue;
       if (!before) {
-        runFirst(db.from("clients").insert({ id: c.id, name: c.name, engagement: c.engagement, pilot: c.pilot, config: cfgPart(cfg) }));
+        runFirst(db.from("clients").upsert({ id: c.id, name: c.name, engagement: c.engagement, pilot: c.pilot, config: cfgPart(cfg) }, { onConflict: "id", ignoreDuplicates: true }));
         continue;
       }
       const prevCfg = prev.config[c.id];
@@ -147,7 +147,7 @@ export async function saveDiff(db: SupabaseClient, prev: State, next: State, me:
     for (const u of b.users) {
       const old = au.find((x) => x.email.toLowerCase() === u.email.toLowerCase());
       if (!old) {
-        run(db.from("members").insert({ client_id: cid, email: u.email, name: u.name, role: u.role, access: u.access, invited: true, added_by: u.addedBy ?? null, huddle: recB.size === 0 || recB.has(u.email) }));
+        run(db.from("members").upsert({ client_id: cid, email: u.email, name: u.name, role: u.role, access: u.access, invited: true, added_by: u.addedBy ?? null, huddle: recB.size === 0 || recB.has(u.email) }, { onConflict: "client_id,email", ignoreDuplicates: true }));
       } else {
         const patch: Record<string, unknown> = {};
         if (old.access !== u.access) patch.access = u.access;
@@ -159,7 +159,7 @@ export async function saveDiff(db: SupabaseClient, prev: State, next: State, me:
     }
     for (const u of au) if (!b.users.some((x) => x.email.toLowerCase() === u.email.toLowerCase())) run(db.from("members").delete().eq("client_id", cid).eq("email", u.email.toLowerCase()));
     const ac = a?.codes ?? [];
-    for (const k of b.codes) if (!ac.some((x) => x.code === k.code)) run(db.from("invite_codes").insert({ code: k.code, client_id: cid, access: k.access, expires: k.expires }));
+    for (const k of b.codes) if (!ac.some((x) => x.code === k.code)) run(db.from("invite_codes").upsert({ code: k.code, client_id: cid, access: k.access, expires: k.expires }, { onConflict: "code", ignoreDuplicates: true }));
     for (const k of ac) if (!b.codes.some((x) => x.code === k.code)) run(db.from("invite_codes").delete().eq("code", k.code));
   }
 
@@ -175,7 +175,7 @@ export async function saveDiff(db: SupabaseClient, prev: State, next: State, me:
       const client_id = t === "candidates" ? roleClient(item.roleId ?? "") : item.clientId;
       if (!client_id) continue;
       const data = strip(item, ["id"]);
-      if (!old) run(db.from(t).insert({ id: item.id, client_id, data }));
+      if (!old) run(db.from(t).upsert({ id: item.id, client_id, data }, { onConflict: "id", ignoreDuplicates: true })); // safe to resend after a dropped connection
       else run(db.from(t).update({ data }).eq("id", item.id));
     }
     if (me.advisor) for (const item of A) if (!B.some((x) => x.id === item.id)) run(db.from(t).delete().eq("id", item.id));
