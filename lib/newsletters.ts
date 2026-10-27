@@ -24,6 +24,10 @@ export interface Newsletter {
   sentAt?: string;
   inLibrary: boolean;
   label?: string;
+  /** Short topic, e.g. "Feedback", so the next draft doesn't repeat it */
+  topic?: string;
+  /** Month it was copied from, until Claude (or Ben) writes this month's words */
+  copiedFrom?: string;
   createdAt: string;
   updatedAt: string;
 }

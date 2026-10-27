@@ -175,7 +175,7 @@ function NewIssue({ month, list, clients, onClose, onCreate, clientName }: { mon
         </fieldset>
       </div>
       {exists && <p className="tiny" style={{ color: "var(--amber)" }}>{clientName(clientId)} already has a {KIND_LABEL[kind]} for {monthLabel(m)}. This adds another.</p>}
-      {usePrev && <p className="tiny muted">Starts as a copy of {monthLabel(prev!.month)}&apos;s issue: &ldquo;{prev!.subject}&rdquo;. Change the wording before it goes out.</p>}
+      {usePrev && <p className="tiny muted">Keeps {monthLabel(prev!.month)}&apos;s design. On the next screen, Claude writes {monthLabel(m)}&apos;s content into it, on a topic you haven&apos;t used yet.</p>}
       {err && <p className="small" style={{ color: "var(--red)" }}>{err}</p>}
       <div className="sheet-actions">
         <button className="btn ghost sm" onClick={onClose}>Cancel</button>
@@ -192,7 +192,7 @@ function NewIssue({ month, list, clients, onClose, onCreate, clientName }: { mon
                 setBusy(false);
                 return setErr("Couldn't open last month's issue. Try again.");
               }
-              base = { html: r.item.html, subject: r.item.subject, preview: r.item.preview, sendFrom: r.item.sendFrom, lang: r.item.lang };
+              base = { html: r.item.html, subject: r.item.subject, preview: r.item.preview, sendFrom: r.item.sendFrom, lang: r.item.lang, copiedFrom: r.item.month };
             } else {
               if (!/<html|<table|<body/i.test(html)) {
                 setBusy(false);
@@ -201,7 +201,7 @@ function NewIssue({ month, list, clients, onClose, onCreate, clientName }: { mon
               base = { html: html.trim(), subject: subject.trim() || `${KIND_LABEL[kind]}`, lang: /espa[nñ]ol|lang="es"/i.test(html) ? "en+es" : "en" };
             }
             const now = new Date().toISOString();
-            onCreate({ id: newNlId(), clientId, kind, month: m, lang: base.lang ?? "en", subject: base.subject ?? "", preview: base.preview, sendFrom: base.sendFrom, html: base.html!, originalHtml: base.html, status: "draft", inLibrary: false, createdAt: now, updatedAt: now });
+            onCreate({ id: newNlId(), clientId, kind, month: m, lang: base.lang ?? "en", subject: base.subject ?? "", preview: base.preview, sendFrom: base.sendFrom, html: base.html!, originalHtml: base.html, copiedFrom: base.copiedFrom, status: "draft", inLibrary: false, createdAt: now, updatedAt: now });
           }}
         >
           {busy ? "Creating..." : "Create"}
