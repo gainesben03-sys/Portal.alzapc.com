@@ -548,3 +548,34 @@ video.pitch-live[controls] { height: auto; max-height: 62vh; object-fit: contain
 .sheet .nl-frame { max-height: 62vh; overflow: auto; }
 @media (max-width: 520px) { .nl-row { padding: 12px; } .nl-chips { flex-direction: column; align-items: flex-end; } }
 .nl-draft { margin-bottom: 14px; border: 1px solid var(--gold); }
+
+/* dashboard */
+.dash-filter { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 6px; margin-top: 14px; scrollbar-width: none; }
+.dash-filter::-webkit-scrollbar { display: none; }
+.dash-filter .chip { white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.chip.chip-btn.on { background: var(--ink); color: var(--card); border-color: var(--ink); }
+.dash-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: 1px; flex: none; }
+.dash-count { font-size: 11px; font-weight: 700; background: var(--soft2); color: var(--ink); border-radius: 10px; padding: 0 6px; }
+.chip.on .dash-count { background: rgba(255,255,255,.25); color: inherit; }
+.dash-focus { padding: 6px 16px 12px; }
+.dash-focus-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.dash-focus-row:first-child { border-top: 0; }
+.dash-num { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; flex: none; color: #fff; }
+.dash-num.t-red { background: var(--red); }
+.dash-num.t-amber { background: var(--amber); }
+.dash-num.t-blue { background: var(--blue); }
+.dash-sort { width: auto; margin: 0; padding: 5px 8px; font-size: 13px; }
+.dash-group { margin-bottom: 14px; }
+.dash-group-label { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px 2px; }
+.dash-group-label span { font-weight: 600; opacity: .7; margin-left: 4px; }
+.dash-group-label.late { color: var(--red); }
+.dash-list { padding: 2px 14px; }
+.dash-row { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-top: 1px solid var(--line); color: inherit; text-decoration: none; }
+.dash-row:first-child { border-top: 0; }
+.dash-row .pill { flex: none; }
+.dash-client .dash-client-btn { all: unset; cursor: pointer; display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.dash-client.on { background: var(--soft2); border-radius: 10px; }
+@media (max-width: 520px) { .dash-row .pill { font-size: 11px; } .dash-focus-row .btn { padding: 6px 10px; } }
+.dash-row > .grow, .dash-focus-row > .grow { flex: 1 1 auto; }
+.dash-row .btn, .dash-focus-row .btn { flex: none; }
+.dash-row .pill { white-space: nowrap; }
