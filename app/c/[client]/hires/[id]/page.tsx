@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ReactNode, Suspense, useMemo, useRef, useState } from "react";
 import { ClientNav, ClientTopbar, Sheet, Toast, useGuard, useToast } from "@/components/ui";
 import { Checks, HireDraft, HireForm, startsIn, Tracker } from "@/components/hires";
@@ -31,6 +31,10 @@ function HireInner() {
   const [editing, setEditing] = useState<HireDraft | null>(null);
   const [drafting, setDrafting] = useState<null | "offer" | "agreement">(null);
   const [filling, setFilling] = useState<null | "offer" | "agreement">(null);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [removeTasks, setRemoveTasks] = useState(true);
+  const [removing, setRemoving] = useState(false);
+  const router = useRouter();
   const [preview, setPreview] = useState<null | "welcome" | "firstDay">(null);
   const [busy, setBusy] = useState("");
   const [confirmSign, setConfirmSign] = useState<NonNullable<Hire["docs"]>[number] | null>(null);
@@ -246,6 +250,11 @@ function HireInner() {
       <ClientNav clientId={client.id} />
       <main className="wrap wide">
         <Link href={isAdvisor && q.get("from") === "console" ? "/console/hires" : `/c/${clientId}/hires`} className="small" style={{ color: "var(--blue)" }}>← New hires</Link>
+        {isAdvisor && (
+          <button className="linklike tiny" style={{ float: "right", color: "var(--red)", marginTop: 4 }} onClick={() => setConfirmRemove(true)}>
+            Remove new hire
+          </button>
+        )}
 
         {q.get("new") && !isAdvisor && (
           <div className="card section small" style={{ borderLeft: "3px solid var(--green)" }}>Sent to Ben. He'll draft the offer letter and send it to you to approve.</div>
@@ -472,6 +481,44 @@ function HireInner() {
           }
         />
       )}
+      {confirmRemove && (() => {
+        const openTasks = myTasks.filter((a) => a.status !== "completed");
+        const liveLinks = (["offer", "agreement"] as const).filter((k) => sig[k] && (sig[k]!.status === "sent" || sig[k]!.status === "viewed"));
+        return (
+          <Sheet title={`Remove ${h.name || "this new hire"}?`} onClose={() => !removing && setConfirmRemove(false)}>
+            <p className="small">
+              {h.name || "This hire"}{h.title ? ` (${h.title})` : ""} comes off {client.name}&apos;s new hires for everyone, with their details, checklist and history. Documents already saved stay in Files. This can&apos;t be undone.
+            </p>
+            {liveLinks.length > 0 && <p className="small" style={{ marginTop: 8 }}>Their open signing link{liveLinks.length > 1 ? "s" : ""} for the {liveLinks.map((k) => (k === "offer" ? "offer letter" : "agreement")).join(" and ")} will stop working.</p>}
+            {openTasks.length > 0 && (
+              <label className="rule" style={{ cursor: "pointer", marginTop: 10 }}>
+                <input type="checkbox" checked={removeTasks} onChange={(e) => setRemoveTasks(e.target.checked)} />
+                <div>
+                  <b className="small">Also remove {openTasks.length} open task{openTasks.length > 1 ? "s" : ""} for this hire</b>
+                  <div className="tiny muted">{openTasks.map((a) => a.title).join(" · ")}</div>
+                </div>
+              </label>
+            )}
+            <div className="sheet-actions">
+              <button className="btn ghost sm" disabled={removing} onClick={() => setConfirmRemove(false)}>Cancel</button>
+              <button
+                className="btn sm"
+                style={{ background: "var(--red)", borderColor: "var(--red)", color: "#fff" }}
+                disabled={removing}
+                onClick={async () => {
+                  setRemoving(true);
+                  if (LIVE) for (const k of liveLinks) await requestSignature(h.id, "", k, true).catch(() => null);
+                  const drop = new Set(removeTasks ? openTasks.map((a) => a.id) : []);
+                  patch({ hires: hires.filter((x) => x.id !== h.id), ...(drop.size ? { actions: actions.filter((a) => !drop.has(a.id)) } : {}) });
+                  router.push(q.get("from") === "console" ? "/console/hires" : `/c/${clientId}/hires`);
+                }}
+              >
+                {removing ? "Removing..." : "Remove"}
+              </button>
+            </div>
+          </Sheet>
+        );
+      })()}
       {confirmSign && (
         <Sheet title={`Send for e-signature?`} onClose={() => setConfirmSign(null)}>
           <p className="small">
