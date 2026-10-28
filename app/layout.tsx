@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { StoreProvider } from "@/lib/store";
 import { DemoBar } from "@/components/demobar";
+import { PreviewBar } from "@/components/preview";
 
 export const metadata: Metadata = {
   title: "AlzaHR Client Portal",
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <StoreProvider>
           <DemoBar />
+          <PreviewBar />
           {children}
         </StoreProvider>
       </body>

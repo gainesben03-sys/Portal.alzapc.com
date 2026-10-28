@@ -78,14 +78,15 @@ export function ActionCard({
 }
 
 export function useGuard(kind: "advisor" | "client", clientId?: string) {
-  const { ready, viewer } = useStore();
+  const { ready, viewer, preview } = useStore();
   const router = useRouter();
   const ok =
     !!viewer &&
     (viewer.kind === "advisor" || (kind === "client" && viewer.kind === "client" && viewer.clientId === clientId));
   useEffect(() => {
-    if (ready && !ok) router.replace("/");
-  }, [ready, ok, router]);
+    // while previewing as a client, anything outside their portal goes to their home page
+    if (ready && !ok) router.replace(preview ? (preview.access === "hiring" ? `/c/${preview.clientId}/recruiting` : `/c/${preview.clientId}`) : "/");
+  }, [ready, ok, router, preview]);
   return ready && ok;
 }
 

@@ -6,7 +6,7 @@ import { addDaysISO, analyze, daysUntil, Hire, officeList, OnboardingSettings, p
 import { PortalUser } from "@/lib/modules";
 
 /** Pizza-tracker style progress: six stops, the current one pulses. */
-export function Tracker({ h, compact }: { h: Pick<Hire, "status" | "startDate">; compact?: boolean }) {
+export function Tracker({ h, compact, noLabels }: { h: Pick<Hire, "status" | "startDate">; compact?: boolean; noLabels?: boolean }) {
   const cur = stageIndex(h.status);
   return (
     <div className={`tracker ${compact ? "compact" : ""}`} role="img" aria-label={`Stage: ${h.status}`}>
@@ -17,7 +17,7 @@ export function Tracker({ h, compact }: { h: Pick<Hire, "status" | "startDate">;
         {STAGES.map((s, i) => (
           <li key={s} className={i < cur ? "done" : i === cur ? "now" : ""}>
             <span className="dot">{i < cur ? "✓" : i + 1}</span>
-            <span className="lbl">{STAGE_SHORT[s]}</span>
+            {!noLabels && <span className="lbl">{STAGE_SHORT[s]}</span>}
           </li>
         ))}
       </ol>

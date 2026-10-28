@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { NewTaskSheet } from "@/components/newtask";
+import { previewLanding, ViewAsSheet } from "@/components/preview";
+import { useRouter } from "next/navigation";
 import { DraftPanel } from "@/components/draft";
 import { AlzaNav, AlzaTopbar, Toast, useGuard, useToast } from "@/components/ui";
 import { daysSince } from "@/lib/modules";
@@ -35,7 +37,7 @@ type Focus = { key: string; score: number; clientId?: string; title: string; why
 
 export default function Console() {
   const ok = useGuard("advisor");
-  const { actions, rules, update, notes, candidates, roles, getClient, files, clients, live, hires } = useStore();
+  const { actions, rules, update, notes, candidates, roles, getClient, files, clients, live, hires, setPreview } = useStore();
   const toast = useToast();
   const [creating, setCreating] = useState(false);
   const [freeDraft, setFreeDraft] = useState<string | null>(null);
@@ -43,6 +45,8 @@ export default function Console() {
   const [sortBy, setSortBy] = useState<SortBy>("due");
   const [showAllFocus, setShowAllFocus] = useState(false);
   const [letters, setLetters] = useState<Newsletter[]>([]);
+  const [viewAs, setViewAs] = useState(false);
+  const router = useRouter();
 
   // remember the filter and sort between visits
   useEffect(() => {
@@ -163,6 +167,7 @@ export default function Console() {
           {clients.length > 0 && (
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
               {live && <button className="btn sm" onClick={() => setFreeDraft(only !== "all" ? only : clients[0].id)}><span className="spark" aria-hidden="true">✦</span> Draft with Claude</button>}
+              <button className="btn sm" onClick={() => setViewAs(true)}>View as client</button>
               <button className="btn primary sm" onClick={() => setCreating(true)}>New request</button>
             </div>
           )}
@@ -383,6 +388,17 @@ export default function Console() {
             <p className="tiny muted" style={{ marginTop: 8 }}>To share it with the client, draft it from a task instead, or download it and upload it to their folder.</p>
           </div>
         </div>
+      )}
+      {viewAs && (
+        <ViewAsSheet
+          initialClient={only !== "all" ? only : undefined}
+          onClose={() => setViewAs(false)}
+          onPick={(p) => {
+            setViewAs(false);
+            setPreview(p);
+            router.push(previewLanding(p));
+          }}
+        />
       )}
       {creating && <NewTaskSheet onClose={() => setCreating(false)} onCreated={(m) => { setCreating(false); toast.show(m); }} />}
       <Toast msg={toast.msg} onDone={toast.clear} />

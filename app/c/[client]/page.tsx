@@ -206,7 +206,8 @@ export default function Home() {
             <Link href={`${base}/hires/${h.id}`} className="row hire-mini" key={h.id}>
               <div className="grow" style={{ minWidth: 0 }}>
                 <div className="title">{h.name} <span className="tiny muted">· {h.title}</span></div>
-                <Tracker h={h} compact />
+                <Tracker h={h} compact noLabels />
+                <div className="tiny muted" style={{ marginTop: 4 }}>{h.status}</div>
               </div>
               <div style={{ textAlign: "right", flexShrink: 0 }}>
                 <div className="small"><b>{h.startDate ? shortDate(h.startDate) : "TBD"}</b></div>

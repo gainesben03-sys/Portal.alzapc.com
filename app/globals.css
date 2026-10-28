@@ -615,3 +615,11 @@ video.pitch-live[controls] { height: auto; max-height: 62vh; object-fit: contain
 .legend-dash { border-top: 2px dashed var(--muted); }
 @media (prefers-reduced-motion: reduce) { .steptrack-bar span.now::after { animation: none; } }
 @media (max-width: 520px) { .proj-hero { flex-direction: column; align-items: flex-start; } }
+
+/* view as client */
+.preview-bar { position: sticky; top: 0; z-index: 60; display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: #B8893B; color: #1c1a19; font-size: 13px; box-shadow: 0 2px 10px rgba(0,0,0,.15); }
+.preview-bar.flash { background: #1c1a19; color: #fff; }
+.preview-bar .pv-btn { border: 1px solid rgba(0,0,0,.25); background: rgba(255,255,255,.35); color: inherit; border-radius: 99px; padding: 5px 12px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.preview-bar.flash .pv-btn { border-color: rgba(255,255,255,.4); background: transparent; }
+.preview-bar .pv-btn.strong { background: #1c1a19; color: #fff; border-color: #1c1a19; }
+@media (max-width: 520px) { .preview-bar .pv-sub { display: none; } }

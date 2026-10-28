@@ -40,6 +40,33 @@ interface Store extends State {
   reset: () => void;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
+  /** Ben looking at the portal as one of a client's people. Read-only. */
+  preview: Preview | null;
+  setPreview: (p: Preview | null) => void;
+}
+
+export type Preview = { clientId: string; email: string; name: string; role: string; access: PortalUser["access"] };
+const PREVIEW_KEY = "alza-preview";
+
+/** While previewing, nothing may be written: block any non-read request except keeping Ben signed in. */
+let realFetch: typeof fetch | null = null;
+function guardWrites(on: boolean) {
+  if (typeof window === "undefined") return;
+  if (on && !realFetch) {
+    realFetch = window.fetch.bind(window);
+    window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+      const method = (init?.method || (input instanceof Request ? input.method : "GET")).toUpperCase();
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (method !== "GET" && method !== "HEAD" && !/\/auth\/v1\//.test(url)) {
+        window.dispatchEvent(new Event("alza-preview-blocked"));
+        return Promise.resolve(new Response(JSON.stringify({ ok: false, sent: false, reason: "preview", message: "Preview is read-only" }), { status: 200, headers: { "Content-Type": "application/json" } }));
+      }
+      return realFetch!(input, init);
+    };
+  } else if (!on && realFetch) {
+    window.fetch = realFetch;
+    realFetch = null;
+  }
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -51,6 +78,20 @@ type Who = { email: string; advisor: boolean; memberships: { clientId: string; n
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [viewer, setViewerState] = useState<Viewer | null>(null);
+  const [preview, setPreviewState] = useState<Preview | null>(null);
+  useEffect(() => {
+    try {
+      const p = sessionStorage.getItem(PREVIEW_KEY);
+      if (p) setPreviewState(JSON.parse(p));
+    } catch {}
+  }, []);
+  const setPreview = useCallback((p: Preview | null) => {
+    try {
+      if (p) sessionStorage.setItem(PREVIEW_KEY, JSON.stringify(p));
+      else sessionStorage.removeItem(PREVIEW_KEY);
+    } catch {}
+    setPreviewState(p);
+  }, []);
   const [state, setState] = useState<State>(emptyState);
   const [noAccess, setNoAccess] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -242,7 +283,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const previewing = !!preview && viewer?.kind === "advisor";
+  useEffect(() => {
+    guardWrites(previewing);
+    return () => guardWrites(false);
+  }, [previewing]);
+
   const value = useMemo<Store>(() => {
+    if (previewing && preview) return previewStore();
     const who = viewer?.kind === "client" ? viewer.person.name : ADVISOR.name;
     const getClient = (id: string): Client | undefined => {
       const base = state.clients.find((c) => c.id === id);
@@ -264,7 +312,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             viewer.person.email ? u.email.toLowerCase() === viewer.person.email.toLowerCase() : u.name === viewer.person.name
           ) ?? null
         : null;
-    return {
+    const main: Store = {
       ...state,
       live: LIVE,
       me,
@@ -336,8 +384,61 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       refresh: async () => {
         if (LIVE) await load();
       },
+      preview: null,
+      setPreview,
     };
-  }, [ready, viewer, state, noAccess, saving, saveError, setViewer, load]);
+
+    /** What the chosen client person would see, with every change switched off. */
+    function previewStore(): Store {
+      const p = preview!;
+      const blocked = () => {
+        if (typeof window !== "undefined") window.dispatchEvent(new Event("alza-preview-blocked"));
+      };
+      const pv: Viewer = { kind: "client", clientId: p.clientId, person: { name: p.name, role: p.role, email: p.email } };
+      const cfg = state.config[p.clientId];
+      const meUser: PortalUser = cfg?.users.find((u) => p.email && u.email.toLowerCase() === p.email.toLowerCase()) ?? { name: p.name, role: p.role, email: p.email, access: p.access };
+      const base = state.clients.find((c) => c.id === p.clientId);
+      const getClient = (id: string): Client | undefined => {
+        const b = state.clients.find((c) => c.id === id);
+        if (!b) return undefined;
+        const c = state.config[id];
+        if (!c) return b;
+        const esc = c.users.find((u) => u.email.toLowerCase() === (c.escalationEmail || "").toLowerCase());
+        return { ...b, accent: c.accent, logo: c.logo, contacts: c.users.map(({ name, role, email }) => ({ name, role, email })), escalation: esc ? { name: esc.name, role: esc.role, email: esc.email } : b.escalation };
+      };
+      return {
+        ...state,
+        // only what this person's account could load
+        clients: base ? [base] : [],
+        candidates: state.candidates.filter((c) => !c.hidden),
+        files: state.files.filter((f) => !f.confidential || f.by === p.name),
+        live: LIVE,
+        me: meUser,
+        ready,
+        viewer: pv,
+        who: p.name,
+        noAccess: null,
+        saving: false,
+        saveError: null,
+        setViewer: () => setPreview(null),
+        getClient,
+        setRules: blocked,
+        patch: blocked,
+        updateHire: blocked,
+        notice: blocked,
+        update: blocked,
+        reset: blocked,
+        signOut: async () => setPreview(null),
+        refresh: async () => {
+          if (LIVE) await load();
+        },
+        preview: p,
+        setPreview,
+      };
+    }
+    return main;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, viewer, state, noAccess, saving, saveError, setViewer, load, preview, previewing, setPreview]);
 
   return (
     <Ctx.Provider value={value}>
