@@ -8,6 +8,7 @@ import { ADVISOR, fmt, fmtTime, parseDay, projectProgress, today, urgency } from
 import { canSee, daysSince, DEFAULT_TILES, Note, TILES } from "@/lib/modules";
 import { notifyBen, useStore } from "@/lib/store";
 import { AskBenSheet } from "@/components/askben";
+import { currentStep, HealthChip, projectHealth, StepTrack } from "@/components/projectprogress";
 import { Tracker, startsIn } from "@/components/hires";
 import { shortDate } from "@/lib/hires";
 
@@ -118,14 +119,16 @@ export default function Home() {
               const pct = projectProgress(p);
               const held = openClient.find((a) => a.projectId === p.id && ["overdue", "blocker"].includes(urgency(a, rules)));
               return (
-                <Link href={`${base}/projects`} key={p.id} className="proj-mini">
+                <Link href={`${base}/projects/${p.id}`} key={p.id} className="proj-mini">
                   <div className="row" style={{ alignItems: "baseline" }}>
                     <b className="ellipsis">{p.name}</b>
                     <span className="small muted">{pct}%</span>
                   </div>
-                  <div className="bar"><div style={{ width: `${pct}%` }} /></div>
-                  <div className="tiny muted" style={{ marginTop: 6 }}>Next: {p.nextMilestone} · {fmt(p.milestoneDue)}</div>
-                  {held && <div className="tiny" style={{ color: "var(--red)", marginTop: 4 }}>Held up by an overdue item</div>}
+                  <div style={{ marginTop: 8 }}><StepTrack p={p} /></div>
+                  <div className="tiny muted" style={{ marginTop: 6 }}>
+                    {currentStep(p) >= 0 ? <>Now: {p.steps[currentStep(p)].text}</> : <>Next: {p.nextMilestone}</>} · {fmt(p.milestoneDue)}
+                  </div>
+                  {held ? <div className="tiny" style={{ color: "var(--red)", marginTop: 4 }}>Held up by an overdue item</div> : <div style={{ marginTop: 6 }}><HealthChip h={projectHealth(p, actions.filter((a) => a.projectId === p.id), rules)} /></div>}
                 </Link>
               );
             })}

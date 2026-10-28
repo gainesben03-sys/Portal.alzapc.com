@@ -43,7 +43,7 @@ interface Store extends State {
 }
 
 const Ctx = createContext<Store | null>(null);
-const KEY = "alza-portal-demo-v8";
+const KEY = "alza-portal-demo-v9";
 export const PENDING_INVITE = "alza-pending-invite";
 
 type Who = { email: string; advisor: boolean; memberships: { clientId: string; name: string; role: string; access: string }[] };

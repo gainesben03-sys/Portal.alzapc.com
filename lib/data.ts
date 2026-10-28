@@ -66,6 +66,7 @@ export interface Subtask {
   id: string;
   text: string;
   done: boolean;
+  doneAt?: string; // when it was checked off (drives the project progress chart)
 }
 
 export interface PersonalReminder {
@@ -91,6 +92,7 @@ export interface Project {
   steps: Subtask[]; // progress is computed from these
   nextMilestone: string;
   milestoneDue: string; // target date (planned: start target, done: completion date)
+  startedAt?: string; // when it moved to In progress
 }
 
 export function projectProgress(p: Project): number {
@@ -535,9 +537,10 @@ export function seed(): { actions: Action[]; projects: Project[] } {
       name: "Org structure refresh",
       status: "active",
       summary: "New reporting lines and updated job descriptions for production.",
-      steps: [{ id: "st0", text: "Interview department leads", done: true }, { id: "st1", text: "Draft proposed structure", done: true }, { id: "st2", text: "Leadership workshop", done: true }, { id: "st3", text: "Updated job descriptions approved", done: false }, { id: "st4", text: "Finalize org chart", done: false }],
+      steps: [{ id: "st0", text: "Interview department leads", done: true, doneAt: due(-20) }, { id: "st1", text: "Draft proposed structure", done: true, doneAt: due(-14) }, { id: "st2", text: "Leadership workshop", done: true, doneAt: due(-6) }, { id: "st3", text: "Updated job descriptions approved", done: false }, { id: "st4", text: "Finalize org chart", done: false }],
       nextMilestone: "Finalize org chart",
       milestoneDue: due(5),
+      startedAt: due(-28),
     },
     {
       id: "bp-p2",
@@ -545,9 +548,10 @@ export function seed(): { actions: Action[]; projects: Project[] } {
       name: "Senior Producer search",
       status: "active",
       summary: "Full-cycle search for a senior producer.",
-      steps: [{ id: "st0", text: "Intake and scorecard", done: true }, { id: "st1", text: "Sourcing", done: true }, { id: "st2", text: "Screening", done: true }, { id: "st3", text: "Finalists to client", done: true }, { id: "st4", text: "Client feedback", done: false }, { id: "st5", text: "Offer and close", done: false }],
+      steps: [{ id: "st0", text: "Intake and scorecard", done: true, doneAt: due(-30) }, { id: "st1", text: "Sourcing", done: true, doneAt: due(-22) }, { id: "st2", text: "Screening", done: true, doneAt: due(-15) }, { id: "st3", text: "Finalists to client", done: true, doneAt: due(-8) }, { id: "st4", text: "Client feedback", done: false }, { id: "st5", text: "Offer and close", done: false }],
       nextMilestone: "Offer extended",
       milestoneDue: due(4),
+      startedAt: due(-35),
     },
     {
       id: "bp-p3",
@@ -558,6 +562,7 @@ export function seed(): { actions: Action[]; projects: Project[] } {
       steps: [{ id: "st0", text: "Collect current balances", done: false }, { id: "st1", text: "Draft policy", done: false }, { id: "st2", text: "Leadership review", done: false }, { id: "st3", text: "Employee announcement", done: false }],
       nextMilestone: "Policy approved",
       milestoneDue: due(10),
+      startedAt: due(-4),
     },
     {
       id: "bp-r1",

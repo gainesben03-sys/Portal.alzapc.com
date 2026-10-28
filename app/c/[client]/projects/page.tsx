@@ -1,17 +1,19 @@
 "use client";
 
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { ClientNav, ClientTopbar, Sheet, Toast, useGuard, useToast } from "@/components/ui";
 import { addBusinessDays, fmt, parseDay, Project, projectProgress, toISO, today } from "@/lib/data";
 import { useStore } from "@/lib/store";
+import { currentStep, HealthChip, projectHealth, StepTrack } from "@/components/projectprogress";
 
 type Tab = "active" | "planned" | "done";
 
 export default function Projects() {
   const { client: clientId } = useParams<{ client: string }>();
   const ok = useGuard("client", clientId);
-  const { getClient, projects, actions, patch, viewer, live } = useStore();
+  const { getClient, projects, actions, patch, viewer, live, rules } = useStore();
   const client = getClient(clientId);
   const [tab, setTab] = useState<Tab>("active");
   const [adding, setAdding] = useState(false);
@@ -63,23 +65,27 @@ export default function Projects() {
             by("active").map((p) => {
               const pct = projectProgress(p);
               const waiting = actions.filter((a) => a.projectId === p.id && a.status !== "completed");
+              const h = projectHealth(p, actions.filter((a) => a.projectId === p.id), rules);
+              const cur = currentStep(p);
               return (
                 <div className="card" key={p.id}>
                   <div className="row" style={{ alignItems: "baseline" }}>
-                    <h3>{p.name}</h3>
-                    <span className="small muted">{pct}%</span>
+                    <h3><Link href={`/c/${client.id}/projects/${p.id}`} style={{ color: "inherit" }}>{p.name}</Link></h3>
+                    <span className="proj-pct">{pct}%</span>
                   </div>
-                  <p className="small muted" style={{ marginTop: 4 }}>{p.summary}</p>
+                  <div style={{ marginTop: 6 }}><HealthChip h={h} /></div>
+                  <p className="small muted" style={{ marginTop: 6 }}>{p.summary}</p>
                   {isAdvisor && <button className="linklike tiny" style={{ color: "var(--red)", marginTop: 4 }} onClick={() => setDel(p)}>Delete project</button>}
-                  <div className="bar"><div style={{ width: `${pct}%` }} /></div>
+                  <div style={{ marginTop: 10 }}><StepTrack p={p} /></div>
+                  {cur >= 0 && <div className="tiny" style={{ marginTop: 6 }}><b>Now:</b> {p.steps[cur].text}{p.steps[cur + 1] ? <span className="muted"> · Next: {p.steps[cur + 1].text}</span> : null}</div>}
                   <div style={{ marginTop: 8 }}>
-                    {p.steps.map((s) => (
+                    {isAdvisor && p.steps.map((s) => (
                       <label key={s.id} className={`check ${s.done ? "done" : ""}`} style={{ cursor: isAdvisor ? "pointer" : "default" }}>
                         <input
                           type="checkbox"
                           checked={s.done}
                           disabled={!isAdvisor}
-                          onChange={() => setP(p.id, { steps: p.steps.map((x) => (x.id === s.id ? { ...x, done: !x.done } : x)) })}
+                          onChange={() => setP(p.id, { steps: p.steps.map((x) => (x.id === s.id ? { ...x, done: !x.done, doneAt: !x.done ? new Date().toISOString() : undefined } : x)) })}
                         />
                         <span>{s.text}</span>
                       </label>
@@ -91,7 +97,8 @@ export default function Projects() {
                     </div>
                   )}
                   <div className="action-foot">
-                    <span className="tiny muted">Next: {p.nextMilestone} · target {fmt(p.milestoneDue)}</span>
+                    <span className="tiny muted">Target {fmt(p.milestoneDue)}</span>
+                    <Link className="btn sm" href={`/c/${client.id}/projects/${p.id}`}>See progress</Link>
                     {isAdvisor && pct === 100 && (
                       <button className="btn sm primary" style={{ marginLeft: "auto" }} onClick={() => { setP(p.id, { status: "done", milestoneDue: toISO(today()) }); toast.show("Moved to Completed"); }}>
                         Mark complete
@@ -125,6 +132,7 @@ export default function Projects() {
                             onClick={() => {
                               setP(p.id, {
                                 status: "active",
+                                startedAt: new Date().toISOString(),
                                 steps: p.steps.length ? p.steps : [{ id: "k1", text: "Kickoff", done: false }, { id: "k2", text: "Draft", done: false }, { id: "k3", text: "Client review", done: false }, { id: "k4", text: "Roll out", done: false }],
                                 nextMilestone: "Kickoff",
                               });
@@ -164,7 +172,7 @@ export default function Projects() {
           onClose={() => setAdding(false)}
           onAdd={(name, summary, date, steps, active) => {
             const st = steps.map((text, i) => ({ id: `st${i}`, text, done: false }));
-            patch({ projects: [...projects, { id: `p${Date.now().toString(36)}`, clientId: client.id, name, summary, status: active ? "active" : "planned", steps: st, nextMilestone: st[0]?.text ?? "Kickoff", milestoneDue: date }] });
+            patch({ projects: [...projects, { id: `p${Date.now().toString(36)}`, clientId: client.id, name, summary, status: active ? "active" : "planned", startedAt: active ? new Date().toISOString() : undefined, steps: st, nextMilestone: st[0]?.text ?? "Kickoff", milestoneDue: date }] });
             setAdding(false);
             setTab(active ? "active" : "planned");
             toast.show(active ? "Project started" : "Added to the roadmap");
