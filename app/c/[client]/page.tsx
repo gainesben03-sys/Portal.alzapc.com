@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { ReactNode, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { ReactNode, useEffect, useState } from "react";
 import { ClientNav, ClientTopbar, Sheet, Toast, UrgencyPill, useGuard, useToast } from "@/components/ui";
 import { ADVISOR, fmt, fmtTime, parseDay, projectProgress, today, urgency } from "@/lib/data";
 import { canSee, daysSince, DEFAULT_TILES, Note, TILES } from "@/lib/modules";
@@ -36,6 +36,15 @@ export default function Home() {
   const { actions, projects, rules, viewer, update, getClient, config, me, patch, notes, candidates, roles, files, resources, announcements, bookingUrl, layouts, notice, who, hires } = s;
   const client = getClient(clientId);
   const [editing, setEditing] = useState(false);
+  const [previewNote, setPreviewNote] = useState(false);
+  const router = useRouter();
+  // "Exit preview and customize" lands here with ?customize=1
+  useEffect(() => {
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("customize") === "1" && viewer?.kind === "advisor") {
+      setEditing(true);
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, [viewer]);
   const [asking, setAsking] = useState(false);
   const [askKind, setAskKind] = useState<string | undefined>(undefined);
   const [msg, setMsg] = useState("");
@@ -342,7 +351,7 @@ export default function Home() {
               {overdue.length + dueToday.length === 0 ? "You're all caught up." : ` across ${client.name}.`}
             </p>
           </div>
-          <button className="btn sm" onClick={() => setEditing(true)}>Customize</button>
+          <button className="btn sm" onClick={() => (s.preview ? setPreviewNote(true) : setEditing(true))}>Customize</button>
         </div>
 
         <div className="dash section" style={{ marginTop: 16 }}>
@@ -359,6 +368,25 @@ export default function Home() {
         <p className="demo-note">Fictional sample data for the prototype.</p>
       </main>
 
+      {previewNote && (
+        <Sheet title="Customize is off in preview" onClose={() => setPreviewNote(false)}>
+          <p className="small">Nothing can be changed while you&apos;re viewing as {s.preview?.name}. To change which tiles {client.name}&apos;s people see, set their default tiles as yourself.</p>
+          <div className="sheet-actions">
+            <button className="btn ghost sm" onClick={() => setPreviewNote(false)}>Stay in preview</button>
+            <button
+              className="btn primary sm"
+              onClick={() => {
+                s.setPreview(null);
+                setPreviewNote(false);
+                router.replace(`/c/${client.id}`);
+                setEditing(true);
+              }}
+            >
+              Exit and set default tiles
+            </button>
+          </div>
+        </Sheet>
+      )}
       {editing && (
         <CustomizeSheet
           title={isAdvisor ? `Default tiles for ${client.name}` : "Customize your dashboard"}
@@ -393,6 +421,23 @@ function withNewTiles(saved: string[]): string[] {
   return out;
 }
 
+/** Turning a tile on puts it back where it normally sits (not at the bottom); turning it off leaves it in place. */
+function toggle(list: { id: string; on: boolean }[], id: string) {
+  const item = list.find((x) => x.id === id)!;
+  if (item.on) return list.map((x) => (x.id === id ? { ...x, on: false } : x));
+  const rank = (tid: string) => {
+    const d = DEFAULT_TILES.indexOf(tid);
+    return d >= 0 ? d : DEFAULT_TILES.length + TILES.findIndex((t) => t.id === tid);
+  };
+  const rest = list.filter((x) => x.id !== id);
+  const ons = rest.filter((x) => x.on);
+  // first switched-on tile that normally comes after this one
+  const before = ons.find((x) => rank(x.id) > rank(id));
+  const at = before ? rest.indexOf(before) : rest.filter((x) => x.on).length ? rest.indexOf(ons[ons.length - 1]) + 1 : 0;
+  rest.splice(at, 0, { id, on: true });
+  return rest;
+}
+
 function CustomizeSheet({ title, note, available, order, onClose, onSave, onReset }: { title: string; note: string; available: typeof TILES; order: string[]; onClose: () => void; onSave: (ids: string[]) => void; onReset: () => void }) {
   const [list, setList] = useState<{ id: string; on: boolean }[]>(() => [
     ...order.map((id) => ({ id, on: true })),
@@ -413,7 +458,7 @@ function CustomizeSheet({ title, note, available, order, onClose, onSave, onRese
           const t = available.find((a) => a.id === x.id)!;
           return (
             <div className="check" key={x.id} style={{ alignItems: "center" }}>
-              <input type="checkbox" checked={x.on} onChange={() => setList(list.map((y) => (y.id === x.id ? { ...y, on: !y.on } : y)))} aria-label={`Show ${t.label}`} />
+              <input type="checkbox" checked={x.on} onChange={() => setList(toggle(list, x.id))} aria-label={`Show ${t.label}`} />
               <span style={{ flex: 1 }}>
                 <b className="small">{t.label}</b>
                 <span className="tiny muted" style={{ display: "block", textDecoration: "none" }}>{t.blurb}</span>
