@@ -9,8 +9,8 @@ import { canSee, daysSince, DEFAULT_TILES, Note, TILES } from "@/lib/modules";
 import { notifyBen, useStore } from "@/lib/store";
 import { AskBenSheet } from "@/components/askben";
 import { currentStep, HealthChip, projectHealth, StepTrack } from "@/components/projectprogress";
-import { Tracker, startsIn } from "@/components/hires";
-import { shortDate } from "@/lib/hires";
+import { HireProgressCard, hireTasks } from "@/components/hires";
+import { daysUntil, onboardingFor, shortDate } from "@/lib/hires";
 
 const ORDER = { blocker: 0, overdue: 1, today: 2, soon: 3, later: 4, done: 5 } as const;
 
@@ -209,24 +209,24 @@ export default function Home() {
       );
     },
     hires: () => {
-      const list = hires.filter((h) => h.clientId === client.id && h.status !== "Started").sort((a, b) => (a.startDate || "9999").localeCompare(b.startDate || "9999"));
+      const recent = (h: (typeof hires)[number]) => h.status === "Started" && !!h.startDate && daysUntil(h.startDate) >= -14;
+      const list = hires
+        .filter((h) => h.clientId === client.id && (h.status !== "Started" || recent(h)))
+        .sort((a, b) => (a.status === "Started" ? 1 : 0) - (b.status === "Started" ? 1 : 0) || (a.startDate || "9999").localeCompare(b.startDate || "9999"));
+      const inProgress = list.filter((h) => h.status !== "Started");
+      const s = onboardingFor(cfg?.onboarding);
+      const thisMonth = inProgress.filter((h) => h.startDate && daysUntil(h.startDate) >= 0 && daysUntil(h.startDate) <= 30).length;
       return (
-        <Tile title="New hires" count={list.length} href={`${base}/hires`} wide>
-          {list.slice(0, 3).map((h) => (
-            <Link href={`${base}/hires/${h.id}`} className="row hire-mini" key={h.id}>
-              <div className="grow" style={{ minWidth: 0 }}>
-                <div className="title">{h.name} <span className="tiny muted">· {h.title}</span></div>
-                <Tracker h={h} compact noLabels />
-                <div className="tiny muted" style={{ marginTop: 4 }}>{h.status}</div>
-              </div>
-              <div style={{ textAlign: "right", flexShrink: 0 }}>
-                <div className="small"><b>{h.startDate ? shortDate(h.startDate) : "TBD"}</b></div>
-                <div className="tiny muted">{startsIn(h.startDate)}</div>
-              </div>
-            </Link>
-          ))}
+        <Tile title="New hires" count={inProgress.length} href={`${base}/hires`} linkLabel="All new hires" wide>
+          {inProgress.length > 0 && <p className="tiny muted" style={{ margin: "-4px 0 10px" }}>{inProgress.length} in progress{thisMonth ? `, ${thisMonth} starting in the next 30 days` : ""}.</p>}
           {list.length === 0 && <p className="small muted">No one in progress. Start a new hire when you&apos;re ready to make an offer.</p>}
-          {(isAdvisor || me?.access === "exec") && <Link href={`${base}/hires/new`} className="btn block" style={{ marginTop: 10 }}>Add a new hire</Link>}
+          <div className="proj-grid">
+            {list.slice(0, 6).map((h) => (
+              <HireProgressCard key={h.id} h={h} href={`${base}/hires/${h.id}`} tasks={hireTasks(h, actions)} s={s} rules={rules} />
+            ))}
+          </div>
+          {list.length > 6 && <Link href={`${base}/hires`} className="tiny" style={{ display: "block", marginTop: 8, color: "var(--blue)" }}>See all {list.length}</Link>}
+          {(isAdvisor || me?.access === "exec") && <Link href={`${base}/hires/new`} className="btn ghost sm" style={{ marginTop: 10, display: "inline-flex" }}>+ Add a new hire</Link>}
         </Tile>
       );
     },

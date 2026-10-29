@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { addDaysISO, analyze, daysUntil, Hire, officeList, OnboardingSettings, payLine, shortDate, STAGES, STAGE_SHORT, stageIndex } from "@/lib/hires";
+import { addDaysISO, analyze, daysUntil, firstName, Hire, officeList, OnboardingSettings, payLine, shortDate, STAGES, STAGE_SHORT, stageIndex } from "@/lib/hires";
+import { Action, Rules, urgency } from "@/lib/data";
 import { PortalUser } from "@/lib/modules";
 
 /** Pizza-tracker style progress: six stops, the current one pulses. */
@@ -22,6 +23,82 @@ export function Tracker({ h, compact, noLabels }: { h: Pick<Hire, "status" | "st
         ))}
       </ol>
     </div>
+  );
+}
+
+/** Tasks that belong to one hire (offer approval, first-day prep, payroll setup...). */
+export function hireTasks(h: Pick<Hire, "clientId" | "name" | "firstName">, actions: Action[]) {
+  const first = firstName(h);
+  return actions.filter((a) => a.clientId === h.clientId && !!h.name && (a.title.includes(h.name) || (a.title === `Get ready for ${first}'s first day` && !!a.history[0]?.text.includes(h.name))));
+}
+
+/** Who acts next on a hire, in plain words. */
+export function hireNext(h: Hire, tasks: Action[], s: OnboardingSettings, escalationName?: string) {
+  const first = firstName(h);
+  const open = tasks.filter((a) => a.status !== "completed");
+  const clientTask = open.find((a) => a.side === "client");
+  switch (stageIndex(h.status)) {
+    case 0:
+      if (clientTask && clientTask.kind === "approval") return `Waiting on ${clientTask.owner.name.split(" ")[0]} to approve the offer`;
+      return (h.docs ?? []).some((d) => d.kind === "offer") ? `Offer letter ready to send` : `Ben is preparing the offer letter`;
+    case 1:
+      return h.esign?.offer?.status === "viewed" ? `${first} opened the offer, not signed yet` : `Waiting on ${first} to sign the offer`;
+    case 2:
+      return clientTask ? `${clientTask.title} (${clientTask.owner.name.split(" ")[0]})` : `Ben is setting up payroll and paperwork`;
+    case 3:
+      if (clientTask) return `${clientTask.title} (${clientTask.owner.name.split(" ")[0]})`;
+      return h.startDate && s.autoSend ? `First-day email goes out ${shortDate(addDaysISO(h.startDate, -s.firstDayDaysBefore))}` : `First-day email is next`;
+    case 4:
+      return clientTask ? `${clientTask.title} (${clientTask.owner.name.split(" ")[0]})` : `All set for day one`;
+    default:
+      return `On the team${escalationName ? "" : ""}`;
+  }
+}
+
+export type HireBadge = { label: string; tone: "green" | "amber" | "red" | "done" };
+export function hireBadge(h: Hire, tasks: Action[], rules: Rules): HireBadge {
+  const stage = stageIndex(h.status);
+  if (stage >= 5) return { label: "Started", tone: "done" };
+  const open = tasks.filter((a) => a.side === "client" && a.status !== "completed");
+  if (open.some((a) => ["overdue", "blocker"].includes(urgency(a, rules)))) return { label: "Needs you", tone: "red" };
+  const n = h.startDate ? daysUntil(h.startDate) : 99;
+  if (n <= 7 && stage < 3) return { label: "Tight for the start date", tone: "red" };
+  if (open.length) return { label: "Needs you", tone: "amber" };
+  if (n <= 7) return { label: n <= 0 ? "Starts today" : "Starts this week", tone: "green" };
+  return { label: "On track", tone: "green" };
+}
+
+/** Home page card: who, when, the six-stop tracker, and who acts next. */
+export function HireProgressCard({ h, href, tasks, s, rules }: { h: Hire; href: string; tasks: Action[]; s: OnboardingSettings; rules: Rules }) {
+  const cur = stageIndex(h.status);
+  const b = hireBadge(h, tasks, rules);
+  const n = h.startDate ? daysUntil(h.startDate) : null;
+  return (
+    <Link href={href} className="proj-mini hire-card-mini">
+      <div className="row" style={{ alignItems: "flex-start", gap: 8 }}>
+        <div className="grow" style={{ minWidth: 0 }}>
+          <b className="ellipsis" style={{ display: "block" }}>{h.name || "New hire"}</b>
+          <span className="tiny muted ellipsis" style={{ display: "block" }}>{h.title}</span>
+        </div>
+        <div style={{ textAlign: "right", flex: "none" }}>
+          <div className="small"><b>{h.startDate ? shortDate(h.startDate) : "TBD"}</b></div>
+          <div className="tiny muted">{n === null ? "No date yet" : n > 1 ? `in ${n} days` : n === 1 ? "tomorrow" : n === 0 ? "today" : `${-n} days ago`}</div>
+        </div>
+      </div>
+      <div className="steptrack" style={{ marginTop: 10 }} role="img" aria-label={`Stage: ${h.status}`}>
+        <div className="steptrack-bar" style={{ gridTemplateColumns: `repeat(${STAGES.length}, 1fr)` }}>
+          {STAGES.map((st, i) => <span key={st} className={i < cur || cur === STAGES.length - 1 ? "done" : i === cur ? "now" : ""} />)}
+        </div>
+      </div>
+      <div className="tiny" style={{ marginTop: 6 }}>
+        <b>{STAGE_SHORT[h.status]}</b>
+        {cur < STAGES.length - 1 && <span className="muted"> · Next: {STAGE_SHORT[STAGES[cur + 1]]}</span>}
+      </div>
+      <div className="tiny muted ellipsis" style={{ marginTop: 2 }}>{hireNext(h, tasks, s)}</div>
+      <div style={{ marginTop: 8 }}>
+        <span className={`health-chip h-${b.tone}`}><span className="dot" />{b.label}</span>
+      </div>
+    </Link>
   );
 }
 
