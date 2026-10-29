@@ -625,3 +625,9 @@ video.pitch-live[controls] { height: auto; max-height: 62vh; object-fit: contain
 @media (max-width: 520px) { .preview-bar .pv-sub { display: none; } }
 .proj-mini-pct { font-family: var(--serif); font-weight: 600; font-size: 18px; }
 .proj-mini:hover { outline: 2px solid color-mix(in srgb, var(--accent) 30%, transparent); }
+
+.step-edit { display: grid; gap: 6px; margin-top: 4px; }
+.step-edit-row { display: flex; align-items: center; gap: 6px; }
+.step-edit-row input.f { margin: 0; flex: 1; min-width: 0; padding: 8px 10px; }
+.step-edit-row input[type=checkbox] { width: 18px; height: 18px; flex: none; }
+.step-edit-row .btn { padding: 6px 8px; flex: none; }

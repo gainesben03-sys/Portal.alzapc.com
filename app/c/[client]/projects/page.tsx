@@ -7,6 +7,7 @@ import { ClientNav, ClientTopbar, Sheet, Toast, useGuard, useToast } from "@/com
 import { addBusinessDays, fmt, parseDay, Project, projectProgress, toISO, today } from "@/lib/data";
 import { useStore } from "@/lib/store";
 import { AskBenSheet } from "@/components/askben";
+import { EditProjectSheet } from "@/components/projectedit";
 import { currentStep, HealthChip, projectHealth, StepTrack } from "@/components/projectprogress";
 
 type Tab = "active" | "planned" | "done";
@@ -20,6 +21,7 @@ export default function Projects() {
   const [adding, setAdding] = useState(false);
   const [del, setDel] = useState<Project | null>(null);
   const [asking, setAsking] = useState(false);
+  const [editP, setEditP] = useState<Project | null>(null);
   const toast = useToast();
   if (!ok || !client) return null;
 
@@ -77,7 +79,7 @@ export default function Projects() {
                   </div>
                   <div style={{ marginTop: 6 }}><HealthChip h={h} /></div>
                   <p className="small muted" style={{ marginTop: 6 }}>{p.summary}</p>
-                  {isAdvisor && <button className="linklike tiny" style={{ color: "var(--red)", marginTop: 4 }} onClick={() => setDel(p)}>Delete project</button>}
+                  {isAdvisor && <span className="tiny" style={{ display: "inline-flex", gap: 12, marginTop: 4 }}><button className="linklike tiny" onClick={() => setEditP(p)}>Edit</button><button className="linklike tiny" style={{ color: "var(--red)" }} onClick={() => setDel(p)}>Delete project</button></span>}
                   <div style={{ marginTop: 10 }}><StepTrack p={p} /></div>
                   {cur >= 0 && <div className="tiny" style={{ marginTop: 6 }}><b>Now:</b> {p.steps[cur].text}{p.steps[cur + 1] ? <span className="muted"> · Next: {p.steps[cur + 1].text}</span> : null}</div>}
                   <div style={{ marginTop: 8 }}>
@@ -123,7 +125,7 @@ export default function Projects() {
                         <div className="grow">
                           <h3>{p.name}</h3>
                           <p className="small muted" style={{ marginTop: 4 }}>{p.summary}</p>
-                  {isAdvisor && <button className="linklike tiny" style={{ color: "var(--red)", marginTop: 4 }} onClick={() => setDel(p)}>Delete project</button>}
+                  {isAdvisor && <span className="tiny" style={{ display: "inline-flex", gap: 12, marginTop: 4 }}><button className="linklike tiny" onClick={() => setEditP(p)}>Edit</button><button className="linklike tiny" style={{ color: "var(--red)" }} onClick={() => setDel(p)}>Delete project</button></span>}
                         </div>
                         <span className="pill later">Starts {fmt(p.milestoneDue)}</span>
                       </div>
@@ -159,7 +161,7 @@ export default function Projects() {
                   <div className="grow">
                     <h3>{p.name}</h3>
                     <p className="small muted" style={{ marginTop: 4 }}>{p.summary}</p>
-                  {isAdvisor && <button className="linklike tiny" style={{ color: "var(--red)", marginTop: 4 }} onClick={() => setDel(p)}>Delete project</button>}
+                  {isAdvisor && <span className="tiny" style={{ display: "inline-flex", gap: 12, marginTop: 4 }}><button className="linklike tiny" onClick={() => setEditP(p)}>Edit</button><button className="linklike tiny" style={{ color: "var(--red)" }} onClick={() => setDel(p)}>Delete project</button></span>}
                   </div>
                   <span className="pill done">Done {fmt(p.milestoneDue)}</span>
                 </div>
@@ -169,6 +171,18 @@ export default function Projects() {
         {!live && <p className="demo-note">Sample projects for the prototype.</p>}
       </main>
 
+      {editP && (
+        <EditProjectSheet
+          p={editP}
+          onClose={() => setEditP(null)}
+          onSave={(next, note) => {
+            patch({ projects: projects.map((x) => (x.id === next.id ? next : x)) });
+            setEditP(null);
+            if (next.status !== editP.status) setTab(next.status);
+            toast.show(note ? `Saved: ${note}` : "Saved");
+          }}
+        />
+      )}
       {asking && <AskBenSheet clientId={client.id} startKind="A new project" onClose={() => setAsking(false)} onDone={(m) => { setAsking(false); toast.show(m); }} />}
       {adding && (
         <AddSheet

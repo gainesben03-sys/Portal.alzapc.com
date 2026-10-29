@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { AskBenSheet } from "@/components/askben";
+import { EditProjectSheet } from "@/components/projectedit";
 import { ClientNav, ClientTopbar, Toast, useGuard, useToast } from "@/components/ui";
 import { currentStep, HealthChip, ProgressChart, ProgressRing, projectHealth, StepTrack } from "@/components/projectprogress";
 import { dueLabel, fmt, Project, projectProgress, toISO, today } from "@/lib/data";
@@ -17,6 +18,7 @@ export default function ProjectProgressPage() {
   const client = getClient(clientId);
   const toast = useToast();
   const [asking, setAsking] = useState(false);
+  const [editingP, setEditingP] = useState(false);
   if (!ok || !client) return null;
   const p = projects.find((x) => x.id === id && x.clientId === clientId);
   const isAdvisor = viewer?.kind === "advisor";
@@ -44,6 +46,7 @@ export default function ProjectProgressPage() {
       <ClientNav clientId={client.id} />
       <main className="wrap">
         <Link href={`/c/${clientId}/projects`} className="small" style={{ color: "var(--blue)" }}>← Projects</Link>
+        {isAdvisor && <button className="btn sm" style={{ float: "right", marginTop: 6 }} onClick={() => setEditingP(true)}>Edit project</button>}
         <h1 style={{ marginTop: 10 }}>{p.name}</h1>
         {p.summary && <p className="muted" style={{ marginTop: 4 }}>{p.summary}</p>}
 
@@ -122,6 +125,17 @@ export default function ProjectProgressPage() {
           </div>
         )}
       </main>
+      {editingP && (
+        <EditProjectSheet
+          p={p}
+          onClose={() => setEditingP(false)}
+          onSave={(next, note) => {
+            patch({ projects: projects.map((x) => (x.id === p.id ? next : x)) });
+            setEditingP(false);
+            toast.show(note ? `Saved: ${note}` : "Saved");
+          }}
+        />
+      )}
       {asking && <AskBenSheet clientId={client.id} projectId={p.id} onClose={() => setAsking(false)} onDone={(m) => { setAsking(false); toast.show(m); }} />}
       <Toast msg={toast.msg} onDone={toast.clear} />
     </div>
