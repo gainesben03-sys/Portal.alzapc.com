@@ -48,8 +48,8 @@ export default function Home() {
   const meName = viewer?.kind === "client" ? viewer.person.name : null;
   const layoutKey = me ? `${client.id}:${me.email}` : "";
   const available = TILES.filter((t) => (!t.module || cfg?.modules[t.module]) && (t.id !== "huddle" || !!me) && (t.module ? canSee(me?.access, t.module) : true));
-  const defaults = (cfg?.tiles ?? DEFAULT_TILES).filter((id) => available.some((t) => t.id === id));
-  const order = (layoutKey && layouts[layoutKey]) || defaults;
+  const defaults = withNewTiles(cfg?.tiles ?? DEFAULT_TILES).filter((id) => available.some((t) => t.id === id));
+  const order = (layoutKey && layouts[layoutKey] && withNewTiles(layouts[layoutKey])) || defaults;
   const shown = order.filter((id) => available.some((t) => t.id === id));
 
   // ----- data -----
@@ -381,6 +381,18 @@ export default function Home() {
   );
 }
 
+/** Tiles added after people may have saved a layout. They appear on saved layouts too, unless someone turned them off. */
+const NEW_TILES: [string, string][] = [["projects", "tasks"]]; // [tile, show it after]
+function withNewTiles(saved: string[]): string[] {
+  const out = saved.filter((id) => !id.startsWith("!"));
+  for (const [id, after] of NEW_TILES) {
+    if (saved.includes(id) || saved.includes(`!${id}`)) continue;
+    const at = out.indexOf(after);
+    out.splice(at >= 0 ? at + 1 : 0, 0, id);
+  }
+  return out;
+}
+
 function CustomizeSheet({ title, note, available, order, onClose, onSave, onReset }: { title: string; note: string; available: typeof TILES; order: string[]; onClose: () => void; onSave: (ids: string[]) => void; onReset: () => void }) {
   const [list, setList] = useState<{ id: string; on: boolean }[]>(() => [
     ...order.map((id) => ({ id, on: true })),
@@ -416,7 +428,7 @@ function CustomizeSheet({ title, note, available, order, onClose, onSave, onRese
         <button className="btn ghost sm" onClick={onReset}>Reset to default</button>
         <div style={{ display: "flex", gap: 8 }}>
           <button className="btn" onClick={onClose}>Cancel</button>
-          <button className="btn primary" onClick={() => onSave(list.filter((x) => x.on).map((x) => x.id))}>Save</button>
+          <button className="btn primary" onClick={() => onSave([...list.filter((x) => x.on).map((x) => x.id), ...list.filter((x) => !x.on).map((x) => `!${x.id}`)])}>Save</button>
         </div>
       </div>
     </Sheet>
