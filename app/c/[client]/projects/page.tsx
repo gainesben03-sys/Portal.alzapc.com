@@ -6,6 +6,7 @@ import { useState } from "react";
 import { ClientNav, ClientTopbar, Sheet, Toast, useGuard, useToast } from "@/components/ui";
 import { addBusinessDays, fmt, parseDay, Project, projectProgress, toISO, today } from "@/lib/data";
 import { useStore } from "@/lib/store";
+import { AskBenSheet } from "@/components/askben";
 import { currentStep, HealthChip, projectHealth, StepTrack } from "@/components/projectprogress";
 
 type Tab = "active" | "planned" | "done";
@@ -18,6 +19,7 @@ export default function Projects() {
   const [tab, setTab] = useState<Tab>("active");
   const [adding, setAdding] = useState(false);
   const [del, setDel] = useState<Project | null>(null);
+  const [asking, setAsking] = useState(false);
   const toast = useToast();
   if (!ok || !client) return null;
 
@@ -43,7 +45,7 @@ export default function Projects() {
             <h1>Projects</h1>
             <p className="muted" style={{ marginTop: 6 }}>What's underway, what's coming, and what's done.</p>
           </div>
-          {isAdvisor && <button className="btn primary" onClick={() => setAdding(true)}>Add</button>}
+          {isAdvisor ? <button className="btn primary" onClick={() => setAdding(true)}>Add</button> : <button className="btn primary sm" onClick={() => setAsking(true)}>Ask for a project</button>}
         </div>
 
         <div className="kpis section" style={{ marginTop: 16, gridTemplateColumns: "repeat(3, 1fr)" }}>
@@ -167,6 +169,7 @@ export default function Projects() {
         {!live && <p className="demo-note">Sample projects for the prototype.</p>}
       </main>
 
+      {asking && <AskBenSheet clientId={client.id} startKind="A new project" onClose={() => setAsking(false)} onDone={(m) => { setAsking(false); toast.show(m); }} />}
       {adding && (
         <AddSheet
           onClose={() => setAdding(false)}

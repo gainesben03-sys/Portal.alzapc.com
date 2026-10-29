@@ -70,7 +70,7 @@ function guardWrites(on: boolean) {
 }
 
 const Ctx = createContext<Store | null>(null);
-const KEY = "alza-portal-demo-v9";
+const KEY = "alza-portal-demo-v10";
 export const PENDING_INVITE = "alza-pending-invite";
 
 type Who = { email: string; advisor: boolean; memberships: { clientId: string; name: string; role: string; access: string }[] };

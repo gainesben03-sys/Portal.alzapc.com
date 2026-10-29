@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useState } from "react";
+import { AskBenSheet } from "@/components/askben";
 import { ClientNav, ClientTopbar, Toast, useGuard, useToast } from "@/components/ui";
 import { currentStep, HealthChip, ProgressChart, ProgressRing, projectHealth, StepTrack } from "@/components/projectprogress";
 import { dueLabel, fmt, Project, projectProgress, toISO, today } from "@/lib/data";
@@ -14,6 +16,7 @@ export default function ProjectProgressPage() {
   const { getClient, projects, actions, patch, viewer, rules } = useStore();
   const client = getClient(clientId);
   const toast = useToast();
+  const [asking, setAsking] = useState(false);
   if (!ok || !client) return null;
   const p = projects.find((x) => x.id === id && x.clientId === clientId);
   const isAdvisor = viewer?.kind === "advisor";
@@ -99,7 +102,10 @@ export default function ProjectProgressPage() {
           </div>
         )}
 
-        <div className="section-head section"><h2>Open items</h2></div>
+        <div className="section-head section">
+          <h2>Open items</h2>
+          {!isAdvisor && p.status !== "done" && <button className="btn sm" onClick={() => setAsking(true)}>Ask Ben about this</button>}
+        </div>
         {openItems.length === 0 ? (
           <div className="card small muted">Nothing open on this project right now.</div>
         ) : (
@@ -116,6 +122,7 @@ export default function ProjectProgressPage() {
           </div>
         )}
       </main>
+      {asking && <AskBenSheet clientId={client.id} projectId={p.id} onClose={() => setAsking(false)} onDone={(m) => { setAsking(false); toast.show(m); }} />}
       <Toast msg={toast.msg} onDone={toast.clear} />
     </div>
   );

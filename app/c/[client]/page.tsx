@@ -37,6 +37,7 @@ export default function Home() {
   const client = getClient(clientId);
   const [editing, setEditing] = useState(false);
   const [asking, setAsking] = useState(false);
+  const [askKind, setAskKind] = useState<string | undefined>(undefined);
   const [msg, setMsg] = useState("");
   const toast = useToast();
   if (!ok || !client) return null;
@@ -101,7 +102,7 @@ export default function Home() {
     schedule: () => (
       <Tile title="Ask Ben" tone="accent">
         <p className="small" style={{ marginBottom: 12 }}>A document, a question, an employee situation: send it here and it&apos;s on Ben&apos;s list.</p>
-        <button className="btn primary block" disabled={isAdvisor} onClick={() => setAsking(true)}>Ask Ben for something</button>
+        <button className="btn primary block" disabled={isAdvisor} onClick={() => { setAskKind(undefined); setAsking(true); }}>Ask Ben for something</button>
         {bookingUrl ? (
           <a className="btn block" style={{ marginTop: 8 }} href={bookingUrl} target="_blank" rel="noopener noreferrer">Book a call</a>
         ) : (
@@ -110,29 +111,38 @@ export default function Home() {
       </Tile>
     ),
     projects: () => {
-      const act = projects.filter((p) => p.clientId === client.id && p.status === "active");
+      const act = projects.filter((p) => p.clientId === client.id && p.status === "active").sort((a, b) => a.milestoneDue.localeCompare(b.milestoneDue));
+      const next = projects.filter((p) => p.clientId === client.id && p.status === "planned").length;
       return (
-        <Tile title="Projects" count={act.length} href={`${base}/projects`} linkLabel="Roadmap" wide>
-          {act.length === 0 && <p className="small muted">No active projects.</p>}
+        <Tile title="Projects" count={act.length} href={`${base}/projects`} linkLabel={next ? `Roadmap (${next} coming up)` : "All projects"} wide>
+          {act.length === 0 && <p className="small muted">Nothing in progress right now.{next ? ` ${next} on the roadmap.` : ""}</p>}
           <div className="proj-grid">
             {act.map((p) => {
               const pct = projectProgress(p);
-              const held = openClient.find((a) => a.projectId === p.id && ["overdue", "blocker"].includes(urgency(a, rules)));
+              const cur = currentStep(p);
               return (
                 <Link href={`${base}/projects/${p.id}`} key={p.id} className="proj-mini">
-                  <div className="row" style={{ alignItems: "baseline" }}>
-                    <b className="ellipsis">{p.name}</b>
-                    <span className="small muted">{pct}%</span>
+                  <div className="row" style={{ alignItems: "baseline", gap: 8 }}>
+                    <b className="ellipsis grow">{p.name}</b>
+                    <span className="proj-mini-pct">{pct}%</span>
                   </div>
                   <div style={{ marginTop: 8 }}><StepTrack p={p} /></div>
-                  <div className="tiny muted" style={{ marginTop: 6 }}>
-                    {currentStep(p) >= 0 ? <>Now: {p.steps[currentStep(p)].text}</> : <>Next: {p.nextMilestone}</>} · {fmt(p.milestoneDue)}
+                  <div className="tiny muted ellipsis" style={{ marginTop: 6 }}>
+                    {cur >= 0 ? <>Now: <b style={{ color: "var(--ink)", fontWeight: 600 }}>{p.steps[cur].text}</b></> : <>Next: {p.nextMilestone}</>}
                   </div>
-                  {held ? <div className="tiny" style={{ color: "var(--red)", marginTop: 4 }}>Held up by an overdue item</div> : <div style={{ marginTop: 6 }}><HealthChip h={projectHealth(p, actions.filter((a) => a.projectId === p.id), rules)} /></div>}
+                  <div className="row" style={{ marginTop: 8, alignItems: "center", gap: 6 }}>
+                    <HealthChip h={projectHealth(p, actions.filter((a) => a.projectId === p.id), rules)} />
+                    <span className="tiny muted" style={{ marginLeft: "auto" }}>{fmt(p.milestoneDue)}</span>
+                  </div>
                 </Link>
               );
             })}
           </div>
+          {!isAdvisor && (
+            <button className="btn ghost sm" style={{ marginTop: 10 }} onClick={() => { setAskKind("A new project"); setAsking(true); }}>
+              + Ask Ben to take on a project
+            </button>
+          )}
         </Tile>
       );
     },
@@ -365,7 +375,7 @@ export default function Home() {
           }}
         />
       )}
-      {asking && <AskBenSheet clientId={client.id} onClose={() => setAsking(false)} onDone={(m) => { setAsking(false); toast.show(m); }} />}
+      {asking && <AskBenSheet clientId={client.id} startKind={askKind} onClose={() => setAsking(false)} onDone={(m) => { setAsking(false); toast.show(m); }} />}
       <Toast msg={toast.msg} onDone={toast.clear} />
     </div>
   );

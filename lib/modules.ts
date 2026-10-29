@@ -122,7 +122,7 @@ export const TILES: { id: string; label: string; blurb: string; module?: ModuleK
   { id: "huddle", label: "HR Huddle email", blurb: "Turn your recap email on or off" },
 ];
 /** A busy executive's Home: what needs me, people in motion, what Ben is on, and one way to reach him. The rest is opt-in under Customize. */
-export const DEFAULT_TILES = ["tasks", "schedule", "hires", "recruiting", "alza"];
+export const DEFAULT_TILES = ["tasks", "projects", "schedule", "hires", "recruiting", "alza"];
 
 export interface ClientConfig {
   onboarding?: Partial<import("./hires").OnboardingSettings>;

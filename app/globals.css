@@ -623,3 +623,5 @@ video.pitch-live[controls] { height: auto; max-height: 62vh; object-fit: contain
 .preview-bar.flash .pv-btn { border-color: rgba(255,255,255,.4); background: transparent; }
 .preview-bar .pv-btn.strong { background: #1c1a19; color: #fff; border-color: #1c1a19; }
 @media (max-width: 520px) { .preview-bar .pv-sub { display: none; } }
+.proj-mini-pct { font-family: var(--serif); font-weight: 600; font-size: 18px; }
+.proj-mini:hover { outline: 2px solid color-mix(in srgb, var(--accent) 30%, transparent); }

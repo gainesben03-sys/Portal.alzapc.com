@@ -33,9 +33,10 @@ export function ActionCard({
   showClient?: boolean;
   children?: ReactNode;
 }) {
-  const { rules, getClient } = useStore();
+  const { rules, getClient, projects } = useStore();
   const client = getClient(a.clientId)!;
   const u: Urgency = urgency(a, rules);
+  const project = a.projectId ? projects.find((p) => p.id === a.projectId) : undefined;
   return (
     <div className={`card action u-${u}`}>
       <Link href={href}>
@@ -49,6 +50,7 @@ export function ActionCard({
             <h3>{a.title}</h3>
             <div className="action-meta">
               {a.side === "alza" ? (a.requestedBy ? `Asked by ${a.requestedBy.name}` : "Owner: Alza (Ben)") : `Owner: ${a.owner.name}, ${a.owner.role}`}
+              {project && <> · Part of {project.name}</>}
             </div>
           </div>
           <UrgencyPill a={a} />

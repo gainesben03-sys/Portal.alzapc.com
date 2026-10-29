@@ -6,13 +6,14 @@ import { notifyBen, useStore } from "@/lib/store";
 import { LIVE, uploadToStorage } from "@/lib/supabase";
 import { Sheet } from "./ui";
 
-const KINDS = ["A document or letter", "A policy question", "Help with an employee situation", "Hiring help", "Something else"];
+const KINDS = ["A new project", "A document or letter", "A policy question", "Help with an employee situation", "Hiring help", "Something else"];
 
 /** A client asks Ben for something. It lands on Ben's "You owe" list and he gets an email and an alert. */
-export function AskBenSheet({ clientId, onClose, onDone }: { clientId: string; onClose: () => void; onDone: (msg: string) => void }) {
-  const { actions, files, patch, viewer, who, notice, getClient } = useStore();
+export function AskBenSheet({ clientId, onClose, onDone, projectId, startKind }: { clientId: string; onClose: () => void; onDone: (msg: string) => void; projectId?: string; startKind?: string }) {
+  const { actions, files, patch, viewer, who, notice, getClient, projects } = useStore();
   const client = getClient(clientId)!;
-  const [kind, setKind] = useState(KINDS[0]);
+  const project = projectId ? projects.find((p) => p.id === projectId) : undefined;
+  const [kind, setKind] = useState(startKind && KINDS.includes(startKind) ? startKind : project ? "Something else" : KINDS[1]);
   const [title, setTitle] = useState("");
   const [detail, setDetail] = useState("");
   const [due, setDue] = useState(toISO(addBusinessDays(today(), 5)));
@@ -38,6 +39,7 @@ export function AskBenSheet({ clientId, onClose, onDone }: { clientId: string; o
       due,
       status: "not_started",
       attachments: [],
+      projectId: project?.id,
       requestedBy: { name: person.name, role: person.role, email: person.email },
       history: [{ at: now, by: person.name, text: `Requested by ${person.name}${urgent ? " (urgent)" : ""}` }],
     };
@@ -60,20 +62,21 @@ export function AskBenSheet({ clientId, onClose, onDone }: { clientId: string; o
     notice({ clientId, kind: "request", text: `${person.name} asked for: ${a.title}${urgent ? " (urgent)" : ""}`, href: `/c/${clientId}/a/${a.id}` });
     notifyBen(
       `${client.name}: ${urgent ? "URGENT " : ""}request from ${person.name}`,
-      `${person.name} asked for: ${a.title}\nType: ${kind}\nNeeded by: ${due}${urgent ? "\nMarked urgent" : ""}\n\n${detail.trim() || "(no details)"}\n\nOpen it: https://portal.alzapc.com/c/${clientId}/a/${a.id}`
+      `${person.name} asked for: ${a.title}\nType: ${kind}${project ? `\nProject: ${project.name}` : ""}\nNeeded by: ${due}${urgent ? "\nMarked urgent" : ""}\n\n${detail.trim() || "(no details)"}\n\nOpen it: https://portal.alzapc.com/c/${clientId}/a/${a.id}`
     );
     onDone("Sent to Ben. You'll see it under Ben is working on.");
   };
 
   return (
-    <Sheet title="Ask Ben for something" onClose={onClose}>
+    <Sheet title={project ? `Ask Ben about ${project.name}` : "Ask Ben for something"} onClose={onClose}>
+      {project && <p className="small muted" style={{ marginTop: 0 }}>This goes on Ben&apos;s list as part of {project.name}.</p>}
       <label className="f">What kind of help
         <select className="f" value={kind} onChange={(e) => setKind(e.target.value)}>
           {KINDS.map((k) => <option key={k}>{k}</option>)}
         </select>
       </label>
       <label className="f">What do you need?
-        <input className="f" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Offer letter for our new office manager" />
+        <input className="f" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={kind === "A new project" ? "e.g. Set up a performance review process" : project ? "e.g. Can we add the Las Vegas team to this?" : "e.g. Offer letter for our new office manager"} />
       </label>
       <label className="f">Details <span className="tiny muted">(optional)</span>
         <textarea className="f" value={detail} onChange={(e) => setDetail(e.target.value)} placeholder="Anything that helps Ben get it right the first time" />
