@@ -66,9 +66,12 @@ export function PreviewBar() {
 
 /** Pick a client and one of their people to see the portal as. */
 export function ViewAsSheet({ initialClient, lockClient, onClose, onPick }: { initialClient?: string; lockClient?: boolean; onClose: () => void; onPick: (p: Preview) => void }) {
-  const { clients, config } = useStore();
+  const { clients, config, people } = useStore();
   const [clientId, setClientId] = useState(initialClient && clients.some((c) => c.id === initialClient) ? initialClient : clients[0]?.id ?? "");
-  const users = config[clientId]?.users ?? [];
+  const invited = config[clientId]?.users ?? [];
+  // managers on the team roster who haven't been invited yet can be previewed too
+  const rosterManagers = Array.from(new Map(people.filter((p) => p.clientId === clientId && p.active && p.managerEmail && !invited.some((u) => u.email.toLowerCase() === p.managerEmail.toLowerCase())).map((p) => [p.managerEmail.toLowerCase(), p.managerName || p.managerEmail])).entries()).map(([email, name]) => ({ name, email, role: "Manager", access: "manager" as const, notInvited: true }));
+  const users = [...invited, ...rosterManagers];
   const order: Access[] = ["exec", "manager", "hiring"];
   const sorted = [...users].sort((a, b) => order.indexOf(a.access) - order.indexOf(b.access));
   const [who, setWho] = useState<string>("");
@@ -86,7 +89,7 @@ export function ViewAsSheet({ initialClient, lockClient, onClose, onPick }: { in
       )}
       <label className="f">As
         <select className="f" value={pick?.email ?? "__exec"} onChange={(e) => setWho(e.target.value)}>
-          {sorted.map((u) => <option key={u.email || u.name} value={u.email}>{u.name}, {ACCESS_LABEL[u.access]}</option>)}
+          {sorted.map((u) => <option key={u.email || u.name} value={u.email}>{u.name}, {ACCESS_LABEL[u.access]}{"notInvited" in u ? " (not invited yet)" : ""}</option>)}
           {sorted.length === 0 && <option value="__exec">An executive (no one invited yet)</option>}
         </select>
       </label>
