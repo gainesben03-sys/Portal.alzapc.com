@@ -7,13 +7,14 @@ import { Action, Client, DEFAULT_RULES, fmt, Project, reminderPlan, Rules, toISO
 import { buildHuddle } from "@/lib/huddle";
 import { Candidate, ClientConfig, HuddleSettings, SharedFile } from "@/lib/modules";
 import { pitchDeleteOn } from "@/lib/pitch";
-import { addDaysISO, firstDayEmail, forCompany, Hire, hireCompany, onboardingFor, senderFor, stageIndex, welcomeEmail } from "@/lib/hires";
+import { addDaysISO, firstDayEmail, forCompany, Hire, hireCompany, listEmail, onboardingFor, senderFor, stageIndex, welcomeEmail } from "@/lib/hires";
+import { anniversary, nextYearly, TeamLog, TeamMember, teamFor, weekItems } from "@/lib/team";
 import { emailLogoUrl } from "@/lib/brand";
 import { admin, PORTAL_URL, sendEmail } from "@/lib/server";
 import { advisorEmails, pushTo } from "@/lib/push";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 type Member = { client_id: string; email: string; name: string; role: string; access: string; huddle: boolean };
 type Row = { id: string; client_id: string; data: Record<string, unknown> };
@@ -229,6 +230,60 @@ export async function GET(req: Request) {
     const data = { ...c, mediaDeletedAt: new Date().toISOString(), pitch: { ...c.pitch, mediaPath: undefined } };
     await db.from("candidates").update({ data }).eq("id", row.id);
     log.push(`pitch video deleted ${row.id}`);
+  }
+
+  // ---------- 5. Manager Hub: birthdays, work anniversaries, new starters, and the Monday list
+  const [peopleR, logsR] = await Promise.all([db.from("people").select("id, client_id, data"), db.from("checkins").select("id, client_id, data")]);
+  if (!peopleR.error) {
+    const people = rows(peopleR) as unknown as TeamMember[];
+    const logs = (logsR.error ? [] : rows(logsR)) as unknown as TeamLog[];
+    const jsNow = new Date(`${day}T12:00:00`);
+    const monday = jsNow.getDay() === 1;
+    for (const c of clientsR.data ?? []) {
+      const cfg = (c.config ?? {}) as Partial<ClientConfig>;
+      const s = onboardingFor(cfg.onboarding);
+      const brand = { company: c.name, accent: cfg.accent || "#19283c", logoUrl: emailLogoUrl(c.id, cfg.logo, cfg.logoEmail, PORTAL_URL) };
+      const hubUrl = `${PORTAL_URL}/c/${c.id}/hub`;
+      const roster = people.filter((p) => p.clientId === c.id && p.active !== false);
+      const mgrs = Array.from(new Set(roster.map((p) => (p.managerEmail || "").toLowerCase()).filter(Boolean)));
+      for (const mgr of mgrs) {
+        // only people who can sign in get reminders
+        const m = members.find((x) => x.client_id === c.id && x.email.toLowerCase() === mgr);
+        if (!m) continue;
+        const team = teamFor(people, c.id, mgr);
+        const first = m.name.split(" ")[0];
+        // dated events: 3 days ahead and the day of
+        const events: { key: string; title: string; why: string }[] = [];
+        for (const p of team) {
+          const pf = p.name.split(" ")[0];
+          const b = p.birthday ? nextYearly(p.birthday, jsNow) : null;
+          if (b && (b.days === 3 || b.days === 0)) events.push({ key: `bd:${p.id}:${b.days}:${day}`, title: b.days === 0 ? `It's ${pf}'s birthday today` : `${pf}'s birthday is ${b.date.toLocaleDateString("en-US", { weekday: "long" })}`, why: b.days === 0 ? "A quick message or a card from you goes a long way." : "Plan something small: a card, a shout-out, a treat." });
+          const a = p.hireDate ? anniversary(p.hireDate, jsNow) : null;
+          if (a && (a.days === 3 || a.days === 0)) events.push({ key: `an:${p.id}:${a.days}:${day}`, title: a.days === 0 ? `${pf}'s ${a.years}-year work anniversary is today` : `${pf}'s ${a.years}-year work anniversary is ${a.date.toLocaleDateString("en-US", { weekday: "long" })}`, why: `Recognize ${a.years === 1 ? "their first year" : `${a.years} years`} in front of the team.` });
+          if (p.hireDate && p.hireDate === addDaysISO(day, 1)) events.push({ key: `st:${p.id}:${day}`, title: `${pf} starts tomorrow`, why: "Be there to greet them, and block time for a first-day check-in." });
+        }
+        if (events.length) {
+          const mail = listEmail(brand, "Your team", events.length === 1 ? events[0].title : `${events.length} things for your team`, `Hi ${first}, a heads-up from your Manager Hub.`, events, { label: "Open your Manager Hub", url: hubUrl });
+          await once(`team:${c.id}:${mgr}:${day}`, () => sendEmail({ to: [mgr], subject: events.length === 1 ? events[0].title : `${events.length} things for your team this week`, html: mail.html, text: mail.text, ...senderFor(s, c.name) }));
+          await once(`team-push:${c.id}:${mgr}:${day}`, async () => {
+            await pushTo(db, [mgr], "team", { title: events[0].title, body: events.length > 1 ? `+${events.length - 1} more for your team` : events[0].why, url: `/c/${c.id}/hub`, tag: `team-${c.id}-${day}` });
+            return { ok: true };
+          });
+        }
+        // Monday: the three things that matter most this week
+        if (monday) {
+          const top = weekItems(team, logs.filter((l) => l.clientId === c.id)).slice(0, 3);
+          if (top.length) {
+            const mail = listEmail(brand, "This week", `Your 3 for this week`, `Hi ${first}, a few minutes on these and your team will notice.`, top.map((t) => ({ title: t.title, why: t.why })), { label: "Open your Manager Hub", url: hubUrl });
+            await once(`team-week:${c.id}:${mgr}:${day}`, () => sendEmail({ to: [mgr], subject: `Your team this week: ${top[0].title}${top.length > 1 ? ` and ${top.length - 1} more` : ""}`, html: mail.html, text: mail.text, ...senderFor(s, c.name) }));
+            await once(`team-week-push:${c.id}:${mgr}:${day}`, async () => {
+              await pushTo(db, [mgr], "team", { title: "Your 3 for this week", body: top.map((t) => t.title).join(" · "), url: `/c/${c.id}/hub`, tag: `team-week-${c.id}` });
+              return { ok: true };
+            });
+          }
+        }
+      }
+    }
   }
 
   return NextResponse.json({ ok: true, day, log });

@@ -10,6 +10,7 @@ import { sendInvite } from "@/lib/invite";
 import { logoInfo, shrinkLogo } from "@/lib/logoimg";
 import { OnboardingSettingsCard } from "@/components/onboarding";
 import { KnowledgePanel } from "@/components/knowledge";
+import { RosterCard } from "@/components/roster";
 
 function luminance(hex: string) {
   const n = parseInt(hex.slice(1), 16);
@@ -111,6 +112,12 @@ export default function ClientSetup() {
             </label>
           )}
         </div>
+
+        <div className="section-head section" id="team"><h2>Team roster</h2></div>
+        <p className="small muted" style={{ marginTop: -4, marginBottom: 10 }}>
+          Everyone at {client.name} and who they report to. It powers the Manager Hub: birthday and work anniversary reminders, check-ins and recognition. Managers only see their own team.
+        </p>
+        <RosterCard clientId={id} onToast={toast.show} />
 
         <div className="section-head section"><h2>Documents for Claude</h2></div>
         <p className="small muted" style={{ marginTop: -4, marginBottom: 10 }}>

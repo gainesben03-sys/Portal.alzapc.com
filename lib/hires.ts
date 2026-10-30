@@ -481,3 +481,16 @@ ${big(headlineHtml.replace(/<(?!\/?i>)[^>]*>/g, ""))}<!--HERO_END-->
 ${section("#F4F1EC", paragraphs.map((p) => `<p style="margin:0 0 12px 0">${esc(p)}</p>`).join(""))}`;
   return { html: frame(brand, inner), text: paragraphs.join("\n\n") };
 }
+
+/** A short list email (Manager Hub reminders, the Monday nudge), in the client's brand, with one button. */
+export function listEmail(b: Brand, kicker: string, headline: string, intro: string, items: { title: string; why: string }[], cta: { label: string; url: string }) {
+  const brand: Brand = { ...b, bar: b.bar ?? b.accent, accent: readableInk(b.accent) };
+  const rows = items
+    .map((it, i) => `<tr><td width="30" valign="top" style="padding:12px 0;font-family:Georgia,serif;font-size:20px;color:${brand.accent}">${i + 1}</td><td valign="top" style="padding:12px 0;font-family:Arial,sans-serif;font-size:15px;line-height:21px;${i < items.length - 1 ? "border-bottom:1px solid #DDD5CA;" : ""}"><b>${esc(it.title)}</b><br><span style="color:#6B645E;font-size:13px">${esc(it.why)}</span></td></tr>`)
+    .join("");
+  const inner = `${label(kicker, "#6B645E").replace("margin:0", "margin:40px 0 0 0")}
+<p style="margin:10px 0 0 0;font-family:Georgia,serif;font-size:32px;line-height:38px;color:#1C1A19">${esc(headline)}</p>
+<p style="margin:12px 0 0 0;font-family:Arial,sans-serif;font-size:15px;line-height:22px;color:#4A4441">${esc(intro)}</p><!--HERO_END-->
+${section("#F4F1EC", `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:2px solid ${brand.accent}">${rows}</table><p style="margin:18px 0 0 0"><a href="${esc(cta.url)}" style="display:inline-block;background:${brand.accent};color:#FFFFFF;padding:12px 20px;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;text-decoration:none;border-radius:6px">${esc(cta.label)}</a></p>`)}`;
+  return { html: frame(brand, inner), text: `${headline}\n\n${intro}\n\n${items.map((it, i) => `${i + 1}. ${it.title} (${it.why})`).join("\n")}\n\n${cta.label}: ${cta.url}` };
+}

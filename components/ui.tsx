@@ -295,7 +295,7 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
  * but only what a busy executive uses is in front of them.
  */
 export function ClientNav({ clientId }: { clientId: string }) {
-  const { config, notes, viewer, me } = useStore();
+  const { config, notes, viewer, me, people } = useStore();
   const path = usePathname();
   const cfg = config[clientId];
   const base = `/c/${clientId}`;
@@ -310,6 +310,18 @@ export function ClientNav({ clientId }: { clientId: string }) {
   const groups: { key: string; label: string; subs: Sub[] }[] = [
     { key: "home", label: "Home", subs: access === "hiring" ? [] : [{ href: base, label: "Home", match: [] }] },
     {
+      // Manager Hub: anyone who has people reporting to them on the roster (Ben sees it when there's a roster)
+      key: "hub",
+      label: "My team",
+      subs: people.some((p) => p.clientId === clientId && p.active && (isAdvisor || (!!me?.email && p.managerEmail.toLowerCase() === me.email.toLowerCase())))
+        ? [
+            { href: `${base}/hub`, label: "This week", match: [] },
+            { href: `${base}/hub/team`, label: "People", match: [`${base}/hub/team`, `${base}/hub/p/`] },
+            { href: `${base}/hub/library`, label: "Library", match: [`${base}/hub/library`] },
+          ]
+        : [],
+    },
+    {
       key: "todo",
       label: "To-dos",
       subs: access === "hiring" ? [] : [
@@ -323,7 +335,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
       subs: [
         ...(mod("hires") ? [{ href: `${base}/hires`, label: "New hires", match: [`${base}/hires`] }] : []),
         ...(mod("recruiting") ? [{ href: `${base}/recruiting`, label: "Recruiting", match: [`${base}/recruiting`] }] : []),
-        ...(canSee(access, "team") ? [{ href: `${base}/team`, label: "Team", match: [`${base}/team`] }] : []),
+        ...(canSee(access, "team") ? [{ href: `${base}/team`, label: "Portal access", match: [`${base}/team`] }] : []),
       ],
     },
     {
@@ -345,7 +357,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
     },
   ].filter((g) => g.subs.length);
 
-  const subOn = (x: Sub) => (x.match.length ? x.match.some((m) => path.startsWith(m)) : path === base);
+  const subOn = (x: Sub) => (x.match.length ? x.match.some((m) => path.startsWith(m)) : path === x.href);
   const current = groups.find((g) => g.subs.some(subOn));
   const groupBadge = (g: (typeof groups)[number]) => g.subs.reduce((n, x) => n + (x.badge ?? 0), 0);
 

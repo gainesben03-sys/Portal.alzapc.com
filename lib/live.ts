@@ -10,7 +10,8 @@ import { ClientConfig, InviteCode, PortalUser } from "./modules";
 import { DEFAULT_BOOKING_URL, emptyState, State } from "./state";
 
 type Row = { id: string; client_id?: string; data: Record<string, unknown> };
-const ENTITY = ["actions", "projects", "notes", "files", "notices", "roles", "candidates", "hires"] as const;
+const ENTITY = ["actions", "projects", "notes", "files", "notices", "roles", "candidates", "hires", "people", "checkins"] as const;
+const OPTIONAL = ["hires", "people", "checkins"]; // tables added by later setup files: load as empty until they exist
 const GLOBAL = ["resources", "benefits", "announcements"] as const;
 type EntityKey = (typeof ENTITY)[number];
 type GlobalKey = (typeof GLOBAL)[number];
@@ -39,7 +40,7 @@ export async function loadAll(db: SupabaseClient, email: string): Promise<State>
     pick<{ key: string; data: { rules?: State["rules"]; bookingUrl?: string } }[]>(db.from("app_settings").select("*")),
     pick<{ email: string; data: { layouts?: State["layouts"]; helpful?: State["helpful"] } }[]>(db.from("user_prefs").select("*").eq("email", email)),
     ...ENTITY.map((t) =>
-      t === "hires"
+      OPTIONAL.includes(t)
         ? db.from(t).select("id, client_id, data").order("created_at").then((r) => (r.error ? [] : ((r.data ?? []) as Row[]))) // table added by 003_hires.sql
         : pick<Row[]>(db.from(t).select("id, client_id, data").order("created_at"))
     ),

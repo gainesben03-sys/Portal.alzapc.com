@@ -5,8 +5,10 @@ import { AlzaNav, AlzaTopbar, Sheet, Toast, useGuard, useToast } from "@/compone
 import { fmt, toISO, today } from "@/lib/data";
 import { FOLDERS, Resource, ResourceType } from "@/lib/modules";
 import { useStore } from "@/lib/store";
+import { BUCKET, LIVE, safeName, sb } from "@/lib/supabase";
+import { openResource, RES_ICON } from "@/lib/library";
 
-const TYPES: ResourceType[] = ["Template", "Guide", "Checklist", "Policy", "Video", "Link"];
+const TYPES: ResourceType[] = ["Training", "Video", "Template", "Guide", "Checklist", "Policy", "Link"];
 
 export default function Library() {
   const ok = useGuard("advisor");
@@ -48,7 +50,7 @@ export default function Library() {
             <div className="card" key={r.id}>
               <div className="action-top">
                 <div>
-                  <h3>{r.title}</h3>
+                  <h3>{RES_ICON[r.type] ? `${RES_ICON[r.type]} ` : ""}{r.title}</h3>
                   <div className="small muted">{r.type} · {r.category} · updated {fmt(r.updated)}</div>
                 </div>
                 {r.outdated && <span className="pill soon">Needs update</span>}
@@ -61,6 +63,7 @@ export default function Library() {
                 ))}
               </div>
               <div className="action-foot">
+{(r.path || r.url) && <button className="btn sm" onClick={async () => { const e = await openResource(r); if (e) toast.show(e); }}>Open</button>}
                 <button className="btn sm primary" onClick={() => setShare(r)}>Share to client</button>
                 {r.outdated ? (
                   <button className="btn sm" onClick={() => { setRes(r.id, { outdated: false, updated: toISO(today()) }); toast.show("Marked as updated"); }}>Mark updated</button>
@@ -91,11 +94,12 @@ export default function Library() {
       )}
       {adding && (
         <AddSheet
+          clients={clients.map((c) => ({ id: c.id, name: getClient(c.id)?.name ?? c.name }))}
           onClose={() => setAdding(false)}
           onAdd={(r) => {
             patch({ resources: [r, ...resources] });
             setAdding(false);
-            toast.show("Added to your library");
+            toast.show(r.shares.length ? `Added and shared with ${r.shares.length} client${r.shares.length > 1 ? "s" : ""}` : "Added to your library");
           }}
         />
       )}
@@ -126,32 +130,88 @@ function ShareSheet({ r, clients, onClose, onShare }: { r: Resource; clients: { 
   );
 }
 
-function AddSheet({ onClose, onAdd }: { onClose: () => void; onAdd: (r: Resource) => void }) {
+function AddSheet({ onClose, onAdd, clients }: { onClose: () => void; onAdd: (r: Resource) => void; clients: { id: string; name: string }[] }) {
   const [title, setTitle] = useState("");
-  const [type, setType] = useState<ResourceType>("Template");
-  const [category, setCategory] = useState("Leadership");
+  const [type, setType] = useState<ResourceType>("Training");
+  const [category, setCategory] = useState("Manager training");
   const [desc, setDesc] = useState("");
+  const [src, setSrc] = useState<"file" | "link">("file");
+  const [file, setFile] = useState<File | null>(null);
+  const [url, setUrl] = useState("");
+  const [shareTo, setShareTo] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
   return (
     <Sheet title="Add to library" onClose={onClose}>
-      <label className="f">Title</label>
-      <input className="f" value={title} onChange={(e) => setTitle(e.target.value)} />
-      <label className="f">Type</label>
-      <select className="f" value={type} onChange={(e) => setType(e.target.value as ResourceType)}>
-        {TYPES.map((t) => <option key={t}>{t}</option>)}
-      </select>
-      <label className="f">Category</label>
-      <input className="f" value={category} onChange={(e) => setCategory(e.target.value)} />
-      <label className="f">Short description</label>
-      <textarea className="f" value={desc} onChange={(e) => setDesc(e.target.value)} />
-      <p className="tiny muted" style={{ marginTop: 10 }}>File upload comes with the full build.</p>
+      <label className="f">Title<input className="f" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Session 3: Interviewing and offers" /></label>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <label className="f">Type
+          <select className="f" value={type} onChange={(e) => setType(e.target.value as ResourceType)}>
+            {TYPES.map((t) => <option key={t}>{t}</option>)}
+          </select>
+        </label>
+        <label className="f">Category<input className="f" value={category} onChange={(e) => setCategory(e.target.value)} /></label>
+      </div>
+      <label className="f">Short description<textarea className="f" value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="One or two lines: what it covers and when to use it" /></label>
+
+      <div className="seg" style={{ gridTemplateColumns: "1fr 1fr" }}>
+        <button className={src === "file" ? "on" : ""} onClick={() => setSrc("file")}>Upload a file</button>
+        <button className={src === "link" ? "on" : ""} onClick={() => setSrc("link")}>Add a link</button>
+      </div>
+      {src === "file" ? (
+        <label className="f">File <span className="tiny muted">(PDF, slides, Word, short video; up to 50 MB)</span>
+          <input className="f" type="file" onChange={(e) => { setErr(""); setFile(e.target.files?.[0] ?? null); }} />
+        </label>
+      ) : (
+        <label className="f">Link <span className="tiny muted">(best for recorded trainings: YouTube unlisted, Loom, Vimeo, Google Drive)</span>
+          <input className="f" type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://" />
+        </label>
+      )}
+
+      {clients.length > 0 && (
+        <div className="f">
+          <span className="flabel">Share with <span className="tiny muted">(goes in their Trainings folder; you can share more later)</span></span>
+          <div className="chips" style={{ marginTop: 0 }}>
+            {clients.map((c) => (
+              <button key={c.id} className={`chip chip-btn ${shareTo.includes(c.id) ? "on" : ""}`} onClick={() => setShareTo(shareTo.includes(c.id) ? shareTo.filter((x) => x !== c.id) : [...shareTo, c.id])}>{c.name}</button>
+            ))}
+          </div>
+        </div>
+      )}
+      {err && <p className="small" style={{ color: "var(--red)" }}>{err}</p>}
       <div className="sheet-actions">
         <button className="btn" onClick={onClose}>Cancel</button>
         <button
           className="btn primary"
-          disabled={!title.trim()}
-          onClick={() => onAdd({ id: `res${Date.now()}`, title: title.trim(), type, category: category.trim() || "General", desc: desc.trim(), updated: toISO(today()), shares: [] })}
+          disabled={busy || !title.trim() || (src === "file" ? !file : !/^https?:\/\/\S+\.\S+/.test(url.trim()))}
+          onClick={async () => {
+            const id = `res${Date.now().toString(36)}`;
+            let path: string | undefined;
+            if (src === "file" && file) {
+              if (file.size > 50e6) return setErr("That file is over 50 MB. Upload long videos to YouTube (unlisted), Loom or Vimeo and add the link instead.");
+              if (LIVE) {
+                setBusy(true);
+                const p = `alza/library/${id}/${safeName(file.name)}`;
+                const { error } = await sb().storage.from(BUCKET).upload(p, file, { contentType: file.type || undefined, upsert: false });
+                setBusy(false);
+                if (error) return setErr(`The upload didn't go through (${error.message}). Try again.`);
+                path = p;
+              }
+            }
+            const at = new Date().toISOString();
+            onAdd({
+              id,
+              title: title.trim(),
+              type,
+              category: category.trim() || "General",
+              desc: desc.trim(),
+              updated: toISO(today()),
+              shares: shareTo.map((clientId) => ({ clientId, folder: type === "Training" ? "Trainings" : "Manager toolkit", at })),
+              ...(src === "link" ? { url: url.trim() } : { path, fileName: file?.name, size: file?.size }),
+            });
+          }}
         >
-          Add
+          {busy ? "Uploading..." : "Add"}
         </button>
       </div>
     </Sheet>

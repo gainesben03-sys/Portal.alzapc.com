@@ -1,6 +1,7 @@
 import { Action, Client, CLIENTS, DEFAULT_RULES, Project, Rules, seed } from "./data";
 import { Announcement, Benefit, Candidate, ClientConfig, Note, Notice, Resource, Role, SharedFile, seedModules } from "./modules";
 import { Hire } from "./hires";
+import { TeamLog, TeamMember } from "./team";
 
 export const DEFAULT_BOOKING_URL = "https://calendly.com/ben-alzapc/30min";
 
@@ -19,6 +20,8 @@ export interface State {
   files: SharedFile[];
   notices: Notice[];
   hires: Hire[];
+  people: TeamMember[]; // each client's team roster (Manager Hub)
+  checkins: TeamLog[]; // check-ins and recognition: only Ben and the person's manager can read them
   helpful: Record<string, "up" | "down">;
   bookingUrl: string; // Ben's scheduling link (Calendly)
   layouts: Record<string, string[]>; // per-person dashboard tiles, key `${clientId}:${email}`
@@ -40,6 +43,8 @@ export function emptyState(): State {
     files: [],
     notices: [],
     hires: [],
+    people: [],
+    checkins: [],
     helpful: {},
     bookingUrl: DEFAULT_BOOKING_URL,
     layouts: {},

@@ -38,6 +38,15 @@ export default function Home() {
   const [editing, setEditing] = useState(false);
   const [previewNote, setPreviewNote] = useState(false);
   const router = useRouter();
+  // managers with a team land on their Manager Hub (they can still open Home from the menu)
+  const leadsTeam = !!me?.email && s.people.some((p) => p.clientId === clientId && p.active && p.managerEmail.toLowerCase() === me.email.toLowerCase());
+  useEffect(() => {
+    let seen = false;
+    try {
+      seen = !!sessionStorage.getItem("alza-home-ok");
+    } catch {}
+    if (viewer?.kind === "client" && me?.access === "manager" && leadsTeam && !seen) router.replace(`/c/${clientId}/hub`);
+  }, [viewer, me, leadsTeam, clientId, router]);
   // "Exit preview and customize" lands here with ?customize=1
   useEffect(() => {
     if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("customize") === "1" && viewer?.kind === "advisor") {

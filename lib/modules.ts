@@ -199,7 +199,7 @@ export interface Candidate {
 
 // ---------- resources ----------
 
-export type ResourceType = "Template" | "Guide" | "Checklist" | "Policy" | "Video" | "Link";
+export type ResourceType = "Training" | "Template" | "Guide" | "Checklist" | "Policy" | "Video" | "Link";
 export interface Share {
   clientId: string;
   folder: string;
@@ -215,8 +215,12 @@ export interface Resource {
   outdated?: boolean;
   clientOnly?: string; // a client-specific deliverable rather than library item
   shares: Share[];
+  url?: string; // a web link (YouTube, Loom, Vimeo, Google Drive...)
+  path?: string; // an uploaded file in storage (alza/library/...)
+  fileName?: string;
+  size?: number;
 }
-export const FOLDERS = ["Manager toolkit", "Policies", "Recruiting", "Project deliverables"];
+export const FOLDERS = ["Trainings", "Manager toolkit", "Policies", "Recruiting", "Project deliverables"];
 
 // ---------- wellness ----------
 
@@ -405,6 +409,9 @@ export function seedModules() {
     { id: "res4", title: "Offer letter template", type: "Template", category: "Recruiting", desc: "California-ready offer letter with at-will language.", updated: d(-40), outdated: true, shares: [] },
     { id: "res5", title: "Remote work policy example", type: "Policy", category: "Policies", desc: "A short, plain-English remote and hybrid policy.", updated: d(-25), shares: [] },
     { id: "res6", title: "New manager onboarding checklist", type: "Checklist", category: "Leadership", desc: "First 30 days for someone stepping into management.", updated: d(-15), shares: [] },
+    { id: "res-t1", title: "Session 1: Job requisitions and the ideal candidate", type: "Training", category: "Manager training", desc: "Define what you need before you post. 45 minutes, with the worksheet.", updated: d(-12), url: "https://www.example.com/training-1", shares: [{ clientId: "blueprint", folder: "Trainings", at: at(-12) }] },
+    { id: "res-t2", title: "Session 2: Reviewing resumes fast and fairly", type: "Training", category: "Manager training", desc: "A 10-minute screen that keeps bias out. Slides and recording.", updated: d(-5), url: "https://www.example.com/training-2", shares: [{ clientId: "blueprint", folder: "Trainings", at: at(-5) }] },
+    { id: "res-t3", title: "Hard conversations: a one-page guide", type: "Guide", category: "Manager toolkit", desc: "What to say, what to write down, when to call Ben.", updated: d(-20), url: "https://www.example.com/guide", shares: [{ clientId: "blueprint", folder: "Manager toolkit", at: at(-20) }] },
     { id: "res7", title: "Feedback conversations (12 min video)", type: "Video", category: "Leadership", desc: "How to give feedback that lands without drama.", updated: d(-18), shares: [] },
     { id: "res8", title: "Org structure refresh: proposal v2", type: "Template", category: "Deliverable", desc: "Proposed reporting lines and role changes.", updated: d(-7), clientOnly: "blueprint", shares: [{ clientId: "blueprint", folder: "Project deliverables", at: at(-7) }] },
   ];
@@ -465,7 +472,24 @@ export function seedModules() {
   ];
   config.blueprint.onboarding = { payroll: "Rippling", hqAddress: "1500 Folsom St, San Francisco, CA 94103", hrPhone: "(415) 555-0142", benefitsNote: "Your medical, dental and vision benefits start on the first of the month after your start date.", leaderQuote: "We make big moments happen. That starts with the people on our team.", leaderNames: "Alex Rivera, CEO" };
 
-  return { config, roles, candidates, resources, benefits, announcements, notes, files, notices, hires };
+  // ---------- Manager Hub sample team (fictional)
+  const md = (n: number) => { const x = new Date(); x.setDate(x.getDate() + n); return `${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`; };
+  const yearsAgo = (y: number, n = 0) => { const x = new Date(); x.setFullYear(x.getFullYear() - y); x.setDate(x.getDate() + n); return toISO(x); };
+  const daysAgo = (n: number) => { const x = new Date(); x.setDate(x.getDate() - n); return toISO(x); };
+  const mgr = { managerEmail: "dana@example.com", managerName: "Dana Ortiz" };
+  const people = [
+    { id: "pp1", clientId: "blueprint", name: "Jamie Lopez", title: "Warehouse Lead", email: "jamie@example.com", ...mgr, hireDate: yearsAgo(3, 2), birthday: md(40), department: "Warehouse", location: "San Francisco", active: true },
+    { id: "pp2", clientId: "blueprint", name: "Sam Patel", title: "Inventory Coordinator", email: "sam.p@example.com", ...mgr, hireDate: yearsAgo(1, 70), birthday: md(3), department: "Warehouse", location: "San Francisco", active: true },
+    { id: "pp3", clientId: "blueprint", name: "Rosa Diaz", title: "Driver", email: "rosa@example.com", ...mgr, hireDate: daysAgo(26), birthday: md(120), department: "Logistics", location: "San Francisco", active: true },
+    { id: "pp4", clientId: "blueprint", name: "Chris Wu", title: "Warehouse Associate", email: "chris.w@example.com", ...mgr, hireDate: yearsAgo(2, 150), birthday: md(200), department: "Warehouse", location: "Las Vegas", active: true },
+    { id: "pp5", clientId: "blueprint", name: "Dana Ortiz", title: "Office Manager", email: "dana@example.com", managerEmail: "alex@example.com", managerName: "Alex Rivera", hireDate: yearsAgo(4, 5), birthday: md(60), department: "Operations", location: "San Francisco", active: true },
+  ];
+  const checkins = [
+    { id: "ck1", clientId: "blueprint", personId: "pp1", managerEmail: "dana@example.com", kind: "checkin" as const, date: daysAgo(9), notes: "Busy season planning. Wants to train Chris on the new scanner.", commitments: [{ id: "c1", text: "Book scanner training for Chris", done: false }], by: "Dana Ortiz", at: new Date().toISOString() },
+    { id: "ck2", clientId: "blueprint", personId: "pp1", managerEmail: "dana@example.com", kind: "recognition" as const, date: daysAgo(12), notes: "Stayed late to get the gala load-out done on time. Thanked him at the team huddle.", by: "Dana Ortiz", at: new Date().toISOString() },
+    { id: "ck3", clientId: "blueprint", personId: "pp4", managerEmail: "dana@example.com", kind: "checkin" as const, date: daysAgo(21), notes: "Interested in a lead role next year.", commitments: [], by: "Dana Ortiz", at: new Date().toISOString() },
+  ];
+  return { config, roles, candidates, resources, benefits, announcements, notes, files, notices, hires, people, checkins };
 }
 
 export const DAY_MS = 86400000;

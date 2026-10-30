@@ -70,7 +70,7 @@ function guardWrites(on: boolean) {
 }
 
 const Ctx = createContext<Store | null>(null);
-const KEY = "alza-portal-demo-v10";
+const KEY = "alza-portal-demo-v11";
 export const PENDING_INVITE = "alza-pending-invite";
 
 type Who = { email: string; advisor: boolean; memberships: { clientId: string; name: string; role: string; access: string }[] };
@@ -412,6 +412,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         clients: base ? [base] : [],
         candidates: state.candidates.filter((c) => !c.hidden),
         files: state.files.filter((f) => !f.confidential || f.by === p.name),
+        // roster: executives see their whole team list, everyone else only the people they manage
+        people: state.people.filter((x) => x.clientId === p.clientId && (p.access === "exec" || (!!p.email && x.managerEmail.toLowerCase() === p.email.toLowerCase()))),
+        // check-ins and recognition: only the person's manager (and Ben)
+        checkins: state.checkins.filter((x) => x.clientId === p.clientId && !!p.email && x.managerEmail.toLowerCase() === p.email.toLowerCase()),
         live: LIVE,
         me: meUser,
         ready,
