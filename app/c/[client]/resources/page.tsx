@@ -1,11 +1,14 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { ClientNav, ClientTopbar, Toast, useGuard, useToast } from "@/components/ui";
 import { fmt } from "@/lib/data";
 import { FOLDERS } from "@/lib/modules";
 import { useStore } from "@/lib/store";
+import { canView, openResource } from "@/lib/library";
+import { hasPractice } from "@/lib/practice";
 
 export default function Resources() {
   const { client: clientId } = useParams<{ client: string }>();
@@ -15,6 +18,7 @@ export default function Resources() {
   const [folder, setFolder] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const toast = useToast();
+  const router = useRouter();
 
   if (!ok || !client) return null;
   if (!config[clientId]?.modules.resources)
@@ -75,7 +79,19 @@ export default function Resources() {
                   {r.outdated && <span style={{ color: "var(--amber)" }}> · update coming</span>}
                 </div>
               </div>
-              <button className="btn sm" onClick={() => toast.show("Opens the file in the full build")}>Open</button>
+              <span style={{ display: "inline-flex", gap: 6, flex: "none" }}>
+                {hasPractice(r) && config[clientId]?.modules.training && <Link className="btn sm primary" href={`/c/${clientId}/hub/learn/${r.id}`}>Practice</Link>}
+                <button
+                  className="btn sm"
+                  onClick={async () => {
+                    if (canView(r)) return router.push(`/c/${clientId}/hub/view/${r.id}`);
+                    const e = await openResource(r);
+                    if (e) toast.show(e);
+                  }}
+                >
+                  Open
+                </button>
+              </span>
             </div>
           ))}
         </div>
