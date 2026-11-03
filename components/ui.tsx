@@ -324,7 +324,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
             ]
           : []),
         ...(tools && cfg?.askHr !== false ? [{ href: `${base}/hub/ask`, label: "Ask HR", match: [`${base}/hub/ask`] }] : []),
-        ...(tools ? [{ href: `${base}/hub/library`, label: "Learn", match: [`${base}/hub/library`, `${base}/hub/learn`] }] : []),
+        ...(tools ? [{ href: `${base}/hub/library`, label: "Learn", match: [`${base}/hub/library`, `${base}/hub/learn`, `${base}/hub/view`] }] : []),
       ],
     },
     {

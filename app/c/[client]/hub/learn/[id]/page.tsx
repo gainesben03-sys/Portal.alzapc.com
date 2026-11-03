@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { ClientNav, ClientTopbar, Toast, useGuard, useToast } from "@/components/ui";
 import { Custom, IdeaCards, Planner, Quiz, RolePlay, Sorter } from "@/components/practice";
 import { useStore } from "@/lib/store";
-import { openResource } from "@/lib/library";
+import { canView, openResource } from "@/lib/library";
 import { authHeader } from "@/lib/supabase";
 import { Lang, LANG_LABEL, Scenario, ui } from "@/lib/practice";
 
@@ -86,7 +86,11 @@ export default function PracticePage() {
           )}
         </div>
         {(r.path || r.url) && (
-          <button className="linklike small" style={{ marginTop: 6 }} onClick={async () => { const e = await openResource(r); if (e) toast.show(e); }}>{L === "es" ? "Ver las diapositivas" : "Open the slides"} ›</button>
+          canView(r) ? (
+            <Link className="linklike small" style={{ marginTop: 6, display: "inline-block" }} href={`/c/${clientId}/hub/view/${r.id}?from=practice`}>{L === "es" ? "Ver las diapositivas" : "View the slides"} ›</Link>
+          ) : (
+            <button className="linklike small" style={{ marginTop: 6 }} onClick={async () => { const e = await openResource(r); if (e) toast.show(e); }}>{L === "es" ? "Ver las diapositivas" : "Open the slides"} ›</button>
+          )
         )}
 
         {!play && (

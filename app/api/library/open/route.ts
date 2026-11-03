@@ -2,6 +2,7 @@
 // Ben can open anything; a client's people only what's been shared with their company.
 import { NextResponse } from "next/server";
 import { admin, caller, SERVER_LIVE } from "@/lib/server";
+import { viewKind } from "@/lib/viewkind";
 
 export async function GET(req: Request) {
   if (!SERVER_LIVE) return NextResponse.json({ ok: false, reason: "demo" });
@@ -14,12 +15,13 @@ export async function GET(req: Request) {
   if (!r) return NextResponse.json({ ok: false, reason: "not_found" }, { status: 404 });
   const shared = (r.shares ?? []).some((s) => me.memberOf.includes(s.clientId));
   if (!me.advisor && !shared) return NextResponse.json({ ok: false, reason: "forbidden" }, { status: 403 });
+  const kind = viewKind(r.fileName ?? r.path ?? "", r.url);
   if (r.path) {
     if (!r.path.startsWith("alza/library/")) return NextResponse.json({ ok: false, reason: "not_found" }, { status: 404 });
     const { data: u } = await db.storage.from("client-files").createSignedUrl(r.path, 3600);
     if (!u?.signedUrl) return NextResponse.json({ ok: false, reason: "missing" });
-    return NextResponse.json({ ok: true, url: u.signedUrl });
+    return NextResponse.json({ ok: true, url: u.signedUrl, kind, fileName: r.fileName });
   }
-  if (r.url && /^https?:\/\//i.test(r.url)) return NextResponse.json({ ok: true, url: r.url });
+  if (r.url && /^https?:\/\//i.test(r.url)) return NextResponse.json({ ok: true, url: r.url, kind });
   return NextResponse.json({ ok: false, reason: "no_file" });
 }

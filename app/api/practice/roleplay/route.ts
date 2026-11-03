@@ -104,7 +104,7 @@ export async function POST(req: Request) {
       .slice(-MAX_TURNS * 2 - 1)
       .map((m) => `${m.role === "user" ? "Manager" : scenario!.name}: ${clip(String(m.text ?? "").replace(/\[END\]/g, ""), 1200)}`)
       .join("\n");
-    const r = await claude({ system: coach(scenario, ideas, framework, lang), messages: [{ role: "user", content: `<conversation>\n${transcript}\n</conversation>\n\nGive the feedback as JSON.` }], maxTokens: 1500, temperature: 0.3 });
+    const r = await claude({ system: coach(scenario, ideas, framework, lang), messages: [{ role: "user", content: `<conversation>\n${transcript}\n</conversation>\n\nGive the feedback as JSON.` }], maxTokens: 1500 });
     if (!r.ok) return NextResponse.json({ ok: false, reason: r.reason });
     const fb = parseJson(r.text);
     if (!fb) return NextResponse.json({ ok: false, reason: "bad_answer" });
@@ -123,7 +123,7 @@ export async function POST(req: Request) {
   );
   if (!chat) return NextResponse.json({ ok: false, reason: "bad_request" }, { status: 400 });
   const messages = chat.map((m) => ({ role: m.role, content: m.text }));
-  const r = await claude({ system: actor(scenario, lang), messages, maxTokens: 300, temperature: 0.8 });
+  const r = await claude({ system: actor(scenario, lang), messages, maxTokens: 300 });
   if (!r.ok) return NextResponse.json({ ok: false, reason: r.reason });
   const done = /\[END\]/.test(r.text);
   const reply = tidy(r.text.replace(/\[END\]/g, "").trim());

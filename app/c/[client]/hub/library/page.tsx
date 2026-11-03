@@ -7,7 +7,8 @@ import { ClientNav, ClientTopbar, Toast, useGuard, useToast } from "@/components
 import { HubHeader } from "@/components/hub";
 import { useStore } from "@/lib/store";
 import { fmt } from "@/lib/data";
-import { openResource, RES_ICON } from "@/lib/library";
+import { canView, openResource, RES_ICON } from "@/lib/library";
+import { useRouter } from "next/navigation";
 import { loadNewsletters, monthLabel, Newsletter } from "@/lib/newsletters";
 import { hasPractice } from "@/lib/practice";
 
@@ -20,6 +21,7 @@ export default function HubLibrary() {
   const { getClient, resources, clients, viewer } = useStore();
   const client = getClient(clientId);
   const toast = useToast();
+  const router = useRouter();
   const [q, setQ] = useState("");
   const [folder, setFolder] = useState<string>("all");
   const [minutes, setMinutes] = useState<Newsletter[]>([]);
@@ -57,7 +59,7 @@ export default function HubLibrary() {
                   <span className="tiny" style={{ opacity: 0.8 }}>{[c.quiz.length && `${c.quiz.length}-question check`, c.scenarios.length && `${c.scenarios.length} role-plays`, c.planner.length && "a conversation planner"].filter(Boolean).join(" · ")}</span>
                   <div className="row" style={{ gap: 8, marginTop: 4 }}>
                     <Link className="btn sm learn-go" href={`/c/${clientId}/hub/learn/${r.id}`}>Start practicing</Link>
-                    {(r.path || r.url) && <button className="btn sm ghost learn-ghost" onClick={async () => { const e = await openResource(r); if (e) toast.show(e); }}>Slides</button>}
+                    {(r.path || r.url) && (canView(r) ? <Link className="btn sm ghost learn-ghost" href={`/c/${clientId}/hub/view/${r.id}`}>View slides</Link> : <button className="btn sm ghost learn-ghost" onClick={async () => { const e = await openResource(r); if (e) toast.show(e); }}>Slides</button>)}
                   </div>
                 </div>
               );
@@ -81,6 +83,7 @@ export default function HubLibrary() {
                 key={r.id + s.folder}
                 className="hub-lib-row"
                 onClick={async () => {
+                  if (canView(r)) return router.push(`/c/${clientId}/hub/view/${r.id}`);
                   const e = await openResource(r);
                   if (e) toast.show(e);
                 }}

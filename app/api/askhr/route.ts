@@ -109,7 +109,7 @@ export async function POST(req: Request) {
   // earlier answers go back as plain text so follow-ups have context
   const messages = chat.map((m) => ({ role: m.role, content: m.text }));
   messages[messages.length - 1].content += "\n\n(Answer with the JSON only.)";
-  const r = await claude({ system, messages, maxTokens: 1800, temperature: 0.2 });
+  const r = await claude({ system, messages, maxTokens: 1800 });
   if (!r.ok) return NextResponse.json({ ok: false, reason: r.reason });
   const out = parseJson(r.text);
   if (!out) return NextResponse.json({ ok: false, reason: "bad_answer" });

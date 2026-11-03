@@ -2,6 +2,7 @@
 
 import { Resource } from "./modules";
 import { authHeader, LIVE } from "./supabase";
+import { viewKind, ViewKind } from "./viewkind";
 
 /** Open a library item in a new tab. Returns an error message, or null. */
 export async function openResource(r: Resource): Promise<string | null> {
@@ -32,3 +33,22 @@ export async function openResource(r: Resource): Promise<string | null> {
 }
 
 export const RES_ICON: Record<string, string> = { Training: "🎓", Video: "▶️", Template: "📄", Guide: "📘", Checklist: "✅", Policy: "📜", Link: "🔗" };
+
+/** True when the item can be shown inside the portal instead of opening a new tab. */
+export function canView(r: Resource): boolean {
+  return viewKind(r.fileName ?? r.path ?? "", r.url) !== "link";
+}
+
+/** The address to show an item in the portal. */
+export async function viewUrl(r: Resource): Promise<{ url: string; kind: ViewKind } | { error: string }> {
+  const kind = viewKind(r.fileName ?? r.path ?? "", r.url);
+  if (!LIVE) return r.url ? { url: r.url, kind } : { error: "Demo mode: files show once the portal is live." };
+  try {
+    const res = await fetch(`/api/library/open?id=${encodeURIComponent(r.id)}`, { headers: await authHeader() });
+    const j = await res.json();
+    if (j.ok && j.url) return { url: j.url, kind: j.kind ?? kind };
+    return { error: j.reason === "forbidden" ? "This hasn't been shared with your company." : "Couldn't open it. Try again." };
+  } catch {
+    return { error: "Couldn't open it. Check your connection." };
+  }
+}

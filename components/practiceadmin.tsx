@@ -32,7 +32,7 @@ export function PracticeSheet({ r, onSave, onClose }: { r: Resource; onSave: (p:
     try {
       const res = await fetch("/api/practice/generate", { method: "POST", headers: { "Content-Type": "application/json", ...(await authHeader()) }, body: JSON.stringify({ id: r.id, notes: notes.trim() || undefined, text: text.trim() || undefined, spanish }) });
       const j = await res.json();
-      if (!j.ok) setErr(WHY[j.reason] ?? `Couldn't build it (${j.reason ?? "error"}).`);
+      if (!j.ok) setErr(WHY[j.reason] ?? `Couldn't build it (${j.reason ?? "error"}${j.detail ? `: ${String(j.detail).slice(0, 200)}` : ""}).`);
       else {
         setP({ status: "draft", langs: j.langs, content: j.content, at: new Date().toISOString(), notes: j.notes });
         setRebuild(false);

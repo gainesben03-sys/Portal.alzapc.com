@@ -61,7 +61,7 @@ ${clip(text, 120_000)}
 </training>
 
 Return the JSON.`;
-  const out = await claude({ system: SYSTEM, messages: [{ role: "user", content: user }], maxTokens: 16000, temperature: 0.4 });
+  const out = await claude({ system: SYSTEM, messages: [{ role: "user", content: user }], maxTokens: 16000 });
   if (!out.ok) return NextResponse.json({ ok: false, reason: out.reason, detail: out.detail });
   const j = parseJson(out.text);
   if (!j?.en?.ideas?.length || !j.en.scenarios?.length) return NextResponse.json({ ok: false, reason: "bad_answer" });

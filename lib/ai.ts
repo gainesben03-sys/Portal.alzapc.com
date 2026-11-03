@@ -25,7 +25,7 @@ export async function claude(opts: { system: string | SysBlock[]; messages: { ro
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5", max_tokens: opts.maxTokens, system: opts.system, messages: opts.messages, ...(opts.temperature != null ? { temperature: opts.temperature } : {}) }),
+    body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5", max_tokens: opts.maxTokens, system: opts.system, messages: opts.messages }),
   });
   if (!r.ok) return { ok: false, reason: `api_${r.status}`, detail: clip(await r.text(), 300) };
   const j = await r.json();
