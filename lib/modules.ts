@@ -4,7 +4,7 @@ import { addBusinessDays, Person, today, toISO } from "./data";
 import type { Hire } from "./hires";
 import { SEED_PRACTICE } from "./practice";
 
-export type ModuleKey = "recruiting" | "resources" | "wellness" | "board" | "hires";
+export type ModuleKey = "recruiting" | "resources" | "wellness" | "board" | "hires" | "training";
 
 /** Which pages each access level can open. Executives see everything, including Team. */
 export function canSee(access: Access | undefined, page: ModuleKey | "projects" | "team"): boolean {
@@ -18,6 +18,7 @@ export const MODULES: { key: ModuleKey; label: string; blurb: string }[] = [
   { key: "resources", label: "Resources", blurb: "Templates, guides and deliverables shared by Alza" },
   { key: "wellness", label: "Wellness", blurb: "Benefits and wellbeing programs by pillar" },
   { key: "board", label: "Messages", blurb: "A message thread with Ben, under Ask Ben" },
+  { key: "training", label: "Training", blurb: "Their trainings to view, with practice: quick checks, role-plays with feedback and a planner. Execs see who's practiced" },
 ];
 
 export type Access = "exec" | "manager" | "hiring";
@@ -287,7 +288,7 @@ export function seedModules() {
   const config: Record<string, ClientConfig> = {
     blueprint: {
       huddle: { cadence: "weekly", day: 1, recipients: ["alex@example.com", "priya@example.com"], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
-      modules: { recruiting: true, resources: true, wellness: true, board: true, hires: true },
+      modules: { recruiting: true, resources: true, wellness: true, board: true, hires: true, training: true },
       videoScreening: true,
       accent: "#2b3ff5",
       logo: "/blueprint-logo.png",
@@ -302,7 +303,7 @@ export function seedModules() {
     },
     harbor: {
       huddle: { cadence: "weekly", day: 1, recipients: ["sam@example.com"], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
-      modules: { recruiting: false, resources: true, wellness: false, board: true, hires: true },
+      modules: { recruiting: false, resources: true, wellness: false, board: true, hires: true, training: false },
       accent: "#6b8c6b",
       codes: [],
       escalationEmail: "sam@example.com",
@@ -310,7 +311,7 @@ export function seedModules() {
     },
     northgate: {
       huddle: { cadence: "weekly", day: 1, recipients: ["rae@example.com"], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
-      modules: { recruiting: false, resources: true, wellness: true, board: true, hires: true },
+      modules: { recruiting: false, resources: true, wellness: true, board: true, hires: true, training: false },
       accent: "#4a7ab5",
       codes: [],
       escalationEmail: "rae@example.com",
@@ -321,7 +322,7 @@ export function seedModules() {
     },
     cedar: {
       huddle: { cadence: "weekly", day: 1, recipients: ["jo@example.com"], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
-      modules: { recruiting: true, resources: false, wellness: false, board: true, hires: true },
+      modules: { recruiting: true, resources: false, wellness: false, board: true, hires: true, training: false },
       accent: "#8a6d3b",
       codes: [],
       escalationEmail: "jo@example.com",

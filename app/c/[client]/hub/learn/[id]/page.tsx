@@ -8,7 +8,7 @@ import { Custom, IdeaCards, Planner, Quiz, RolePlay, Sorter } from "@/components
 import { useStore } from "@/lib/store";
 import { canView, openResource } from "@/lib/library";
 import { authHeader } from "@/lib/supabase";
-import { Lang, LANG_LABEL, Scenario, ui } from "@/lib/practice";
+import { Lang, LANG_LABEL, saveProgress, Scenario, ui } from "@/lib/practice";
 
 type Tab = "ideas" | "check" | "sort" | "roleplay" | "plan";
 const LANG_KEY = "alza-practice-lang";
@@ -17,7 +17,7 @@ const LANG_KEY = "alza-practice-lang";
 export default function PracticePage() {
   const { client: clientId, id } = useParams<{ client: string; id: string }>();
   const ok = useGuard("client", clientId);
-  const { getClient, resources, viewer } = useStore();
+  const { getClient, resources, viewer, config } = useStore();
   const client = getClient(clientId);
   const toast = useToast();
   const [lang, setLang] = useState<Lang>("en");
@@ -36,13 +36,15 @@ export default function PracticePage() {
   if (!ok || !client) return null;
   const r = resources.find((x) => x.id === id);
   const isAdvisor = viewer?.kind === "advisor";
-  const visible = !!r?.practice && (isAdvisor || (r.practice.status === "published" && r.shares.some((s) => s.clientId === clientId)));
+  const trainingOn = !!config[clientId]?.modules.training;
+  const home = trainingOn ? `/c/${clientId}/training` : `/c/${clientId}/hub/library`;
+  const visible = !!r?.practice && (isAdvisor || (trainingOn && r.practice.status === "published" && r.shares.some((s) => s.clientId === clientId)));
   if (!r || !visible || !r.practice?.content.en)
     return (
       <div style={{ ["--accent" as string]: client.accent }}>
         <ClientTopbar client={client} />
         <ClientNav clientId={client.id} />
-        <main className="wrap"><div className="card">This practice isn&apos;t available. <Link href={`/c/${clientId}/hub/library`}>Back to Learn</Link></div></main>
+        <main className="wrap"><div className="card">This practice isn&apos;t available. <Link href={home}>Back</Link></div></main>
       </div>
     );
   const p = r.practice;
@@ -56,6 +58,7 @@ export default function PracticePage() {
     } catch {}
   };
   const done = async (kind: "quiz" | "sort", score: number, total: number) => {
+    saveProgress(r.id, (cur) => ({ ...cur, [kind]: { score, total, at: new Date().toISOString() } }));
     fetch("/api/practice/done", { method: "POST", headers: { "Content-Type": "application/json", ...(await authHeader()) }, body: JSON.stringify({ clientId, resourceId: r.id, kind, score, total }) }).catch(() => undefined);
   };
   const tabs: { k: Tab; label: string; show: boolean }[] = [
@@ -71,7 +74,7 @@ export default function PracticePage() {
       <ClientTopbar client={client} />
       <ClientNav clientId={client.id} />
       <main className="wrap">
-        <Link href={`/c/${clientId}/hub/library`} className="small" style={{ color: "var(--blue)" }}>← {L === "es" ? "Aprender" : "Learn"}</Link>
+        <Link href={home} className="small" style={{ color: "var(--blue)" }}>← {trainingOn ? (L === "es" ? "Capacitación" : "Training") : L === "es" ? "Aprender" : "Learn"}</Link>
         {isAdvisor && p.status !== "published" && <div className="pr-draft tiny">Draft: only you can see this until you publish it in the library.</div>}
         <div className="pr-head section">
           <div className="grow" style={{ minWidth: 0 }}>
@@ -101,7 +104,7 @@ export default function PracticePage() {
 
         <div className="section">
           {play ? (
-            <RolePlay key={(play.scenario?.id ?? "custom") + L} clientId={clientId} resourceId={play.scenario ? r.id : undefined} scenario={play.scenario} custom={play.custom} lang={L} ideas={c.ideas} pushback={c.pushback} onExit={() => setPlay(null)} />
+            <RolePlay key={(play.scenario?.id ?? "custom") + L} clientId={clientId} resourceId={play.scenario ? r.id : undefined} scenario={play.scenario} custom={play.custom} lang={L} ideas={c.ideas} pushback={c.pushback} onExit={() => setPlay(null)} onFeedback={() => saveProgress(r.id, (cur) => ({ ...cur, roleplays: (cur.roleplays ?? 0) + 1 }))} />
           ) : tab === "ideas" ? (
             <>
               <IdeaCards c={c} lang={L} />

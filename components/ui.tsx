@@ -310,6 +310,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
   // Manager Hub: anyone with people reporting to them on the roster; Ask HR and Learn also for executives
   const leads = people.some((p) => p.clientId === clientId && p.active && (isAdvisor || (!!me?.email && p.managerEmail.toLowerCase() === me.email.toLowerCase())));
   const tools = leads || isAdvisor || access === "exec";
+  const training = !!cfg?.modules.training && access !== "hiring";
   const groups: { key: string; label: string; subs: Sub[] }[] = [
     { key: "home", label: "Home", subs: access === "hiring" ? [] : [{ href: base, label: "Home", match: [] }] },
     {
@@ -324,8 +325,18 @@ export function ClientNav({ clientId }: { clientId: string }) {
             ]
           : []),
         ...(tools && cfg?.askHr !== false ? [{ href: `${base}/hub/ask`, label: "Ask HR", match: [`${base}/hub/ask`] }] : []),
-        ...(tools ? [{ href: `${base}/hub/library`, label: "Learn", match: [`${base}/hub/library`, `${base}/hub/learn`, `${base}/hub/view`] }] : []),
+        ...(tools ? [{ href: `${base}/hub/library`, label: training ? "Toolkit" : "Learn", match: [`${base}/hub/library`, ...(training ? [] : [`${base}/hub/learn`, `${base}/hub/view`])] }] : []),
       ],
+    },
+    {
+      key: "training",
+      label: "Training",
+      subs: training
+        ? [
+            { href: `${base}/training`, label: "Trainings", match: [`${base}/hub/learn`, `${base}/hub/view`] },
+            ...(isAdvisor || access === "exec" ? [{ href: `${base}/training/progress`, label: "Who's practiced", match: [`${base}/training/progress`] }] : []),
+          ]
+        : [],
     },
     {
       key: "todo",
@@ -363,7 +374,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
     },
   ].filter((g) => g.subs.length);
 
-  const subOn = (x: Sub) => (x.match.length ? x.match.some((m) => path.startsWith(m)) : path === x.href);
+  const subOn = (x: Sub) => path === x.href || x.match.some((m) => path.startsWith(m));
   const current = groups.find((g) => g.subs.some(subOn));
   const groupBadge = (g: (typeof groups)[number]) => g.subs.reduce((n, x) => n + (x.badge ?? 0), 0);
 

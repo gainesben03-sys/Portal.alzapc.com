@@ -345,3 +345,32 @@ export function demoFeedback(ideas: KeyIdea[]): Feedback {
     betterLine: { said: "So just try to be on time, okay?", try: "Can we agree you're here and ready at 7:00, starting tomorrow? Let's check in Friday." },
   };
 }
+
+// ---------- My progress (kept on this device only) ----------
+
+export interface MyProgress {
+  quiz?: { score: number; total: number; at: string };
+  sort?: { score: number; total: number; at: string };
+  roleplays?: number;
+  last?: string;
+}
+const PROG_KEY = "alza-practice-progress";
+export function myProgress(): Record<string, MyProgress> {
+  try {
+    return JSON.parse(localStorage.getItem(PROG_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+export function saveProgress(id: string, p: (cur: MyProgress) => MyProgress) {
+  try {
+    const all = myProgress();
+    all[id] = { ...p(all[id] ?? {}), last: new Date().toISOString() };
+    localStorage.setItem(PROG_KEY, JSON.stringify(all));
+  } catch {}
+}
+/** 0 to 3 steps done: the quick check, a role-play, and the sort drill or a second role-play. */
+export function progressSteps(p: MyProgress | undefined, hasSort: boolean): number {
+  if (!p) return 0;
+  return (p.quiz ? 1 : 0) + ((p.roleplays ?? 0) > 0 ? 1 : 0) + (hasSort ? (p.sort ? 1 : 0) : (p.roleplays ?? 0) > 1 ? 1 : 0);
+}

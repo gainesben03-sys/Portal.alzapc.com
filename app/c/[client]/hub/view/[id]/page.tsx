@@ -23,7 +23,7 @@ function View() {
   const { client: clientId, id } = useParams<{ client: string; id: string }>();
   const back = useSearchParams().get("from");
   const ok = useGuard("client", clientId);
-  const { getClient, resources, viewer } = useStore();
+  const { getClient, resources, viewer, config } = useStore();
   const client = getClient(clientId);
   const r = resources.find((x) => x.id === id && (viewer?.kind === "advisor" || x.shares.some((s) => s.clientId === clientId)));
   const [v, setV] = useState<{ url: string; kind: ViewKind } | null>(null);
@@ -34,13 +34,15 @@ function View() {
   }, [ok, r?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!ok || !client) return null;
-  const backHref = back === "practice" ? `/c/${clientId}/hub/learn/${id}` : `/c/${clientId}/hub/library`;
+  const trainingOn = !!config[clientId]?.modules.training;
+  const isTraining = !!r?.shares.some((s) => s.clientId === clientId && s.folder === "Trainings");
+  const backHref = back === "practice" ? `/c/${clientId}/hub/learn/${id}` : trainingOn && isTraining ? `/c/${clientId}/training` : `/c/${clientId}/hub/library`;
   return (
     <div style={{ ["--accent" as string]: client.accent }}>
       <ClientTopbar client={client} />
       <ClientNav clientId={client.id} />
       <main className="wrap">
-        <Link href={backHref} className="small" style={{ color: "var(--blue)" }}>← {back === "practice" ? "Practice" : "Learn"}</Link>
+        <Link href={backHref} className="small" style={{ color: "var(--blue)" }}>← {back === "practice" ? "Practice" : trainingOn && isTraining ? "Training" : "Toolkit"}</Link>
         {!r ? (
           <div className="card section">This isn&apos;t available. <Link href={`/c/${clientId}/hub/library`}>Back to Learn</Link></div>
         ) : (
@@ -50,7 +52,7 @@ function View() {
                 <h1 style={{ margin: 0 }}>{r.title}</h1>
                 {r.desc && <p className="muted small" style={{ margin: "4px 0 0" }}>{r.desc}</p>}
               </div>
-              {hasPractice(r) && back !== "practice" && <Link className="btn primary sm" href={`/c/${clientId}/hub/learn/${r.id}`}>🎯 Practice</Link>}
+              {hasPractice(r) && trainingOn && back !== "practice" && <Link className="btn primary sm" href={`/c/${clientId}/hub/learn/${r.id}`}>🎯 Practice</Link>}
             </div>
             <div className="section">
               {err ? <div className="card small">{err}</div> : v ? <DocViewer url={v.url} kind={v.kind} title={r.title} /> : <p className="small muted">Loading…</p>}

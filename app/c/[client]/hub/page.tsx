@@ -18,7 +18,7 @@ const ICON: Record<HubItem["kind"], string> = { birthday: "🎂", anniversary: "
 export default function HubHome() {
   const { client: clientId } = useParams<{ client: string }>();
   const ok = useGuard("client", clientId);
-  const { getClient, actions, rules, clients, resources } = useStore();
+  const { getClient, actions, rules, clients, resources, config } = useStore();
   const client = getClient(clientId);
   const h = useHub(clientId);
   const toast = useToast();
@@ -44,7 +44,7 @@ export default function HubHome() {
   const myTasks = actions.filter((a) => a.clientId === clientId && a.side === "client" && a.status !== "completed" && !!h.managerEmail && (a.owner.email ?? "").toLowerCase() === h.managerEmail);
   const first = (h.managerName || "").split(" ")[0];
   const byId = (id?: string) => h.team.find((p) => p.id === id);
-  const training = resources.find((r) => hasPractice(r) && r.shares.some((s) => s.clientId === clientId));
+  const training = !config[clientId]?.modules.training ? undefined : resources.find((r) => hasPractice(r) && r.shares.some((s) => s.clientId === clientId));
 
   return (
     <div style={{ ["--accent" as string]: client.accent }}>

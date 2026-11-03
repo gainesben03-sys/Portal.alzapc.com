@@ -96,7 +96,7 @@ export default function ClientSetup() {
           {MODULES.map((m) => (
             <label className="rule" key={m.key} style={{ cursor: "pointer" }}>
               <span className="switch">
-                <input type="checkbox" checked={cfg.modules[m.key]} onChange={(e) => set({ modules: { ...cfg.modules, [m.key]: e.target.checked } })} />
+                <input type="checkbox" checked={!!cfg.modules[m.key]} onChange={(e) => set({ modules: { ...cfg.modules, [m.key]: e.target.checked } })} />
                 <span />
               </span>
               <div><b>{m.label}</b><div className="tiny muted">{m.blurb}</div></div>

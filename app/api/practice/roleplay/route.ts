@@ -64,6 +64,10 @@ export async function POST(req: Request) {
   let scenario: Scenario | null = null;
   let ideas = DEFAULT_IDEAS;
   let framework = "CLEAR";
+  if (b.resourceId && !me.advisor) {
+    const { data: cl } = await db.from("clients").select("config").eq("id", clientId).maybeSingle();
+    if (!(cl?.config as D)?.modules?.training) return NextResponse.json({ ok: false, reason: "forbidden" }, { status: 403 });
+  }
   if (b.resourceId) {
     const { data } = await db.from("resources").select("data").eq("id", String(b.resourceId)).maybeSingle();
     const r = data?.data as D | undefined;

@@ -18,7 +18,7 @@ const MANAGER_FOLDERS = ["Trainings", "Manager toolkit", "Policies"];
 export default function HubLibrary() {
   const { client: clientId } = useParams<{ client: string }>();
   const ok = useGuard("client", clientId);
-  const { getClient, resources, clients, viewer } = useStore();
+  const { getClient, resources, clients, viewer, config } = useStore();
   const client = getClient(clientId);
   const toast = useToast();
   const router = useRouter();
@@ -33,11 +33,13 @@ export default function HubLibrary() {
   }, [ok, clientId, demoClients]);
 
   if (!ok || !client) return null;
+  const trainingOn = !!config[clientId]?.modules.training;
   const items = resources
-    .flatMap((r) => r.shares.filter((s) => s.clientId === clientId && MANAGER_FOLDERS.includes(s.folder)).map((s) => ({ r, s })))
+    .flatMap((r) => r.shares.filter((s) => s.clientId === clientId && MANAGER_FOLDERS.includes(s.folder) && !(trainingOn && s.folder === "Trainings")).map((s) => ({ r, s })))
     .sort((a, b) => (a.s.folder === "Trainings" ? -1 : 0) - (b.s.folder === "Trainings" ? -1 : 0) || b.s.at.localeCompare(a.s.at));
   const isAdvisor = viewer?.kind === "advisor";
-  const practice = items.filter(({ r, s }) => s.folder === "Trainings" && (hasPractice(r) || (isAdvisor && !!r.practice)));
+  // practice lives in the Training tab (a feature Ben turns on per client)
+  const practice: typeof items = [];
   const folders = Array.from(new Set(items.map((x) => x.s.folder)));
   const shown = items.filter(({ r, s }) => (folder === "all" || s.folder === folder) && (!q || `${r.title} ${r.desc} ${r.category}`.toLowerCase().includes(q.toLowerCase())));
 
@@ -46,7 +48,13 @@ export default function HubLibrary() {
       <ClientTopbar client={client} />
       <ClientNav clientId={client.id} />
       <main className="wrap">
-        <HubHeader clientId={clientId} title="Learn" sub="Your trainings, a place to practice, and the toolkit." />
+        <HubHeader clientId={clientId} title={trainingOn ? "Toolkit" : "Learn"} sub={trainingOn ? "Guides, policies and past Manager Minutes." : "Trainings, tools and past Manager Minutes."} />
+        {trainingOn && (
+          <Link href={`/c/${clientId}/training`} className="card section hub-tool">
+            <span className="hub-icon" aria-hidden="true">🎓</span>
+            <span className="grow" style={{ minWidth: 0 }}><b className="small" style={{ display: "block" }}>Trainings and practice</b><span className="tiny muted">In the Training tab</span></span>
+          </Link>
+        )}
         {practice.length > 0 && (
           <div className="learn-feature section">
             {practice.map(({ r }) => {

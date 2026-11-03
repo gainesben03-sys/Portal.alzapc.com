@@ -135,7 +135,7 @@ type Msg = { role: "user" | "assistant"; text: string };
 export type Custom = { name: string; role: string; situation: string };
 
 /** Claude plays the employee. When the manager is ready, it switches to coach and gives feedback. */
-export function RolePlay({ clientId, resourceId, scenario, custom, lang, ideas, pushback, onExit }: { clientId: string; resourceId?: string; scenario?: Scenario; custom?: Custom; lang: Lang; ideas: KeyIdea[]; pushback?: { line: string; reply: string }[]; onExit: () => void }) {
+export function RolePlay({ clientId, resourceId, scenario, custom, lang, ideas, pushback, onExit, onFeedback }: { clientId: string; resourceId?: string; scenario?: Scenario; custom?: Custom; lang: Lang; ideas: KeyIdea[]; pushback?: { line: string; reply: string }[]; onExit: () => void; onFeedback?: () => void }) {
   const t = ui(lang);
   const name = scenario?.name ?? custom?.name ?? "Sam";
   const [msgs, setMsgs] = useState<Msg[]>(scenario?.opener ? [{ role: "assistant", text: scenario.opener }] : []);
@@ -182,9 +182,13 @@ export function RolePlay({ clientId, resourceId, scenario, custom, lang, ideas, 
     setBusy(true); setErr("");
     const j = await call({ messages: payload(msgs), feedback: true });
     setBusy(false);
-    if (j.reason === "demo") return setFb(demoFeedback(ideas));
+    if (j.reason === "demo") {
+      setFb(demoFeedback(ideas));
+      return onFeedback?.();
+    }
     if (!j.ok) return setErr(say(j.reason));
     setFb(j.feedback);
+    onFeedback?.();
   };
 
   const restart = () => {

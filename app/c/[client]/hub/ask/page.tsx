@@ -31,7 +31,7 @@ const REASON: Record<string, string> = {
 export default function AskHr() {
   const { client: clientId } = useParams<{ client: string }>();
   const ok = useGuard("client", clientId);
-  const { getClient, resources } = useStore();
+  const { getClient, resources, config } = useStore();
   const client = getClient(clientId);
   const toast = useToast();
   const [mode, setMode] = useState<Mode>("handbook");
@@ -62,7 +62,7 @@ export default function AskHr() {
   }, [ok, client]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!ok || !client) return null;
-  const training = resources.find((r) => hasPractice(r) && r.shares.some((s) => s.clientId === clientId));
+  const training = !config[clientId]?.modules.training ? undefined : resources.find((r) => hasPractice(r) && r.shares.some((s) => s.clientId === clientId));
   const ideas = training?.practice?.content.en?.ideas ?? DEFAULT_IDEAS;
 
   const ask = async (text: string, m: Mode = mode) => {

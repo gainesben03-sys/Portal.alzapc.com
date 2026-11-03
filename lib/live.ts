@@ -68,7 +68,7 @@ export async function loadAll(db: SupabaseClient, email: string): Promise<State>
       accent: "#19283c",
       escalationEmail: "",
       ...cfg,
-      modules: { recruiting: true, resources: true, wellness: false, board: true, hires: true, ...(cfg.modules ?? {}) },
+      modules: { recruiting: true, resources: true, wellness: false, board: true, hires: true, training: false, ...(cfg.modules ?? {}) },
       huddle,
       users,
       codes: cc,
