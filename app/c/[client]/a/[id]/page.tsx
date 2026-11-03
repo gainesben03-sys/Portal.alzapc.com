@@ -45,7 +45,7 @@ export default function ActionDetail() {
   const left = subs.filter((x) => !x.done).length;
   const canCheck = open && (isAdvisor || a.side === "client");
   const primaryLabel =
-    left > 0 ? `${left} step${left === 1 ? "" : "s"} left` : a.kind === "approval" ? "Approve" : a.kind === "feedback" ? "Submit feedback" : "Mark as sent";
+    left > 0 ? `${left} step${left === 1 ? "" : "s"} left` : a.kind === "approval" ? "Approve" : a.kind === "feedback" ? "Submit feedback" : a.kind === "todo" ? "Mark done" : "Mark as sent";
   const attachFile = async (f: File) => {
     if (f.size > 25e6) return toast.show("Files can be up to 25 MB");
     const who = viewer?.kind === "client" ? viewer.person.name : "Ben Gaines";

@@ -5,6 +5,7 @@
 //   every change is saved back automatically. Row-level security decides who sees what.
 //   Demo mode (no keys): fictional sample data kept in this browser only.
 
+import { stepsFromTasks } from "./projecttasks";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, ReactNode } from "react";
 import { Action, ADVISOR, Client, Person, Rules, toISO } from "./data";
 import { Notice, PortalUser } from "./modules";
@@ -325,7 +326,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setViewer,
       getClient,
       setRules: (rules) => setState((s) => ({ ...s, rules })),
-      patch: (p) => setState((s) => ({ ...s, ...p })),
+      patch: (p) => setState((s) => (p.actions ? stepsFromTasks({ ...s, ...p }) : { ...s, ...p })),
       updateHire: (id, change, log) =>
         setState((s) => ({
           ...s,
@@ -344,7 +345,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }));
       },
       update: (id, patch, log) =>
-        setState((s) => {
+        setState((s0) => stepsFromTasks(((s) => {
           const before = s.actions.find((a) => a.id === id);
           let notices = s.notices;
           if (before && viewer?.kind === "client" && patch.status && patch.status !== before.status) {
@@ -373,7 +374,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 : a
             ),
           };
-        }),
+        })(s0))),
       reset: () => {
         if (!LIVE) setState(demoState());
       },

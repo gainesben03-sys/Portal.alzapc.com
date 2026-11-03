@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { AskBenSheet } from "@/components/askben";
-import { EditProjectSheet } from "@/components/projectedit";
+import { EditProjectSheet, useAssignees, useSaveProject } from "@/components/projectedit";
+import { canEditProject } from "@/lib/projecttasks";
 import { ClientNav, ClientTopbar, Toast, useGuard, useToast } from "@/components/ui";
 import { currentStep, HealthChip, ProgressChart, ProgressRing, projectHealth, StepTrack } from "@/components/projectprogress";
 import { dueLabel, fmt, Project, projectProgress, toISO, today } from "@/lib/data";
@@ -14,11 +15,13 @@ import { useStore } from "@/lib/store";
 export default function ProjectProgressPage() {
   const { client: clientId, id } = useParams<{ client: string; id: string }>();
   const ok = useGuard("client", clientId);
-  const { getClient, projects, actions, patch, viewer, rules } = useStore();
+  const { getClient, projects, actions, viewer, rules, me } = useStore();
   const client = getClient(clientId);
   const toast = useToast();
   const [asking, setAsking] = useState(false);
   const [editingP, setEditingP] = useState(false);
+  const people = useAssignees(clientId);
+  const saveProject = useSaveProject();
   if (!ok || !client) return null;
   const p = projects.find((x) => x.id === id && x.clientId === clientId);
   const isAdvisor = viewer?.kind === "advisor";
@@ -32,7 +35,9 @@ export default function ProjectProgressPage() {
       </div>
     );
 
-  const setP = (patchP: Partial<Project>) => patch({ projects: projects.map((x) => (x.id === p.id ? { ...x, ...patchP } : x)) });
+  const setP = (patchP: Partial<Project>) => saveProject({ ...p, ...patchP }, p);
+  const can = canEditProject(p, { advisor: isAdvisor, access: me?.access, email: me?.email });
+  const mineEmail = me?.email?.toLowerCase();
   const pct = projectProgress(p);
   const items = actions.filter((a) => a.projectId === p.id);
   const openItems = items.filter((a) => a.status !== "completed").sort((a, b) => a.due.localeCompare(b.due));
@@ -46,9 +51,10 @@ export default function ProjectProgressPage() {
       <ClientNav clientId={client.id} />
       <main className="wrap">
         <Link href={`/c/${clientId}/projects`} className="small" style={{ color: "var(--blue)" }}>← Projects</Link>
-        {isAdvisor && <button className="btn sm" style={{ float: "right", marginTop: 6 }} onClick={() => setEditingP(true)}>Edit project</button>}
+        {can && <button className="btn sm" style={{ float: "right", marginTop: 6 }} onClick={() => setEditingP(true)}>Edit project</button>}
         <h1 style={{ marginTop: 10 }}>{p.name}</h1>
         {p.summary && <p className="muted" style={{ marginTop: 4 }}>{p.summary}</p>}
+        {p.createdBy && <p className="tiny muted" style={{ marginTop: 2 }}>Started by {p.createdBy.name}</p>}
 
         <div className="card section proj-hero">
           <ProgressRing pct={pct} />
@@ -75,9 +81,10 @@ export default function ProjectProgressPage() {
                     <div className="pizza-title">{s.text}</div>
                     <div className="tiny muted">
                       {s.done ? (s.doneAt ? `Done ${fmt(s.doneAt.slice(0, 10))}` : "Done") : i === cur ? "In progress now" : i === cur + 1 ? "Up next" : "Coming up"}
+                      {s.owner && <> · {s.owner.name === "Ben Gaines" ? "Ben" : s.owner.name}{s.due && !s.done ? `, due ${fmt(s.due)}` : ""}</>}
                     </div>
                   </div>
-                  {isAdvisor && p.status !== "planned" && (
+                  {can && p.status !== "planned" && (
                     <input
                       type="checkbox"
                       aria-label={`Mark "${s.text}" done`}
@@ -89,8 +96,8 @@ export default function ProjectProgressPage() {
               );
             })}
           </ol>
-          {p.steps.length === 0 && <p className="small muted">Ben will add the steps when this kicks off.</p>}
-          {isAdvisor && p.status === "active" && pct === 100 && (
+          {p.steps.length === 0 && <p className="small muted">{can ? "No steps yet. Tap Edit project to add them, with who and when." : "Ben will add the steps when this kicks off."}</p>}
+          {can && p.status === "active" && pct === 100 && (
             <div className="action-foot">
               <button className="btn sm primary" style={{ marginLeft: "auto" }} onClick={() => { setP({ status: "done", milestoneDue: toISO(today()) }); toast.show("Marked complete"); }}>Mark project complete</button>
             </div>
@@ -119,7 +126,7 @@ export default function ProjectProgressPage() {
                   <div className="title ellipsis">{a.title}</div>
                   <div className="tiny muted">{a.side === "alza" ? "Ben" : a.owner.name} · {dueLabel(a)}</div>
                 </div>
-                <span className={`pill ${a.side === "alza" ? "alza" : "soon"}`}>{a.side === "alza" ? "Ben's" : isAdvisor ? "Client" : "Yours"}</span>
+                <span className={`pill ${a.side === "alza" ? "alza" : "soon"}`}>{a.side === "alza" ? "Ben's" : isAdvisor ? "Client" : mineEmail && a.owner.email?.toLowerCase() === mineEmail ? "Yours" : a.owner.name.split(" ")[0]}</span>
               </Link>
             ))}
           </div>
@@ -129,10 +136,11 @@ export default function ProjectProgressPage() {
         <EditProjectSheet
           p={p}
           onClose={() => setEditingP(false)}
+          people={people}
           onSave={(next, note) => {
-            patch({ projects: projects.map((x) => (x.id === p.id ? next : x)) });
+            const n = saveProject(next, p);
             setEditingP(false);
-            toast.show(note ? `Saved: ${note}` : "Saved");
+            toast.show([note ? `Saved: ${note}` : "Saved", n ? `${n} added to to-do lists` : ""].filter(Boolean).join(". "));
           }}
         />
       )}

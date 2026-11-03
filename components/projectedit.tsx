@@ -1,13 +1,44 @@
 "use client";
 
 import { useState } from "react";
-import { fmt, Project, Subtask, toISO, today } from "@/lib/data";
+import { ADVISOR, addBusinessDays, fmt, Person, Project, Subtask, toISO, today } from "@/lib/data";
+import { notifyBen, useStore } from "@/lib/store";
+import { pingTask } from "@/lib/pushclient";
+import { syncStepTasks } from "@/lib/projecttasks";
 import { Sheet } from "./ui";
+
+/** Who a step can go to: Ben, or anyone at the client who isn't hiring-only. */
+export function useAssignees(clientId: string): Person[] {
+  const { config } = useStore();
+  const users = (config[clientId]?.users ?? []).filter((u) => u.access !== "hiring");
+  return [ADVISOR, ...users.map((u) => ({ name: u.name, role: u.role, email: u.email }))];
+}
+
+/** Save a project; steps with a person and a date become tasks on that person's list. */
+export function useSaveProject() {
+  const { projects, actions, patch, viewer, me, who, getClient } = useStore();
+  const advisor = viewer?.kind === "advisor";
+  return (next: Project, prev?: Project): number => {
+    const person = viewer?.kind === "client" ? { name: viewer.person.name, role: viewer.person.role, email: me?.email ?? viewer.person.email } : undefined;
+    const r = syncStepTasks(next, prev, actions, { name: who, advisor, person });
+    patch({ projects: prev ? projects.map((x) => (x.id === next.id ? r.project : x)) : [...projects, r.project], actions: r.actions });
+    for (const a of r.created) if (a.side === "client" && a.status !== "completed") pingTask(a.id);
+    if (!advisor && r.forBen.length) {
+      const c = getClient(next.clientId)?.name ?? "A client";
+      notifyBen(`${c}: ${r.forBen.length === 1 ? "a project step" : `${r.forBen.length} project steps`} for you`, `${who} assigned you ${r.forBen.length === 1 ? "a step" : "steps"} in "${next.name}":\n\n${r.forBen.map((a) => `- ${a.title} (due ${fmt(a.due)})`).join("\n")}`);
+    }
+    return r.created.length;
+  };
+}
+
+export function blankProject(clientId: string, by?: Person): Project {
+  return { id: `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, clientId, name: "", summary: "", status: "active", steps: [], nextMilestone: "", milestoneDue: toISO(addBusinessDays(today(), 20)), startedAt: new Date().toISOString(), createdBy: by };
+}
 
 const newStepId = () => `st${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 
-/** Ben edits a project: name, summary, status, target date, and its steps. */
-export function EditProjectSheet({ p, onClose, onSave }: { p: Project; onClose: () => void; onSave: (next: Project, note: string) => void }) {
+/** Edit (or start) a project: name, summary, status, target date, and its steps with who and when. */
+export function EditProjectSheet({ p, onClose, onSave, people, isNew }: { p: Project; onClose: () => void; onSave: (next: Project, note: string) => void; people?: Person[]; isNew?: boolean }) {
   const [name, setName] = useState(p.name);
   const [summary, setSummary] = useState(p.summary);
   const [status, setStatus] = useState<Project["status"]>(p.status);
@@ -54,7 +85,7 @@ export function EditProjectSheet({ p, onClose, onSave }: { p: Project; onClose: 
 
   const dateLabel = status === "planned" ? "Target start" : status === "done" ? "Finished on" : "Target finish";
   return (
-    <Sheet title="Edit project" onClose={onClose}>
+    <Sheet title={isNew ? "New project" : "Edit project"} onClose={onClose}>
       <div className="seg" style={{ gridTemplateColumns: "1fr 1fr 1fr", marginTop: 0 }}>
         <button className={status === "planned" ? "on" : ""} onClick={() => setStatus("planned")}>Roadmap</button>
         <button className={status === "active" ? "on" : ""} onClick={() => setStatus("active")}>In progress</button>
@@ -65,7 +96,7 @@ export function EditProjectSheet({ p, onClose, onSave }: { p: Project; onClose: 
       <label className="f">{dateLabel}<input className="f" type="date" value={due} onChange={(e) => setDue(e.target.value)} /></label>
 
       <div className="f" style={{ marginTop: 14 }}>
-        <span className="flabel">Steps <span className="tiny muted">(these drive the % and the tracker)</span></span>
+        <span className="flabel">Steps <span className="tiny muted">(these drive the %{people ? ". Give a step a person and a date and it goes on their to-do list" : " and the tracker"})</span></span>
         <div className="step-edit">
           {steps.map((s, i) => (
             <div key={s.id} className="step-edit-row">
@@ -74,6 +105,15 @@ export function EditProjectSheet({ p, onClose, onSave }: { p: Project; onClose: 
               <button className="btn ghost sm" aria-label="Move up" disabled={i === 0} onClick={() => move(i, -1)}>↑</button>
               <button className="btn ghost sm" aria-label="Move down" disabled={i === steps.length - 1} onClick={() => move(i, 1)}>↓</button>
               <button className="btn ghost sm" aria-label="Remove step" style={{ color: "var(--red)" }} onClick={() => setSteps(steps.filter((_, k) => k !== i))}>✕</button>
+              {people && people.length > 0 && (
+                <div className="step-assign">
+                  <select className="f" aria-label={`Who does step ${i + 1}`} value={s.owner ? people.find((x) => x.name === s.owner!.name)?.name ?? "" : ""} onChange={(e) => { const o = people.find((x) => x.name === e.target.value); setStep(i, { owner: o, due: o ? s.due ?? toISO(addBusinessDays(today(), 5)) : s.due }); }}>
+                    <option value="">No one yet</option>
+                    {people.map((x) => <option key={x.name} value={x.name}>{x.name === ADVISOR.name ? "Ben (Alza)" : x.name}</option>)}
+                  </select>
+                  <input className="f" type="date" aria-label={`Due date for step ${i + 1}`} value={s.due ?? ""} onChange={(e) => setStep(i, { due: e.target.value || undefined })} />
+                </div>
+              )}
             </div>
           ))}
           {steps.length === 0 && <p className="tiny muted" style={{ margin: "4px 0" }}>No steps yet.</p>}
@@ -98,7 +138,7 @@ export function EditProjectSheet({ p, onClose, onSave }: { p: Project; onClose: 
 
       <div className="sheet-actions">
         <button className="btn ghost sm" onClick={onClose}>Cancel</button>
-        <button className="btn primary sm" disabled={!name.trim()} onClick={save}>Save</button>
+        <button className="btn primary sm" disabled={!name.trim()} onClick={save}>{isNew ? "Create project" : "Save"}</button>
       </div>
     </Sheet>
   );

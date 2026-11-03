@@ -7,7 +7,8 @@ import { ClientNav, ClientTopbar, Sheet, Toast, useGuard, useToast } from "@/com
 import { addBusinessDays, fmt, parseDay, Project, projectProgress, toISO, today } from "@/lib/data";
 import { useStore } from "@/lib/store";
 import { AskBenSheet } from "@/components/askben";
-import { EditProjectSheet } from "@/components/projectedit";
+import { blankProject, EditProjectSheet, useAssignees, useSaveProject } from "@/components/projectedit";
+import { canEditProject } from "@/lib/projecttasks";
 import { currentStep, HealthChip, projectHealth, StepTrack } from "@/components/projectprogress";
 
 type Tab = "active" | "planned" | "done";
@@ -15,20 +16,28 @@ type Tab = "active" | "planned" | "done";
 export default function Projects() {
   const { client: clientId } = useParams<{ client: string }>();
   const ok = useGuard("client", clientId);
-  const { getClient, projects, actions, patch, viewer, live, rules } = useStore();
+  const { getClient, projects, actions, patch, viewer, live, rules, me } = useStore();
   const client = getClient(clientId);
   const [tab, setTab] = useState<Tab>("active");
   const [adding, setAdding] = useState(false);
   const [del, setDel] = useState<Project | null>(null);
   const [asking, setAsking] = useState(false);
   const [editP, setEditP] = useState<Project | null>(null);
+  const [newP, setNewP] = useState<Project | null>(null);
   const toast = useToast();
+  const people = useAssignees(clientId);
+  const saveProject = useSaveProject();
   if (!ok || !client) return null;
 
   const isAdvisor = viewer?.kind === "advisor";
   const mine = projects.filter((p) => p.clientId === client.id);
   const by = (s: Tab) => mine.filter((p) => p.status === s).sort((a, b) => (s === "done" ? b.milestoneDue.localeCompare(a.milestoneDue) : a.milestoneDue.localeCompare(b.milestoneDue)));
-  const setP = (id: string, p: Partial<Project>) => patch({ projects: projects.map((x) => (x.id === id ? { ...x, ...p } : x)) });
+  const setP = (id: string, p: Partial<Project>) => {
+    const prev = projects.find((x) => x.id === id);
+    if (prev) saveProject({ ...prev, ...p }, prev);
+  };
+  const can = (p: Project) => canEditProject(p, { advisor: isAdvisor, access: me?.access, email: me?.email });
+  const startNew = () => setNewP(blankProject(clientId, viewer?.kind === "client" ? { name: viewer.person.name, role: viewer.person.role, email: me?.email ?? viewer.person.email } : undefined));
 
   const planned = by("planned");
   const months: Record<string, Project[]> = {};
@@ -47,7 +56,14 @@ export default function Projects() {
             <h1>Projects</h1>
             <p className="muted" style={{ marginTop: 6 }}>What's underway, what's coming, and what's done.</p>
           </div>
-          {isAdvisor ? <button className="btn primary" onClick={() => setAdding(true)}>Add</button> : <button className="btn primary sm" onClick={() => setAsking(true)}>Ask for a project</button>}
+          {isAdvisor ? (
+            <button className="btn primary" onClick={() => setAdding(true)}>Add</button>
+          ) : (
+            <span style={{ display: "inline-flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+              <button className="btn sm" onClick={() => setAsking(true)}>Ask Ben for one</button>
+              <button className="btn primary sm" onClick={startNew}>New project</button>
+            </span>
+          )}
         </div>
 
         <div className="kpis section" style={{ marginTop: 16, gridTemplateColumns: "repeat(3, 1fr)" }}>
@@ -79,19 +95,19 @@ export default function Projects() {
                   </div>
                   <div style={{ marginTop: 6 }}><HealthChip h={h} /></div>
                   <p className="small muted" style={{ marginTop: 6 }}>{p.summary}</p>
-                  {isAdvisor && <span className="tiny" style={{ display: "inline-flex", gap: 12, marginTop: 4 }}><button className="linklike tiny" onClick={() => setEditP(p)}>Edit</button><button className="linklike tiny" style={{ color: "var(--red)" }} onClick={() => setDel(p)}>Delete project</button></span>}
+                  {can(p) && <span className="tiny" style={{ display: "inline-flex", gap: 12, marginTop: 4 }}><button className="linklike tiny" onClick={() => setEditP(p)}>Edit</button>{isAdvisor && <button className="linklike tiny" style={{ color: "var(--red)" }} onClick={() => setDel(p)}>Delete project</button>}</span>}
+                  {p.createdBy && <span className="tiny muted" style={{ display: "block" }}>Started by {p.createdBy.name}</span>}
                   <div style={{ marginTop: 10 }}><StepTrack p={p} /></div>
                   {cur >= 0 && <div className="tiny" style={{ marginTop: 6 }}><b>Now:</b> {p.steps[cur].text}{p.steps[cur + 1] ? <span className="muted"> · Next: {p.steps[cur + 1].text}</span> : null}</div>}
                   <div style={{ marginTop: 8 }}>
-                    {isAdvisor && p.steps.map((s) => (
-                      <label key={s.id} className={`check ${s.done ? "done" : ""}`} style={{ cursor: isAdvisor ? "pointer" : "default" }}>
+                    {can(p) && p.steps.map((s) => (
+                      <label key={s.id} className={`check ${s.done ? "done" : ""}`} style={{ cursor: "pointer" }}>
                         <input
                           type="checkbox"
                           checked={s.done}
-                          disabled={!isAdvisor}
                           onChange={() => setP(p.id, { steps: p.steps.map((x) => (x.id === s.id ? { ...x, done: !x.done, doneAt: !x.done ? new Date().toISOString() : undefined } : x)) })}
                         />
-                        <span>{s.text}</span>
+                        <span>{s.text}{s.owner && <span className="step-who">{s.owner.name === "Ben Gaines" ? "Ben" : s.owner.name.split(" ")[0]}{s.due ? ` · ${fmt(s.due)}` : ""}</span>}</span>
                       </label>
                     ))}
                   </div>
@@ -103,7 +119,7 @@ export default function Projects() {
                   <div className="action-foot">
                     <span className="tiny muted">Target {fmt(p.milestoneDue)}</span>
                     <Link className="btn sm" href={`/c/${client.id}/projects/${p.id}`}>See progress</Link>
-                    {isAdvisor && pct === 100 && (
+                    {can(p) && pct === 100 && (
                       <button className="btn sm primary" style={{ marginLeft: "auto" }} onClick={() => { setP(p.id, { status: "done", milestoneDue: toISO(today()) }); toast.show("Moved to Completed"); }}>
                         Mark complete
                       </button>
@@ -125,11 +141,12 @@ export default function Projects() {
                         <div className="grow">
                           <h3>{p.name}</h3>
                           <p className="small muted" style={{ marginTop: 4 }}>{p.summary}</p>
-                  {isAdvisor && <span className="tiny" style={{ display: "inline-flex", gap: 12, marginTop: 4 }}><button className="linklike tiny" onClick={() => setEditP(p)}>Edit</button><button className="linklike tiny" style={{ color: "var(--red)" }} onClick={() => setDel(p)}>Delete project</button></span>}
+                  {can(p) && <span className="tiny" style={{ display: "inline-flex", gap: 12, marginTop: 4 }}><button className="linklike tiny" onClick={() => setEditP(p)}>Edit</button>{isAdvisor && <button className="linklike tiny" style={{ color: "var(--red)" }} onClick={() => setDel(p)}>Delete project</button>}</span>}
+                  {p.createdBy && <span className="tiny muted" style={{ display: "block" }}>Started by {p.createdBy.name}</span>}
                         </div>
                         <span className="pill later">Starts {fmt(p.milestoneDue)}</span>
                       </div>
-                      {isAdvisor && (
+                      {can(p) && (
                         <div className="action-foot">
                           <button
                             className="btn sm"
@@ -161,7 +178,8 @@ export default function Projects() {
                   <div className="grow">
                     <h3>{p.name}</h3>
                     <p className="small muted" style={{ marginTop: 4 }}>{p.summary}</p>
-                  {isAdvisor && <span className="tiny" style={{ display: "inline-flex", gap: 12, marginTop: 4 }}><button className="linklike tiny" onClick={() => setEditP(p)}>Edit</button><button className="linklike tiny" style={{ color: "var(--red)" }} onClick={() => setDel(p)}>Delete project</button></span>}
+                  {can(p) && <span className="tiny" style={{ display: "inline-flex", gap: 12, marginTop: 4 }}><button className="linklike tiny" onClick={() => setEditP(p)}>Edit</button>{isAdvisor && <button className="linklike tiny" style={{ color: "var(--red)" }} onClick={() => setDel(p)}>Delete project</button>}</span>}
+                  {p.createdBy && <span className="tiny muted" style={{ display: "block" }}>Started by {p.createdBy.name}</span>}
                   </div>
                   <span className="pill done">Done {fmt(p.milestoneDue)}</span>
                 </div>
@@ -175,11 +193,26 @@ export default function Projects() {
         <EditProjectSheet
           p={editP}
           onClose={() => setEditP(null)}
+          people={people}
           onSave={(next, note) => {
-            patch({ projects: projects.map((x) => (x.id === next.id ? next : x)) });
+            const n = saveProject(next, editP);
             setEditP(null);
             if (next.status !== editP.status) setTab(next.status);
-            toast.show(note ? `Saved: ${note}` : "Saved");
+            toast.show([note ? `Saved: ${note}` : "Saved", n ? `${n} added to to-do lists` : ""].filter(Boolean).join(". "));
+          }}
+        />
+      )}
+      {newP && (
+        <EditProjectSheet
+          p={newP}
+          isNew
+          people={people}
+          onClose={() => setNewP(null)}
+          onSave={(next) => {
+            const n = saveProject(next);
+            setNewP(null);
+            setTab(next.status);
+            toast.show(n ? `Project created. ${n} step${n > 1 ? "s" : ""} added to to-do lists` : "Project created");
           }}
         />
       )}

@@ -105,7 +105,7 @@ export default function Home() {
                 <div className="title">{a.title}</div>
                 <div className="tiny muted">
                   {meName ? "" : `${a.owner.name} · `}
-                  {a.subtasks?.length ? `${a.subtasks.filter((x) => x.done).length}/${a.subtasks.length} steps` : a.kind === "approval" ? "Approval" : a.kind === "feedback" ? "Feedback" : "Info needed"}
+                  {a.subtasks?.length ? `${a.subtasks.filter((x) => x.done).length}/${a.subtasks.length} steps` : a.kind === "approval" ? "Approval" : a.kind === "feedback" ? "Feedback" : a.kind === "todo" ? "To-do" : "Info needed"}
                 </div>
               </Link>
               <UrgencyPill a={a} />

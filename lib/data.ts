@@ -10,7 +10,7 @@ export type Status =
   | "extension_requested"
   | "completed"
   | "blocked";
-export type Kind = "approval" | "information" | "feedback" | "document";
+export type Kind = "approval" | "information" | "feedback" | "document" | "todo";
 
 export interface Person {
   name: string;
@@ -67,6 +67,9 @@ export interface Subtask {
   text: string;
   done: boolean;
   doneAt?: string; // when it was checked off (drives the project progress chart)
+  owner?: Person; // project steps: who's doing it (Ben or someone at the client)
+  due?: string; // project steps: yyyy-mm-dd
+  actionId?: string; // the task this step created, so it shows on that person's list
 }
 
 export interface PersonalReminder {
@@ -93,6 +96,7 @@ export interface Project {
   nextMilestone: string;
   milestoneDue: string; // target date (planned: start target, done: completion date)
   startedAt?: string; // when it moved to In progress
+  createdBy?: Person; // set when someone at the client started it (not Ben)
 }
 
 export function projectProgress(p: Project): number {

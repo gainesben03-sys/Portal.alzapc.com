@@ -6,6 +6,7 @@ import { ActionCard, ClientNav, ClientTopbar, Toast, useGuard, useToast } from "
 import { parseDay, urgency } from "@/lib/data";
 import { NewTaskSheet } from "@/components/newtask";
 import { AskBenSheet } from "@/components/askben";
+import { TodoSheet } from "@/components/todo";
 import { useStore } from "@/lib/store";
 
 type Tab = "you" | "team" | "alza" | "done";
@@ -20,6 +21,7 @@ export default function Tasks() {
   const toast = useToast();
   const [creating, setCreating] = useState(false);
   const [asking, setAsking] = useState(false);
+  const [todo, setTodo] = useState(false);
 
   if (!ok || !client) return null;
 
@@ -54,7 +56,10 @@ export default function Tasks() {
           {viewer?.kind === "advisor" ? (
             <button className="btn primary sm" onClick={() => setCreating(true)}>New request</button>
           ) : (
-            <button className="btn primary sm" onClick={() => setAsking(true)}>Ask Ben</button>
+            <span style={{ display: "inline-flex", gap: 8 }}>
+              <button className="btn sm" onClick={() => setAsking(true)}>Ask Ben</button>
+              <button className="btn primary sm" onClick={() => setTodo(true)}>Add a to-do</button>
+            </span>
           )}
         </div>
         <p className="muted" style={{ marginTop: 6 }}>
@@ -94,6 +99,7 @@ export default function Tasks() {
         <p className="demo-note">Fictional sample data for the prototype.</p>
       </main>
       {creating && <NewTaskSheet clientId={client.id} onClose={() => setCreating(false)} onCreated={(m) => { setCreating(false); toast.show(m); }} />}
+      {todo && <TodoSheet clientId={client.id} onClose={() => setTodo(false)} onDone={(m) => { setTodo(false); setTab(m.startsWith("Added to your") ? "you" : m.startsWith("Sent to Ben") ? "alza" : "team"); toast.show(m); }} />}
       {asking && <AskBenSheet clientId={client.id} onClose={() => setAsking(false)} onDone={(m) => { setAsking(false); setTab("alza"); toast.show(m); }} />}
       <Toast msg={toast.msg} onDone={toast.clear} />
     </div>
