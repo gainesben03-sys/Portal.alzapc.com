@@ -9,13 +9,13 @@ import { Sheet } from "./ui";
 const KINDS = ["A new project", "A document or letter", "A policy question", "Help with an employee situation", "Hiring help", "Something else"];
 
 /** A client asks Ben for something. It lands on Ben's "You owe" list and he gets an email and an alert. */
-export function AskBenSheet({ clientId, onClose, onDone, projectId, startKind }: { clientId: string; onClose: () => void; onDone: (msg: string) => void; projectId?: string; startKind?: string }) {
+export function AskBenSheet({ clientId, onClose, onDone, projectId, startKind, startTitle, startDetail }: { clientId: string; onClose: () => void; onDone: (msg: string) => void; projectId?: string; startKind?: string; startTitle?: string; startDetail?: string }) {
   const { actions, files, patch, viewer, who, notice, getClient, projects } = useStore();
   const client = getClient(clientId)!;
   const project = projectId ? projects.find((p) => p.id === projectId) : undefined;
   const [kind, setKind] = useState(startKind && KINDS.includes(startKind) ? startKind : project ? "Something else" : KINDS[1]);
-  const [title, setTitle] = useState("");
-  const [detail, setDetail] = useState("");
+  const [title, setTitle] = useState(startTitle ?? "");
+  const [detail, setDetail] = useState(startDetail ?? "");
   const [due, setDue] = useState(toISO(addBusinessDays(today(), 5)));
   const [urgent, setUrgent] = useState(false);
   const [err, setErr] = useState("");

@@ -14,8 +14,30 @@ export async function extractText(buf: Buffer, name: string, mime: string): Prom
     const { value } = await mammoth.extractRawText({ buffer: buf });
     return value;
   }
+  if (ext === "pptx") return pptxText(buf);
   if (["txt", "md", "csv"].includes(ext) || mime.startsWith("text/")) return buf.toString("utf8");
   return "";
+}
+
+/** Slide text, in order, with the speaker notes. One block per slide. */
+export async function pptxText(buf: Buffer): Promise<string> {
+  const zip = await JSZip.loadAsync(buf);
+  const num = (f: string) => Number(f.match(/(\d+)\.xml$/)?.[1] ?? 0);
+  const slides = Object.keys(zip.files).filter((f) => /^ppt\/slides\/slide\d+\.xml$/.test(f)).sort((a, b) => num(a) - num(b));
+  const paras = (xml: string) =>
+    (xml.match(/<a:p>[\s\S]*?<\/a:p>|<a:p [\s\S]*?<\/a:p>/g) ?? [])
+      .map((p) => (p.match(/<a:t>([^<]*)<\/a:t>/g) ?? []).map((t) => t.replace(/<\/?a:t>/g, "")).join(""))
+      .map((t) => t.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").trim())
+      .filter(Boolean);
+  const out: string[] = [];
+  for (const f of slides) {
+    const n = num(f);
+    const body = paras(await zip.file(f)!.async("string"));
+    const notesFile = zip.file(`ppt/notesSlides/notesSlide${n}.xml`);
+    const notes = notesFile ? paras(await notesFile.async("string")).filter((t) => !/^\d+$/.test(t)) : [];
+    out.push(`--- Slide ${n} ---\n${body.join("\n")}${notes.length ? `\n[Speaker notes] ${notes.join(" ")}` : ""}`);
+  }
+  return out.join("\n\n");
 }
 
 /** Pull the header image out of a Word letterhead (falls back to the first image in the file). */

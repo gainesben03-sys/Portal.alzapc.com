@@ -57,7 +57,7 @@ function guardWrites(on: boolean) {
     window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
       const method = (init?.method || (input instanceof Request ? input.method : "GET")).toUpperCase();
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-      if (method !== "GET" && method !== "HEAD" && !/\/auth\/v1\//.test(url)) {
+      if (method !== "GET" && method !== "HEAD" && !/\/auth\/v1\/|\/api\/askhr|\/api\/practice\/roleplay/.test(url)) {
         window.dispatchEvent(new Event("alza-preview-blocked"));
         return Promise.resolve(new Response(JSON.stringify({ ok: false, sent: false, reason: "preview", message: "Preview is read-only" }), { status: 200, headers: { "Content-Type": "application/json" } }));
       }
@@ -70,7 +70,7 @@ function guardWrites(on: boolean) {
 }
 
 const Ctx = createContext<Store | null>(null);
-const KEY = "alza-portal-demo-v11";
+const KEY = "alza-portal-demo-v12";
 export const PENDING_INVITE = "alza-pending-invite";
 
 type Who = { email: string; advisor: boolean; memberships: { clientId: string; name: string; role: string; access: string }[] };

@@ -2,6 +2,7 @@
 
 import { addBusinessDays, Person, today, toISO } from "./data";
 import type { Hire } from "./hires";
+import { SEED_PRACTICE } from "./practice";
 
 export type ModuleKey = "recruiting" | "resources" | "wellness" | "board" | "hires";
 
@@ -129,6 +130,7 @@ export interface ClientConfig {
   tiles?: string[]; // default dashboard for everyone at this client (set by Ben)
   softAsks?: boolean; // show the quiet referral / add-on lines (default on)
   videoScreening?: boolean; // add-on: pitch links on Recruiting roles
+  askHr?: boolean; // Ask HR for managers (default on; answers come only from this client's handbook and policies)
   huddle: HuddleSettings;
   modules: Record<ModuleKey, boolean>;
   accent: string;
@@ -219,6 +221,7 @@ export interface Resource {
   path?: string; // an uploaded file in storage (alza/library/...)
   fileName?: string;
   size?: number;
+  practice?: import("./practice").Practice; // optional practice built from a training
 }
 export const FOLDERS = ["Trainings", "Manager toolkit", "Policies", "Recruiting", "Project deliverables"];
 
@@ -411,6 +414,7 @@ export function seedModules() {
     { id: "res6", title: "New manager onboarding checklist", type: "Checklist", category: "Leadership", desc: "First 30 days for someone stepping into management.", updated: d(-15), shares: [] },
     { id: "res-t1", title: "Session 1: Job requisitions and the ideal candidate", type: "Training", category: "Manager training", desc: "Define what you need before you post. 45 minutes, with the worksheet.", updated: d(-12), url: "https://www.example.com/training-1", shares: [{ clientId: "blueprint", folder: "Trainings", at: at(-12) }] },
     { id: "res-t2", title: "Session 2: Reviewing resumes fast and fairly", type: "Training", category: "Manager training", desc: "A 10-minute screen that keeps bias out. Slides and recording.", updated: d(-5), url: "https://www.example.com/training-2", shares: [{ clientId: "blueprint", folder: "Trainings", at: at(-5) }] },
+    { id: "res-t0", title: "Manager Essentials: Say it. Don't avoid it.", type: "Training", category: "Manager training", desc: "Difficult conversations with the CLEAR framework. Bilingual slides, with practice.", updated: d(-2), url: "https://www.example.com/say-it", practice: SEED_PRACTICE, shares: [{ clientId: "blueprint", folder: "Trainings", at: at(-2) }] },
     { id: "res-t3", title: "Hard conversations: a one-page guide", type: "Guide", category: "Manager toolkit", desc: "What to say, what to write down, when to call Ben.", updated: d(-20), url: "https://www.example.com/guide", shares: [{ clientId: "blueprint", folder: "Manager toolkit", at: at(-20) }] },
     { id: "res7", title: "Feedback conversations (12 min video)", type: "Video", category: "Leadership", desc: "How to give feedback that lands without drama.", updated: d(-18), shares: [] },
     { id: "res8", title: "Org structure refresh: proposal v2", type: "Template", category: "Deliverable", desc: "Proposed reporting lines and role changes.", updated: d(-7), clientOnly: "blueprint", shares: [{ clientId: "blueprint", folder: "Project deliverables", at: at(-7) }] },

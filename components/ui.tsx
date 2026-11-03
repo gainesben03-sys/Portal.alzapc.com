@@ -307,19 +307,25 @@ export function ClientNav({ clientId }: { clientId: string }) {
   const [msg, setMsg] = useState<string | null>(null);
 
   type Sub = { href: string; label: string; match: string[]; badge?: number };
+  // Manager Hub: anyone with people reporting to them on the roster; Ask HR and Learn also for executives
+  const leads = people.some((p) => p.clientId === clientId && p.active && (isAdvisor || (!!me?.email && p.managerEmail.toLowerCase() === me.email.toLowerCase())));
+  const tools = leads || isAdvisor || access === "exec";
   const groups: { key: string; label: string; subs: Sub[] }[] = [
     { key: "home", label: "Home", subs: access === "hiring" ? [] : [{ href: base, label: "Home", match: [] }] },
     {
       // Manager Hub: anyone who has people reporting to them on the roster (Ben sees it when there's a roster)
       key: "hub",
       label: "My team",
-      subs: people.some((p) => p.clientId === clientId && p.active && (isAdvisor || (!!me?.email && p.managerEmail.toLowerCase() === me.email.toLowerCase())))
-        ? [
-            { href: `${base}/hub`, label: "This week", match: [] },
-            { href: `${base}/hub/team`, label: "People", match: [`${base}/hub/team`, `${base}/hub/p/`] },
-            { href: `${base}/hub/library`, label: "Library", match: [`${base}/hub/library`] },
-          ]
-        : [],
+      subs: [
+        ...(leads
+          ? [
+              { href: `${base}/hub`, label: "This week", match: [] },
+              { href: `${base}/hub/team`, label: "People", match: [`${base}/hub/team`, `${base}/hub/p/`] },
+            ]
+          : []),
+        ...(tools && cfg?.askHr !== false ? [{ href: `${base}/hub/ask`, label: "Ask HR", match: [`${base}/hub/ask`] }] : []),
+        ...(tools ? [{ href: `${base}/hub/library`, label: "Learn", match: [`${base}/hub/library`, `${base}/hub/learn`] }] : []),
+      ],
     },
     {
       key: "todo",

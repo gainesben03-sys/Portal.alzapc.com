@@ -135,6 +135,15 @@ export default function ClientSetup() {
           </>
         )}
 
+        <div className="section-head section"><h2>Manager tools</h2></div>
+        <div className="card">
+          <label className="rule" style={{ cursor: "pointer" }}>
+            <span className="switch"><input type="checkbox" checked={cfg.askHr !== false} onChange={(e) => set({ askHr: e.target.checked })} /><span /></span>
+            <div><b>Ask HR</b><div className="tiny muted">Managers and executives ask questions in plain words. Answers come only from the handbook and policies in Documents for Claude, with the section cited. Sticky situations get coaching, and anything about firing, leave, harassment or discrimination is sent to you. Your private client notes are never used. Questions aren&apos;t saved.</div></div>
+          </label>
+          <div className="rule tiny muted">Practice for trainings is set up in the <a href="/console/library">library</a>: add the slides, tap Make practice, review, publish, then share to {client.name}&apos;s Trainings folder.</div>
+        </div>
+
         <div className="section-head section"><h2>Growth</h2></div>
         <div className="card">
           <label className="rule" style={{ cursor: "pointer" }}>

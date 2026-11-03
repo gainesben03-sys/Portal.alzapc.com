@@ -9,14 +9,15 @@ import { useStore } from "@/lib/store";
 import { fmt } from "@/lib/data";
 import { openResource, RES_ICON } from "@/lib/library";
 import { loadNewsletters, monthLabel, Newsletter } from "@/lib/newsletters";
+import { hasPractice } from "@/lib/practice";
 
 const MANAGER_FOLDERS = ["Trainings", "Manager toolkit", "Policies"];
 
-/** Trainings, toolkit and past Manager Minutes, built for a quick look on a phone. */
+/** Learn: trainings with practice, the toolkit and past Manager Minutes, built for a phone. */
 export default function HubLibrary() {
   const { client: clientId } = useParams<{ client: string }>();
   const ok = useGuard("client", clientId);
-  const { getClient, resources, clients } = useStore();
+  const { getClient, resources, clients, viewer } = useStore();
   const client = getClient(clientId);
   const toast = useToast();
   const [q, setQ] = useState("");
@@ -33,6 +34,8 @@ export default function HubLibrary() {
   const items = resources
     .flatMap((r) => r.shares.filter((s) => s.clientId === clientId && MANAGER_FOLDERS.includes(s.folder)).map((s) => ({ r, s })))
     .sort((a, b) => (a.s.folder === "Trainings" ? -1 : 0) - (b.s.folder === "Trainings" ? -1 : 0) || b.s.at.localeCompare(a.s.at));
+  const isAdvisor = viewer?.kind === "advisor";
+  const practice = items.filter(({ r, s }) => s.folder === "Trainings" && (hasPractice(r) || (isAdvisor && !!r.practice)));
   const folders = Array.from(new Set(items.map((x) => x.s.folder)));
   const shown = items.filter(({ r, s }) => (folder === "all" || s.folder === folder) && (!q || `${r.title} ${r.desc} ${r.category}`.toLowerCase().includes(q.toLowerCase())));
 
@@ -41,7 +44,26 @@ export default function HubLibrary() {
       <ClientTopbar client={client} />
       <ClientNav clientId={client.id} />
       <main className="wrap">
-        <HubHeader clientId={clientId} title="Library" sub="Trainings, tools and past Manager Minutes." />
+        <HubHeader clientId={clientId} title="Learn" sub="Your trainings, a place to practice, and the toolkit." />
+        {practice.length > 0 && (
+          <div className="learn-feature section">
+            {practice.map(({ r }) => {
+              const c = r.practice!.content.en!;
+              return (
+                <div className="card learn-card" key={r.id}>
+                  <span className="tiny" style={{ letterSpacing: ".08em", textTransform: "uppercase", opacity: 0.8 }}>🎯 Practice{c.framework ? ` · ${c.framework}` : ""}{r.practice!.langs.includes("es") ? " · EN / ES" : ""}{r.practice!.status !== "published" ? " · draft" : ""}</span>
+                  <b className="learn-title">{c.title}</b>
+                  <span className="small" style={{ opacity: 0.85 }}>{c.intro}</span>
+                  <span className="tiny" style={{ opacity: 0.8 }}>{[c.quiz.length && `${c.quiz.length}-question check`, c.scenarios.length && `${c.scenarios.length} role-plays`, c.planner.length && "a conversation planner"].filter(Boolean).join(" · ")}</span>
+                  <div className="row" style={{ gap: 8, marginTop: 4 }}>
+                    <Link className="btn sm learn-go" href={`/c/${clientId}/hub/learn/${r.id}`}>Start practicing</Link>
+                    {(r.path || r.url) && <button className="btn sm ghost learn-ghost" onClick={async () => { const e = await openResource(r); if (e) toast.show(e); }}>Slides</button>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
         {items.length + minutes.length > 6 && <input className="f section" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search trainings and tools" />}
         {folders.length > 1 && (
           <div className="chips section">

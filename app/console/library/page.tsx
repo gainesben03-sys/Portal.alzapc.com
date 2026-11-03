@@ -1,12 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlzaNav, AlzaTopbar, Sheet, Toast, useGuard, useToast } from "@/components/ui";
 import { fmt, toISO, today } from "@/lib/data";
 import { FOLDERS, Resource, ResourceType } from "@/lib/modules";
 import { useStore } from "@/lib/store";
 import { BUCKET, LIVE, safeName, sb } from "@/lib/supabase";
 import { openResource, RES_ICON } from "@/lib/library";
+import { PracticeSheet } from "@/components/practiceadmin";
+
+type Use = { people: number; runs: number };
+/** Who's practiced each training in the last 90 days (counts only). */
+function usePracticeUse(on: boolean) {
+  const [use, setUse] = useState<Record<string, Use>>({});
+  useEffect(() => {
+    if (!on || !LIVE) return;
+    sb()
+      .from("ai_usage")
+      .select("email, ref, kind")
+      .in("kind", ["quiz", "sort", "roleplay"])
+      .gte("at", new Date(Date.now() - 90 * 864e5).toISOString())
+      .then(({ data }) => {
+        const by: Record<string, { e: Set<string>; n: number }> = {};
+        for (const u of data ?? []) {
+          const id = String(u.ref ?? "").split(":")[0];
+          if (!id) continue;
+          (by[id] ??= { e: new Set(), n: 0 }).e.add(u.email);
+          by[id].n++;
+        }
+        setUse(Object.fromEntries(Object.entries(by).map(([k, v]) => [k, { people: v.e.size, runs: v.n }])));
+      });
+  }, [on]);
+  return use;
+}
 
 const TYPES: ResourceType[] = ["Training", "Video", "Template", "Guide", "Checklist", "Policy", "Link"];
 
@@ -17,7 +43,9 @@ export default function Library() {
   const [q, setQ] = useState("");
   const [share, setShare] = useState<Resource | null>(null);
   const [adding, setAdding] = useState(false);
+  const [prac, setPrac] = useState<Resource | null>(null);
   const toast = useToast();
+  const use = usePracticeUse(ok);
   if (!ok) return null;
 
   const lib = resources.filter((r) => !r.clientOnly);
@@ -56,6 +84,12 @@ export default function Library() {
                 {r.outdated && <span className="pill soon">Needs update</span>}
               </div>
               <p className="small" style={{ marginTop: 6 }}>{r.desc}</p>
+              {r.practice && (
+                <div className="tiny" style={{ marginTop: 4 }}>
+                  🎯 Practice {r.practice.status === "published" ? "published" : "draft"}{r.practice.langs.length > 1 ? " · EN / ES" : ""}
+                  {use[r.id] ? <span className="muted"> · {use[r.id].people} {use[r.id].people === 1 ? "manager" : "managers"} practiced, {use[r.id].runs} times (90 days)</span> : r.practice.status === "published" ? <span className="muted"> · no one yet</span> : null}
+                </div>
+              )}
               <div className="chips">
                 {r.shares.length === 0 && <span className="tiny muted">Not shared yet</span>}
                 {r.shares.map((s, i) => (
@@ -65,6 +99,7 @@ export default function Library() {
               <div className="action-foot">
 {(r.path || r.url) && <button className="btn sm" onClick={async () => { const e = await openResource(r); if (e) toast.show(e); }}>Open</button>}
                 <button className="btn sm primary" onClick={() => setShare(r)}>Share to client</button>
+                {(r.type === "Training" || r.practice) && <button className="btn sm" onClick={() => setPrac(r)}>{r.practice ? "Practice" : "🎯 Make practice"}</button>}
                 {r.outdated ? (
                   <button className="btn sm" onClick={() => { setRes(r.id, { outdated: false, updated: toISO(today()) }); toast.show("Marked as updated"); }}>Mark updated</button>
                 ) : (
@@ -100,6 +135,17 @@ export default function Library() {
             patch({ resources: [r, ...resources] });
             setAdding(false);
             toast.show(r.shares.length ? `Added and shared with ${r.shares.length} client${r.shares.length > 1 ? "s" : ""}` : "Added to your library");
+          }}
+        />
+      )}
+      {prac && (
+        <PracticeSheet
+          r={prac}
+          onClose={() => setPrac(null)}
+          onSave={(p, msg) => {
+            setRes(prac.id, { practice: p });
+            setPrac(null);
+            toast.show(msg);
           }}
         />
       )}
