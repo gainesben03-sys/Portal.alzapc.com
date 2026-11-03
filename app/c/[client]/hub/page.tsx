@@ -10,6 +10,7 @@ import { dueLabel, urgency } from "@/lib/data";
 import { HubItem, TeamLog, TeamMember, weekItems } from "@/lib/team";
 import { KIND_LABEL, loadNewsletters, monthLabel, Newsletter } from "@/lib/newsletters";
 import { hasPractice } from "@/lib/practice";
+import { AskBox } from "@/components/askbox";
 
 const ICON: Record<HubItem["kind"], string> = { birthday: "🎂", anniversary: "🎉", starting: "👋", checkin: "💬", recognize: "⭐", commitment: "✔️" };
 
@@ -17,7 +18,7 @@ const ICON: Record<HubItem["kind"], string> = { birthday: "🎂", anniversary: "
 export default function HubHome() {
   const { client: clientId } = useParams<{ client: string }>();
   const ok = useGuard("client", clientId);
-  const { getClient, actions, rules, clients, resources, config } = useStore();
+  const { getClient, actions, rules, clients, resources } = useStore();
   const client = getClient(clientId);
   const h = useHub(clientId);
   const toast = useToast();
@@ -44,7 +45,6 @@ export default function HubHome() {
   const first = (h.managerName || "").split(" ")[0];
   const byId = (id?: string) => h.team.find((p) => p.id === id);
   const training = resources.find((r) => hasPractice(r) && r.shares.some((s) => s.clientId === clientId));
-  const askOn = config[clientId]?.askHr !== false;
 
   return (
     <div style={{ ["--accent" as string]: client.accent }}>
@@ -84,16 +84,8 @@ export default function HubHome() {
               {items.length > 5 && <button className="linklike tiny" style={{ marginTop: 6 }} onClick={() => setShowAll(!showAll)}>{showAll ? "Show the top 5" : `Show all ${items.length}`}</button>}
             </div>
 
+            <div className="section"><AskBox clientId={clientId} compact /></div>
             <div className="hub-tools section">
-              {askOn && (
-                <Link href={`/c/${clientId}/hub/ask?mode=situation`} className="card hub-tool">
-                  <span className="hub-icon" aria-hidden="true">🧭</span>
-                  <span className="grow" style={{ minWidth: 0 }}>
-                    <b className="small" style={{ display: "block" }}>Stuck on something?</b>
-                    <span className="tiny muted">Ask HR about a sticky situation or the handbook.</span>
-                  </span>
-                </Link>
-              )}
               {training && (
                 <Link href={`/c/${clientId}/hub/learn/${training.id}`} className="card hub-tool">
                   <span className="hub-icon" aria-hidden="true">🎯</span>

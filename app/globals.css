@@ -808,3 +808,13 @@ video.pitch-live[controls] { height: auto; max-height: 62vh; object-fit: contain
 .dv-full { position: fixed; inset: 0; z-index: 100; border-radius: 0; border: 0; display: flex; flex-direction: column; }
 .dv-full .dv-pdf { flex: 1; overflow-y: auto; }
 .dv-full .dv-office, .dv-full .dv-video { flex: 1; height: auto; aspect-ratio: auto; }
+
+/* Ask HR box on the home pages */
+.askbox { margin-top: 14px; border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+.askbox-label { display: block; margin-bottom: 8px; }
+.askbox-row { display: flex; gap: 8px; }
+.askbox-row .f { margin: 0; font-size: 16px; }
+.askbox-row .btn { flex: none; }
+.askbox-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.askbox-chips .chip { font-size: 12px; }
+.askbox.compact { margin-top: 0; }

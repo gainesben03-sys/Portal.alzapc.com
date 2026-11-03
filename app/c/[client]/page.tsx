@@ -1,5 +1,6 @@
 "use client";
 
+import { AskBox } from "@/components/askbox";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useState } from "react";
@@ -362,6 +363,8 @@ export default function Home() {
           </div>
           <button className="btn sm" onClick={() => (s.preview ? setPreviewNote(true) : setEditing(true))}>Customize</button>
         </div>
+
+        <AskBox clientId={client.id} />
 
         <div className="dash section" style={{ marginTop: 16 }}>
           {shown.map((id) => <div key={id} className={TILES.find((t) => t.id === id)?.wide ? "span2" : ""}>{tiles[id]?.()}</div>)}

@@ -45,36 +45,47 @@ export default function AskHr() {
   useEffect(() => {
     if (thread.length) end.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [thread.length, busy]);
+
+  // a question typed on the home page arrives as ?q=
+  const asked = useRef(false);
   useEffect(() => {
-    const m = new URLSearchParams(window.location.search).get("mode");
-    if (m === "situation") setMode("situation");
-  }, []);
+    if (!ok || !client || asked.current) return;
+    asked.current = true;
+    const sp = new URLSearchParams(window.location.search);
+    const m: Mode = sp.get("mode") === "situation" ? "situation" : "handbook";
+    setMode(m);
+    const q = sp.get("q");
+    if (q) {
+      window.history.replaceState(null, "", window.location.pathname);
+      ask(q, m);
+    }
+  }, [ok, client]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!ok || !client) return null;
   const training = resources.find((r) => hasPractice(r) && r.shares.some((s) => s.clientId === clientId));
   const ideas = training?.practice?.content.en?.ideas ?? DEFAULT_IDEAS;
 
-  const ask = async (text: string) => {
+  const ask = async (text: string, m: Mode = mode) => {
     const q = text.trim();
     if (!q || busy) return;
-    const prior = thread.filter((x) => x.a);
-    const next: Turn[] = [...thread, { q }];
-    setThreads((t) => ({ ...t, [mode]: next }));
+    const prior = threads[m].filter((x) => x.a);
+    const next: Turn[] = [...threads[m], { q }];
+    setThreads((t) => ({ ...t, [m]: next }));
     setDraft("");
     setBusy(true);
     const messages = prior.flatMap((x) => [{ role: "user", text: x.q }, { role: "assistant", text: JSON.stringify(x.a) }]).concat({ role: "user", text: q });
     let turn: Turn = { q };
     try {
-      const r = await fetch("/api/askhr", { method: "POST", headers: { "Content-Type": "application/json", ...(await authHeader()) }, body: JSON.stringify({ clientId, mode, messages }) });
+      const r = await fetch("/api/askhr", { method: "POST", headers: { "Content-Type": "application/json", ...(await authHeader()) }, body: JSON.stringify({ clientId, mode: m, messages }) });
       const j = await r.json();
-      if (j.reason === "demo") turn = { q, a: mode === "handbook" ? demoHandbook(q) : demoSituation(q) };
+      if (j.reason === "demo") turn = { q, a: m === "handbook" ? demoHandbook(q) : demoSituation(q) };
       else if (j.ok) turn = { q, a: j.answer };
       else turn = { q, err: REASON[j.reason] ?? "Something went wrong. Try that again." };
     } catch {
       turn = { q, err: "Couldn't reach Ask HR. Check your connection and try again." };
     }
     setBusy(false);
-    setThreads((t) => ({ ...t, [mode]: [...next.slice(0, -1), turn] }));
+    setThreads((t) => ({ ...t, [m]: [...next.slice(0, -1), turn] }));
   };
 
   if (play)
