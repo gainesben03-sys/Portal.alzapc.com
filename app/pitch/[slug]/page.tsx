@@ -47,6 +47,7 @@ export default function PitchPage() {
   const [missing, setMissing] = useState(false);
   const [step, setStep] = useState<Step>("intro");
   const [mode, setMode] = useState<Mode>("video");
+  const [noCam, setNoCam] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -84,7 +85,14 @@ export default function PitchPage() {
   // pick a sensible default mode for this device
   useEffect(() => {
     if (!info) return;
-    if (!canRecord("video")) setMode(info.allowUpload ? "upload" : info.allowAudio && canRecord("audio") ? "audio" : "written");
+    if (!canRecord("video")) {
+      // no camera here: audio if allowed, otherwise uploading a video is always offered
+      if (!info.allowUpload && info.allowAudio && canRecord("audio")) setMode("audio");
+      else {
+        setNoCam(true);
+        setMode("upload");
+      }
+    }
   }, [info]);
 
   const closeCam = useCallback(() => {
@@ -263,9 +271,8 @@ export default function PitchPage() {
   const first = name.split(" ")[0];
   const modes: [Mode, string][] = [
     ["video", "Record video"],
-    ...(info.allowUpload ? ([["upload", "Upload a video"]] as [Mode, string][]) : []),
+    ...(info.allowUpload || noCam ? ([["upload", "Upload a video"]] as [Mode, string][]) : []),
     ...(info.allowAudio ? ([["audio", "Audio only"]] as [Mode, string][]) : []),
-    ...(info.allowWritten ? ([["written", "Write it"]] as [Mode, string][]) : []),
   ];
 
   return (
@@ -305,7 +312,7 @@ export default function PitchPage() {
             <p>{info.intro}</p>
             <h2 style={{ marginTop: 16 }}>What to cover</h2>
             <ul className="pitch-prompts">{info.prompts.map((p, i) => <li key={i}>{p}</li>)}</ul>
-            <p className="small muted" style={{ marginTop: 12 }}>Up to {fmtSec(info.maxSeconds)}. Be yourself; no script needed. You can watch it back and re-record before you send. Your video is private to the hiring team and deleted soon after a decision.</p>
+            <p className="small muted" style={{ marginTop: 12 }}>Up to {fmtSec(info.maxSeconds)}. Be yourself; no script needed. You can watch it back and re-record before you send. Your video is private to the hiring team and deleted after hiring decisions are made for this role.</p>
             <button className="btn primary block" style={{ marginTop: 14 }} onClick={() => setStep("details")}>Get started</button>
           </div>
         </>

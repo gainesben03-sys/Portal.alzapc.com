@@ -312,11 +312,11 @@ export function ClientNav({ clientId }: { clientId: string }) {
   const tools = leads || isAdvisor || access === "exec";
   const training = !!cfg?.modules.training && access !== "hiring";
   const groups: { key: string; label: string; subs: Sub[] }[] = [
-    { key: "home", label: "Home", subs: access === "hiring" ? [] : [{ href: base, label: "Home", match: [] }] },
+    { key: "home", label: "Dashboard", subs: access === "hiring" ? [] : [{ href: base, label: "Home", match: [] }] },
     {
       // Manager Hub: anyone who has people reporting to them on the roster (Ben sees it when there's a roster)
       key: "hub",
-      label: "My team",
+      label: "Team Hub",
       subs: [
         ...(leads
           ? [
@@ -340,7 +340,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
     },
     {
       key: "todo",
-      label: "To-dos",
+      label: "Action Center",
       subs: access === "hiring" ? [] : [
         { href: `${base}/tasks`, label: "Tasks", match: [`${base}/tasks`, `${base}/a/`] },
         { href: `${base}/projects`, label: "Projects", match: [`${base}/projects`] },
@@ -348,7 +348,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
     },
     {
       key: "people",
-      label: "People",
+      label: "People & Hiring",
       subs: [
         ...(mod("hires") ? [{ href: `${base}/hires`, label: "New hires", match: [`${base}/hires`] }] : []),
         ...(mod("recruiting") ? [{ href: `${base}/recruiting`, label: "Recruiting", match: [`${base}/recruiting`] }] : []),
@@ -357,7 +357,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
     },
     {
       key: "ask",
-      label: "Ask Ben",
+      label: "Ask Alza",
       subs: access === "hiring" ? [] : [
         ...(mod("board") ? [{ href: `${base}/board`, label: "Messages", match: [`${base}/board`], badge: unread }] : []),
         { href: `${base}/share`, label: "Send files", match: [`${base}/share`] },
@@ -365,7 +365,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
     },
     {
       key: "library",
-      label: "Library",
+      label: "Resource Center",
       subs: [
         ...(mod("resources") ? [{ href: `${base}/resources`, label: "Resources", match: [`${base}/resources`] }] : []),
         ...(access !== "hiring" ? [{ href: `${base}/newsletters`, label: "Newsletters", match: [`${base}/newsletters`] }] : []),

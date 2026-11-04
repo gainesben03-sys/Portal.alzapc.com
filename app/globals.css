@@ -843,3 +843,9 @@ video.pitch-live[controls] { height: auto; max-height: 62vh; object-fit: contain
 .step-assign input.f { flex: 1; }
 .step-who { font-size: 12px; color: var(--muted); margin-left: 6px; white-space: nowrap; }
 .todo-two { display: grid; grid-template-columns: 1.3fr 1fr; gap: 8px; }
+
+/* recruiting: yes / no */
+.yn { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.yn .btn { min-width: 58px; justify-content: center; }
+.yn-yes.on { background: var(--green); border-color: var(--green); color: #fff; }
+.yn-no.on { background: var(--red-bg); border-color: var(--red); color: var(--red); }

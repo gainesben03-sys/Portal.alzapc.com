@@ -9,7 +9,7 @@ export interface PitchSettings {
   intro: string; // a short welcome from the company
   allowUpload: boolean; // upload a video they already recorded
   allowAudio: boolean;
-  allowWritten: boolean;
+  allowWritten: boolean; // retired: candidates send video or audio only
   askResume: boolean;
   askLinkedin: boolean;
   review: "ben" | "client"; // Ben screens first, or straight to the client
@@ -44,7 +44,7 @@ export function newPitch(title: string): PitchSettings {
     intro: "Thanks for your interest. Instead of a cover letter, we'd love a short video so we can get to know you.",
     allowUpload: true,
     allowAudio: true,
-    allowWritten: true,
+    allowWritten: false,
     askResume: true,
     askLinkedin: true,
     review: "ben",
@@ -56,20 +56,26 @@ export const pitchOpen = (p?: PitchSettings) => !!p && p.open && (!p.closesAt ||
 
 export const MAX_UPLOAD_MB = 50;
 
-/** Pitch videos are deleted this long after a decision (passed, advanced to interview, or offer). */
-export const DELETE_AFTER_DECISION_DAYS = 7;
-/** Safety net: pitches nobody decides on are deleted after this long. */
-export const DELETE_UNDECIDED_DAYS = 30;
-const DECIDED = ["pass", "advance", "offer"];
+/** Pitch videos are kept until a week after the role's cutoff date, so the hiring team can look back while deciding. */
+export const DELETE_AFTER_CUTOFF_DAYS = 7;
+/** Without a cutoff date, videos are deleted this long after they were sent. */
+export const DELETE_NO_CUTOFF_DAYS = 30;
+/** Pitches Ben passed on before sharing go a week after he passed. */
+export const DELETE_AFTER_PASS_DAYS = 7;
 
-/** When this candidate's pitch video will be (or was due to be) deleted, or null if it waits on a decision. */
-export function pitchDeleteOn(c: { decision?: string; decidedAt?: string; feedbackAt?: string; screened?: string; pitch?: { submittedAt: string } }): Date | null {
+/** When this candidate's pitch video will be (or was due to be) deleted. Clearing a candidate deletes it right away. */
+export function pitchDeleteOn(c: { decidedAt?: string; screened?: string; cleared?: boolean; clearedAt?: string; pitch?: { submittedAt: string } }, closesAt?: string): Date | null {
   if (!c.pitch) return null;
-  const decided = c.screened === "passed" || (c.decision && DECIDED.includes(c.decision));
-  const from = decided ? c.decidedAt || c.feedbackAt : c.pitch.submittedAt;
-  if (!from) return null;
-  const d = new Date(from);
-  d.setDate(d.getDate() + (decided ? DELETE_AFTER_DECISION_DAYS : DELETE_UNDECIDED_DAYS));
-  return d;
+  if (c.cleared) return new Date(c.clearedAt ?? Date.now());
+  const add = (from: string, days: number) => {
+    const d = new Date(from);
+    d.setDate(d.getDate() + days);
+    return d;
+  };
+  if (c.screened === "passed" && c.decidedAt) return add(c.decidedAt, DELETE_AFTER_PASS_DAYS);
+  if (closesAt) return add(`${closesAt}T23:59:00`, DELETE_AFTER_CUTOFF_DAYS);
+  return add(c.pitch.submittedAt, DELETE_NO_CUTOFF_DAYS);
 }
+/** Past the role's cutoff date. */
+export const pastCutoff = (closesAt?: string) => !!closesAt && closesAt < new Date().toISOString().slice(0, 10);
 export const MAX_RESUME_MB = 10;

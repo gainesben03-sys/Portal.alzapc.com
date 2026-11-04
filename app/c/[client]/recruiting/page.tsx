@@ -8,6 +8,7 @@ import { fmtTime } from "@/lib/data";
 import { Candidate, daysSince, Decision, DECISION_LABEL } from "@/lib/modules";
 import { notifyBen, useStore } from "@/lib/store";
 import { deletePitchFiles, PitchLinkCard, PitchView, RoleSheet, ShareSheet } from "@/components/pitch";
+import { pastCutoff } from "@/lib/pitch";
 import { Role } from "@/lib/modules";
 
 function Score({ n }: { n: number }) {
@@ -31,6 +32,7 @@ export default function Recruiting() {
   const [sharing, setSharing] = useState<{ c: Candidate; role: Role } | null>(null);
   const [showPassed, setShowPassed] = useState<Record<string, boolean>>({});
   const [removing, setRemoving] = useState<Candidate | null>(null);
+  const [showCleared, setShowCleared] = useState<Record<string, boolean>>({});
   const toast = useToast();
 
   if (!ok || !client) return null;
@@ -71,13 +73,15 @@ export default function Recruiting() {
       );
     }
     setFb(null);
-    if (viewer?.kind === "client")
-      notice({ clientId: client.id, kind: "feedback", text: `${who}: ${DECISION_LABEL[decision]} on ${c.name} (${role.title})`, href: `/c/${client.id}/recruiting` });
+    const said = decision === "offer" ? "wants to make an offer to" : decision === "hold" ? "put on hold" : `said ${DECISION_LABEL[decision]} to`;
+    const first = c.name.split(" ")[0];
+    if (viewer?.kind !== "client") return toast.show(`${DECISION_LABEL[decision]} on ${first}`);
+    notice({ clientId: client.id, kind: "feedback", text: `${who} ${said} ${c.name} (${role.title})`, href: `/c/${client.id}/recruiting` });
     const sent = await notifyBen(
-      `${client.name}: ${DECISION_LABEL[decision]} on ${c.name} (${role.title})`,
-      `${who} marked ${c.name} as "${DECISION_LABEL[decision]}" for ${role.title}.\n\n${note || "(no note)"}`
+      `${client.name}: ${who.split(" ")[0]} ${said} ${c.name} (${role.title})`,
+      `${who} ${said} ${c.name} for ${role.title}.${note ? `\n\nNote: ${note}` : ""}\n\n${typeof window !== "undefined" ? window.location.origin : ""}/c/${client.id}/recruiting`
     );
-    toast.show(sent ? "Feedback saved. Ben has been emailed." : "Feedback saved.");
+    toast.show(`${DECISION_LABEL[decision] === "Yes" || DECISION_LABEL[decision] === "No" ? `${DECISION_LABEL[decision]} on ${first}` : "Saved"}.${sent ? " Ben's been told." : ""}`);
   };
 
   return (
@@ -94,10 +98,16 @@ export default function Recruiting() {
         )}
         {myRoles.map((role) => {
           const all = candidates.filter((c) => c.roleId === role.id);
-          const list = all.filter((c) => !c.hidden || (isAdvisor && c.screened !== "passed") || (isAdvisor && showPassed[role.id]));
+          const closed = pastCutoff(role.pitch?.closesAt);
+          const clearedCount = all.filter((c) => c.cleared).length;
+          const list = all
+            .filter((c) => (c.cleared ? isAdvisor && showCleared[role.id] : true))
+            // after the cutoff, the no's drop off the client's list; Ben still sees them until he clears them
+            .filter((c) => isAdvisor || !(closed && c.decision === "pass"))
+            .filter((c) => !c.hidden || (isAdvisor && c.screened !== "passed") || (isAdvisor && showPassed[role.id]));
           const toScreen = all.filter((c) => c.hidden && !c.screened).length;
           const passedCount = all.filter((c) => c.hidden && c.screened === "passed").length;
-          const pending = list.filter((c) => !c.decision && !c.hidden);
+          const pending = list.filter((c) => !c.decision && !c.hidden && !c.cleared);
           const atRisk = pending.filter((c) => c.otherOffers);
           const mode = view[role.id] ?? "cards";
           return (
@@ -120,7 +130,7 @@ export default function Recruiting() {
                 {pending.length > 0 && (
                   <div className="impact" style={{ marginTop: 12 }}>
                     <b>
-                      {pending.length} candidate{pending.length === 1 ? "" : "s"} waiting on feedback
+                      {pending.length} candidate{pending.length === 1 ? "" : "s"} waiting on a yes or no
                     </b>{" "}
                     {(() => { const d = Math.max(...pending.map((c) => daysSince(c.sentAt))); return d === 0 ? "since today." : `for ${d} day${d === 1 ? "" : "s"}.`; })()}
                     {atRisk.length > 0 && (
@@ -129,6 +139,11 @@ export default function Recruiting() {
                   </div>
                 )}
                 {list.length === 0 && <p className="small muted" style={{ marginTop: 10 }}>{role.pitch && cfg?.videoScreening ? "No pitches yet. Share the link above and they'll show up here." : "Alza is sourcing. Candidates will appear here."}</p>}
+                {isAdvisor && clearedCount > 0 && (
+                  <button className="linklike tiny" style={{ marginTop: 8, marginRight: 12 }} onClick={() => setShowCleared({ ...showCleared, [role.id]: !showCleared[role.id] })}>
+                    {showCleared[role.id] ? "Hide" : "Show"} {clearedCount} cleared
+                  </button>
+                )}
                 {isAdvisor && passedCount > 0 && (
                   <button className="linklike tiny" style={{ marginTop: 8 }} onClick={() => setShowPassed({ ...showPassed, [role.id]: !showPassed[role.id] })}>
                     {showPassed[role.id] ? "Hide" : "Show"} {passedCount} passed pitch{passedCount === 1 ? "" : "es"}
@@ -157,8 +172,10 @@ export default function Recruiting() {
                       </div>
                       {c.hidden ? (
                         <span className={`pill ${c.screened === "passed" ? "later" : "soon"}`}>{c.screened === "passed" ? "Passed" : "To screen"}</span>
+                      ) : c.cleared ? (
+                        <span className="pill later">Cleared</span>
                       ) : c.decision ? (
-                        <span className={`pill ${c.decision === "pass" ? "later" : "done"}`}>{DECISION_LABEL[c.decision]}</span>
+                        <span className={`pill ${c.decision === "pass" ? "later" : "done"}`}>{c.decision === "pass" ? "✕ No" : c.decision === "advance" ? "✓ Yes" : DECISION_LABEL[c.decision]}</span>
                       ) : (
                         <span className={`pill ${c.otherOffers ? "overdue" : "soon"}`}>
                           <span className="dot" />
@@ -194,15 +211,17 @@ export default function Recruiting() {
                           {c.screened !== "passed" && <button className="btn ghost sm" style={{ marginLeft: "auto" }} onClick={() => pass(c)}>Pass</button>}
                           <button className={`btn sm primary`} style={c.screened === "passed" ? { marginLeft: "auto" } : undefined} onClick={() => setSharing({ c, role })}>Share with {role.hiringManager.name.split(" ")[0]}</button>
                         </>
-                      ) : (
-                      <button className={`btn sm ${c.decision ? "" : "primary"}`} style={{ marginLeft: "auto" }} onClick={() => setFb(c)}>
-                        {c.decision ? "Update feedback" : "Give feedback"}
-                      </button>
+                      ) : c.cleared ? null : (
+                        <span className="yn" style={{ marginLeft: "auto" }}>
+                          {c.decision && <button className="linklike tiny" onClick={() => setFb(c)}>{c.feedback ? "Edit note" : "Add a note"}</button>}
+                          <button className={`btn sm yn-no ${c.decision === "pass" ? "on" : ""}`} aria-pressed={c.decision === "pass"} onClick={() => c.decision !== "pass" && saveFeedback(c, "pass", c.feedback ?? "")}>No</button>
+                          <button className={`btn sm yn-yes ${c.decision === "advance" || c.decision === "offer" ? "on" : ""}`} aria-pressed={c.decision === "advance"} onClick={() => c.decision !== "advance" && c.decision !== "offer" && saveFeedback(c, "advance", c.feedback ?? "")}>Yes</button>
+                        </span>
                       )}
-                      {!c.hidden && c.decision === "offer" && config[clientId]?.modules.hires && (viewer?.kind === "advisor" || me?.access === "exec") && !hires.some((h) => h.clientId === clientId && h.name === c.name) && (
+                      {!c.hidden && !c.cleared && (c.decision === "offer" || c.decision === "advance") && config[clientId]?.modules.hires && (viewer?.kind === "advisor" || me?.access === "exec") && !hires.some((h) => h.clientId === clientId && h.name === c.name) && (
                         <Link href={`/c/${clientId}/hires/new?candidate=${c.id}`} className="btn sm primary">Start the hire</Link>
                       )}
-                      {isAdvisor && <button className="btn ghost sm" style={{ color: "var(--red)" }} onClick={() => setRemoving(c)}>Remove</button>}
+                      {isAdvisor && <button className="btn ghost sm" onClick={() => setRemoving(c)}>{c.cleared ? "Delete" : "Clear"}</button>}
                     </div>
                   </div>
                 ))}
@@ -233,7 +252,7 @@ export default function Recruiting() {
                           {list.filter((x) => !x.hidden).map((c) => (
                             <td key={c.id}>
                               {c.decision ? DECISION_LABEL[c.decision] : (
-                                <button className="btn sm" onClick={() => setFb(c)}>Decide</button>
+                                <span className="yn"><button className="btn sm yn-no" onClick={() => saveFeedback(c, "pass", "")}>No</button><button className="btn sm yn-yes" onClick={() => saveFeedback(c, "advance", "")}>Yes</button></span>
                               )}
                             </td>
                           ))}
@@ -251,23 +270,43 @@ export default function Recruiting() {
       </main>
 
       {removing && (
-        <Sheet title={`Remove ${removing.name}?`} onClose={() => setRemoving(null)}>
-          <p className="small">This deletes the candidate and any feedback on them for everyone.{removing.pitch ? " Their pitch video and resume are deleted too." : ""} It can't be undone.</p>
+        <Sheet title={removing.cleared ? `Delete ${removing.name}?` : `Clear ${removing.name}?`} onClose={() => setRemoving(null)}>
+          {!removing.cleared && <p className="small">They come off {client.name}&apos;s list.{removing.pitch && !removing.mediaDeletedAt ? " Their pitch video and resume are deleted now." : ""} You can still see them under &quot;Show cleared&quot;.</p>}
+          <p className="small muted">{removing.cleared ? "" : "Or "}Delete completely: the candidate, any feedback{removing.pitch ? ", their video and resume" : ""}, for everyone. Can&apos;t be undone.</p>
           <div className="sheet-actions">
             <button className="btn ghost sm" onClick={() => setRemoving(null)}>Cancel</button>
             <button
               className="btn sm"
-              style={{ background: "var(--red)", borderColor: "var(--red)", color: "#fff" }}
+              style={{ color: "var(--red)" }}
               onClick={async () => {
                 const c = removing;
                 setRemoving(null);
                 if (c.pitch && live) await deletePitchFiles(c.id);
                 patch({ candidates: candidates.filter((x) => x.id !== c.id) });
-                toast.show(`${c.name} removed`);
+                toast.show(`${c.name} deleted`);
               }}
             >
-              Remove
+              Delete completely
             </button>
+            {!removing.cleared && (
+              <button
+                className="btn primary sm"
+                onClick={async () => {
+                  const c = removing;
+                  setRemoving(null);
+                  const now = new Date().toISOString();
+                  let gone = false;
+                  if (c.pitch?.mediaPath && live) {
+                    await deletePitchFiles(c.id);
+                    gone = true;
+                  }
+                  patch({ candidates: candidates.map((x) => (x.id === c.id ? { ...x, cleared: true, clearedAt: now, ...(gone && x.pitch ? { mediaDeletedAt: now, pitch: { ...x.pitch, mediaPath: undefined, resumePath: undefined } } : {}) } : x)) });
+                  toast.show(`${c.name.split(" ")[0]} cleared`);
+                }}
+              >
+                Clear
+              </button>
+            )}
           </div>
         </Sheet>
       )}
@@ -291,19 +330,19 @@ function FeedbackSheet({
   const [d, setD] = useState<Decision | null>(c.decision ?? null);
   const [note, setNote] = useState(c.feedback ?? "");
   return (
-    <Sheet title={`Feedback on ${c.name}`} onClose={onClose}>
-      <div className="seg">
-        {(Object.keys(DECISION_LABEL) as Decision[]).map((k) => (
+    <Sheet title={`${c.name.split(" ")[0]}: your call`} onClose={onClose}>
+      <div className="seg" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
+        {(["pass", "advance", "offer"] as Decision[]).map((k) => (
           <button key={k} className={d === k ? "on" : ""} onClick={() => setD(k)}>
             {DECISION_LABEL[k]}
           </button>
         ))}
       </div>
-      <label className="f">A sentence or two (optional)</label>
+      <label className="f">A note for Ben (optional)</label>
       <textarea className="f" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Strong on budgets, want to check references" />
       <div className="sheet-actions">
         <button className="btn" onClick={onClose}>Cancel</button>
-        <button className="btn primary" disabled={!d} onClick={() => d && onSave(c, d, note.trim())}>Send to Ben</button>
+        <button className="btn primary" disabled={!d} onClick={() => d && onSave(c, d, note.trim())}>Save</button>
       </div>
     </Sheet>
   );

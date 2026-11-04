@@ -208,7 +208,7 @@ export default function Home() {
     },
     recruiting: () => {
       const myRoles = roles.filter((r) => r.clientId === client.id);
-      const waiting = candidates.filter((c) => !c.decision && myRoles.some((r) => r.id === c.roleId));
+      const waiting = candidates.filter((c) => !c.decision && !c.cleared && myRoles.some((r) => r.id === c.roleId));
       return (
         <Tile title="Hiring" count={myRoles.length} href={`${base}/recruiting`}>
           {myRoles.map((r) => {

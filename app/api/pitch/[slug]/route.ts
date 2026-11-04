@@ -38,7 +38,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     maxSeconds: p.maxSeconds,
     allowUpload: p.allowUpload,
     allowAudio: p.allowAudio,
-    allowWritten: p.allowWritten,
+    allowWritten: false,
     askResume: p.askResume,
     askLinkedin: p.askLinkedin,
     limits: { uploadMB: MAX_UPLOAD_MB, resumeMB: MAX_RESUME_MB },
@@ -68,23 +68,23 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   if (b.action === "start") {
     const name = s(b.name, 100);
     const email = s(b.email, 200).toLowerCase();
-    const kind = b.kind === "audio" ? "audio" : b.kind === "written" ? "written" : "video";
+    // written intros are retired: video or audio only
+    if (b.kind === "written") return NextResponse.json({ ok: false, reason: "kind" });
+    const kind: "video" | "audio" = b.kind === "audio" ? "audio" : "video";
     if (name.length < 2) return NextResponse.json({ ok: false, reason: "name" });
     if (!emailOk(email)) return NextResponse.json({ ok: false, reason: "email" });
-    if ((kind === "audio" && !p.allowAudio) || (kind === "written" && !p.allowWritten)) return NextResponse.json({ ok: false, reason: "kind" });
+    if (kind === "audio" && !p.allowAudio) return NextResponse.json({ ok: false, reason: "kind" });
     if (await already(email)) return NextResponse.json({ ok: false, reason: "already_applied" });
     const mime = s(b.mime, 80).toLowerCase();
     const size = Number(b.size) || 0;
-    if (kind !== "written") {
-      if (!/^(video|audio)\//.test(mime)) return NextResponse.json({ ok: false, reason: "type" });
-      if (size > MAX_UPLOAD_MB * 1024 * 1024) return NextResponse.json({ ok: false, reason: "too_big" });
-    }
+    if (!/^(video|audio)\//.test(mime)) return NextResponse.json({ ok: false, reason: "type" });
+    if (size > MAX_UPLOAD_MB * 1024 * 1024) return NextResponse.json({ ok: false, reason: "too_big" });
     const resume = b.resume as { name?: string; type?: string; size?: number } | undefined;
     if (resume && (Number(resume.size) || 0) > MAX_RESUME_MB * 1024 * 1024) return NextResponse.json({ ok: false, reason: "resume_too_big" });
 
     const c = newCandidateId();
     const folder = `${role.clientId}/pitch/${c}`;
-    const m = kind === "written" ? undefined : `${folder}/pitch.${extFor(mime, kind)}`;
+    const m = `${folder}/pitch.${extFor(mime, kind)}`;
     const rs = resume?.name ? `${folder}/${safe(String(resume.name))}` : undefined;
     const sign = async (path?: string) => {
       if (!path) return null;

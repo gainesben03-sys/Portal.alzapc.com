@@ -213,12 +213,13 @@ export async function GET(req: Request) {
     if (changed) await db.from("hires").update({ data }).eq("id", row.id);
   }
 
-  // ---------- 4. Pitch videos: delete a week after a decision (30 days if nobody decides)
-  const candR = await db.from("candidates").select("id, client_id, data").eq("data->>source", "pitch");
+  // ---------- 4. Pitch videos: delete a week after the role's cutoff (30 days after sending if no cutoff), or when Ben clears them
+  const [candR, rolesR] = await Promise.all([db.from("candidates").select("id, client_id, data").eq("data->>source", "pitch"), db.from("roles").select("id, data")]);
+  const cutoff = new Map((rolesR.data ?? []).map((r) => [r.id as string, (r.data as { pitch?: { closesAt?: string } })?.pitch?.closesAt]));
   for (const row of candR.data ?? []) {
     const c = row.data as Candidate;
     if (!c.pitch?.mediaPath || c.mediaDeletedAt) continue;
-    const due = pitchDeleteOn(c);
+    const due = pitchDeleteOn(c, cutoff.get(c.roleId));
     if (!due || due > new Date()) continue;
     const path = c.pitch.mediaPath;
     if (!path.startsWith(`${row.client_id}/pitch/${row.id}/`)) continue;

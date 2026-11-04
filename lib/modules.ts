@@ -155,9 +155,9 @@ export function newCode(): string {
 
 export type Decision = "advance" | "hold" | "pass" | "offer";
 export const DECISION_LABEL: Record<Decision, string> = {
-  advance: "Advance",
+  advance: "Yes",
   hold: "Hold",
-  pass: "Pass",
+  pass: "No",
   offer: "Make offer",
 };
 
@@ -196,7 +196,9 @@ export interface Candidate {
   pitch?: import("./pitch").PitchSubmission;
   hidden?: boolean; // a pitch Ben hasn't shared with the client yet
   screened?: "shared" | "passed";
-  decidedAt?: string; // when passed / advanced / offered (starts the video deletion clock)
+  decidedAt?: string; // when they said yes / no / offer
+  cleared?: boolean; // Ben cleared them: off the client's list, video deleted
+  clearedAt?: string;
   mediaDeletedAt?: string;
 }
 

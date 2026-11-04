@@ -177,7 +177,6 @@ function PitchSettingsSheet({ p, onClose, onSave }: { p: PitchSettings; onClose:
         <span className="flabel">Candidates can also</span>
         {tog("allowUpload", "Upload a video they recorded on their phone")}
         {tog("allowAudio", "Send audio only")}
-        {tog("allowWritten", "Write it instead")}
         {tog("askResume", "Attach a resume")}
         {tog("askLinkedin", "Add their LinkedIn")}
       </div>
@@ -192,6 +191,7 @@ function PitchSettingsSheet({ p, onClose, onSave }: { p: PitchSettings; onClose:
 // ------------------------------------------------------------------ the pitch itself
 
 export function PitchView({ c }: { c: Candidate }) {
+  const { roles } = useStore();
   const p = c.pitch!;
   const [src, setSrc] = useState("");
   const [busy, setBusy] = useState(false);
@@ -211,7 +211,8 @@ export function PitchView({ c }: { c: Candidate }) {
     }
     setBusy(false);
   };
-  const delOn = pitchDeleteOn(c);
+  const closesAt = roles.find((r) => r.id === c.roleId)?.pitch?.closesAt;
+  const delOn = pitchDeleteOn(c, closesAt);
   const day = (d: Date | string) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
   return (
     <div className="pitch-view">
@@ -236,7 +237,7 @@ export function PitchView({ c }: { c: Candidate }) {
       </div>
       {!c.mediaDeletedAt && p.kind !== "written" && delOn && (
         <div className="tiny muted" style={{ marginTop: 4 }}>
-          {c.decidedAt || c.screened === "passed" ? `Video deletes ${day(delOn)} (a week after the decision)` : `Video deletes ${day(delOn)} if no decision is made`}
+          {c.screened === "passed" ? `Video deletes ${day(delOn)} (a week after you passed)` : closesAt ? `Video deletes ${day(delOn)} (a week after the ${day(closesAt + "T12:00")} cutoff)` : `Video deletes ${day(delOn)} (30 days after it was sent)`}
         </div>
       )}
       {err && <p className="tiny" style={{ color: "var(--amber)" }}>{err}</p>}
