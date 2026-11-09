@@ -1,4 +1,5 @@
 // Server-only helpers for video screening.
+import { reviewLinkLive } from "./pitch";
 import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { Role } from "./modules";
@@ -48,3 +49,14 @@ export async function roleBySlug(db: SupabaseClient, slug: string) {
 
 export const extFor = (mime: string, kind: string) =>
   /mp4/.test(mime) ? (kind === "audio" ? "m4a" : "mp4") : /quicktime/.test(mime) ? "mov" : /ogg/.test(mime) ? "ogg" : /mpeg/.test(mime) ? "mp3" : /wav/.test(mime) ? "wav" : "webm";
+
+/** The role and link behind a reviewer link, if it's still good. */
+export async function roleByReviewToken(db: SupabaseClient, token: string) {
+  if (!/^[A-Za-z0-9]{24,64}$/.test(token)) return null;
+  const { data } = await db.from("roles").select("id, client_id, data").filter("data->reviewers", "cs", JSON.stringify([{ token }])).maybeSingle();
+  if (!data) return null;
+  const role = { ...(data.data as Role), id: data.id as string, clientId: data.client_id as string };
+  const link = (role.reviewers ?? []).find((l) => l.token === token);
+  if (!link || !reviewLinkLive(link)) return null;
+  return { role, link };
+}

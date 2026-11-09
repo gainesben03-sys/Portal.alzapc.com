@@ -174,6 +174,7 @@ export interface Role {
   criteria: string[];
   feedbackActionId?: string;
   pitch?: import("./pitch").PitchSettings; // video screening link
+  reviewers?: import("./pitch").ReviewLink[]; // Ben's private links for people outside the portal
 }
 
 export interface Candidate {
@@ -200,6 +201,7 @@ export interface Candidate {
   cleared?: boolean; // Ben cleared them: off the client's list, video deleted
   clearedAt?: string;
   mediaDeletedAt?: string;
+  reviews?: import("./pitch").OutsideReview[]; // yes/no from reviewer links
 }
 
 // ---------- resources ----------
@@ -345,6 +347,7 @@ export function seedModules() {
       status: "Finalists with client",
       criteria: ["Event production scale", "Client management", "Budget ownership", "Team leadership"],
       feedbackActionId: "bp-2",
+      reviewers: [{ id: "rv-demo", token: "DemoReviewerLink0000000000000", name: "Pat Morgan", email: "pat@example.com", createdAt: at(-2), expiresAt: d(21) }],
     },
     {
       id: "r-coord",
@@ -365,6 +368,7 @@ export function seedModules() {
     {
       id: "c1",
       roleId: "r-producer",
+      reviews: [{ reviewerId: "rv-demo", name: "Pat Morgan", decision: "yes", note: "Best answer on budgets.", at: at(-1, 15) }],
       name: "Jamie Torres",
       headline: "Senior Producer, large-format corporate events",
       summary: "9 years producing 1,000+ guest corporate events and brand activations. Led a 6-person production team.",

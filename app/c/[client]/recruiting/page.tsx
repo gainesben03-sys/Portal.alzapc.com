@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ClientNav, ClientTopbar, Sheet, Toast, useGuard, useToast } from "@/components/ui";
 import { fmtTime } from "@/lib/data";
 import { Candidate, daysSince, Decision, DECISION_LABEL } from "@/lib/modules";
 import { notifyBen, useStore } from "@/lib/store";
-import { deletePitchFiles, PitchLinkCard, PitchView, RoleSheet, ShareSheet } from "@/components/pitch";
-import { pastCutoff } from "@/lib/pitch";
+import { deletePitchFiles, PitchLinkCard, PitchView, ReviewerLinks, RoleSheet, ShareSheet } from "@/components/pitch";
+import { OutsideReview, pastCutoff } from "@/lib/pitch";
+import { LIVE, sb } from "@/lib/supabase";
 import { Role } from "@/lib/modules";
 
 function Score({ n }: { n: number }) {
@@ -34,6 +35,22 @@ export default function Recruiting() {
   const [removing, setRemoving] = useState<Candidate | null>(null);
   const [showCleared, setShowCleared] = useState<Record<string, boolean>>({});
   const toast = useToast();
+  // yes/no from reviewer links live in their own table (the server writes them)
+  const [outside, setOutside] = useState<Record<string, OutsideReview[]>>({});
+  useEffect(() => {
+    if (!ok || !LIVE) return;
+    sb()
+      .from("outside_reviews")
+      .select("candidate_id, data")
+      .eq("client_id", clientId)
+      .then(({ data, error }) => {
+        if (error) return;
+        const m: Record<string, OutsideReview[]> = {};
+        for (const r of data ?? []) (m[r.candidate_id as string] ??= []).push(r.data as OutsideReview);
+        setOutside(m);
+      });
+  }, [ok, clientId]);
+  const reviewsFor = (c: Candidate) => (LIVE ? outside[c.id] ?? [] : c.reviews ?? []).slice().sort((a, b) => a.at.localeCompare(b.at));
 
   if (!ok || !client) return null;
   if (!config[clientId]?.modules.recruiting)
@@ -127,6 +144,7 @@ export default function Recruiting() {
                   {canEdit && <button className="btn ghost sm" onClick={() => setRoleEdit(role)}>Edit</button>}
                 </div>
                 {cfg?.videoScreening && <PitchLinkCard role={role} canEdit={canEdit} toScreen={isAdvisor ? toScreen : 0} onToast={toast.show} />}
+                {isAdvisor && <ReviewerLinks role={role} reviews={all.flatMap(reviewsFor)} onToast={toast.show} />}
                 {pending.length > 0 && (
                   <div className="impact" style={{ marginTop: 12 }}>
                     <b>
@@ -202,6 +220,17 @@ export default function Recruiting() {
                       <div className="reply">
                         <b>{c.feedbackBy}:</b> {c.feedback || "No note"}
                         <div className="tiny muted">{c.feedbackAt && fmtTime(c.feedbackAt)}</div>
+                      </div>
+                    )}
+                    {reviewsFor(c).length > 0 && (
+                      <div className="reply outside-reviews">
+                        <span className="tiny muted" style={{ display: "block", marginBottom: 2 }}>Outside reviewers</span>
+                        {reviewsFor(c).map((r) => (
+                          <div key={r.reviewerId} className="small">
+                            <b>{r.name}:</b> <span style={{ color: r.decision === "yes" ? "var(--green)" : "var(--red)", fontWeight: 600 }}>{r.decision === "yes" ? "Yes" : "No"}</span>
+                            {r.note ? ` · ${r.note}` : ""} <span className="tiny muted">{fmtTime(r.at)}</span>
+                          </div>
+                        ))}
                       </div>
                     )}
                     <div className="action-foot">

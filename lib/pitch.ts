@@ -31,6 +31,32 @@ export interface PitchSubmission {
   submittedAt: string;
 }
 
+/** A private link Ben sends to someone outside the portal so they can watch pitches and say yes or no. */
+export interface ReviewLink {
+  id: string;
+  token: string; // long random; the link is /review/<token>
+  name: string; // who it's for, so their yes/no is labeled
+  email?: string;
+  createdAt: string;
+  expiresAt?: string; // yyyy-mm-dd, last day it works
+  revoked?: boolean;
+}
+/** One outside reviewer's call on a candidate. */
+export interface OutsideReview {
+  reviewerId: string;
+  name: string;
+  decision: "yes" | "no";
+  note?: string;
+  at: string;
+}
+
+export function newReviewLink(name: string, email?: string, expiresAt?: string): ReviewLink {
+  const abc = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  const token = Array.from(crypto.getRandomValues(new Uint8Array(28)), (b) => abc[b % abc.length]).join("");
+  return { id: `rv${Date.now().toString(36)}`, token, name: name.trim(), email: email?.trim() || undefined, createdAt: new Date().toISOString(), expiresAt };
+}
+export const reviewLinkLive = (l: ReviewLink) => !l.revoked && (!l.expiresAt || l.expiresAt >= new Date().toISOString().slice(0, 10));
+
 export const DEFAULT_PROMPTS = ["Who you are and what you do best", "Why this role, and why now", "One result you're proud of"];
 
 export function newPitch(title: string): PitchSettings {

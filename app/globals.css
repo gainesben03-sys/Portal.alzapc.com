@@ -849,3 +849,48 @@ video.pitch-live[controls] { height: auto; max-height: 62vh; object-fit: contain
 .yn .btn { min-width: 58px; justify-content: center; }
 .yn-yes.on { background: var(--green); border-color: var(--green); color: #fff; }
 .yn-no.on { background: var(--red-bg); border-color: var(--red); color: var(--red); }
+
+/* outside reviewer page (/review/<token>) */
+.rv-wrap { max-width: 640px; margin: 0 auto; padding: 18px 16px 60px; color: var(--ink); }
+.rv-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--line); margin-bottom: 18px; }
+.rv-logo { max-height: 34px; max-width: 170px; object-fit: contain; }
+.rv-co { font-size: 17px; }
+.rv-h1 { font-family: var(--serif, Georgia, serif); font-size: 28px; line-height: 1.15; margin: 0; }
+.rv-muted { color: var(--muted); }
+.rv-small { font-size: 13.5px; }
+.rv-intro { margin: 14px 0 16px; padding: 14px; border-radius: 14px; background: var(--soft); }
+.rv-prog { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+.rv-bar { flex: 1; height: 8px; border-radius: 8px; background: var(--track); overflow: hidden; }
+.rv-bar i { display: block; height: 100%; background: var(--accent); transition: width .3s; }
+.rv-demo { background: var(--amber-bg); color: var(--amber); padding: 8px 12px; border-radius: 10px; }
+.rv-card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin-bottom: 12px; }
+.rv-cand.is-yes { border-color: color-mix(in srgb, var(--green) 45%, var(--line)); }
+.rv-cand.is-no { opacity: .8; }
+.rv-row { display: flex; align-items: center; gap: 12px; }
+.rv-num { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 14px; flex: none; }
+.rv-name { font-size: 18px; margin: 0; text-transform: none; letter-spacing: 0; color: var(--ink); font-weight: 700; font-family: inherit; }
+.rv-tag { font-size: 12.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; flex: none; }
+.rv-tag.yes { background: var(--green-bg); color: var(--green); }
+.rv-tag.no { background: var(--red-bg); color: var(--red); }
+.rv-play { margin-top: 12px; width: 100%; aspect-ratio: 16 / 9; max-height: 240px; border: 0; border-radius: 12px; background: #19202c; color: #fff; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.rv-play span { width: 46px; height: 46px; border-radius: 50%; background: var(--accent); display: grid; place-items: center; font-size: 16px; }
+.rv-media { display: block; width: 100%; margin-top: 12px; border-radius: 12px; background: #000; max-height: 70vh; }
+audio.rv-media { background: none; }
+.rv-assess { margin: 12px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--soft); }
+.rv-links { display: flex; gap: 14px; margin-top: 10px; }
+.rv-link { border: 0; background: none; padding: 0; font: inherit; color: var(--blue); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.rv-yn { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+.rv-btn { border: 1.5px solid var(--line); background: var(--card); border-radius: 12px; padding: 13px; font: inherit; font-size: 16px; font-weight: 700; color: var(--ink); cursor: pointer; }
+.rv-btn.yes.on { background: var(--green); border-color: var(--green); color: #fff; }
+.rv-btn.no.on { background: var(--red-bg); border-color: var(--red); color: var(--red); }
+.rv-note { margin-top: 10px; display: grid; gap: 6px; justify-items: end; }
+.rv-note textarea { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: inherit; font-size: 16px; background: var(--card); color: var(--ink); }
+.rv-cand > .rv-link { display: inline-block; margin-top: 10px; }
+.rv-ok { color: var(--green); margin: 6px 0 0; font-weight: 600; }
+.rv-err { color: var(--red); margin: 6px 0 0; }
+.rv-foot { text-align: center; margin-top: 24px; }
+.reviewer-links { margin-top: 10px; }
+.rl-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 8px 0; border-top: 1px solid var(--line); margin-top: 8px; }
+.rl-row.off { opacity: .6; }
+.rl-add { margin-top: 10px; }
+.outside-reviews > div + div { margin-top: 2px; }
