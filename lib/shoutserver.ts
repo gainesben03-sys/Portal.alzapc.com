@@ -7,7 +7,7 @@ import { advisorEmails, pushTo } from "./push";
 import { CelebrateKind, celebrateSender, fillCelebrate, RecognitionSettings, shortName, Shoutout, ShoutChannel, templateFor } from "./recognition";
 import { emailLogoUrl } from "./brand";
 import { funFact } from "./onthisday";
-import { Brand, celebrationEmail } from "./hires";
+import { Brand, celebrationEmail, festiveEmail } from "./hires";
 import { sendEmail } from "./server";
 import type { TeamMember } from "./team";
 
@@ -121,7 +121,7 @@ export async function tellThem(db: SupabaseClient, site: string, c: ShoutClient,
   const line = `${from} gave you a shoutout${s.value ? ` for ${s.value}` : ""}: "${s.message}"`;
   const sender = celebrateSender(c.rec, c.name);
   if (person.email) {
-    const m = celebrationEmail(brandFor(c, site), "Shoutout", `${from} gave you a shoutout`, [`Hi ${first},`, `"${s.message}"`, ...(s.value ? [`For: ${s.value}`] : []), "Pass it on: recognize someone who made your day better."], { label: "See it on the wall", url: link }, { url: optOutUrl(site, c.id, person.id), label: OPT_LABEL });
+    const m = festiveEmail(brandFor(c, site), { emoji: "&#127881;&#128079;&#127775;", kicker: s.value ? `Shoutout · ${s.value}` : "You got a shoutout", headline: `${from} gave you a shoutout!`, quote: s.message, paragraphs: [`Hi ${first}, someone noticed. 🙌`, "Pass it on: recognize someone who made your day better."], cta: { label: "🎉 See it on the wall", url: link }, optOut: { url: optOutUrl(site, c.id, person.id), label: OPT_LABEL } });
     await sendEmail({ to: [person.email], subject: `🎉 ${from} gave you a shoutout`, text: m.text, html: m.html, ...sender }).catch(() => undefined);
   }
   if (person.cell && smsReady()) await sendSms(db, person.cell, c.rec.smsNumber, `${c.name}: ${line} ${link}\nReply STOP to stop texts.`);
@@ -139,7 +139,18 @@ export async function celebrateMail(c: ShoutClient, site: string, person: { id: 
   const headline = fillCelebrate(tpl.headline || tpl.subject, v).replace(/\s*[🎂🎉]\s*$/u, "");
   const paras = fillCelebrate(tpl.body, v).split(/\n{2,}/).map((x) => x.trim()).filter(Boolean);
   const fact = tpl.funFact === false ? null : await funFact(on.getMonth() + 1, on.getDate()).catch(() => null);
-  const m = celebrationEmail(brandFor(c, site), kind === "birthday" ? "Happy birthday" : "Work anniversary", headline, paras, c.rec.celebrate === false ? null : { label: "See your team's shoutouts", url: `${site}/shout/${c.rec.token}` }, { url: optOutUrl(site, c.id, person.id), label: OPT_LABEL }, fact ?? undefined);
+  const m = festiveEmail(brandFor(c, site), {
+    emoji: kind === "birthday" ? "&#127874;&#127880;&#127881;" : "&#127881;&#127942;&#127882;",
+    kicker: kind === "birthday" ? "Happy birthday" : `${years} ${years === 1 ? "year" : "years"} with ${c.name}`,
+    headline: headline.replace(/[🎂🎉🎈]/gu, "").trim(),
+    paragraphs: paras,
+    quote: tpl.quote ? fillCelebrate(tpl.quote, v) : undefined,
+    quoteAfter: true,
+    signoff: tpl.signoff ? fillCelebrate(tpl.signoff, v) : undefined,
+    fact: fact ?? undefined,
+    cta: c.rec.celebrate === false ? undefined : { label: kind === "birthday" ? "🎈 See your team's shoutouts" : "🎉 See your team's shoutouts", url: `${site}/shout/${c.rec.token}` },
+    optOut: { url: optOutUrl(site, c.id, person.id), label: OPT_LABEL },
+  });
   return { subject, ...m, ...celebrateSender(c.rec, c.name) };
 }
 

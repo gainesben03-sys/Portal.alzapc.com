@@ -331,8 +331,10 @@ function Setup({ rec, onSave, clientName, onTest }: { rec: RecognitionSettings |
                   <label className="f">Subject<input className="f" value={t.subject} onChange={(e) => setTpls({ ...tpls, [k]: { ...t, subject: e.target.value } })} /></label>
                   <label className="f">Headline<input className="f" value={t.headline ?? ""} onChange={(e) => setTpls({ ...tpls, [k]: { ...t, headline: e.target.value } })} /></label>
                   <label className="f">Message<textarea className="f" style={{ minHeight: 110 }} value={t.body} onChange={(e) => setTpls({ ...tpls, [k]: { ...t, body: e.target.value } })} /></label>
+                  <label className="f">Quote <span className="tiny muted">(optional, shown in a highlighted box)</span><textarea className="f" style={{ minHeight: 60 }} value={t.quote ?? ""} onChange={(e) => setTpls({ ...tpls, [k]: { ...t, quote: e.target.value } })} /></label>
+                  <label className="f">Signed <span className="tiny muted">(optional)</span><input className="f" value={t.signoff ?? ""} onChange={(e) => setTpls({ ...tpls, [k]: { ...t, signoff: e.target.value } })} placeholder="e.g. {company} Leadership" /></label>
                   <div className="chips" style={{ margin: "0 0 8px" }}>
-                    {CELEBRATE_FILL_INS.filter((f) => f !== "{years}" || k === "anniversary").map((f) => (
+                    {CELEBRATE_FILL_INS.filter((f) => !f.includes("year") || k === "anniversary").map((f) => (
                       <button key={f} className="chip chip-btn" onClick={() => setTpls({ ...tpls, [k]: { ...t, body: `${t.body}${t.body.endsWith(" ") || !t.body ? "" : " "}${f}` } })}>{f}</button>
                     ))}
                     <button className="chip chip-btn" onClick={() => setTpls({ ...tpls, [k]: DEFAULT_CELEBRATE_TEMPLATES[k] })}>Reset to default</button>
@@ -345,6 +347,8 @@ function Setup({ rec, onSave, clientName, onTest }: { rec: RecognitionSettings |
                     <span className="tiny muted">Preview · subject: {fillCelebrate(t.subject, sample)}</span>
                     <b style={{ display: "block", margin: "4px 0 6px", fontFamily: "var(--serif, Georgia, serif)", fontSize: 18 }}>{fillCelebrate(t.headline || t.subject, sample)}</b>
                     {fillCelebrate(t.body, sample).split(/\n{2,}/).map((para, i) => <p key={i} className="small" style={{ margin: "0 0 8px", whiteSpace: "pre-wrap" }}>{para}</p>)}
+                    {t.quote && <p className="small so-quote">“{fillCelebrate(t.quote, sample)}”</p>}
+                    {t.signoff && <p className="small" style={{ fontStyle: "italic", margin: "0 0 8px" }}>{fillCelebrate(t.signoff, sample)}</p>}
                     {t.funFact !== false && (
                       <div className="so-fact">
                         <span className="tiny muted" style={{ textTransform: "uppercase", letterSpacing: ".08em" }}>On this day: October 30</span>

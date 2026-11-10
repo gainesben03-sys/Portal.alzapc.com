@@ -491,6 +491,42 @@ ${section("#F4F1EC", paragraphs.map((p) => `<p style="margin:0 0 12px 0">${esc(p
   return { html: frame(brand, inner), text: `${headline}\n\n${paragraphs.join("\n\n")}${extra ? `\n\n${extra.title}\n${extra.text}` : ""}${cta ? `\n\n${cta.label}: ${cta.url}` : ""}${optOut ? `\n\n${optOut.label} Turn it off: ${optOut.url}` : ""}` };
 }
 
+/** The fun version for birthdays, anniversaries and shoutouts: confetti, the logo up top, big emoji, a party card. */
+export function festiveEmail(b: Brand, o: { emoji: string; kicker: string; headline: string; paragraphs: string[]; quote?: string; quoteAfter?: boolean; signoff?: string; fact?: { title: string; text: string }; cta?: { label: string; url: string }; optOut?: { url: string; label: string } }) {
+  const ink = readableInk(b.accent);
+  const confetti = [b.accent, "#F5B83D", "#FF6F61", "#2EC4B6", "#9B5DE5", "#F15BB5", b.accent, "#F5B83D", "#2EC4B6", "#FF6F61", "#9B5DE5", "#F15BB5"];
+  const strip = `<tr><td style="padding:0;font-size:0;line-height:0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>${confetti.map((c) => `<td height="10" bgcolor="${c}" style="background:${c};height:10px;font-size:0;line-height:0">&nbsp;</td>`).join("")}</tr></table></td></tr>`;
+  const logo = b.logoUrl && /^(https?:\/\/|data:image\/|\/)/.test(b.logoUrl)
+    ? `<img src="${esc(b.logoUrl)}" alt="${esc(b.company)}" height="44" style="display:block;margin:0 auto;border:0;height:44px;width:auto">`
+    : `<span style="font-family:Georgia,serif;font-size:22px;color:#1C1A19">${esc(b.company)}</span>`;
+  const quoteBox = (q: string) => `<p style="margin:4px 0 16px 0;padding:16px 18px;background:#FFF6E9;border-radius:10px;font-family:Georgia,serif;font-size:19px;line-height:28px;color:#1C1A19">&ldquo;${esc(q)}&rdquo;</p>`;
+  const p = (t: string) => `<p style="margin:0 0 12px 0;font-family:Arial,sans-serif;font-size:16px;line-height:25px;color:#1C1A19">${esc(t).replace(/\n/g, "<br>")}</p>`;
+  const html = `<!doctype html><html><body style="margin:0;padding:0;background:#FFF6E9">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#FFF6E9"><tr><td align="center" style="padding:24px 12px">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background:#FFFFFF;border-radius:14px;overflow:hidden">
+${strip}
+<tr><td align="center" style="padding:28px 36px 0 36px">${logo}</td></tr>
+<tr><td align="center" style="padding:22px 36px 0 36px;font-size:46px;line-height:56px">${o.emoji}</td></tr>
+<tr><td align="center" style="padding:8px 36px 0 36px;font-family:Arial,sans-serif;font-size:12px;letter-spacing:3px;text-transform:uppercase;color:${ink};font-weight:bold">${esc(o.kicker)}</td></tr>
+<tr><td align="center" style="padding:10px 36px 6px 36px;font-family:Georgia,serif;font-size:38px;line-height:46px;color:#1C1A19">${esc(o.headline)}</td></tr>
+<tr><td style="padding:18px 36px 0 36px">
+${o.quote && !o.quoteAfter ? quoteBox(o.quote) : ""}
+${o.paragraphs.map(p).join("")}
+${o.quote && o.quoteAfter ? quoteBox(o.quote) : ""}
+${o.signoff ? `<p style="margin:4px 0 14px 0;font-family:Georgia,serif;font-size:17px;font-style:italic;color:#4A4441">${esc(o.signoff)}</p>` : ""}
+${o.fact ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:10px 0 6px 0"><tr><td style="padding:16px 18px;background:#F3F0FF;border-radius:10px;border-left:5px solid #9B5DE5"><p style="margin:0 0 6px 0;font-family:Arial,sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#6B4FB8;font-weight:bold">&#10024; ${esc(o.fact.title)}</p><p style="margin:0;font-family:Georgia,serif;font-size:16px;line-height:24px;color:#1C1A19">${esc(o.fact.text)}</p></td></tr></table>` : ""}
+</td></tr>
+${o.cta ? `<tr><td align="center" style="padding:20px 36px 4px 36px"><a href="${esc(o.cta.url)}" style="display:inline-block;background:${ink};color:#FFFFFF;padding:14px 26px;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;text-decoration:none;border-radius:999px">${esc(o.cta.label)}</a></td></tr>` : ""}
+<tr><td align="center" style="padding:22px 36px 26px 36px;font-size:22px;letter-spacing:6px">&#127880;&#127881;&#127874;&#10024;&#127882;</td></tr>
+${strip}
+</table>
+${o.optOut ? `<p style="margin:14px 0 0 0;font-family:Arial,sans-serif;font-size:12px;line-height:18px;color:#8A827B">${esc(o.optOut.label)} <a href="${esc(o.optOut.url)}" style="color:#8A827B">Turn it off</a>.</p>` : ""}
+<p style="margin:8px 0 0 0;font-family:Arial,sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#A39A92">${esc(b.company)}</p>
+</td></tr></table></body></html>`;
+  const text = `${o.headline}\n\n${o.quote ? `"${o.quote}"\n\n` : ""}${o.paragraphs.join("\n\n")}${o.signoff ? `\n\n${o.signoff}` : ""}${o.fact ? `\n\n${o.fact.title}\n${o.fact.text}` : ""}${o.cta ? `\n\n${o.cta.label}: ${o.cta.url}` : ""}${o.optOut ? `\n\n${o.optOut.label} Turn it off: ${o.optOut.url}` : ""}`;
+  return { html, text };
+}
+
 /** A short list email (Manager Hub reminders, the Monday nudge), in the client's brand, with one button. */
 export function listEmail(b: Brand, kicker: string, headline: string, intro: string, items: { title: string; why: string }[], cta: { label: string; url: string }) {
   const brand: Brand = { ...b, bar: b.bar ?? b.accent, accent: readableInk(b.accent) };

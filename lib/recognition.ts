@@ -33,8 +33,8 @@ export interface RecognitionSettings {
 }
 
 export type CelebrateKind = "birthday" | "anniversary";
-export type CelebrateTemplate = { subject: string; body: string; headline?: string; funFact?: boolean };
-export const CELEBRATE_FILL_INS = ["{first name}", "{company}", "{years}", "{manager}"] as const;
+export type CelebrateTemplate = { subject: string; body: string; headline?: string; quote?: string; signoff?: string; funFact?: boolean };
+export const CELEBRATE_FILL_INS = ["{first name}", "{company}", "{years}", "{year/years}", "{manager}"] as const;
 export const DEFAULT_CELEBRATE_TEMPLATES: Record<CelebrateKind, CelebrateTemplate> = {
   birthday: {
     subject: "Happy birthday, {first name}! 🎂",
@@ -43,9 +43,11 @@ export const DEFAULT_CELEBRATE_TEMPLATES: Record<CelebrateKind, CelebrateTemplat
     funFact: true,
   },
   anniversary: {
-    subject: "Happy {years}-year anniversary, {first name}! 🎉",
-    headline: "Happy {years}-year anniversary, {first name}!",
-    body: "{years} years with {company}! Thank you for the work, the care and everything in between.\n\nWe're lucky to have you on the team.",
+    subject: "{first name}, thank you for {years} incredible {year/years}! 🎉",
+    headline: "{first name}, thank you for {years} incredible {year/years}!",
+    body: "Today marks a meaningful milestone in your journey with {company}. Your commitment, creativity, and hard work have left a real mark on this team and everything we build together. We're genuinely grateful you're part of the {company} family.",
+    quote: "{years} {year/years} of showing up, delivering, and raising the bar. That's something worth celebrating, today and every day.",
+    signoff: "{company} Leadership",
     funFact: true,
   },
 };
@@ -55,6 +57,7 @@ export function fillCelebrate(text: string, v: { first: string; company: string;
     .replace(/\{first name\}/gi, v.first)
     .replace(/\{company\}/gi, v.company)
     .replace(/\{years\}/gi, String(v.years ?? ""))
+    .replace(/\{year\/years\}/gi, v.years === 1 ? "year" : "years")
     .replace(/\{manager\}/gi, v.manager || "your manager");
 }
 /** Who employee emails come from. */
