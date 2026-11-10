@@ -15,6 +15,7 @@ export interface TeamMember {
   department?: string;
   location?: string;
   cell?: string; // for recognition by text; digits with country code, e.g. +14155551234
+  celebrate?: boolean; // false = they opted out of public birthday and anniversary celebrations
   active: boolean;
 }
 

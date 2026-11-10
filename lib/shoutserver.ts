@@ -1,4 +1,5 @@
 // Server side of shoutouts: find the company, screen every message, save it, and let people know.
+import { createHmac } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { claude, parseJson } from "./ai";
 import type { ClientConfig } from "./modules";
@@ -144,4 +145,15 @@ export function matchPeople(roster: TeamMember[], q: string): TeamMember[] {
   const exact = roster.filter((p) => p.name.toLowerCase() === t);
   if (exact.length) return exact;
   return roster.filter((p) => words.every((w) => p.name.toLowerCase().split(/\s+/).some((n) => n.startsWith(w)))).slice(0, 8);
+}
+
+// ---------- celebrations ----------
+
+/** Today's date where the company is (Pacific), for birthdays and anniversaries. */
+export const localToday = () => new Date(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
+
+/** A link-only key so the opt-out link in an email can't be guessed for someone else. */
+export function optOutKey(clientId: string, personId: string) {
+  const secret = process.env.CRON_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || "alza";
+  return createHmac("sha256", secret).update(`celebrate:${clientId}:${personId}`).digest("hex").slice(0, 24);
 }

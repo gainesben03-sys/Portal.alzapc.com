@@ -5,10 +5,10 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { Scoreboard, ShoutCard, WallItem } from "@/components/shoutui";
-import { Board, shortName } from "@/lib/recognition";
-import { DEMO_SHOUTS, demoBoard, demoReactions } from "@/lib/shoutdemo";
+import { Board, Celebration, shortName } from "@/lib/recognition";
+import { DEMO_CELEBRATE, DEMO_SHOUTS, demoBoard, demoReactions } from "@/lib/shoutdemo";
 
-type Info = { company: string; accent: string; logo: string | null; board: Board | null; wall: WallItem[] };
+type Info = { company: string; accent: string; logo: string | null; board: Board | null; wall: WallItem[]; celebrate?: Celebration[] };
 
 export default function ShoutTv() {
   const { token } = useParams<{ token: string }>();
@@ -23,7 +23,7 @@ export default function ShoutTv() {
         .then((j) => {
           if (j.ok) setInfo(j);
           else if (j.reason === "demo")
-            setInfo({ company: "Blueprint Studios", accent: "#2b3cf5", logo: null, board: demoBoard(), wall: DEMO_SHOUTS.filter((s) => s.status === "live").map((s) => ({ id: s.id, to: shortName(s.to.name), team: s.to.department ?? "", from: shortName(s.from.name), value: s.value ?? null, message: s.message, at: s.at, reactions: demoReactions[s.id] ?? {}, mine: [] })) });
+            setInfo({ company: "Blueprint Studios", accent: "#2b3cf5", logo: null, celebrate: DEMO_CELEBRATE, board: demoBoard(), wall: DEMO_SHOUTS.filter((s) => s.status === "live").map((s) => ({ id: s.id, to: shortName(s.to.name), team: s.to.department ?? "", from: shortName(s.from.name), value: s.value ?? null, message: s.message, at: s.at, reactions: demoReactions[s.id] ?? {}, mine: [] })) });
         })
         .catch(() => undefined);
     load();
@@ -46,6 +46,14 @@ export default function ShoutTv() {
         {info.logo ? <img src={info.logo} alt={info.company} /> : <b>{info.company}</b>}
         <span>Shoutouts</span>
       </header>
+      {(info.celebrate ?? []).some((c) => c.days === 0 || (c.kind === "new" && c.days >= -3 && c.days <= 0)) && (
+        <div className="so-tv-cel">
+          <b>Today we&apos;re celebrating</b>
+          {(info.celebrate ?? []).filter((c) => c.days === 0 || (c.kind === "new" && c.days >= -3 && c.days <= 0)).map((c) => (
+            <span key={c.kind + c.personId}>{c.kind === "birthday" ? "🎂" : c.kind === "anniversary" ? "🎉" : "👋"} {c.name}{c.kind === "anniversary" ? ` · ${c.years} yrs` : c.kind === "new" ? " · welcome!" : ""}</span>
+          ))}
+        </div>
+      )}
       <main>
         <section className="so-tv-main">
           {cur ? <ShoutCard key={cur.id + i} s={cur} big /> : <h2>Be the first to give a shoutout this month.</h2>}

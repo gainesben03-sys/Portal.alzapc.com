@@ -7,8 +7,8 @@
 
 import { createHash } from "crypto";
 import { NextResponse } from "next/server";
-import { REACTIONS, scoreboard, shortName, Shoutout } from "@/lib/recognition";
-import { clientByToken, createShout, matchPeople, rosterFor, tellReviewers } from "@/lib/shoutserver";
+import { celebrations, REACTIONS, scoreboard, shortName, Shoutout } from "@/lib/recognition";
+import { clientByToken, createShout, localToday, matchPeople, rosterFor, tellReviewers } from "@/lib/shoutserver";
 import { admin, SERVER_LIVE, siteUrl } from "@/lib/server";
 
 type D = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -40,7 +40,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ token: s
   const ids = wall.map((s) => s.id);
   const { data: rx } = ids.length ? await db.from("shout_reactions").select("shout_id, who, emoji").in("shout_id", ids) : { data: [] };
   const me = device ? `d:${hash(device)}` : "";
+  const celebrate = c.rec.celebrate === false ? [] : celebrations(await rosterFor(db, c.id), localToday(), 14);
   return json({
+    celebrate,
     ok: true,
     company: c.name,
     accent: c.config.accent || "#19283c",

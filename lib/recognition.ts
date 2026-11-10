@@ -26,6 +26,55 @@ export interface RecognitionSettings {
   smsNumber?: string; // the company's texting number (+1...), once the texting provider is set up
   notifyManagers?: boolean; // email the person's manager when they get one (default on)
   showWall?: boolean; // the wall and scoreboard on the QR page (default on)
+  celebrate?: boolean; // the Celebrate tab: birthdays, work anniversaries, new people (default on; each person can opt out)
+}
+
+export type Celebration = { personId: string; name: string; team: string; kind: "birthday" | "anniversary" | "new"; days: number; when: string; years?: number };
+
+/** Birthdays, work anniversaries and new starters in the next two weeks, for people who haven't opted out. */
+export function celebrations(people: { id: string; name: string; department?: string; location?: string; birthday?: string; hireDate?: string; celebrate?: boolean; active?: boolean }[], from = new Date(), within = 14): Celebration[] {
+  const day0 = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+  const next = (mmdd: string) => {
+    const m = /^(\d{1,2})-(\d{1,2})$/.exec(mmdd);
+    if (!m) return null;
+    let d = new Date(day0.getFullYear(), +m[1] - 1, +m[2]);
+    if (d < day0) d = new Date(day0.getFullYear() + 1, +m[1] - 1, +m[2]);
+    return d;
+  };
+  const fmt = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const out: Celebration[] = [];
+  for (const p of people) {
+    if (p.active === false || p.celebrate === false) continue;
+    const base = { personId: p.id, name: shortName(p.name), team: p.department || p.location || "" };
+    if (p.birthday) {
+      const d = next(p.birthday);
+      if (d) {
+        const days = Math.round((d.getTime() - day0.getTime()) / 864e5);
+        if (days <= within) out.push({ ...base, kind: "birthday", days, when: fmt(d) });
+      }
+    }
+    if (p.hireDate) {
+      const [y, mo, da] = p.hireDate.slice(0, 10).split("-").map(Number);
+      const start = new Date(y, mo - 1, da);
+      const sd = Math.round((start.getTime() - day0.getTime()) / 864e5);
+      if (sd >= -7 && sd <= within) out.push({ ...base, kind: "new", days: sd, when: fmt(start) });
+      else {
+        const d = next(`${mo}-${da}`);
+        if (d) {
+          const days = Math.round((d.getTime() - day0.getTime()) / 864e5);
+          const years = d.getFullYear() - y;
+          if (years >= 1 && days <= within) out.push({ ...base, kind: "anniversary", days, when: fmt(d), years });
+        }
+      }
+    }
+  }
+  return out.sort((a, b) => a.days - b.days || a.name.localeCompare(b.name));
+}
+
+export function celebrateLine(c: Celebration, lang: "en" | "es" = "en") {
+  const first = c.name.split(" ")[0];
+  if (lang === "es") return c.kind === "birthday" ? `¡Feliz cumpleaños, ${first}! 🎂 ` : c.kind === "anniversary" ? `¡Felices ${c.years} ${c.years === 1 ? "año" : "años"} con el equipo, ${first}! 🎉 ` : `¡Bienvenido al equipo, ${first}! 👋 `;
+  return c.kind === "birthday" ? `Happy birthday, ${first}! 🎂 ` : c.kind === "anniversary" ? `Happy ${c.years}-year work anniversary, ${first}! 🎉 ` : `Welcome to the team, ${first}! 👋 `;
 }
 
 export const DEFAULT_VALUES = ["Teamwork", "Safety first", "Above and beyond", "Customer first", "Ownership"];

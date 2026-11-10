@@ -43,3 +43,17 @@ export function demoBoard() {
   return scoreboard(DEMO_SHOUTS, DEMO_VALUES, since);
 }
 export const demoReactions: Record<string, Record<string, number>> = { d1: { "👏": 9, "❤️": 4, "🔥": 3 }, d2: { "🙌": 6, "👏": 2 }, d3: { "🔥": 5 }, d4: { "❤️": 7 }, d5: { "👏": 3 }, d6: { "❤️": 2 }, d7: { "🙌": 4 } };
+
+import type { Celebration } from "./recognition";
+const md = (plus: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() + plus);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+};
+export const DEMO_CELEBRATE: Celebration[] = [
+  { personId: "pp2", name: "Ana R.", team: "Install crew", kind: "birthday", days: 0, when: md(0) },
+  { personId: "pp3", name: "Devon P.", team: "Production", kind: "anniversary", days: 2, when: md(2), years: 3 },
+  { personId: "pp6", name: "Jordan H.", team: "Install crew", kind: "new", days: -2, when: md(-2) },
+  { personId: "pp5", name: "Sam W.", team: "Sales", kind: "birthday", days: 5, when: md(5) },
+  { personId: "pp4", name: "Lucía M.", team: "Warehouse", kind: "birthday", days: 11, when: md(11) },
+];

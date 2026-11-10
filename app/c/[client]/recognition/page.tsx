@@ -241,6 +241,7 @@ function Setup({ rec, onSave, clientName }: { rec: RecognitionSettings | null | 
   const [sms, setSms] = useState(rec?.smsNumber ?? "");
   const [notify, setNotify] = useState(rec?.notifyManagers !== false);
   const [wall, setWall] = useState(rec?.showWall !== false);
+  const [cel, setCel] = useState(rec?.celebrate !== false);
   const [qr, setQr] = useState("");
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const link = rec ? `${origin}/shout/${rec.token}` : "";
@@ -250,7 +251,7 @@ function Setup({ rec, onSave, clientName }: { rec: RecognitionSettings | null | 
   const vals = values.split("\n").map((v) => v.trim()).filter(Boolean).slice(0, 8);
   const clean = sms.replace(/[^\d+]/g, "");
   const smsNumber = clean ? (clean.startsWith("+") ? clean : clean.length === 10 ? `+1${clean}` : `+${clean}`) : undefined;
-  const save = () => onSave({ ...(rec ?? newRecognition()), values: vals.length ? vals : DEFAULT_VALUES, smsNumber, notifyManagers: notify, showWall: wall });
+  const save = () => onSave({ ...(rec ?? newRecognition()), values: vals.length ? vals : DEFAULT_VALUES, smsNumber, notifyManagers: notify, showWall: wall, celebrate: cel });
   const copy = (t: string) => navigator.clipboard?.writeText(t);
 
   return (
@@ -262,6 +263,7 @@ function Setup({ rec, onSave, clientName }: { rec: RecognitionSettings | null | 
         </label>
         <label className="check"><input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} /> Email the person&apos;s manager when they get a shoutout</label>
         <label className="check"><input type="checkbox" checked={wall} onChange={(e) => setWall(e.target.checked)} /> Show the wall and scoreboard on the QR page</label>
+        <label className="check"><input type="checkbox" checked={cel} onChange={(e) => setCel(e.target.checked)} /> Celebrate tab: birthdays, work anniversaries and new people (next 2 weeks, month and day only). Anyone can opt out from their birthday email, or you can uncheck them on the roster.</label>
         <label className="f" style={{ marginTop: 8 }}>Texting number <span className="tiny muted">(optional, once the texting provider is set up)</span>
           <input className="f" value={sms} onChange={(e) => setSms(e.target.value)} placeholder="(415) 555-0123" />
         </label>

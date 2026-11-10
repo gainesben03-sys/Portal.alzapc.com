@@ -284,6 +284,10 @@ function PersonSheet({ p, users, onClose, onSave, onRemove }: { p: TeamMember; u
           <label className="f">Cell <span className="tiny muted">(optional, for shoutout texts)</span><input className="f" type="tel" value={v.cell ?? ""} onChange={(e) => set("cell", e.target.value || undefined)} onBlur={() => set("cell", cleanCell(v.cell) ?? (v.cell ? v.cell : undefined))} placeholder="(415) 555-0134" /></label>
         </fieldset>
       </div>
+      <label className="rule" style={{ cursor: "pointer" }}>
+        <input type="checkbox" checked={v.celebrate !== false} onChange={(e) => set("celebrate", e.target.checked ? undefined : false)} />
+        <div><b className="small">Celebrate their birthday and work anniversary with the team</b><div className="tiny muted">Shows on the Shoutouts Celebrate tab (month and day only). Uncheck if they&apos;d rather not. Their manager still gets a private reminder.</div></div>
+      </label>
       {p.id && (
         <label className="rule" style={{ cursor: "pointer" }}>
           <input type="checkbox" checked={!v.active} onChange={(e) => set("active", !e.target.checked)} />

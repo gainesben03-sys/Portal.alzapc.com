@@ -4,15 +4,15 @@
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Pick, PersonSearch, Scoreboard, ShoutCard, WallItem } from "@/components/shoutui";
-import { Board, MAX_MESSAGE, shortName, STARTERS } from "@/lib/recognition";
-import { DEMO_PEOPLE, DEMO_SHOUTS, DEMO_VALUES, demoBoard, demoReactions } from "@/lib/shoutdemo";
+import { Board, Celebration, celebrateLine, MAX_MESSAGE, shortName, STARTERS } from "@/lib/recognition";
+import { DEMO_CELEBRATE, DEMO_PEOPLE, DEMO_SHOUTS, DEMO_VALUES, demoBoard, demoReactions } from "@/lib/shoutdemo";
 
-type Info = { company: string; accent: string; logo: string | null; values: string[]; sms: string | null; showWall: boolean; board: Board | null; wall: WallItem[] };
+type Info = { company: string; accent: string; logo: string | null; values: string[]; sms: string | null; showWall: boolean; board: Board | null; wall: WallItem[]; celebrate: Celebration[] };
 type Lang = "en" | "es";
 
 const W = {
-  en: { give: "Give a shoutout", wall: "Wall", who: "Who are you recognizing?", whoPh: "Start typing their name", what: "What did they do?", whatPh: "Be specific. What happened, and why it mattered.", value: "Which value does it show?", skip: "Skip", from: "Who's it from?", fromPh: "Find your name", notListed: "I'm not on the list", yourName: "Your name", send: "Send shoutout", sending: "Sending…", sentT: "Sent! 🎉", sentB: (n: string) => `${n} will get it right away.`, heldB: "Thanks! It'll post after a quick check.", another: "Recognize someone else", seeWall: "See the wall", text: (n: string) => `Or text a name to ${n}`, empty: "No shoutouts yet. Be the first.", private: "Shoutouts are checked before they post. Keep it about the work.", report: "Thanks. We'll take a look.", limit: "That's the limit for today. Thank you for recognizing so many people!", err: "That didn't send. Try again." },
-  es: { give: "Dar un reconocimiento", wall: "Muro", who: "¿A quién quieres reconocer?", whoPh: "Escribe su nombre", what: "¿Qué hizo?", whatPh: "Sé específico. Qué pasó y por qué importó.", value: "¿Qué valor muestra?", skip: "Omitir", from: "¿De parte de quién?", fromPh: "Busca tu nombre", notListed: "No estoy en la lista", yourName: "Tu nombre", send: "Enviar", sending: "Enviando…", sentT: "¡Enviado! 🎉", sentB: (n: string) => `${n} lo recibirá enseguida.`, heldB: "¡Gracias! Se publicará después de una revisión rápida.", another: "Reconocer a alguien más", seeWall: "Ver el muro", text: (n: string) => `O manda un mensaje con un nombre al ${n}`, empty: "Aún no hay reconocimientos. Sé el primero.", private: "Los reconocimientos se revisan antes de publicarse. Habla del trabajo.", report: "Gracias. Lo revisaremos.", limit: "Llegaste al límite de hoy. ¡Gracias por reconocer a tantas personas!", err: "No se envió. Intenta de nuevo." },
+  en: { give: "Give a shoutout", wall: "Wall", who: "Who are you recognizing?", whoPh: "Start typing their name", what: "What did they do?", whatPh: "Be specific. What happened, and why it mattered.", value: "Which value does it show?", skip: "Skip", from: "Who's it from?", fromPh: "Find your name", notListed: "I'm not on the list", yourName: "Your name", send: "Send shoutout", sending: "Sending…", sentT: "Sent! 🎉", sentB: (n: string) => `${n} will get it right away.`, heldB: "Thanks! It'll post after a quick check.", another: "Recognize someone else", seeWall: "See the wall", text: (n: string) => `Or text a name to ${n}`, empty: "No shoutouts yet. Be the first.", private: "Shoutouts are checked before they post. Keep it about the work.", report: "Thanks. We'll take a look.", limit: "That's the limit for today. Thank you for recognizing so many people!", err: "That didn't send. Try again.", cel: "Celebrate", today: "Today", week: "This week", next: "Next week", newp: "New on the team", bday: "Birthday", anniv: (y: number) => `${y} ${y === 1 ? "year" : "years"} with the team`, started: "Started", starts: "Starts", sendOne: "Send a shoutout", noCel: "Nothing coming up in the next two weeks.", optNote: "Rather not have your birthday here? Use the link in your birthday email, or ask your manager." },
+  es: { give: "Dar un reconocimiento", wall: "Muro", who: "¿A quién quieres reconocer?", whoPh: "Escribe su nombre", what: "¿Qué hizo?", whatPh: "Sé específico. Qué pasó y por qué importó.", value: "¿Qué valor muestra?", skip: "Omitir", from: "¿De parte de quién?", fromPh: "Busca tu nombre", notListed: "No estoy en la lista", yourName: "Tu nombre", send: "Enviar", sending: "Enviando…", sentT: "¡Enviado! 🎉", sentB: (n: string) => `${n} lo recibirá enseguida.`, heldB: "¡Gracias! Se publicará después de una revisión rápida.", another: "Reconocer a alguien más", seeWall: "Ver el muro", text: (n: string) => `O manda un mensaje con un nombre al ${n}`, empty: "Aún no hay reconocimientos. Sé el primero.", private: "Los reconocimientos se revisan antes de publicarse. Habla del trabajo.", report: "Gracias. Lo revisaremos.", limit: "Llegaste al límite de hoy. ¡Gracias por reconocer a tantas personas!", err: "No se envió. Intenta de nuevo.", cel: "Celebrar", today: "Hoy", week: "Esta semana", next: "La próxima semana", newp: "Nuevos en el equipo", bday: "Cumpleaños", anniv: (y: number) => `${y} ${y === 1 ? "año" : "años"} con el equipo`, started: "Empezó", starts: "Empieza", sendOne: "Enviar un reconocimiento", noCel: "No hay nada en las próximas dos semanas.", optNote: "¿Prefieres que tu cumpleaños no aparezca aquí? Usa el enlace en tu correo de cumpleaños o habla con tu gerente." },
 };
 
 function deviceId() {
@@ -33,7 +33,7 @@ export default function ShoutPage() {
   const [info, setInfo] = useState<Info | null>(null);
   const [state, setState] = useState<"loading" | "ok" | "gone">("loading");
   const [demo, setDemo] = useState(false);
-  const [tab, setTab] = useState<"give" | "wall">("give");
+  const [tab, setTab] = useState<"give" | "celebrate" | "wall">("give");
   const [lang, setLang] = useState<Lang>("en");
   const [to, setTo] = useState<Pick | null>(null);
   const [from, setFrom] = useState<Pick | null>(null);
@@ -60,6 +60,7 @@ export default function ShoutPage() {
         values: DEMO_VALUES,
         sms: "+14155550123",
         showWall: true,
+        celebrate: DEMO_CELEBRATE,
         board: demoBoard(),
         wall: DEMO_SHOUTS.filter((s) => s.status === "live").map((s) => ({ id: s.id, to: shortName(s.to.name), team: s.to.department ?? "", from: shortName(s.from.name), value: s.value ?? null, message: s.message, at: s.at, reactions: demoReactions[s.id] ?? {}, mine: [] })),
       });
@@ -168,10 +169,11 @@ export default function ShoutPage() {
         <h1 className="so-h1">{lang === "es" ? "¿Quién te alegró el día?" : "Who made your day better?"}</h1>
       </div>
       {demo && <p className="so-demo">Demo preview with sample people.</p>}
-      {info.showWall && (
-        <div className="so-tabs" role="tablist">
-          <button role="tab" aria-selected={tab === "give"} className={tab === "give" ? "on" : ""} onClick={() => setTab("give")}>{t.give}</button>
-          <button role="tab" aria-selected={tab === "wall"} className={tab === "wall" ? "on" : ""} onClick={() => setTab("wall")}>{t.wall}{info.board ? ` · ${info.board.total}` : ""}</button>
+      {(info.showWall || info.celebrate.length > 0) && (
+        <div className="so-tabs" role="tablist" style={{ gridTemplateColumns: `repeat(${1 + (info.celebrate.length ? 1 : 0) + (info.showWall ? 1 : 0)}, 1fr)` }}>
+          <button role="tab" aria-selected={tab === "give"} className={tab === "give" ? "on" : ""} onClick={() => setTab("give")}>{info.celebrate.length && info.showWall ? (lang === "es" ? "Dar" : "Give") : t.give}</button>
+          {info.celebrate.length > 0 && <button role="tab" aria-selected={tab === "celebrate"} className={tab === "celebrate" ? "on" : ""} onClick={() => setTab("celebrate")}>🎂 {t.cel}{info.celebrate.some((c) => c.days === 0) ? <span className="so-dot" aria-label={t.today} /> : null}</button>}
+          {info.showWall && <button role="tab" aria-selected={tab === "wall"} className={tab === "wall" ? "on" : ""} onClick={() => setTab("wall")}>{t.wall}{info.board ? ` · ${info.board.total}` : ""}</button>}
         </div>
       )}
 
@@ -219,6 +221,8 @@ export default function ShoutPage() {
             {info.sms && <p className="so-meta so-fine">📱 {t.text(info.sms.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3"))}</p>}
           </div>
         )
+      ) : tab === "celebrate" ? (
+        <Celebrate list={info.celebrate} t={t} lang={lang} onShout={(c) => { reset(); setTo({ id: c.personId, name: c.name, team: c.team }); setMsg(celebrateLine(c, lang)); setTab("give"); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
       ) : (
         <>
           {info.board && <Scoreboard b={info.board} />}
@@ -232,6 +236,36 @@ export default function ShoutPage() {
         </>
       )}
       {toast && <div className="so-toast" role="status">{toast}</div>}
+    </div>
+  );
+}
+
+function Celebrate({ list, t, lang, onShout }: { list: Celebration[]; t: (typeof W)["en"]; lang: Lang; onShout: (c: Celebration) => void }) {
+  const groups: [string, Celebration[]][] = [
+    [t.today, list.filter((c) => c.days === 0 && c.kind !== "new")],
+    [t.week, list.filter((c) => c.days >= 1 && c.days <= 7 && c.kind !== "new")],
+    [t.next, list.filter((c) => c.days >= 8 && c.kind !== "new")],
+    [t.newp, list.filter((c) => c.kind === "new")],
+  ];
+  if (!list.length) return <div className="so-panel so-meta">{t.noCel}</div>;
+  return (
+    <div className="so-cel">
+      {groups.filter(([, g]) => g.length).map(([label, g]) => (
+        <section key={label}>
+          <h3 className="so-cel-h">{label}</h3>
+          {g.map((c) => (
+            <div key={c.kind + c.personId} className={`so-cel-row ${c.days === 0 && c.kind !== "new" ? "today" : ""}`}>
+              <span className="so-cel-ic" aria-hidden="true">{c.kind === "birthday" ? "🎂" : c.kind === "anniversary" ? "🎉" : "👋"}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <b>{c.name}</b>
+                <span className="so-meta" style={{ display: "block" }}>{[c.kind === "birthday" ? t.bday : c.kind === "anniversary" ? t.anniv(c.years ?? 1) : c.days <= 0 ? t.started : t.starts, c.days === 0 ? null : c.when, c.team].filter(Boolean).join(" · ")}</span>
+              </div>
+              <button className="so-cel-btn" onClick={() => onShout(c)}>{lang === "es" ? "Felicitar" : c.kind === "new" ? "Welcome" : "Celebrate"}</button>
+            </div>
+          ))}
+        </section>
+      ))}
+      <p className="so-meta so-fine">{t.optNote}</p>
     </div>
   );
 }
