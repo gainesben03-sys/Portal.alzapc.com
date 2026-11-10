@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     if (!me.advisor) return NextResponse.json({ ok: false, reason: "forbidden" }, { status: 403 });
     const kind = b.kind === "anniversary" ? "anniversary" : "birthday";
     const draft = { ...c, rec: { ...c.rec, ...(b.rec && typeof b.rec === "object" ? { templates: b.rec.templates, sender: b.rec.sender, celebrate: b.rec.celebrate } : {}) } };
-    const m = celebrateMail(draft, siteUrl(req), { id: "test", name: "Alex Sample", managerName: "Jordan Lee" }, kind, kind === "anniversary" ? 3 : undefined);
+    const m = await celebrateMail(draft, siteUrl(req), { id: "test", name: "Alex Sample", managerName: "Jordan Lee" }, kind, kind === "anniversary" ? 3 : undefined);
     const r = await sendEmail({ to: [me.email], subject: `[Test] ${m.subject}`, text: m.text, html: m.html, fromName: m.fromName, fromBox: m.fromBox });
     return NextResponse.json({ ok: r.ok, reason: r.reason, to: me.email });
   }

@@ -303,7 +303,7 @@ export async function GET(req: Request) {
         if (cel.kind === "new" || (cel.kind === "birthday" && !rec.autoEmail?.birthday) || (cel.kind === "anniversary" && !rec.autoEmail?.anniversary)) continue;
         const p = people.find((x) => x.id === cel.personId);
         if (!p?.email) continue;
-        const m = celebrateMail(sc, PORTAL_URL, p, cel.kind, cel.years);
+        const m = await celebrateMail(sc, PORTAL_URL, p, cel.kind, cel.years);
         await once(`cel:${cel.kind}:${c.id}:${p.id}:${day}`, () => sendEmail({ to: [p.email!], subject: m.subject, text: m.text, html: m.html, fromName: m.fromName, fromBox: m.fromBox }));
       }
     }

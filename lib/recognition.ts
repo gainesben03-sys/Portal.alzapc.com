@@ -33,16 +33,20 @@ export interface RecognitionSettings {
 }
 
 export type CelebrateKind = "birthday" | "anniversary";
-export type CelebrateTemplate = { subject: string; body: string };
+export type CelebrateTemplate = { subject: string; body: string; headline?: string; funFact?: boolean };
 export const CELEBRATE_FILL_INS = ["{first name}", "{company}", "{years}", "{manager}"] as const;
 export const DEFAULT_CELEBRATE_TEMPLATES: Record<CelebrateKind, CelebrateTemplate> = {
   birthday: {
     subject: "Happy birthday, {first name}! 🎂",
-    body: "Happy birthday from all of us at {company}!\n\nWe hope today is a great one. Thanks for everything you bring to the team.",
+    headline: "Wishing you a wonderful birthday, {first name}!",
+    body: "Today is all about you! Thank you for everything you bring to {company}. Your energy, creativity, and dedication make this team what it is. Hope your day is as amazing as you are!",
+    funFact: true,
   },
   anniversary: {
     subject: "Happy {years}-year anniversary, {first name}! 🎉",
+    headline: "Happy {years}-year anniversary, {first name}!",
     body: "{years} years with {company}! Thank you for the work, the care and everything in between.\n\nWe're lucky to have you on the team.",
+    funFact: true,
   },
 };
 export const templateFor = (rec: RecognitionSettings | undefined, k: CelebrateKind): CelebrateTemplate => ({ ...DEFAULT_CELEBRATE_TEMPLATES[k], ...(rec?.templates?.[k] ?? {}) });

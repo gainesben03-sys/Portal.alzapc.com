@@ -1029,3 +1029,4 @@ audio.rv-media { background: none; }
 .so-tpl { margin: 10px 0 0 26px; }
 .so-preview { background: var(--soft); border-radius: 10px; padding: 12px; }
 .so-auto-row .linklike { white-space: nowrap; flex: none; }
+.so-fact { background: var(--card); border-left: 4px solid var(--accent); border-radius: 6px; padding: 10px 12px; margin: 4px 0 10px; }

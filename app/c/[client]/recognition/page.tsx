@@ -329,6 +329,7 @@ function Setup({ rec, onSave, clientName, onTest }: { rec: RecognitionSettings |
               {editing === k && (
                 <div className="so-tpl">
                   <label className="f">Subject<input className="f" value={t.subject} onChange={(e) => setTpls({ ...tpls, [k]: { ...t, subject: e.target.value } })} /></label>
+                  <label className="f">Headline<input className="f" value={t.headline ?? ""} onChange={(e) => setTpls({ ...tpls, [k]: { ...t, headline: e.target.value } })} /></label>
                   <label className="f">Message<textarea className="f" style={{ minHeight: 110 }} value={t.body} onChange={(e) => setTpls({ ...tpls, [k]: { ...t, body: e.target.value } })} /></label>
                   <div className="chips" style={{ margin: "0 0 8px" }}>
                     {CELEBRATE_FILL_INS.filter((f) => f !== "{years}" || k === "anniversary").map((f) => (
@@ -336,10 +337,20 @@ function Setup({ rec, onSave, clientName, onTest }: { rec: RecognitionSettings |
                     ))}
                     <button className="chip chip-btn" onClick={() => setTpls({ ...tpls, [k]: DEFAULT_CELEBRATE_TEMPLATES[k] })}>Reset to default</button>
                   </div>
+                  <label className="check" style={{ margin: "0 0 8px" }}>
+                    <input type="checkbox" checked={t.funFact !== false} onChange={(e) => setTpls({ ...tpls, [k]: { ...t, funFact: e.target.checked } })} />
+                    <span>Add an &quot;On this day&quot; fun fact <span className="tiny muted">(a real event from that date, picked to be upbeat and work-appropriate: no war, politics, religion or tragedy)</span></span>
+                  </label>
                   <div className="so-preview">
-                    <span className="tiny muted">Preview</span>
-                    <b className="small" style={{ display: "block", margin: "2px 0 6px" }}>{fillCelebrate(t.subject, sample)}</b>
+                    <span className="tiny muted">Preview · subject: {fillCelebrate(t.subject, sample)}</span>
+                    <b style={{ display: "block", margin: "4px 0 6px", fontFamily: "var(--serif, Georgia, serif)", fontSize: 18 }}>{fillCelebrate(t.headline || t.subject, sample)}</b>
                     {fillCelebrate(t.body, sample).split(/\n{2,}/).map((para, i) => <p key={i} className="small" style={{ margin: "0 0 8px", whiteSpace: "pre-wrap" }}>{para}</p>)}
+                    {t.funFact !== false && (
+                      <div className="so-fact">
+                        <span className="tiny muted" style={{ textTransform: "uppercase", letterSpacing: ".08em" }}>On this day: October 30</span>
+                        <p className="small" style={{ margin: "2px 0 0" }}>On October 30, 1974, Muhammad Ali won back the heavyweight title in the legendary &quot;Rumble in the Jungle,&quot; one of sports&apos; greatest comebacks! <span className="tiny muted">(example; each email gets that day&apos;s fact)</span></p>
+                      </div>
+                    )}
                     <p className="tiny muted" style={{ margin: 0 }}>Rather not have your birthday and work anniversary celebrated? <u>Turn it off</u>.</p>
                   </div>
                 </div>

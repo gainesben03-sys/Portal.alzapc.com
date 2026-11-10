@@ -6,6 +6,7 @@ import type { ClientConfig } from "./modules";
 import { advisorEmails, pushTo } from "./push";
 import { CelebrateKind, celebrateSender, fillCelebrate, RecognitionSettings, shortName, Shoutout, ShoutChannel, templateFor } from "./recognition";
 import { emailLogoUrl } from "./brand";
+import { funFact } from "./onthisday";
 import { Brand, celebrationEmail } from "./hires";
 import { sendEmail } from "./server";
 import type { TeamMember } from "./team";
@@ -130,13 +131,15 @@ export async function tellThem(db: SupabaseClient, site: string, c: ShoutClient,
   }
 }
 
-/** The automatic birthday or work anniversary email, from the client's template. */
-export function celebrateMail(c: ShoutClient, site: string, person: { id: string; name: string; managerName?: string }, kind: CelebrateKind, years?: number) {
+/** The automatic birthday or work anniversary email, from the client's template, with an "On this day" fact. */
+export async function celebrateMail(c: ShoutClient, site: string, person: { id: string; name: string; managerName?: string }, kind: CelebrateKind, years?: number, on: Date = localToday()) {
   const tpl = templateFor(c.rec, kind);
   const v = { first: person.name.split(" ")[0], company: c.name, years, manager: person.managerName };
   const subject = fillCelebrate(tpl.subject, v);
+  const headline = fillCelebrate(tpl.headline || tpl.subject, v).replace(/\s*[🎂🎉]\s*$/u, "");
   const paras = fillCelebrate(tpl.body, v).split(/\n{2,}/).map((x) => x.trim()).filter(Boolean);
-  const m = celebrationEmail(brandFor(c, site), kind === "birthday" ? "Happy birthday" : "Work anniversary", subject.replace(/\s*[🎂🎉]\s*$/u, ""), paras, c.rec.celebrate === false ? null : { label: "See your team's shoutouts", url: `${site}/shout/${c.rec.token}` }, { url: optOutUrl(site, c.id, person.id), label: OPT_LABEL });
+  const fact = tpl.funFact === false ? null : await funFact(on.getMonth() + 1, on.getDate()).catch(() => null);
+  const m = celebrationEmail(brandFor(c, site), kind === "birthday" ? "Happy birthday" : "Work anniversary", headline, paras, c.rec.celebrate === false ? null : { label: "See your team's shoutouts", url: `${site}/shout/${c.rec.token}` }, { url: optOutUrl(site, c.id, person.id), label: OPT_LABEL }, fact ?? undefined);
   return { subject, ...m, ...celebrateSender(c.rec, c.name) };
 }
 
