@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Action, addBusinessDays, Person, toISO, today } from "@/lib/data";
 import { Candidate, PortalUser, Role } from "@/lib/modules";
-import { DEFAULT_PROMPTS, newPitch, newReviewLink, OutsideReview, pitchDeleteOn, PitchSettings, pitchOpen, ReviewLink, reviewLinkLive } from "@/lib/pitch";
+import { DEFAULT_PROMPTS, newPitch, newReviewLink, OutsideReview, reviewerSees, pitchDeleteOn, PitchSettings, pitchOpen, ReviewLink, reviewLinkLive } from "@/lib/pitch";
 import { pingTask } from "@/lib/pushclient";
 import { useStore } from "@/lib/store";
 import { authHeader, LIVE } from "@/lib/supabase";
@@ -161,10 +161,11 @@ export function ReviewerLinks({ role, reviews, onToast }: { role: Role; reviews:
     return role.pitch?.closesAt && role.pitch.closesAt > new Date().toISOString().slice(0, 10) ? role.pitch.closesAt : fallback;
   };
   const [until, setUntil] = useState(defaultEnd);
+  const [scope, setScope] = useState<ReviewLink["scope"]>("all");
   const links = role.reviewers ?? [];
   const set = (next: ReviewLink[]) => patch({ roles: roles.map((r) => (r.id === role.id ? { ...r, reviewers: next } : r)) });
   const urlFor = (l: ReviewLink) => (typeof window !== "undefined" ? `${window.location.origin}/review/${l.token}` : "");
-  const shown = candidates.filter((c) => c.roleId === role.id && !c.hidden && !c.cleared).length;
+  const seen = (sc: ReviewLink["scope"]) => candidates.filter((c) => c.roleId === role.id && reviewerSees(c, sc)).length;
   const reviewedBy = (l: ReviewLink) => new Set(reviews.filter((r) => r.reviewerId === l.id).map((r) => (r as OutsideReview & { candidateId?: string }).candidateId ?? r.at)).size;
   const copy = (l: ReviewLink) => navigator.clipboard?.writeText(urlFor(l)).then(() => onToast(`Link for ${l.name.split(" ")[0]} copied`));
   const mail = (l: ReviewLink) =>
@@ -176,7 +177,7 @@ export function ReviewerLinks({ role, reviews, onToast }: { role: Role; reviews:
         <b className="small grow">Reviewer links <span className="tiny muted" style={{ fontWeight: 400 }}>· only you see this</span></b>
         {!adding && <button className="btn ghost sm" onClick={() => setAdding(true)}>+ Add reviewer</button>}
       </div>
-      <div className="tiny muted">For people who aren&apos;t on the portal. They see the {shown} candidate{shown === 1 ? "" : "s"} you&apos;ve shared, play the pitches and say yes or no. You&apos;re told each time.</div>
+      <div className="tiny muted">For people who aren&apos;t on the portal. They play the pitches and say yes or no. You&apos;re told each time.</div>
       {links.map((l) => {
         const live = reviewLinkLive(l);
         return (
@@ -184,7 +185,8 @@ export function ReviewerLinks({ role, reviews, onToast }: { role: Role; reviews:
             <div className="grow" style={{ minWidth: 0 }}>
               <b className="small">{l.name}</b>
               <span className="tiny muted" style={{ display: "block" }}>
-                {l.revoked ? "Turned off" : !live ? "Expired" : l.expiresAt ? `Works through ${new Date(l.expiresAt + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : "No end date"} · {reviewedBy(l)} of {shown} reviewed
+                {l.revoked ? "Turned off" : !live ? "Expired" : l.expiresAt ? `Works through ${new Date(l.expiresAt + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : "No end date"} · {reviewedBy(l)} of {seen(l.scope)} reviewed ·{" "}
+                <button className="linklike tiny" title="Change who they see" onClick={() => { const next = l.scope === "shared" ? "all" : "shared"; set(links.map((x) => (x.id === l.id ? { ...x, scope: next } : x))); onToast(next === "shared" ? "Now only candidates you've shared" : "Now all pitches except ones you pass"); }}>{l.scope === "shared" ? "shared only" : "all pitches"}</button>
               </span>
             </div>
             {live ? (
@@ -206,14 +208,22 @@ export function ReviewerLinks({ role, reviews, onToast }: { role: Role; reviews:
             <label className="f">Their name<input className="f" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Pat Morgan" autoFocus /></label>
             <label className="f">Email <span className="tiny muted">(optional)</span><input className="f" type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
           </div>
-          <label className="f">Works through<input className="f" type="date" value={until} onChange={(e) => setUntil(e.target.value)} /></label>
+          <div className="two">
+            <label className="f">Works through<input className="f" type="date" value={until} onChange={(e) => setUntil(e.target.value)} /></label>
+            <label className="f">They see
+              <select className="f" value={scope} onChange={(e) => setScope(e.target.value as ReviewLink["scope"])}>
+                <option value="all">All pitches ({seen("all")}), except ones I pass</option>
+                <option value="shared">Only ones I&apos;ve shared ({seen("shared")})</option>
+              </select>
+            </label>
+          </div>
           <div className="sheet-actions">
             <button className="btn ghost sm" onClick={() => { setAdding(false); setName(""); setEmail(""); }}>Cancel</button>
             <button
               className="btn primary sm"
               disabled={name.trim().length < 2}
               onClick={() => {
-                const l = newReviewLink(name, email, until || undefined);
+                const l = newReviewLink(name, email, until || undefined, scope);
                 set([...links, l]);
                 setAdding(false);
                 setName("");

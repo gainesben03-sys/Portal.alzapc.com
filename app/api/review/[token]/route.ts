@@ -1,7 +1,7 @@
 // Public, link-only: someone outside the portal reviews the candidates for one role.
 // The long random token in the link is the only key. Ben creates, and can turn off, each link.
-// They see the candidates Ben has shared with the client (not ones he's still screening or has
-// cleared), can play each pitch, and say yes or no. Ben is told every time.
+// They see every pitch for the role except ones Ben passed on or cleared (or, if Ben set the link
+// that way, only ones he's shared with the client). They play each pitch and say yes or no.
 //
 // GET  -> the role, the candidates, and this reviewer's calls so far
 // POST { action: "media", c, f: "media" | "resume" } -> a 10-minute private link to the file
@@ -9,7 +9,7 @@
 
 import { NextResponse } from "next/server";
 import { Candidate, ClientConfig } from "@/lib/modules";
-import { OutsideReview } from "@/lib/pitch";
+import { OutsideReview, reviewerSees } from "@/lib/pitch";
 import { roleByReviewToken } from "@/lib/pitchserver";
 import { advisorEmails, pushTo } from "@/lib/push";
 import { admin, sendEmail, SERVER_LIVE, siteUrl } from "@/lib/server";
@@ -18,7 +18,6 @@ type D = Record<string, any>; // eslint-disable-line @typescript-eslint/no-expli
 const BUCKET = "client-files";
 const NO_STORE = { "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow" };
 const json = (b: D, status = 200) => NextResponse.json(b, { status, headers: NO_STORE });
-const visible = (c: Candidate) => !c.hidden && !c.cleared;
 
 async function load(token: string) {
   const db = admin();
@@ -40,8 +39,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
   const mineBy = new Map((mineRows ?? []).map((r) => [r.candidate_id as string, r.data as OutsideReview]));
   const list = (rows ?? [])
     .map((r) => ({ ...(r.data as Candidate), id: r.id as string }))
-    .filter(visible)
-    .sort((a, b) => (a.pitch?.submittedAt ?? a.sentAt).localeCompare(b.pitch?.submittedAt ?? b.sentAt));
+    .filter((c) => reviewerSees(c, x.link.scope))
+    .sort((a, b) => String(a.pitch?.submittedAt ?? a.sentAt ?? "").localeCompare(String(b.pitch?.submittedAt ?? b.sentAt ?? "")));
   return json({
     ok: true,
     company: x.company,
@@ -65,7 +64,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
         hasMedia: !!c.pitch?.mediaPath && !c.mediaDeletedAt,
         hasResume: !!c.pitch?.resumePath && !c.mediaDeletedAt,
         linkedin: c.pitch?.linkedin ?? null,
-        at: c.pitch?.submittedAt ?? c.sentAt,
+        at: c.pitch?.submittedAt ?? c.sentAt ?? null,
         mine: mine ? { decision: mine.decision, note: mine.note ?? "" } : null,
       };
     }),
@@ -87,7 +86,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   const { data: row } = await x.db.from("candidates").select("id, client_id, data").eq("id", id).maybeSingle();
   const c = row?.data as Candidate | undefined;
   // the candidate has to belong to this link's role and be one the client can see
-  if (!row || !c || row.client_id !== x.role.clientId || c.roleId !== x.role.id || !visible(c)) return json({ ok: false, reason: "not_found" }, 404);
+  if (!row || !c || row.client_id !== x.role.clientId || c.roleId !== x.role.id || !reviewerSees(c, x.link.scope)) return json({ ok: false, reason: "not_found" }, 404);
 
   if (b.action === "media") {
     const path = b.f === "resume" ? c.pitch?.resumePath : c.pitch?.mediaPath;

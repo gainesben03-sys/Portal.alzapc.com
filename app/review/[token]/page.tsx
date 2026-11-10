@@ -15,7 +15,7 @@ type Cand = {
   hasMedia: boolean;
   hasResume: boolean;
   linkedin: string | null;
-  at: string;
+  at: string | null;
   mine: { decision: "yes" | "no"; note: string } | null;
 };
 type Info = {
@@ -162,7 +162,7 @@ function CandidateCard({ c, n, call, demo, onSaved }: { c: Cand; n: number; call
         <span className="rv-num">{n}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <h2 className="rv-name">{c.name}</h2>
-          <span className="rv-small rv-muted">{c.kind === "audio" ? "Audio pitch" : c.kind === "video" ? "Video pitch" : c.headline}{c.seconds ? `, ${fmtSec(c.seconds)}` : ""} · {day(c.at)}</span>
+          <span className="rv-small rv-muted">{c.kind === "audio" ? "Audio pitch" : c.kind === "video" ? "Video pitch" : c.headline}{c.seconds ? `, ${fmtSec(c.seconds)}` : ""}{c.at ? ` · ${day(c.at)}` : ""}</span>
         </div>
         {c.mine && <span className={`rv-tag ${c.mine.decision}`}>{c.mine.decision === "yes" ? "✓ Yes" : "✕ No"}</span>}
       </div>
