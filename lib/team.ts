@@ -14,6 +14,7 @@ export interface TeamMember {
   birthday?: string; // "MM-DD" only, never the year
   department?: string;
   location?: string;
+  cell?: string; // for recognition by text; digits with country code, e.g. +14155551234
   active: boolean;
 }
 
@@ -175,7 +176,19 @@ const H = {
   birthday: /^(birthday|birth date|date of birth|dob|birthdate)$/i,
   department: /^(department|dept|team)$/i,
   location: /^(location|work location|office|site)$/i,
+  cell: /^(cell|cell phone|mobile|mobile phone|phone|phone number|text|sms)$/i,
 };
+
+/** US-friendly phone cleanup: returns +1XXXXXXXXXX or undefined. */
+export function cleanCell(v?: string): string | undefined {
+  const d = (v ?? "").replace(/[^\d+]/g, "");
+  if (!d) return undefined;
+  if (/^\+\d{10,15}$/.test(d)) return d;
+  const n = d.replace(/\D/g, "");
+  if (n.length === 10) return `+1${n}`;
+  if (n.length === 11 && n.startsWith("1")) return `+${n}`;
+  return undefined;
+}
 
 function toIsoDate(v: string): string | undefined {
   const s = v.trim();
@@ -235,6 +248,7 @@ export function rowsToTeam(rows: Record<string, string>[], headers: string[], cl
       birthday: c.birthday ? toMonthDay(r[c.birthday]) : undefined,
       department: (c.department && r[c.department]) || undefined,
       location: (c.location && r[c.location]) || undefined,
+      cell: c.cell ? cleanCell(r[c.cell]) : undefined,
       active: true,
     });
   });
@@ -242,4 +256,4 @@ export function rowsToTeam(rows: Record<string, string>[], headers: string[], cl
   return { people, problems, columns: c, missing };
 }
 
-export const ROSTER_TEMPLATE = "Name,Title,Email,Manager Email,Hire Date,Birthday,Department,Location\nTaylor Brooks,Event Coordinator,taylor@company.com,manager@company.com,2024-03-18,06-12,Events,San Francisco\n";
+export const ROSTER_TEMPLATE = "Name,Title,Email,Manager Email,Hire Date,Birthday,Department,Location,Cell\nTaylor Brooks,Event Coordinator,taylor@company.com,manager@company.com,2024-03-18,06-12,Events,San Francisco,415-555-0134\n";
