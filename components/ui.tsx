@@ -1,5 +1,6 @@
 "use client";
 
+import { useLeaveAccess } from "@/lib/leaveclient";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ReactNode, useEffect, useState } from "react";
@@ -305,6 +306,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
   const mod = (k: ModuleKey) => !!cfg?.modules[k] && canSee(access, k);
   const [asking, setAsking] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const leaveAcc = useLeaveAccess(clientId);
 
   type Sub = { href: string; label: string; match: string[]; badge?: number };
   // Manager Hub: anyone with people reporting to them on the roster; Ask HR and Learn also for executives
@@ -353,6 +355,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
       subs: [
         ...(mod("hires") ? [{ href: `${base}/hires`, label: "New hires", match: [`${base}/hires`] }] : []),
         ...(mod("recruiting") ? [{ href: `${base}/recruiting`, label: "Recruiting", match: [`${base}/recruiting`] }] : []),
+        ...(leaveAcc.admin && (cfg?.modules.leave || isAdvisor) ? [{ href: `${base}/leave`, label: "Leave center", match: [`${base}/leave`] }] : []),
         ...(canSee(access, "team") ? [{ href: `${base}/team`, label: "Portal access", match: [`${base}/team`] }] : []),
       ],
     },

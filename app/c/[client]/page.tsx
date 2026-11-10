@@ -1,5 +1,7 @@
 "use client";
 
+import { LeaveTile } from "@/components/leaveui";
+import { useLeaveAccess } from "@/lib/leaveclient";
 import { AskBox } from "@/components/askbox";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -55,6 +57,7 @@ export default function Home() {
       window.history.replaceState(null, "", window.location.pathname);
     }
   }, [viewer]);
+  const leaveAcc = useLeaveAccess(clientId);
   const [asking, setAsking] = useState(false);
   const [askKind, setAskKind] = useState<string | undefined>(undefined);
   const [msg, setMsg] = useState("");
@@ -66,7 +69,7 @@ export default function Home() {
   const isAdvisor = viewer?.kind === "advisor";
   const meName = viewer?.kind === "client" ? viewer.person.name : null;
   const layoutKey = me ? `${client.id}:${me.email}` : "";
-  const available = TILES.filter((t) => (!t.module || cfg?.modules[t.module]) && (t.id !== "huddle" || !!me) && (t.module ? canSee(me?.access, t.module) : true));
+  const available = TILES.filter((t) => (!t.module || cfg?.modules[t.module]) && (t.id !== "huddle" || !!me) && (t.id !== "leave" || leaveAcc.admin) && (t.module ? canSee(me?.access, t.module) : true));
   const defaults = withNewTiles(cfg?.tiles ?? DEFAULT_TILES).filter((id) => available.some((t) => t.id === id));
   const order = (layoutKey && layouts[layoutKey] && withNewTiles(layouts[layoutKey])) || defaults;
   const shown = order.filter((id) => available.some((t) => t.id === id));
@@ -320,6 +323,7 @@ export default function Home() {
         </Tile>
       );
     },
+    leave: () => <LeaveTile clientId={client.id} Tile={Tile} />,
     huddle: () =>
       me && cfg ? (
         <Tile title="HR Huddle email">
@@ -422,7 +426,7 @@ export default function Home() {
 }
 
 /** Tiles added after people may have saved a layout. They appear on saved layouts too, unless someone turned them off. */
-const NEW_TILES: [string, string][] = [["projects", "tasks"]]; // [tile, show it after]
+const NEW_TILES: [string, string][] = [["projects", "tasks"], ["leave", "hires"]]; // [tile, show it after]
 function withNewTiles(saved: string[]): string[] {
   const out = saved.filter((id) => !id.startsWith("!"));
   for (const [id, after] of NEW_TILES) {

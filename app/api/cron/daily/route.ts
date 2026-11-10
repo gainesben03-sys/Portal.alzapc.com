@@ -18,6 +18,7 @@ import { anniversary, nextYearly, TeamLog, TeamMember, teamFor, weekItems } from
 import { emailLogoUrl } from "@/lib/brand";
 import { admin, PORTAL_URL, sendEmail } from "@/lib/server";
 import { advisorEmails, pushTo } from "@/lib/push";
+import { DEFAULT_SETTINGS as LEAVE_DEFAULTS, dueItems, Due, fmtDay, LeaveCase, LeaveSettings, OPEN_STATUSES } from "@/lib/leave";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -359,6 +360,52 @@ export async function GET(req: Request) {
         log.push(`nudge ${n.id} wave ${i + 1}: ${sent} sent`);
         break; // one wave per nudge per day
       }
+    }
+  }
+
+  // ---------- 9. Leave center: one reminder email a day per HR admin, case number and first name only
+  {
+    const lR = await db.from("leave_cases").select("client_id, data");
+    const aR = await db.from("leave_admins").select("client_id, email");
+    const lt = localToday();
+    const leaveToday = `${lt.getFullYear()}-${String(lt.getMonth() + 1).padStart(2, "0")}-${String(lt.getDate()).padStart(2, "0")}`;
+    const monday = new Date(`${leaveToday}T12:00:00`).getDay() === 1;
+    for (const cl of clientsR.data ?? []) {
+      const cfg = (cl.config ?? {}) as ClientConfig;
+      if (!(cfg.modules as Record<string, boolean> | undefined)?.leave) continue;
+      const set: LeaveSettings & typeof LEAVE_DEFAULTS = { ...LEAVE_DEFAULTS, ...(cfg.leave ?? {}) };
+      const cases = (lR.error ? [] : lR.data ?? []).filter((r) => r.client_id === cl.id).map((r) => r.data as LeaveCase).filter((c) => OPEN_STATUSES.includes(c.status));
+      if (!cases.length) continue;
+      const hr = (aR.error ? [] : aR.data ?? []).filter((r) => r.client_id === cl.id).map((r) => String(r.email).toLowerCase());
+      const remind = (d: Due) =>
+        d.kind === "return" ? d.days === set.returnDays || d.days === 7 || d.days === 1 || d.days === 0 :
+        d.kind === "followup" || d.kind === "extension" ? monday || d.days === 0 :
+        d.days < 0 ? d.days === -1 || (-d.days) % 7 === 0 :
+        set.remindDays.includes(d.days);
+      const byWho = new Map<string, { line: string; days: number }[]>();
+      const short = (n: string) => { const w = n.trim().split(/\s+/); return w.length > 1 ? `${w[0]} ${w[w.length - 1][0]}.` : w[0]; };
+      for (const c of cases) {
+        const items = dueItems([c], set, leaveToday).filter(remind);
+        if (!items.length) continue;
+        const owner = c.assignedTo?.email?.toLowerCase();
+        const to = new Set([...(owner && (hr.includes(owner) || benPush.includes(owner)) ? [owner] : hr), ...benPush, ...(set.notify ?? [])]);
+        for (const d of items) {
+          const when = d.days < 0 ? `${-d.days} day${d.days === -1 ? "" : "s"} overdue` : d.days === 0 ? "today" : `in ${d.days} day${d.days === 1 ? "" : "s"} (${fmtDay(d.due)})`;
+          const line = `${c.number} · ${short(c.employee.name)}: ${d.kind === "return" ? "expected back" : d.title} ${when}`;
+          for (const e of to) byWho.set(e, [...(byWho.get(e) ?? []), { line, days: d.days }]);
+        }
+      }
+      const brand = { company: cl.name, accent: cfg.accent || "#19283c", logoUrl: emailLogoUrl(cl.id, cfg.logo, cfg.logoEmail, PORTAL_URL) };
+      const url = `${PORTAL_URL}/c/${cl.id}/leave?tab=tasks`;
+      for (const [email, list] of byWho) {
+        const sorted = list.sort((a, b) => a.days - b.days);
+        const late = sorted.filter((x) => x.days < 0).length;
+        await once(`leave:${cl.id}:${email}:${leaveToday}`, () => {
+          const m = listEmail(brand, "Leave center", `${sorted.length} leave item${sorted.length === 1 ? "" : "s"} need${sorted.length === 1 ? "s" : ""} attention`, late ? `${late} ${late === 1 ? "is" : "are"} overdue. Details are in the portal.` : "Here's what's coming up. Details are in the portal.", sorted.map((x) => ({ title: x.line, why: "" })), { label: "Open the leave center", url });
+          return sendEmail({ to: [email], subject: `${cl.name}: ${sorted.length} leave item${sorted.length === 1 ? "" : "s"} ${late ? `(${late} overdue)` : "coming up"}`, text: `${sorted.map((x) => `- ${x.line}`).join("\n")}\n\nOpen the leave center: ${url}`, html: m.html });
+        });
+      }
+      if (byWho.size) await pushTo(db, [...byWho.keys()], "reminders", { title: `${cl.name}: leave items due`, body: "Open the leave center for details.", url: `/c/${cl.id}/leave?tab=tasks`, tag: `leave-${cl.id}` }).catch(() => 0);
     }
   }
 
