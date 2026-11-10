@@ -5,6 +5,7 @@ import { useStore } from "@/lib/store";
 import { sendInvite } from "@/lib/invite";
 import { PortalUser } from "@/lib/modules";
 import { parseRoster, ROSTER_TEMPLATE, rowsToTeam, sameEmail, TeamMember, tenure } from "@/lib/team";
+import { cleanCell } from "@/lib/team";
 import { Sheet } from "./ui";
 
 const mdLabel = (md?: string) => {
@@ -280,6 +281,7 @@ function PersonSheet({ p, users, onClose, onSave, onRemove }: { p: TeamMember; u
           </div>
           <label className="f">Department <span className="tiny muted">(optional)</span><input className="f" value={v.department ?? ""} onChange={(e) => set("department", e.target.value || undefined)} /></label>
           <label className="f">Location <span className="tiny muted">(optional)</span><input className="f" value={v.location ?? ""} onChange={(e) => set("location", e.target.value || undefined)} /></label>
+          <label className="f">Cell <span className="tiny muted">(optional, for shoutout texts)</span><input className="f" type="tel" value={v.cell ?? ""} onChange={(e) => set("cell", e.target.value || undefined)} onBlur={() => set("cell", cleanCell(v.cell) ?? (v.cell ? v.cell : undefined))} placeholder="(415) 555-0134" /></label>
         </fieldset>
       </div>
       {p.id && (
