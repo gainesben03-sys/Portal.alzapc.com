@@ -1073,3 +1073,8 @@ audio.rv-media { background: none; }
 .so-kinds button > span:first-child { grid-row: span 2; font-size: 22px; }
 .so-kinds button.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, var(--card)); }
 .so-kinds button:disabled { opacity: .5; cursor: default; }
+.roster-diff { background: var(--soft); border-radius: 10px; padding: 10px 12px; margin: 8px 0; }
+.roster-diff p { margin: 6px 0 0; }
+.roster-diff-kpis { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; }
+.roster-diff-kpis b { font-size: 16px; }
+.roster-diff-kpis .warn b { color: var(--amber); }

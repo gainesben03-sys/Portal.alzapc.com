@@ -15,6 +15,7 @@ export interface TeamMember {
   department?: string;
   location?: string;
   cell?: string; // for recognition by text; digits with country code, e.g. +14155551234
+  employeeId?: string; // from payroll (ADP associate ID / file number), the most reliable match on refresh
   celebrate?: boolean; // false = they opted out of public birthday and anniversary celebrations
   active: boolean;
 }
@@ -177,7 +178,8 @@ const H = {
   birthday: /^(birthday|birth date|date of birth|dob|birthdate)$/i,
   department: /^(department|dept|team)$/i,
   location: /^(location|work location|office|site)$/i,
-  cell: /^(cell|cell phone|mobile|mobile phone|phone|phone number|text|sms)$/i,
+  cell: /^(cell|cell phone|mobile|mobile phone|personal mobile|phone|phone number|text|sms)$/i,
+  employeeId: /^(employee id|employee number|emp id|emp #|employee #|associate id|file number|file #|id|worker id|position id)$/i,
 };
 
 /** US-friendly phone cleanup: returns +1XXXXXXXXXX or undefined. */
@@ -250,6 +252,7 @@ export function rowsToTeam(rows: Record<string, string>[], headers: string[], cl
       department: (c.department && r[c.department]) || undefined,
       location: (c.location && r[c.location]) || undefined,
       cell: c.cell ? cleanCell(r[c.cell]) : undefined,
+      employeeId: (c.employeeId && String(r[c.employeeId] ?? "").trim()) || undefined,
       active: true,
     });
   });
@@ -257,4 +260,55 @@ export function rowsToTeam(rows: Record<string, string>[], headers: string[], cl
   return { people, problems, columns: c, missing };
 }
 
-export const ROSTER_TEMPLATE = "Name,Title,Email,Manager Email,Hire Date,Birthday,Department,Location,Cell\nTaylor Brooks,Event Coordinator,taylor@company.com,manager@company.com,2024-03-18,06-12,Events,San Francisco,415-555-0134\n";
+export const ROSTER_TEMPLATE = "Employee ID,Name,Title,Email,Manager Email,Hire Date,Birthday,Department,Location,Cell\nA1001,Taylor Brooks,Event Coordinator,taylor@company.com,manager@company.com,2024-03-18,06-12,Events,San Francisco,415-555-0134\n";
+
+
+export type RosterDiff = {
+  next: TeamMember[];
+  added: TeamMember[];
+  updated: { p: TeamMember; changes: string[] }[];
+  leaving: TeamMember[];
+  back: TeamMember[]; // were marked as left, are in the file again
+  unchanged: number;
+};
+
+const FIELDS: [keyof TeamMember, string][] = [["name", "name"], ["title", "title"], ["email", "email"], ["managerEmail", "manager"], ["hireDate", "hire date"], ["birthday", "birthday"], ["department", "department"], ["location", "location"], ["cell", "cell"], ["employeeId", "employee ID"]];
+const norm = (v: unknown) => String(v ?? "").trim().toLowerCase();
+
+/**
+ * Refresh the roster from a payroll export. Matches by employee ID, then email, then name.
+ * Updates people who match, adds new people, and marks anyone missing from the file as no longer here
+ * (never deletes, so their check-ins and shoutouts stay connected).
+ */
+export function diffRoster(team: TeamMember[], incoming: TeamMember[], removeMissing = true): RosterDiff {
+  const next = team.map((p) => ({ ...p }));
+  const seen = new Set<string>();
+  const added: TeamMember[] = [];
+  const updated: RosterDiff["updated"] = [];
+  const back: TeamMember[] = [];
+  let unchanged = 0;
+  for (const p of incoming) {
+    const i = next.findIndex(
+      (x) => !seen.has(x.id) && ((p.employeeId && x.employeeId && norm(x.employeeId) === norm(p.employeeId)) || (p.email && x.email && norm(x.email) === norm(p.email)) || norm(x.name) === norm(p.name))
+    );
+    if (i < 0) {
+      next.push(p);
+      added.push(p);
+      continue;
+    }
+    const old = next[i];
+    seen.add(old.id);
+    const changes = FIELDS.filter(([k]) => p[k] !== undefined && p[k] !== "" && norm(p[k]) !== norm(old[k])).map(([, label]) => label);
+    const merged = { ...old, ...Object.fromEntries(Object.entries(p).filter(([k, v]) => v !== undefined && v !== "" && k !== "id" && k !== "celebrate")), id: old.id, active: true } as TeamMember;
+    if (!old.active) back.push(merged);
+    else if (changes.length) updated.push({ p: merged, changes });
+    else unchanged++;
+    next[i] = merged;
+  }
+  const leaving = removeMissing ? next.filter((x) => x.active && !seen.has(x.id) && !added.includes(x)) : [];
+  for (const l of leaving) {
+    const i = next.findIndex((x) => x.id === l.id);
+    next[i] = { ...next[i], active: false };
+  }
+  return { next, added, updated, leaving, back, unchanged };
+}

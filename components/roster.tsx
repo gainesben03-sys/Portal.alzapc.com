@@ -5,7 +5,7 @@ import { useStore } from "@/lib/store";
 import { sendInvite } from "@/lib/invite";
 import { PortalUser } from "@/lib/modules";
 import { parseRoster, ROSTER_TEMPLATE, rowsToTeam, sameEmail, TeamMember, tenure } from "@/lib/team";
-import { cleanCell } from "@/lib/team";
+import { cleanCell, diffRoster } from "@/lib/team";
 import { Sheet } from "./ui";
 
 const mdLabel = (md?: string) => {
@@ -21,7 +21,7 @@ export function RosterCard({ clientId, onToast }: { clientId: string; onToast: (
   const cfg = config[clientId];
   const team = useMemo(() => people.filter((p) => p.clientId === clientId).sort((a, b) => a.managerName.localeCompare(b.managerName) || a.name.localeCompare(b.name)), [people, clientId]);
   const [preview, setPreview] = useState<ReturnType<typeof rowsToTeam> | null>(null);
-  const [mode, setMode] = useState<"merge" | "replace">("merge");
+  const [mode, setMode] = useState<"refresh" | "add">("refresh");
   const [paste, setPaste] = useState<string | null>(null);
   const [edit, setEdit] = useState<TeamMember | null>(null);
   const [q, setQ] = useState("");
@@ -45,23 +45,13 @@ export function RosterCard({ clientId, onToast }: { clientId: string; onToast: (
     setPreview(rowsToTeam(rows, headers, clientId, users));
   };
 
+  const diff = preview ? diffRoster(team, preview.people, mode === "refresh") : null;
   const doImport = () => {
-    if (!preview) return;
-    const incoming = preview.people;
-    let next: TeamMember[];
-    if (mode === "replace") next = incoming;
-    else {
-      next = [...team];
-      for (const p of incoming) {
-        const i = next.findIndex((x) => (p.email && sameEmail(x.email, p.email)) || x.name.trim().toLowerCase() === p.name.trim().toLowerCase());
-        if (i >= 0) next[i] = { ...next[i], ...Object.fromEntries(Object.entries(p).filter(([k, v]) => v !== undefined && v !== "" && k !== "id")), id: next[i].id } as TeamMember;
-        else next.push(p);
-      }
-    }
-    patch({ people: [...people.filter((p) => p.clientId !== clientId), ...next] });
+    if (!preview || !diff) return;
+    patch({ people: [...people.filter((p) => p.clientId !== clientId), ...diff.next] });
     setPreview(null);
     setPaste(null);
-    onToast(`${incoming.length} ${incoming.length === 1 ? "person" : "people"} ${mode === "replace" ? "loaded" : "added or updated"}`);
+    onToast([diff.added.length && `${diff.added.length} added`, diff.updated.length && `${diff.updated.length} updated`, diff.back.length && `${diff.back.length} back`, diff.leaving.length && `${diff.leaving.length} marked as left`].filter(Boolean).join(", ") || "No changes");
   };
 
   const invite = async (m: { email: string; name: string }) => {
@@ -211,14 +201,31 @@ export function RosterCard({ clientId, onToast }: { clientId: string; onToast: (
           )}
           {team.length > 0 && (
             <div className="seg" style={{ gridTemplateColumns: "1fr 1fr" }}>
-              <button className={mode === "merge" ? "on" : ""} onClick={() => setMode("merge")}>Add and update</button>
-              <button className={mode === "replace" ? "on" : ""} onClick={() => setMode("replace")}>Replace everyone</button>
+              <button className={mode === "refresh" ? "on" : ""} onClick={() => setMode("refresh")}>Refresh the list</button>
+              <button className={mode === "add" ? "on" : ""} onClick={() => setMode("add")}>Only add and update</button>
             </div>
           )}
-          {team.length > 0 && <p className="tiny muted">{mode === "merge" ? "Matches people by email (or name) and updates them; adds anyone new; leaves everyone else." : "Replaces the whole roster with this file. Check-in notes stay with Ben."}</p>}
+          {team.length > 0 && <p className="tiny muted">{mode === "refresh" ? "Use this with your full payroll export. Matches people by employee ID, then email, then name. Anyone not in the file is marked as no longer here (not deleted, so their history stays)." : "For a partial file, like this week's new hires. Nobody is marked as left."}</p>}
+          {team.length > 0 && diff && (
+            <div className="roster-diff">
+              <div className="roster-diff-kpis">
+                <span><b>{diff.added.length}</b> new</span>
+                <span><b>{diff.updated.length}</b> changed</span>
+                {diff.back.length > 0 && <span><b>{diff.back.length}</b> back</span>}
+                <span className={diff.leaving.length ? "warn" : ""}><b>{diff.leaving.length}</b> leaving</span>
+                <span className="muted"><b>{diff.unchanged}</b> no change</span>
+              </div>
+              {diff.added.length > 0 && <p className="small"><b>New:</b> {diff.added.slice(0, 12).map((p) => p.name).join(", ")}{diff.added.length > 12 ? ` and ${diff.added.length - 12} more` : ""}</p>}
+              {diff.updated.length > 0 && <p className="small"><b>Changed:</b> {diff.updated.slice(0, 10).map((u) => `${u.p.name} (${u.changes.join(", ")})`).join("; ")}{diff.updated.length > 10 ? ` and ${diff.updated.length - 10} more` : ""}</p>}
+              {diff.back.length > 0 && <p className="small"><b>Back:</b> {diff.back.map((p) => p.name).join(", ")}</p>}
+              {diff.leaving.length > 0 && (
+                <p className="small" style={{ color: "var(--amber)" }}><b>Not in this file, will be marked as left:</b> {diff.leaving.slice(0, 15).map((p) => p.name).join(", ")}{diff.leaving.length > 15 ? ` and ${diff.leaving.length - 15} more` : ""}{diff.leaving.length > Math.max(5, team.filter((p) => p.active).length / 4) ? ". That's a lot. If this file is only part of the company, use Only add and update." : ""}</p>
+              )}
+            </div>
+          )}
           <div className="sheet-actions">
             <button className="btn ghost sm" onClick={() => setPreview(null)}>Cancel</button>
-            <button className="btn primary sm" disabled={!preview.people.length} onClick={doImport}>Import {preview.people.length}</button>
+            <button className="btn primary sm" disabled={!preview.people.length} onClick={doImport}>{team.length ? (mode === "refresh" ? "Refresh roster" : "Add and update") : `Import ${preview.people.length}`}</button>
           </div>
         </Sheet>
       )}
