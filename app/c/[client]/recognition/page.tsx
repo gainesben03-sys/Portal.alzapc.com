@@ -9,7 +9,7 @@ import { ClientNav, ClientTopbar, Sheet, Toast, useGuard, useToast } from "@/com
 import { Pick, PersonSearch, Scoreboard, ShoutCard, WallItem } from "@/components/shoutui";
 import { useStore } from "@/lib/store";
 import { authHeader, LIVE, sb } from "@/lib/supabase";
-import { DEFAULT_VALUES, MAX_MESSAGE, newRecognition, randomToken, REACTIONS, RecognitionSettings, scoreboard, Shoutout, STARTERS } from "@/lib/recognition";
+import { CELEBRATE_FILL_INS, CelebrateKind, CelebrateTemplate, celebrateSender, DEFAULT_CELEBRATE_TEMPLATES, DEFAULT_VALUES, fillCelebrate, MAX_MESSAGE, newRecognition, randomToken, REACTIONS, RecognitionSettings, scoreboard, Shoutout, STARTERS, templateFor } from "@/lib/recognition";
 import { DEMO_PEOPLE, DEMO_SHOUTS, demoReactions } from "@/lib/shoutdemo";
 
 type Rx = { shout_id: string; who: string; emoji: string };
@@ -160,7 +160,18 @@ export default function Recognition() {
                   )}
                 </>
               )}
-              {tab === "setup" && isAdvisor && <Setup rec={rec} onSave={(r) => { setRec(r); toast.show("Saved"); }} clientName={client.name} />}
+              {tab === "setup" && isAdvisor && (
+                <Setup
+                  rec={rec}
+                  onSave={(r) => { setRec(r); toast.show("Saved"); }}
+                  clientName={client.name}
+                  onTest={async (kind, draft) => {
+                    if (!LIVE) return toast.show("Demo: test emails send from the live portal");
+                    const j = await api({ action: "testEmail", kind, rec: draft });
+                    toast.show(j.ok ? `Test sent to ${j.to}` : `Couldn't send the test (${j.reason ?? "error"})`);
+                  }}
+                />
+              )}
             </div>
           </>
         )}
@@ -236,12 +247,21 @@ function GiveSheet({ token, values, onClose, onSend }: { token: string; values: 
   );
 }
 
-function Setup({ rec, onSave, clientName }: { rec: RecognitionSettings | null | undefined; onSave: (r: RecognitionSettings) => void; clientName: string }) {
+const MAIL_DOMAIN = process.env.NEXT_PUBLIC_MAIL_DOMAIN || "alzapc.com";
+
+function Setup({ rec, onSave, clientName, onTest }: { rec: RecognitionSettings | null | undefined; onSave: (r: RecognitionSettings) => void; clientName: string; onTest?: (k: CelebrateKind, draft: Partial<RecognitionSettings>) => void }) {
   const [values, setValues] = useState((rec?.values ?? DEFAULT_VALUES).join("\n"));
   const [sms, setSms] = useState(rec?.smsNumber ?? "");
   const [notify, setNotify] = useState(rec?.notifyManagers !== false);
   const [wall, setWall] = useState(rec?.showWall !== false);
   const [cel, setCel] = useState(rec?.celebrate !== false);
+  const defSender = celebrateSender(undefined, clientName);
+  const [senderName, setSenderName] = useState(rec?.sender?.name ?? "");
+  const [senderBox, setSenderBox] = useState(rec?.sender?.box ?? "");
+  const [autoB, setAutoB] = useState(!!rec?.autoEmail?.birthday);
+  const [autoA, setAutoA] = useState(!!rec?.autoEmail?.anniversary);
+  const [tpls, setTpls] = useState<Record<CelebrateKind, CelebrateTemplate>>({ birthday: templateFor(rec ?? undefined, "birthday"), anniversary: templateFor(rec ?? undefined, "anniversary") });
+  const [editing, setEditing] = useState<CelebrateKind | null>(null);
   const [qr, setQr] = useState("");
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const link = rec ? `${origin}/shout/${rec.token}` : "";
@@ -251,7 +271,17 @@ function Setup({ rec, onSave, clientName }: { rec: RecognitionSettings | null | 
   const vals = values.split("\n").map((v) => v.trim()).filter(Boolean).slice(0, 8);
   const clean = sms.replace(/[^\d+]/g, "");
   const smsNumber = clean ? (clean.startsWith("+") ? clean : clean.length === 10 ? `+1${clean}` : `+${clean}`) : undefined;
-  const save = () => onSave({ ...(rec ?? newRecognition()), values: vals.length ? vals : DEFAULT_VALUES, smsNumber, notifyManagers: notify, showWall: wall, celebrate: cel });
+  const cleanBox = senderBox.toLowerCase().replace(/[^a-z0-9._-]/g, "");
+  const extras = (): Partial<RecognitionSettings> => ({
+    sender: senderName.trim() || cleanBox ? { name: senderName.trim() || undefined, box: cleanBox || undefined } : undefined,
+    autoEmail: { birthday: autoB, anniversary: autoA },
+    templates: {
+      ...(JSON.stringify(tpls.birthday) !== JSON.stringify(DEFAULT_CELEBRATE_TEMPLATES.birthday) ? { birthday: tpls.birthday } : {}),
+      ...(JSON.stringify(tpls.anniversary) !== JSON.stringify(DEFAULT_CELEBRATE_TEMPLATES.anniversary) ? { anniversary: tpls.anniversary } : {}),
+    },
+    celebrate: cel,
+  });
+  const save = () => onSave({ ...(rec ?? newRecognition()), values: vals.length ? vals : DEFAULT_VALUES, smsNumber, notifyManagers: notify, showWall: wall, ...extras() });
   const copy = (t: string) => navigator.clipboard?.writeText(t);
 
   return (
@@ -268,6 +298,57 @@ function Setup({ rec, onSave, clientName }: { rec: RecognitionSettings | null | 
           <input className="f" value={sms} onChange={(e) => setSms(e.target.value)} placeholder="(415) 555-0123" />
         </label>
         <div className="sheet-actions"><button className="btn primary sm" onClick={save}>{rec ? "Save" : "Turn on shoutouts"}</button></div>
+      </div>
+
+      <div className="card section">
+        <b className="small">Emails to employees</b>
+        <p className="tiny muted" style={{ margin: "2px 0 10px" }}>Shoutout, birthday and anniversary emails come from this name and address. Every one has a one-click opt-out at the bottom.</p>
+        <div className="two">
+          <label className="f">From name<input className="f" value={senderName} onChange={(e) => setSenderName(e.target.value)} placeholder={defSender.fromName} maxLength={60} /></label>
+          <label className="f">Address
+            <span className="so-addr"><input className="f" value={senderBox} onChange={(e) => setSenderBox(e.target.value)} placeholder={defSender.fromBox} maxLength={40} /><span className="tiny muted">@{MAIL_DOMAIN}</span></span>
+          </label>
+        </div>
+        <p className="tiny muted" style={{ margin: "0 0 10px" }}>They&apos;ll see: <b>{senderName.trim() || defSender.fromName}</b> &lt;{cleanBox || defSender.fromBox}@{MAIL_DOMAIN}&gt;</p>
+
+        {(["birthday", "anniversary"] as CelebrateKind[]).map((k) => {
+          const onK = k === "birthday" ? autoB : autoA;
+          const t = tpls[k];
+          const sample = { first: "Alex", company: clientName, years: 3, manager: "Jordan Lee" };
+          return (
+            <div key={k} className="so-auto">
+              <label className="check" style={{ margin: 0 }}>
+                <input type="checkbox" checked={onK} onChange={(e) => (k === "birthday" ? setAutoB : setAutoA)(e.target.checked)} />
+                <span><b>{k === "birthday" ? "Email them on their birthday" : "Email them on their work anniversary"}</b> <span className="tiny muted">{k === "birthday" ? "(the morning of)" : "(each year, the morning of)"}</span></span>
+              </label>
+              <div className="so-auto-row">
+                <span className="tiny muted ellipsis grow">“{fillCelebrate(t.subject, sample)}”</span>
+                <button className="linklike tiny" onClick={() => setEditing(editing === k ? null : k)}>{editing === k ? "Done" : "Edit template"}</button>
+                {onTest && <button className="linklike tiny" onClick={() => onTest(k, { ...extras() })}>Send me a test</button>}
+              </div>
+              {editing === k && (
+                <div className="so-tpl">
+                  <label className="f">Subject<input className="f" value={t.subject} onChange={(e) => setTpls({ ...tpls, [k]: { ...t, subject: e.target.value } })} /></label>
+                  <label className="f">Message<textarea className="f" style={{ minHeight: 110 }} value={t.body} onChange={(e) => setTpls({ ...tpls, [k]: { ...t, body: e.target.value } })} /></label>
+                  <div className="chips" style={{ margin: "0 0 8px" }}>
+                    {CELEBRATE_FILL_INS.filter((f) => f !== "{years}" || k === "anniversary").map((f) => (
+                      <button key={f} className="chip chip-btn" onClick={() => setTpls({ ...tpls, [k]: { ...t, body: `${t.body}${t.body.endsWith(" ") || !t.body ? "" : " "}${f}` } })}>{f}</button>
+                    ))}
+                    <button className="chip chip-btn" onClick={() => setTpls({ ...tpls, [k]: DEFAULT_CELEBRATE_TEMPLATES[k] })}>Reset to default</button>
+                  </div>
+                  <div className="so-preview">
+                    <span className="tiny muted">Preview</span>
+                    <b className="small" style={{ display: "block", margin: "2px 0 6px" }}>{fillCelebrate(t.subject, sample)}</b>
+                    {fillCelebrate(t.body, sample).split(/\n{2,}/).map((para, i) => <p key={i} className="small" style={{ margin: "0 0 8px", whiteSpace: "pre-wrap" }}>{para}</p>)}
+                    <p className="tiny muted" style={{ margin: 0 }}>Rather not have your birthday and work anniversary celebrated? <u>Turn it off</u>.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        <p className="tiny muted" style={{ margin: "8px 0 0" }}>Only people with an email on the roster who haven&apos;t opted out. Month and day only, never their age.</p>
+        <div className="sheet-actions"><button className="btn primary sm" onClick={save}>Save</button></div>
       </div>
 
       {rec && (

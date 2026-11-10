@@ -4,7 +4,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { claude, parseJson } from "./ai";
 import type { ClientConfig } from "./modules";
 import { advisorEmails, pushTo } from "./push";
-import { RecognitionSettings, shortName, Shoutout, ShoutChannel } from "./recognition";
+import { CelebrateKind, celebrateSender, fillCelebrate, RecognitionSettings, shortName, Shoutout, ShoutChannel, templateFor } from "./recognition";
+import { emailLogoUrl } from "./brand";
+import { Brand, celebrationEmail } from "./hires";
 import { sendEmail } from "./server";
 import type { TeamMember } from "./team";
 
@@ -104,28 +106,38 @@ export async function createShout(
   return s;
 }
 
+const brandFor = (c: ShoutClient, site: string): Brand => ({ company: c.name, accent: c.config.accent || "#19283c", logoUrl: emailLogoUrl(c.id, c.config.logo, c.config.logoEmail, site) });
+export const optOutUrl = (site: string, clientId: string, personId: string) => `${site}/api/celebrate/optout?c=${encodeURIComponent(clientId)}&p=${encodeURIComponent(personId)}&k=${optOutKey(clientId, personId)}`;
+const OPT_LABEL = "Rather not have your birthday and work anniversary celebrated?";
+
 /** Let the person (and their manager) know. Email if we have it, text if they've opted in. */
 export async function tellThem(db: SupabaseClient, site: string, c: ShoutClient, s: Shoutout, to?: TeamMember) {
   const person = to ?? (await rosterFor(db, c.id)).find((p) => p.id === s.to.personId);
   if (!person) return;
   const link = `${site}/shout/${c.rec.token}?s=${s.id}`;
   const from = shortName(s.from.name);
+  const first = person.name.split(" ")[0];
   const line = `${from} gave you a shoutout${s.value ? ` for ${s.value}` : ""}: "${s.message}"`;
-  if (person.email)
-    await sendEmail({
-      to: [person.email],
-      subject: `🎉 ${from} gave you a shoutout`,
-      text: `Hi ${person.name.split(" ")[0]},\n\n${line}\n\nSee it on the ${c.name} wall: ${link}\n\nPass it on: recognize someone who made your day better. ${site}/shout/${c.rec.token}`,
-      fromName: `${c.name} Shoutouts`,
-    }).catch(() => undefined);
+  const sender = celebrateSender(c.rec, c.name);
+  if (person.email) {
+    const m = celebrationEmail(brandFor(c, site), "Shoutout", `${from} gave you a shoutout`, [`Hi ${first},`, `"${s.message}"`, ...(s.value ? [`For: ${s.value}`] : []), "Pass it on: recognize someone who made your day better."], { label: "See it on the wall", url: link }, { url: optOutUrl(site, c.id, person.id), label: OPT_LABEL });
+    await sendEmail({ to: [person.email], subject: `🎉 ${from} gave you a shoutout`, text: m.text, html: m.html, ...sender }).catch(() => undefined);
+  }
   if (person.cell && smsReady()) await sendSms(db, person.cell, c.rec.smsNumber, `${c.name}: ${line} ${link}\nReply STOP to stop texts.`);
-  if (c.rec.notifyManagers !== false && person.managerEmail && person.managerEmail !== person.email)
-    await sendEmail({
-      to: [person.managerEmail],
-      subject: `${person.name.split(" ")[0]} got a shoutout`,
-      text: `${person.name} got a shoutout from ${from}${s.value ? ` for ${s.value}` : ""}:\n\n"${s.message}"\n\nA quick "I saw this, nice work" from you goes a long way.\n\n${link}`,
-      fromName: `${c.name} Shoutouts`,
-    }).catch(() => undefined);
+  if (c.rec.notifyManagers !== false && person.managerEmail && person.managerEmail !== person.email) {
+    const m = celebrationEmail(brandFor(c, site), "Your team", `${first} got a shoutout`, [`${person.name} got a shoutout from ${from}${s.value ? ` for ${s.value}` : ""}:`, `"${s.message}"`, `A quick "I saw this, nice work" from you goes a long way.`], { label: "See it", url: link });
+    await sendEmail({ to: [person.managerEmail], subject: `${first} got a shoutout`, text: m.text, html: m.html, ...sender }).catch(() => undefined);
+  }
+}
+
+/** The automatic birthday or work anniversary email, from the client's template. */
+export function celebrateMail(c: ShoutClient, site: string, person: { id: string; name: string; managerName?: string }, kind: CelebrateKind, years?: number) {
+  const tpl = templateFor(c.rec, kind);
+  const v = { first: person.name.split(" ")[0], company: c.name, years, manager: person.managerName };
+  const subject = fillCelebrate(tpl.subject, v);
+  const paras = fillCelebrate(tpl.body, v).split(/\n{2,}/).map((x) => x.trim()).filter(Boolean);
+  const m = celebrationEmail(brandFor(c, site), kind === "birthday" ? "Happy birthday" : "Work anniversary", subject.replace(/\s*[🎂🎉]\s*$/u, ""), paras, c.rec.celebrate === false ? null : { label: "See your team's shoutouts", url: `${site}/shout/${c.rec.token}` }, { url: optOutUrl(site, c.id, person.id), label: OPT_LABEL });
+  return { subject, ...m, ...celebrateSender(c.rec, c.name) };
 }
 
 /** Something's waiting for review: tell Ben (and the bell). */

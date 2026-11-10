@@ -482,6 +482,15 @@ ${section("#F4F1EC", paragraphs.map((p) => `<p style="margin:0 0 12px 0">${esc(p
   return { html: frame(brand, inner), text: paragraphs.join("\n\n") };
 }
 
+/** A celebration or shoutout email to an employee: big headline, a few lines, a button, and the opt-out at the bottom. */
+export function celebrationEmail(b: Brand, kicker: string, headline: string, paragraphs: string[], cta: { label: string; url: string } | null, optOut?: { url: string; label: string }) {
+  const brand: Brand = { ...b, bar: b.bar ?? b.accent, accent: readableInk(b.accent) };
+  const inner = `${label(kicker, "#6B645E").replace("margin:0", "margin:40px 0 0 0")}
+${big(esc(headline))}<!--HERO_END-->
+${section("#F4F1EC", paragraphs.map((p) => `<p style="margin:0 0 12px 0">${esc(p).replace(/\n/g, "<br>")}</p>`).join("") + (cta ? `<p style="margin:16px 0 0 0"><a href="${esc(cta.url)}" style="display:inline-block;background:${brand.accent};color:#FFFFFF;padding:12px 20px;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;text-decoration:none;border-radius:6px">${esc(cta.label)}</a></p>` : "") + (optOut ? `<p style="margin:22px 0 0 0;font-family:Arial,sans-serif;font-size:12px;line-height:18px;color:#8A827B">${esc(optOut.label)} <a href="${esc(optOut.url)}" style="color:#8A827B">Turn it off</a>.</p>` : ""))}`;
+  return { html: frame(brand, inner), text: `${headline}\n\n${paragraphs.join("\n\n")}${cta ? `\n\n${cta.label}: ${cta.url}` : ""}${optOut ? `\n\n${optOut.label} Turn it off: ${optOut.url}` : ""}` };
+}
+
 /** A short list email (Manager Hub reminders, the Monday nudge), in the client's brand, with one button. */
 export function listEmail(b: Brand, kicker: string, headline: string, intro: string, items: { title: string; why: string }[], cta: { label: string; url: string }) {
   const brand: Brand = { ...b, bar: b.bar ?? b.accent, accent: readableInk(b.accent) };

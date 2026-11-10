@@ -1022,3 +1022,10 @@ audio.rv-media { background: none; }
 .so-tv-cel b { margin-right: .6vw; }
 .so-tv-cel span { background: rgba(255,255,255,.16); border-radius: 999px; padding: .6vh 1.2vw; }
 .so-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #e5484d; margin-left: 5px; vertical-align: 2px; }
+.so-addr { display: flex; align-items: center; gap: 6px; }
+.so-addr .f { margin: 0; min-width: 0; }
+.so-auto { padding: 10px 0; border-top: 1px solid var(--line); }
+.so-auto-row { display: flex; gap: 12px; align-items: center; margin: 4px 0 0 26px; min-width: 0; }
+.so-tpl { margin: 10px 0 0 26px; }
+.so-preview { background: var(--soft); border-radius: 10px; padding: 12px; }
+.so-auto-row .linklike { white-space: nowrap; flex: none; }

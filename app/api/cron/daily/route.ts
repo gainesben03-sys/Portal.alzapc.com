@@ -3,7 +3,7 @@
 //   2. HR Huddle recap emails for clients whose Huddle day is today.
 // Each email is logged in email_log so a re-run never double-sends.
 import { celebrations } from "@/lib/recognition";
-import { localToday, optOutKey } from "@/lib/shoutserver";
+import { celebrateMail, localToday } from "@/lib/shoutserver";
 import { NextResponse } from "next/server";
 import { Action, Client, DEFAULT_RULES, fmt, Project, reminderPlan, Rules, toISO, today } from "@/lib/data";
 import { buildHuddle } from "@/lib/huddle";
@@ -289,28 +289,22 @@ export async function GET(req: Request) {
     }
   }
 
-  // ---------- 6. Shoutouts: a birthday email on the day, with a link to the wall and to opt out
+  // ---------- 6. Celebration emails: birthdays and work anniversaries, if the client turned them on
   if (!peopleR.error) {
     const people = rows(peopleR) as unknown as TeamMember[];
     const today = localToday();
     for (const c of clientsR.data ?? []) {
-      const cfg = (c.config ?? {}) as Partial<ClientConfig>;
+      const cfg = (c.config ?? {}) as ClientConfig;
       const rec = cfg.recognition;
-      if (!(cfg.modules as Record<string, boolean> | undefined)?.recognition || !rec?.token || rec.celebrate === false) continue;
+      if (!(cfg.modules as Record<string, boolean> | undefined)?.recognition || !rec?.token || !(rec.autoEmail?.birthday || rec.autoEmail?.anniversary)) continue;
+      const sc = { id: c.id, name: c.name, config: cfg, rec };
+      // celebrations() already skips anyone who opted out or has left
       for (const cel of celebrations(people.filter((p) => p.clientId === c.id), today, 0)) {
-        if (cel.kind !== "birthday") continue;
+        if (cel.kind === "new" || (cel.kind === "birthday" && !rec.autoEmail?.birthday) || (cel.kind === "anniversary" && !rec.autoEmail?.anniversary)) continue;
         const p = people.find((x) => x.id === cel.personId);
         if (!p?.email) continue;
-        const first = p.name.split(" ")[0];
-        const opt = `${PORTAL_URL}/api/celebrate/optout?c=${encodeURIComponent(c.id)}&p=${encodeURIComponent(p.id)}&k=${optOutKey(c.id, p.id)}`;
-        await once(`bday:${c.id}:${p.id}:${day}`, () =>
-          sendEmail({
-            to: [p.email!],
-            subject: `Happy birthday, ${first}! 🎂`,
-            text: `Happy birthday from everyone at ${c.name}! 🎉\n\nYour coworkers can see it's your day on the team's shoutout page, so keep an eye on the wall: ${PORTAL_URL}/shout/${rec.token}\n\nRather not have your birthday shown to the team? One click and it's off: ${opt}`,
-            fromName: `${c.name} Shoutouts`,
-          })
-        );
+        const m = celebrateMail(sc, PORTAL_URL, p, cel.kind, cel.years);
+        await once(`cel:${cel.kind}:${c.id}:${p.id}:${day}`, () => sendEmail({ to: [p.email!], subject: m.subject, text: m.text, html: m.html, fromName: m.fromName, fromBox: m.fromBox }));
       }
     }
   }

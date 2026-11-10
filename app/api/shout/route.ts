@@ -6,8 +6,8 @@
 
 import { NextResponse } from "next/server";
 import { REACTIONS, Shoutout } from "@/lib/recognition";
-import { createShout, rosterFor, tellThem, ShoutClient } from "@/lib/shoutserver";
-import { admin, caller, SERVER_LIVE, siteUrl } from "@/lib/server";
+import { celebrateMail, createShout, rosterFor, tellThem, ShoutClient } from "@/lib/shoutserver";
+import { admin, caller, sendEmail, SERVER_LIVE, siteUrl } from "@/lib/server";
 import type { ClientConfig } from "@/lib/modules";
 
 type D = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -33,6 +33,16 @@ export async function POST(req: Request) {
   const exec = me.advisor || mem?.access === "exec";
   const myName = me.advisor ? "Ben Gaines" : (mem?.name as string) || me.email.split("@")[0];
   const roster = await rosterFor(db, clientId);
+
+  // Ben: send himself a sample celebration email with the settings on screen (saved or not)
+  if (b.action === "testEmail") {
+    if (!me.advisor) return NextResponse.json({ ok: false, reason: "forbidden" }, { status: 403 });
+    const kind = b.kind === "anniversary" ? "anniversary" : "birthday";
+    const draft = { ...c, rec: { ...c.rec, ...(b.rec && typeof b.rec === "object" ? { templates: b.rec.templates, sender: b.rec.sender, celebrate: b.rec.celebrate } : {}) } };
+    const m = celebrateMail(draft, siteUrl(req), { id: "test", name: "Alex Sample", managerName: "Jordan Lee" }, kind, kind === "anniversary" ? 3 : undefined);
+    const r = await sendEmail({ to: [me.email], subject: `[Test] ${m.subject}`, text: m.text, html: m.html, fromName: m.fromName, fromBox: m.fromBox });
+    return NextResponse.json({ ok: r.ok, reason: r.reason, to: me.email });
+  }
 
   if (b.action === "give") {
     const to = roster.find((p) => p.id === String(b.to ?? ""));

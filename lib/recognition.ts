@@ -27,6 +27,36 @@ export interface RecognitionSettings {
   notifyManagers?: boolean; // email the person's manager when they get one (default on)
   showWall?: boolean; // the wall and scoreboard on the QR page (default on)
   celebrate?: boolean; // the Celebrate tab: birthdays, work anniversaries, new people (default on; each person can opt out)
+  sender?: { name?: string; box?: string }; // emails to employees come from "<name> <box@domain>", e.g. "Blueprint Studios Celebrations <celebrations@alzapc.com>"
+  autoEmail?: { birthday?: boolean; anniversary?: boolean }; // email people on the day (off until turned on)
+  templates?: Partial<Record<CelebrateKind, CelebrateTemplate>>;
+}
+
+export type CelebrateKind = "birthday" | "anniversary";
+export type CelebrateTemplate = { subject: string; body: string };
+export const CELEBRATE_FILL_INS = ["{first name}", "{company}", "{years}", "{manager}"] as const;
+export const DEFAULT_CELEBRATE_TEMPLATES: Record<CelebrateKind, CelebrateTemplate> = {
+  birthday: {
+    subject: "Happy birthday, {first name}! 🎂",
+    body: "Happy birthday from all of us at {company}!\n\nWe hope today is a great one. Thanks for everything you bring to the team.",
+  },
+  anniversary: {
+    subject: "Happy {years}-year anniversary, {first name}! 🎉",
+    body: "{years} years with {company}! Thank you for the work, the care and everything in between.\n\nWe're lucky to have you on the team.",
+  },
+};
+export const templateFor = (rec: RecognitionSettings | undefined, k: CelebrateKind): CelebrateTemplate => ({ ...DEFAULT_CELEBRATE_TEMPLATES[k], ...(rec?.templates?.[k] ?? {}) });
+export function fillCelebrate(text: string, v: { first: string; company: string; years?: number; manager?: string }) {
+  return text
+    .replace(/\{first name\}/gi, v.first)
+    .replace(/\{company\}/gi, v.company)
+    .replace(/\{years\}/gi, String(v.years ?? ""))
+    .replace(/\{manager\}/gi, v.manager || "your manager");
+}
+/** Who employee emails come from. */
+export function celebrateSender(rec: RecognitionSettings | undefined, company: string) {
+  const box = (rec?.sender?.box || "celebrations").toLowerCase().replace(/[^a-z0-9._-]/g, "") || "celebrations";
+  return { fromName: (rec?.sender?.name || `${company} Celebrations`).slice(0, 60), fromBox: box };
 }
 
 export type Celebration = { personId: string; name: string; team: string; kind: "birthday" | "anniversary" | "new"; days: number; when: string; years?: number };

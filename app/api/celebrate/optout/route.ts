@@ -17,5 +17,5 @@ export async function GET(req: Request) {
   const { data } = await db.from("people").select("data").eq("id", p).eq("client_id", c).maybeSingle();
   if (!data) return page("That link didn't work", "Ask your manager to turn off birthday celebrations for you.");
   await db.from("people").update({ data: { ...(data.data as object), celebrate: false } }).eq("id", p);
-  return page("Done", "Your birthday and work anniversary won't be shown to the team. Your manager can turn it back on any time.");
+  return page("Done", "Your birthday and work anniversary won't be shown to the team or emailed to you. Your manager can turn it back on any time.");
 }
