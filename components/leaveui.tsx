@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Sheet } from "@/components/ui";
 import { useStore } from "@/lib/store";
-import { categoriesFor, CaseDoc, dashboard, fillLeave, fmtDay, LEAVE_EMAILS, LEAVE_FILL_INS, LeaveCase, LeaveCategory, LeaveStatus, newCase, Schedule, SCHEDULE_LABEL, STATUS_LABEL, tasksFor, today } from "@/lib/leave";
+import { backDate, daysBetween, outNow, startingSoon, categoriesFor, CaseDoc, dashboard, fillLeave, fmtDay, LEAVE_EMAILS, LEAVE_FILL_INS, LeaveCase, LeaveCategory, LeaveStatus, newCase, Schedule, SCHEDULE_LABEL, STATUS_LABEL, tasksFor, today } from "@/lib/leave";
 import { useLeaveAccess, useLeaveCases } from "@/lib/leaveclient";
 import type { HrAdmin } from "@/lib/leaveclient";
 
@@ -39,7 +39,8 @@ export function LeaveTile({ clientId, Tile }: { clientId: string; Tile: (p: { ti
   if (!acc.ready || !acc.admin) return null;
   const d = dashboard(cases ?? [], config[clientId]?.leave);
   const base = `/c/${clientId}/leave`;
-  const out = (cases ?? []).filter((c) => ["active", "extended"].includes(c.status));
+  const out = outNow(cases ?? []);
+  const soon = startingSoon(cases ?? [], undefined, 30);
   return (
     <Tile title="Leave of absence" count={d.active} href={base} linkLabel="Leave center" wide>
       {!cases ? (
@@ -51,13 +52,27 @@ export function LeaveTile({ clientId, Tile }: { clientId: string; Tile: (p: { ti
             <span><b>{d.pending}</b> new requests</span>
             <span className={d.overdue.length ? "bad" : ""}><b>{d.overdue.length}</b> overdue</span>
           </div>
-          {out.length === 0 && d.returning.length === 0 && d.overdue.length === 0 && <p className="small muted">Nobody is out right now.</p>}
-          {[...d.overdue.slice(0, 2), ...d.returning.slice(0, 3)].map((x) => (
+          {out.length === 0 && soon.length === 0 && d.overdue.length === 0 && <p className="small muted">Nobody is out right now.</p>}
+          {d.overdue.slice(0, 2).map((x) => (
             <Link key={x.caseId + x.title + x.due} href={`${base}/${x.caseId}`} className="lv-line">
-              <span className="grow">
-                <b>{x.who}</b> <span className="muted">· {x.kind === "return" ? `back ${fmtDay(x.due)}` : x.title}</span>
-              </span>
-              <span className={`pill ${x.days < 0 ? "overdue" : x.days <= 3 ? "soon" : "later"}`}>{dueLabel(x.days)}</span>
+              <span className="grow"><b>{x.who}</b> <span className="muted">· {x.title}</span></span>
+              <span className="pill overdue">{dueLabel(x.days)}</span>
+            </Link>
+          ))}
+          {out.slice(0, 5).map((c) => {
+            const back = backDate(c);
+            const days = back ? daysBetween(today(), back) : null;
+            return (
+              <Link key={c.id} href={`${base}/${c.id}`} className="lv-line">
+                <span className="grow"><b>{c.employee.name}</b> <span className="muted">· out{back ? `, back ${fmtDay(back)}` : ", return date not set"}</span></span>
+                {days != null && <span className={`pill ${days < 0 ? "overdue" : days <= 7 ? "soon" : "later"}`}>{days < 0 ? "Past return date" : days === 0 ? "Back today" : `${days} days`}</span>}
+              </Link>
+            );
+          })}
+          {soon.slice(0, 3).map((c) => (
+            <Link key={c.id} href={`${base}/${c.id}`} className="lv-line">
+              <span className="grow"><b>{c.employee.name}</b> <span className="muted">· starts {fmtDay(c.expectedStart)}</span></span>
+              <StatusPill s={c.status} />
             </Link>
           ))}
         </>

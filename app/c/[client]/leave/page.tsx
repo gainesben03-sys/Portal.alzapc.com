@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ClientNav, ClientTopbar, Toast, useGuard, useToast } from "@/components/ui";
 import { dueLabel, NewCaseSheet, NOT_LEGAL, StatusPill, useAssignees } from "@/components/leaveui";
 import { useStore } from "@/lib/store";
-import { addDays, casesCsv, categoriesFor, daysBetween, DEFAULT_CATEGORIES, DEFAULT_SETTINGS, dashboard, dueItems, fmtDay, LeaveCase, LeaveCategory, LeaveSettings, LeaveStatus, OPEN_STATUSES, report, SCHEDULE_LABEL, STATUS_LABEL, today, Due } from "@/lib/leave";
+import { addDays, backDate, outNow, startingSoon, casesCsv, categoriesFor, daysBetween, DEFAULT_CATEGORIES, DEFAULT_SETTINGS, dashboard, dueItems, fmtDay, LeaveCase, LeaveCategory, LeaveSettings, LeaveStatus, OPEN_STATUSES, report, SCHEDULE_LABEL, STATUS_LABEL, today, Due } from "@/lib/leave";
 import { HrAdmin, leaveApi, useLeaveAccess, useLeaveCases } from "@/lib/leaveclient";
 import { LIVE } from "@/lib/supabase";
 
@@ -154,7 +154,8 @@ export default function LeaveCenter() {
 // ---------- overview ----------
 function Overview({ cases, settings, base, go }: { cases: LeaveCase[]; settings: LeaveSettings; base: string; go: (t: Tab) => void }) {
   const d = dashboard(cases, settings);
-  const out = cases.filter((c) => ["active", "extended"].includes(c.status));
+  const out = outNow(cases);
+  const soon = startingSoon(cases);
   const Item = ({ x }: { x: Due }) => (
     <Link href={`${base}/${x.caseId}`} className="lv-line">
       <span className="grow">
@@ -192,7 +193,7 @@ function Overview({ cases, settings, base, go }: { cases: LeaveCase[]; settings:
               <Link key={c.id} href={`${base}/${c.id}`} className="lv-line">
                 <span className="grow">
                   <b>{c.employee.name}</b> <span className="tiny muted">{c.number}</span>
-                  <span className="lv-sub">{c.employee.department ? `${c.employee.department} · ` : ""}{SCHEDULE_LABEL[c.schedule]} · since {fmtDay(c.actualStart || c.expectedStart)}</span>
+                  <span className="lv-sub">{c.employee.department ? `${c.employee.department} · ` : ""}{SCHEDULE_LABEL[c.schedule]}{c.actualStart || c.expectedStart ? ` · since ${fmtDay(c.actualStart || c.expectedStart)}` : " · start date not set"}{backDate(c) ? ` · back ${fmtDay(backDate(c))}` : ""}</span>
                 </span>
                 <StatusPill s={c.status} />
               </Link>
@@ -201,6 +202,20 @@ function Overview({ cases, settings, base, go }: { cases: LeaveCase[]; settings:
             <p className="small muted">Nobody is out right now.</p>
           )}
         </div>
+        {soon.length > 0 && (
+          <div className="card">
+            <h3 className="lv-h">Starting soon</h3>
+            {soon.map((c) => (
+              <Link key={c.id} href={`${base}/${c.id}`} className="lv-line">
+                <span className="grow">
+                  <b>{c.employee.name}</b> <span className="tiny muted">{c.number}</span>
+                  <span className="lv-sub">Starts {fmtDay(c.expectedStart)}{backDate(c) ? ` · back ${fmtDay(backDate(c))}` : ""}</span>
+                </span>
+                <StatusPill s={c.status} />
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );

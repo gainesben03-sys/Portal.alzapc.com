@@ -200,11 +200,22 @@ export function dueItems(cases: LeaveCase[], s?: LeaveSettings, on = today()): D
   return out.sort((a, b) => a.days - b.days);
 }
 
+/** The return date in effect: the latest approved extension, or the expected return. */
+export const backDate = (c: LeaveCase) => c.extensions.filter((e) => e.status === "approved").map((e) => e.newEnd).sort().pop() || c.expectedEnd;
+/** Out right now: on leave, or approved and the start date has come (or isn't set yet). */
+export function outNow(cases: LeaveCase[], on = today()): LeaveCase[] {
+  return cases.filter((c) => !c.actualEnd && (["active", "extended"].includes(c.status) || (c.status === "approved" && (!(c.actualStart || c.expectedStart) || (c.actualStart || c.expectedStart)! <= on))));
+}
+/** Approved or requested, starting in the next few weeks. */
+export function startingSoon(cases: LeaveCase[], on = today(), days = 30): LeaveCase[] {
+  return cases.filter((c) => ["approved", "requested", "pending_docs"].includes(c.status) && !c.actualStart && !!c.expectedStart && c.expectedStart > on && daysBetween(on, c.expectedStart) <= days).sort((a, b) => (a.expectedStart! < b.expectedStart! ? -1 : 1));
+}
+
 export type Dash = { active: number; pending: number; waitingDocs: number; deadlines: Due[]; returning: Due[]; overdue: Due[] };
 export function dashboard(cases: LeaveCase[], s?: LeaveSettings, on = today()): Dash {
   const items = dueItems(cases, s, on);
   return {
-    active: cases.filter((c) => ["approved", "active", "extended"].includes(c.status)).length,
+    active: outNow(cases, on).length,
     pending: cases.filter((c) => c.status === "requested").length,
     waitingDocs: cases.filter((c) => c.status === "pending_docs" || c.tasks.some((t) => !t.done && t.kind === "certification" && t.due && t.due <= addDays(on, 14))).length,
     deadlines: items.filter((d) => d.days >= 0 && d.days <= 14 && d.kind !== "return"),
