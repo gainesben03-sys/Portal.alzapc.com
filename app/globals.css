@@ -1078,3 +1078,75 @@ audio.rv-media { background: none; }
 .roster-diff-kpis { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; }
 .roster-diff-kpis b { font-size: 16px; }
 .roster-diff-kpis .warn b { color: var(--amber); }
+
+/* ---------- Shoutouts looks (all built from the client's brand color + a second color) ---------- */
+.so-page, .so-portal { --accent2: #f5b83d; }
+/* Confetti: a light pattern of brand-colored dots */
+.so-theme-confetti.so-page, .so-portal.so-theme-confetti {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(circle at 12px 14px, color-mix(in srgb, var(--accent) 22%, transparent) 2.5px, transparent 3px),
+    radial-gradient(circle at 52px 46px, color-mix(in srgb, var(--accent2) 35%, transparent) 2.5px, transparent 3px),
+    linear-gradient(35deg, transparent 47%, color-mix(in srgb, var(--accent2) 22%, transparent) 47% 53%, transparent 53%);
+  background-size: 74px 74px, 74px 74px, 37px 37px;
+  background-position: 0 0, 0 0, 18px 22px;
+}
+.so-theme-confetti.so-page { min-height: 100vh; max-width: none; }
+.so-theme-confetti.so-page > * { max-width: 528px; margin-left: auto; margin-right: auto; }
+.so-theme-confetti .so-hero { background: var(--card); border-radius: 18px; padding: 16px; border: 2px solid color-mix(in srgb, var(--accent2) 55%, var(--line)); }
+.so-theme-confetti .so-card, .so-theme-confetti .so-panel, .so-theme-confetti .so-board { box-shadow: 0 2px 0 color-mix(in srgb, var(--accent2) 45%, transparent); }
+.so-theme-confetti .so-value { background: color-mix(in srgb, var(--accent2) 25%, var(--card)); }
+
+/* Spotlight: a bold banner in the brand color */
+.so-theme-spotlight .so-hero { background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 65%, #000)); color: #fff; border-radius: 20px; padding: 22px 18px 24px; position: relative; overflow: hidden; }
+.so-theme-spotlight .so-hero::after { content: ""; position: absolute; right: -30px; top: -30px; width: 140px; height: 140px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--accent2) 70%, transparent), transparent 70%); }
+.so-theme-spotlight .so-hero .so-kicker { color: var(--accent2); }
+.so-theme-spotlight .so-hero .so-h1 { color: #fff; }
+.so-theme-spotlight .so-card { border-top: 4px solid var(--accent2); }
+.so-theme-spotlight .so-value { background: var(--accent); color: #fff; }
+.so-theme-spotlight .so-kpis b { color: var(--accent); }
+.so-portal.so-theme-spotlight .so-board { border-top: 4px solid var(--accent2); }
+
+/* Warm: cream and gold */
+.so-theme-warm.so-page, .so-portal.so-theme-warm { background: #fbf6ee; --line: #ecdfc9; --card: #fffdf9; --soft: #f6ecdc; --ink: #2a2118; --muted: #7c6c58; }
+.so-theme-warm.so-page { min-height: 100vh; max-width: none; }
+.so-theme-warm.so-page > * { max-width: 528px; margin-left: auto; margin-right: auto; }
+.so-theme-warm .so-kicker { color: #b07d2b; }
+.so-theme-warm .so-h1, .so-theme-warm .so-to { font-family: var(--serif, Georgia, serif); }
+.so-theme-warm .so-card { border-left: 4px solid #d4a24c; }
+.so-theme-warm .so-value { background: #f3e2c0; color: #6b4a14; }
+.so-theme-warm .so-kpis b { color: #b07d2b; }
+.so-theme-warm .so-bar em { background: linear-gradient(90deg, #d4a24c, var(--accent)); }
+.so-portal.so-theme-warm { border-radius: 18px; padding: 12px; }
+.so-portal.so-theme-confetti { border-radius: 18px; padding: 12px; }
+
+/* TV versions */
+.so-tv.so-theme-spotlight { background: radial-gradient(circle at 85% 0%, color-mix(in srgb, var(--accent2) 30%, transparent), transparent 40%), linear-gradient(160deg, color-mix(in srgb, var(--accent) 55%, #0b1220), #0b1220 70%); }
+.so-tv.so-theme-confetti { background-color: #0f1724; background-image: radial-gradient(circle at 14px 14px, color-mix(in srgb, var(--accent) 45%, transparent) 2.5px, transparent 3px), radial-gradient(circle at 54px 48px, color-mix(in srgb, var(--accent2) 55%, transparent) 2.5px, transparent 3px); background-size: 80px 80px; }
+.so-tv.so-theme-warm { background: linear-gradient(160deg, #2a2118, #15110c); --card: #2f2519; --line: #4a3a26; --soft: #3a2d1e; }
+.so-tv.so-theme-warm .so-card { border-left: 4px solid #d4a24c; }
+.so-tv .so-card.big { border-top: 5px solid var(--accent2); }
+
+/* confetti burst after sending */
+.so-done { position: relative; overflow: hidden; }
+.so-confetti { position: absolute; inset: 0; pointer-events: none; }
+.so-confetti i { position: absolute; top: -12px; border-radius: 2px; animation: soFall 1.4s ease-in forwards; opacity: 0; }
+.so-confetti i.c0 { background: var(--accent); }
+.so-confetti i.c1 { background: var(--accent2); }
+.so-confetti i.c2 { background: #ff6f61; }
+.so-confetti i.c3 { background: #2ec4b6; }
+@keyframes soFall { 0% { opacity: 1; transform: translateY(0) rotate(0); } 100% { opacity: 0; transform: translateY(320px) rotate(540deg); } }
+@media (prefers-reduced-motion: reduce) { .so-confetti { display: none; } .so-burst { animation: none; } }
+
+/* style picker */
+.so-looks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.so-look { border: 2px solid var(--line); border-radius: 12px; padding: 0; overflow: hidden; background: var(--card); cursor: pointer; text-align: left; font: inherit; color: var(--ink); }
+.so-look.on { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent); }
+.so-look-pv { height: 64px; display: flex; align-items: flex-end; padding: 8px; }
+.so-look-pv span { display: block; height: 10px; width: 60%; border-radius: 6px; background: var(--card); box-shadow: 0 0 0 1px var(--line); }
+.so-look b { display: block; padding: 6px 10px 0; font-size: 13px; }
+.so-look small { display: block; padding: 0 10px 8px; font-size: 11.5px; color: var(--muted); }
+.so-color { display: flex; align-items: center; gap: 8px; }
+.so-color input[type=color] { width: 44px; height: 36px; border: 1px solid var(--line); border-radius: 8px; padding: 2px; background: var(--card); }
+.so-done h2 { text-transform: none; letter-spacing: 0; color: var(--ink); font-family: var(--serif, Georgia, serif); font-size: 30px; }
+.so-theme-spotlight .so-done h2, .so-theme-confetti .so-done h2 { color: var(--accent); }

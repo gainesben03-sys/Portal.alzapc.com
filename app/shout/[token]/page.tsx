@@ -5,10 +5,11 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { ChallengeCards, Pick, PersonSearch, Scoreboard, ShoutCard, WallItem } from "@/components/shoutui";
 import { PublicChallenge, publicChallenge } from "@/lib/challenges";
-import { Board, Celebration, celebrateLine, MAX_MESSAGE, shortName, STARTERS } from "@/lib/recognition";
+import { Board, Celebration, celebrateLine, DEFAULT_HEADLINE, MAX_MESSAGE, shortName, ShoutTheme, STARTERS, themeVars } from "@/lib/recognition";
+import { Burst } from "@/components/shoutui";
 import { DEMO_CELEBRATE, DEMO_CHALLENGES, DEMO_PEOPLE, DEMO_ROSTER, DEMO_SHOUTS, DEMO_VALUES, demoBoard, demoReactions } from "@/lib/shoutdemo";
 
-type Info = { company: string; accent: string; logo: string | null; values: string[]; sms: string | null; showWall: boolean; board: Board | null; wall: WallItem[]; celebrate: Celebration[]; challenges: PublicChallenge[]; pass: Pass | null };
+type Info = { company: string; accent: string; theme?: ShoutTheme | null; logo: string | null; values: string[]; sms: string | null; showWall: boolean; board: Board | null; wall: WallItem[]; celebrate: Celebration[]; challenges: PublicChallenge[]; pass: Pass | null };
 type Pass = { id: string; title: string; link: number; holder: { id: string; name: string; team: string }; daysLeft: number; error?: string };
 type Lang = "en" | "es";
 
@@ -59,6 +60,7 @@ export default function ShoutPage() {
       setInfo({
         company: "Blueprint Studios",
         accent: "#2b3cf5",
+        theme: (() => { try { return JSON.parse(localStorage.getItem("alza-demo-shout-theme") || "null"); } catch { return null; } })(),
         logo: null,
         values: DEMO_VALUES,
         sms: "+14155550123",
@@ -162,7 +164,7 @@ export default function ShoutPage() {
     );
 
   return (
-    <div className="so-page" style={{ ["--accent" as string]: info.accent }}>
+    <div className={`so-page so-theme-${info.theme?.style ?? "classic"}`} style={themeVars(info.accent, info.theme ?? undefined)}>
       <header className="so-head">
         {info.logo ? <img src={info.logo} alt={info.company} className="so-logo" /> : <b>{info.company}</b>}
         <div className="so-lang" role="group" aria-label="Language">
@@ -172,7 +174,7 @@ export default function ShoutPage() {
       </header>
       <div className="so-hero">
         <span className="so-kicker">{lang === "es" ? "Reconocimientos" : "Shoutouts"}</span>
-        <h1 className="so-h1">{lang === "es" ? "¿Quién te alegró el día?" : "Who made your day better?"}</h1>
+        <h1 className="so-h1">{lang === "es" ? info.theme?.headlineEs || DEFAULT_HEADLINE.es : info.theme?.headline || DEFAULT_HEADLINE.en}</h1>
       </div>
       {demo && <p className="so-demo">Demo preview with sample people.</p>}
       {(info.showWall || info.celebrate.length > 0) && (
@@ -186,6 +188,7 @@ export default function ShoutPage() {
       {tab === "give" ? (
         done ? (
           <div className="so-panel so-done">
+            {info.theme?.burst !== false && <Burst />}
             <div className="so-burst" aria-hidden="true">🎉</div>
             <h2>{t.sentT}</h2>
             <p>{passing && done === "live" ? t.passDone(passing.link) : done === "live" ? t.sentB(to?.name.split(" ")[0] ?? "") : t.heldB}</p>

@@ -11,7 +11,7 @@ import { Baton, Challenge, CHALLENGE_INFO, ChallengeKind, chainStats, challengeL
 import { challengeLine, NUDGE_LINES } from "@/lib/nudge";
 import { useStore } from "@/lib/store";
 import { authHeader, LIVE, sb } from "@/lib/supabase";
-import { CELEBRATE_FILL_INS, CelebrateKind, CelebrateTemplate, celebrateSender, DEFAULT_CELEBRATE_TEMPLATES, DEFAULT_VALUES, fillCelebrate, MAX_MESSAGE, newRecognition, randomToken, REACTIONS, RecognitionSettings, scoreboard, Shoutout, STARTERS, templateFor } from "@/lib/recognition";
+import { DEFAULT_HEADLINE, THEME_STYLES, ThemeStyle, themeVars, secondColor, ShoutTheme, CELEBRATE_FILL_INS, CelebrateKind, CelebrateTemplate, celebrateSender, DEFAULT_CELEBRATE_TEMPLATES, DEFAULT_VALUES, fillCelebrate, MAX_MESSAGE, newRecognition, randomToken, REACTIONS, RecognitionSettings, scoreboard, Shoutout, STARTERS, templateFor } from "@/lib/recognition";
 import { DEMO_CHALLENGES, DEMO_PEOPLE, DEMO_SHOUTS, demoReactions } from "@/lib/shoutdemo";
 
 type Rx = { shout_id: string; who: string; emoji: string };
@@ -137,7 +137,7 @@ export default function Recognition() {
 
         {!rec?.token ? (
           isAdvisor ? (
-            <Setup rec={null} onSave={(r) => { setRec(r); toast.show("Shoutouts set up"); setTab("setup"); }} clientName={client.name} />
+            <Setup rec={null} onSave={(r) => { setRec(r); toast.show("Shoutouts set up"); setTab("setup"); }} clientName={client.name} accent={client.accent} />
           ) : (
             <div className="card section small muted">Shoutouts aren&apos;t set up yet.</div>
           )
@@ -160,7 +160,7 @@ export default function Recognition() {
                 </div>
               </div>
             ))}
-            <div className="section">
+            <div className={`section ${tab === "wall" || tab === "board" ? `so-portal so-theme-${rec.theme?.style ?? "classic"}` : ""}`} style={themeVars(client.accent, rec.theme)}>
               {tab === "challenges" && (
                 <Challenges
                   list={challenges}
@@ -216,6 +216,7 @@ export default function Recognition() {
                   rec={rec}
                   onSave={(r) => { setRec(r); toast.show("Saved"); }}
                   clientName={client.name}
+                  accent={client.accent}
                   onTest={async (kind, draft) => {
                     if (!LIVE) return toast.show("Demo: test emails send from the live portal");
                     const j = await api({ action: "testEmail", kind, rec: draft });
@@ -580,12 +581,13 @@ function GiveSheet({ token, values, pass, onClose, onSend }: { token: string; va
 
 const MAIL_DOMAIN = process.env.NEXT_PUBLIC_MAIL_DOMAIN || "alzapc.com";
 
-function Setup({ rec, onSave, clientName, onTest }: { rec: RecognitionSettings | null | undefined; onSave: (r: RecognitionSettings) => void; clientName: string; onTest?: (k: CelebrateKind, draft: Partial<RecognitionSettings>) => void }) {
+function Setup({ rec, onSave, clientName, accent, onTest }: { rec: RecognitionSettings | null | undefined; onSave: (r: RecognitionSettings) => void; clientName: string; accent: string; onTest?: (k: CelebrateKind, draft: Partial<RecognitionSettings>) => void }) {
   const [values, setValues] = useState((rec?.values ?? DEFAULT_VALUES).join("\n"));
   const [sms, setSms] = useState(rec?.smsNumber ?? "");
   const [notify, setNotify] = useState(rec?.notifyManagers !== false);
   const [wall, setWall] = useState(rec?.showWall !== false);
   const [cel, setCel] = useState(rec?.celebrate !== false);
+  const [theme, setTheme] = useState<ShoutTheme>(rec?.theme ?? { style: "classic", burst: true });
   const defSender = celebrateSender(undefined, clientName);
   const [senderName, setSenderName] = useState(rec?.sender?.name ?? "");
   const [senderBox, setSenderBox] = useState(rec?.sender?.box ?? "");
@@ -611,6 +613,7 @@ function Setup({ rec, onSave, clientName, onTest }: { rec: RecognitionSettings |
       ...(JSON.stringify(tpls.anniversary) !== JSON.stringify(DEFAULT_CELEBRATE_TEMPLATES.anniversary) ? { anniversary: tpls.anniversary } : {}),
     },
     celebrate: cel,
+    theme,
   });
   const save = () => onSave({ ...(rec ?? newRecognition()), values: vals.length ? vals : DEFAULT_VALUES, smsNumber, notifyManagers: notify, showWall: wall, ...extras() });
   const copy = (t: string) => navigator.clipboard?.writeText(t);
@@ -629,6 +632,39 @@ function Setup({ rec, onSave, clientName, onTest }: { rec: RecognitionSettings |
           <input className="f" value={sms} onChange={(e) => setSms(e.target.value)} placeholder="(415) 555-0123" />
         </label>
         <div className="sheet-actions"><button className="btn primary sm" onClick={save}>{rec ? "Save" : "Turn on shoutouts"}</button></div>
+      </div>
+
+      <div className="card section">
+        <b className="small">The look</b>
+        <p className="tiny muted" style={{ margin: "2px 0 10px" }}>For the QR page, the wall and the TV. Every style uses {clientName}&apos;s brand color and logo.</p>
+        <div className="so-looks">
+          {THEME_STYLES.map((t) => (
+            <button key={t.id} className={`so-look ${(theme.style ?? "classic") === t.id ? "on" : ""}`} onClick={() => setTheme({ ...theme, style: t.id as ThemeStyle })}>
+              <div className={`so-look-pv so-portal so-theme-${t.id}`} style={{ ...themeVars(accent, theme), ...(t.id === "spotlight" ? { background: `linear-gradient(135deg, ${accent}, #111)` } : t.id === "classic" ? { background: "var(--soft)" } : {}) }}>
+                <span style={t.id === "spotlight" ? { background: theme.accent2 || secondColor(accent), boxShadow: "none" } : undefined} />
+              </div>
+              <b>{t.name}</b>
+              <small>{t.blurb}</small>
+            </button>
+          ))}
+        </div>
+        <div className="two" style={{ marginTop: 10 }}>
+          <label className="f">Second color
+            <span className="so-color">
+              <input type="color" value={theme.accent2 || secondColor(accent)} onChange={(e) => setTheme({ ...theme, accent2: e.target.value })} />
+              <span className="tiny muted">{theme.accent2 ? <button className="linklike tiny" onClick={() => setTheme({ ...theme, accent2: undefined })}>Use the suggested one</button> : "Suggested to go with your brand color"}</span>
+            </span>
+          </label>
+          <label className="check" style={{ alignSelf: "end" }}><input type="checkbox" checked={theme.burst !== false} onChange={(e) => setTheme({ ...theme, burst: e.target.checked })} /> Confetti when someone sends one</label>
+        </div>
+        <div className="two">
+          <label className="f">Headline<input className="f" value={theme.headline ?? ""} onChange={(e) => setTheme({ ...theme, headline: e.target.value || undefined })} placeholder={DEFAULT_HEADLINE.en} maxLength={60} /></label>
+          <label className="f">Headline (Spanish)<input className="f" value={theme.headlineEs ?? ""} onChange={(e) => setTheme({ ...theme, headlineEs: e.target.value || undefined })} placeholder={DEFAULT_HEADLINE.es} maxLength={60} /></label>
+        </div>
+        <div className="sheet-actions">
+          {rec && <a className="btn ghost sm" href={`/shout/${rec.token}`} target="_blank" rel="noopener">Open the page</a>}
+          <button className="btn primary sm" onClick={() => { save(); try { localStorage.setItem("alza-demo-shout-theme", JSON.stringify(theme)); } catch {} }}>Save the look</button>
+        </div>
       </div>
 
       <div className="card section">

@@ -69,6 +69,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ token: s
     ok: true,
     company: c.name,
     accent: c.config.accent || "#19283c",
+    theme: c.rec.theme ?? null,
     logo: c.config.logoEmail || c.config.logo || null,
     values: c.rec.values,
     sms: c.rec.smsNumber ?? null,

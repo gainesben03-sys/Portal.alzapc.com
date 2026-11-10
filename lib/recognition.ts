@@ -30,6 +30,7 @@ export interface RecognitionSettings {
   notifyManagers?: boolean; // email the person's manager when they get one (default on)
   showWall?: boolean; // the wall and scoreboard on the QR page (default on)
   celebrate?: boolean; // the Celebrate tab: birthdays, work anniversaries, new people (default on; each person can opt out)
+  theme?: ShoutTheme; // the look of the QR page, wall and TV
   sender?: { name?: string; box?: string }; // emails to employees come from "<name> <box@domain>", e.g. "Blueprint Studios Celebrations <celebrations@alzapc.com>"
   autoEmail?: { birthday?: boolean; anniversary?: boolean }; // email people on the day (off until turned on)
   templates?: Partial<Record<CelebrateKind, CelebrateTemplate>>;
@@ -189,3 +190,28 @@ export const ago = (iso: string) => {
   const d = Math.round(h / 24);
   return d < 7 ? `${d}d ago` : new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 };
+
+
+// ---------- the look ----------
+export type ThemeStyle = "classic" | "confetti" | "spotlight" | "warm";
+export type ShoutTheme = { style?: ThemeStyle; accent2?: string; headline?: string; headlineEs?: string; burst?: boolean };
+export const THEME_STYLES: { id: ThemeStyle; name: string; blurb: string }[] = [
+  { id: "classic", name: "Clean", blurb: "Simple and bright. Your color on white." },
+  { id: "confetti", name: "Confetti", blurb: "A light confetti pattern in your colors." },
+  { id: "spotlight", name: "Spotlight", blurb: "A bold banner in your brand color." },
+  { id: "warm", name: "Warm", blurb: "Cream and gold, a little more elegant." },
+];
+export const DEFAULT_HEADLINE = { en: "Who made your day better?", es: "¿Quién te alegró el día?" };
+/** A friendly second color that goes with the brand color, if they didn't pick one. */
+export function secondColor(hex: string): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
+  if (!m) return "#f5b83d";
+  const n = parseInt(m[1], 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  const max = Math.max(r, g, b);
+  // blues and purples get gold; warm brands get teal; greens get coral
+  if (b === max) return "#f5b83d";
+  if (r === max) return "#2ec4b6";
+  return "#ff6f61";
+}
+export const themeVars = (accent: string, t?: ShoutTheme) => ({ ["--accent" as string]: accent, ["--accent2" as string]: t?.accent2 || secondColor(accent) });

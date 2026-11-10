@@ -183,3 +183,24 @@ export function ChallengeCards({ list, lang = "en", big }: { list: PublicChallen
     </div>
   );
 }
+
+/** A short burst of confetti in the brand colors (skipped for people who prefer less motion). */
+export function Burst() {
+  const bits = useRef(
+    Array.from({ length: 36 }, (_, i) => ({
+      left: Math.round(Math.random() * 100),
+      delay: Math.round(Math.random() * 300),
+      dur: 900 + Math.round(Math.random() * 900),
+      rot: Math.round(Math.random() * 360),
+      c: i % 4,
+      w: 6 + Math.round(Math.random() * 6),
+    }))
+  ).current;
+  return (
+    <div className="so-confetti" aria-hidden="true">
+      {bits.map((b, i) => (
+        <i key={i} className={`c${b.c}`} style={{ left: `${b.left}%`, animationDelay: `${b.delay}ms`, animationDuration: `${b.dur}ms`, transform: `rotate(${b.rot}deg)`, width: b.w, height: b.w * 0.45 }} />
+      ))}
+    </div>
+  );
+}

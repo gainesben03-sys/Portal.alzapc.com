@@ -6,10 +6,10 @@ import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { ChallengeCards, Scoreboard, ShoutCard, WallItem } from "@/components/shoutui";
 import { PublicChallenge, publicChallenge } from "@/lib/challenges";
-import { Board, Celebration, shortName } from "@/lib/recognition";
+import { Board, Celebration, shortName, ShoutTheme, themeVars } from "@/lib/recognition";
 import { DEMO_CELEBRATE, DEMO_CHALLENGES, DEMO_ROSTER, DEMO_SHOUTS, demoBoard, demoReactions } from "@/lib/shoutdemo";
 
-type Info = { company: string; accent: string; logo: string | null; board: Board | null; wall: WallItem[]; celebrate?: Celebration[]; challenges?: PublicChallenge[] };
+type Info = { company: string; accent: string; theme?: ShoutTheme | null; logo: string | null; board: Board | null; wall: WallItem[]; celebrate?: Celebration[]; challenges?: PublicChallenge[] };
 
 export default function ShoutTv() {
   const { token } = useParams<{ token: string }>();
@@ -24,7 +24,7 @@ export default function ShoutTv() {
         .then((j) => {
           if (j.ok) setInfo(j);
           else if (j.reason === "demo")
-            setInfo({ company: "Blueprint Studios", accent: "#2b3cf5", logo: null, celebrate: DEMO_CELEBRATE, challenges: DEMO_CHALLENGES.map((c) => publicChallenge(c, DEMO_SHOUTS, DEMO_ROSTER)), board: demoBoard(), wall: DEMO_SHOUTS.filter((s) => s.status === "live").map((s) => ({ id: s.id, to: shortName(s.to.name), team: s.to.department ?? "", from: shortName(s.from.name), value: s.value ?? null, message: s.message, at: s.at, reactions: demoReactions[s.id] ?? {}, mine: [] })) });
+            setInfo({ company: "Blueprint Studios", accent: "#2b3cf5", theme: (() => { try { return JSON.parse(localStorage.getItem("alza-demo-shout-theme") || "null"); } catch { return null; } })(), logo: null, celebrate: DEMO_CELEBRATE, challenges: DEMO_CHALLENGES.map((c) => publicChallenge(c, DEMO_SHOUTS, DEMO_ROSTER)), board: demoBoard(), wall: DEMO_SHOUTS.filter((s) => s.status === "live").map((s) => ({ id: s.id, to: shortName(s.to.name), team: s.to.department ?? "", from: shortName(s.from.name), value: s.value ?? null, message: s.message, at: s.at, reactions: demoReactions[s.id] ?? {}, mine: [] })) });
         })
         .catch(() => undefined);
     load();
@@ -42,7 +42,7 @@ export default function ShoutTv() {
   const cur = list.length ? list[i % list.length] : null;
   const next = list.length > 1 ? [1, 2].map((k) => list[(i + k) % list.length]) : [];
   return (
-    <div className="so-tv" style={{ ["--accent" as string]: info.accent }}>
+    <div className={`so-tv so-theme-${info.theme?.style ?? "classic"}`} style={themeVars(info.accent, info.theme ?? undefined)}>
       <header>
         {info.logo ? <img src={info.logo} alt={info.company} /> : <b>{info.company}</b>}
         <span>Shoutouts</span>
