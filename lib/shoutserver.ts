@@ -198,7 +198,7 @@ export function matchPeople(roster: TeamMember[], q: string): TeamMember[] {
 export const localToday = () => new Date(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
 
 /** A link-only key so the opt-out link in an email can't be guessed for someone else. */
-export function optOutKey(clientId: string, personId: string) {
+export function optOutKey(clientId: string, personId: string, type = "celebrate") {
   const secret = process.env.CRON_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || "alza";
-  return createHmac("sha256", secret).update(`celebrate:${clientId}:${personId}`).digest("hex").slice(0, 24);
+  return createHmac("sha256", secret).update(`${type === "celebrate" ? "celebrate" : type}:${clientId}:${personId}`).digest("hex").slice(0, 24);
 }

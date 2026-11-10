@@ -8,6 +8,8 @@ import { NextResponse } from "next/server";
 import { REACTIONS, Shoutout } from "@/lib/recognition";
 import { Challenge, CHALLENGE_INFO } from "@/lib/challenges";
 import { challengesFor, checkChainPass, checkGoals } from "@/lib/challengeserver";
+import { Nudge, NudgeAudience, pickLine, waves } from "@/lib/nudge";
+import { nudgeTargets, sendNudgeWave } from "@/lib/nudgeserver";
 import { celebrateMail, createShout, rosterFor, tellThem, ShoutClient } from "@/lib/shoutserver";
 import { admin, caller, sendEmail, SERVER_LIVE, siteUrl } from "@/lib/server";
 import type { ClientConfig } from "@/lib/modules";
@@ -100,6 +102,35 @@ export async function POST(req: Request) {
       if (error) return NextResponse.json({ ok: false, reason: "save_failed" }, { status: 500 });
     }
     return NextResponse.json({ ok: true, challenge: ch, first });
+  }
+
+  // a nudge to recognize someone: now, or in three waves across the week
+  if (b.action === "nudge") {
+    const raw = String(b.audience ?? "everyone");
+    const audience = (raw === "managers" || raw === "mine" || raw === "everyone" || raw.startsWith("team:") ? raw : "everyone") as NudgeAudience;
+    if (!exec && !(manages && audience === "mine")) return NextResponse.json({ ok: false, reason: "forbidden" }, { status: 403 });
+    const targets = nudgeTargets(roster, audience, me.email);
+    if (!targets.length) return NextResponse.json({ ok: false, reason: "nobody" });
+    // no spamming: one nudge to the same group every 3 days
+    const { data: recent } = await db.from("nudges").select("data").eq("client_id", clientId).gte("created_at", new Date(Date.now() - 3 * 864e5).toISOString());
+    if (!b.force && (recent ?? []).some((r) => (r.data as Nudge).audience === audience)) return NextResponse.json({ ok: false, reason: "recent" });
+    const groups = Number(b.waves) === 3 && targets.length >= 6 ? waves(targets) : [targets];
+    const now = Date.now();
+    const n: Nudge = {
+      id: `nu${now.toString(36)}${Math.random().toString(36).slice(2, 5)}`,
+      clientId,
+      audience,
+      waves: groups.length === 3 ? 3 : 1,
+      line: String(b.line ?? "").trim().slice(0, 140) || pickLine(),
+      note: String(b.note ?? "").trim().slice(0, 500) || undefined,
+      challengeId: b.challengeId ? String(b.challengeId) : undefined,
+      by: { name: myName, email: me.email },
+      createdAt: new Date(now).toISOString(),
+      plan: groups.map((g, i) => ({ at: new Date(now + i * 2 * 864e5).toISOString(), ids: g.map((t) => t.id) })),
+    };
+    await db.from("nudges").insert({ id: n.id, client_id: clientId, data: n });
+    const sent = await sendNudgeWave(db, siteUrl(req), c, n, 0);
+    return NextResponse.json({ ok: true, sent, total: targets.length, waves: n.waves });
   }
 
   if (b.action === "endChallenge") {

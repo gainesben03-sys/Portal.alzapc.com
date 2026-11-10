@@ -12,10 +12,15 @@ export async function GET(req: Request) {
   const c = u.searchParams.get("c") ?? "";
   const p = u.searchParams.get("p") ?? "";
   const k = u.searchParams.get("k") ?? "";
-  if (!c || !p || k !== optOutKey(c, p)) return page("That link didn't work", "Ask your manager to turn off birthday celebrations for you.");
+  const t = u.searchParams.get("t") === "nudge" ? "nudge" : "celebrate";
+  if (!c || !p || k !== optOutKey(c, p, t)) return page("That link didn't work", "Ask your manager to turn off birthday celebrations for you.");
   const db = admin();
   const { data } = await db.from("people").select("data").eq("id", p).eq("client_id", c).maybeSingle();
   if (!data) return page("That link didn't work", "Ask your manager to turn off birthday celebrations for you.");
+  if (t === "nudge") {
+    await db.from("people").update({ data: { ...(data.data as object), nudges: false } }).eq("id", p);
+    return page("Done", "You won't get any more of these reminders. You can still give and get shoutouts any time.");
+  }
   await db.from("people").update({ data: { ...(data.data as object), celebrate: false } }).eq("id", p);
   return page("Done", "Your birthday and work anniversary won't be shown to the team or emailed to you. Your manager can turn it back on any time.");
 }

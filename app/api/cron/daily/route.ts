@@ -5,6 +5,8 @@
 import { celebrateSender, celebrations } from "@/lib/recognition";
 import { Challenge, chainStats, challengeLive } from "@/lib/challenges";
 import { shoutsSince } from "@/lib/challengeserver";
+import type { Nudge } from "@/lib/nudge";
+import { sendNudgeWave } from "@/lib/nudgeserver";
 import { celebrateMail, localToday } from "@/lib/shoutserver";
 import { NextResponse } from "next/server";
 import { Action, Client, DEFAULT_RULES, fmt, Project, reminderPlan, Rules, toISO, today } from "@/lib/data";
@@ -339,6 +341,23 @@ export async function GET(req: Request) {
             })
           );
         }
+      }
+    }
+  }
+
+  // ---------- 8. Nudges: send waves 2 and 3 when their day comes
+  {
+    const nR = await db.from("nudges").select("id, client_id, data").gte("created_at", new Date(Date.now() - 10 * 864e5).toISOString());
+    for (const row of nR.error ? [] : nR.data ?? []) {
+      const n = row.data as Nudge;
+      const cl = (clientsR.data ?? []).find((x) => x.id === row.client_id);
+      const cfg = (cl?.config ?? {}) as ClientConfig;
+      if (!cl || !cfg.recognition?.token || !(cfg.modules as Record<string, boolean> | undefined)?.recognition) continue;
+      for (let i = 1; i < n.plan.length; i++) {
+        if (n.plan[i].sentAt || new Date(n.plan[i].at).getTime() > Date.now() + 3 * 3600e3) continue;
+        const sent = await sendNudgeWave(db, PORTAL_URL, { id: cl.id, name: cl.name, config: cfg, rec: cfg.recognition }, n, i);
+        log.push(`nudge ${n.id} wave ${i + 1}: ${sent} sent`);
+        break; // one wave per nudge per day
       }
     }
   }

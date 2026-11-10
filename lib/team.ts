@@ -16,6 +16,7 @@ export interface TeamMember {
   location?: string;
   cell?: string; // for recognition by text; digits with country code, e.g. +14155551234
   employeeId?: string; // from payroll (ADP associate ID / file number), the most reliable match on refresh
+  nudges?: boolean; // false = they turned off "recognize someone" nudge emails
   celebrate?: boolean; // false = they opted out of public birthday and anniversary celebrations
   active: boolean;
 }

@@ -7,7 +7,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
 import { ClientNav, ClientTopbar, Sheet, Toast, useGuard, useToast } from "@/components/ui";
 import { ChallengeCards, Pick, PersonSearch, Scoreboard, ShoutCard, WallItem } from "@/components/shoutui";
-import { Baton, Challenge, CHALLENGE_INFO, ChallengeKind, chainStats, challengeLive, publicChallenge } from "@/lib/challenges";
+import { Baton, Challenge, CHALLENGE_INFO, ChallengeKind, chainStats, challengeLive, PublicChallenge, publicChallenge } from "@/lib/challenges";
+import { challengeLine, NUDGE_LINES } from "@/lib/nudge";
 import { useStore } from "@/lib/store";
 import { authHeader, LIVE, sb } from "@/lib/supabase";
 import { CELEBRATE_FILL_INS, CelebrateKind, CelebrateTemplate, celebrateSender, DEFAULT_CELEBRATE_TEMPLATES, DEFAULT_VALUES, fillCelebrate, MAX_MESSAGE, newRecognition, randomToken, REACTIONS, RecognitionSettings, scoreboard, Shoutout, STARTERS, templateFor } from "@/lib/recognition";
@@ -32,6 +33,7 @@ export default function Recognition() {
   const [giving, setGiving] = useState<false | { pass?: Baton & { title: string } }>(false);
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [starting, setStarting] = useState(false);
+  const [nudging, setNudging] = useState(false);
   const myKey = `e:${(me?.email ?? "ben").toLowerCase()}`;
 
   const load = useCallback(async () => {
@@ -124,7 +126,12 @@ export default function Recognition() {
             <h1 style={{ margin: 0 }}>Shoutouts</h1>
             <p className="muted" style={{ margin: "4px 0 0" }}>Recognition from anyone, by QR code, text or right here.</p>
           </div>
-          {rec?.token && <button className="btn primary" onClick={() => setGiving({})}>🎉 Give one</button>}
+          {rec?.token && (
+            <span style={{ display: "inline-flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+              {(exec || manages) && <button className="btn" onClick={() => setNudging(true)}>💛 Nudge</button>}
+              <button className="btn primary" onClick={() => setGiving({})}>🎉 Give one</button>
+            </span>
+          )}
         </div>
         {!on && isAdvisor && <div className="pr-draft tiny">Shoutouts is off for {client.name}. Turn it on in their settings under Modules.</div>}
 
@@ -236,6 +243,27 @@ export default function Recognition() {
           }}
         />
       )}
+      {nudging && rec && (
+        <NudgeSheet
+          exec={exec}
+          myEmail={me?.email ?? ""}
+          roster={roster}
+          challenges={activeCh.map((c) => publicChallenge(c, list, roster))}
+          onClose={() => setNudging(false)}
+          onSend={async (body) => {
+            const j = await api({ action: "nudge", ...body });
+            if (j.demo) {
+              setNudging(false);
+              toast.show("Nudge sent (demo)");
+              return "";
+            }
+            if (!j.ok) return j.reason === "recent" ? "This group got a nudge in the last 3 days. Give it a little time." : j.reason === "nobody" ? "Nobody in that group has an email on the roster." : j.reason === "forbidden" ? "Managers can nudge their own team." : "Couldn't send it. Try again.";
+            setNudging(false);
+            toast.show(j.waves === 3 ? `Wave 1 sent to ${j.sent}. The rest go out over the next 4 days.` : `Nudge sent to ${j.sent} ${j.sent === 1 ? "person" : "people"} 💛`);
+            return "";
+          }}
+        />
+      )}
       {starting && rec && (
         <StartSheet
           token={rec.token}
@@ -259,6 +287,85 @@ export default function Recognition() {
       )}
       <Toast msg={toast.msg} onDone={toast.clear} />
     </div>
+  );
+}
+
+type NudgeBody = { audience: string; waves: 1 | 3; line: string; note?: string; challengeId?: string };
+
+/** A nudge to recognize someone, to everyone or a group, at once or in three waves. */
+function NudgeSheet({ exec, myEmail, roster, challenges, onClose, onSend }: { exec: boolean; myEmail: string; roster: { id: string; name: string; email?: string; managerEmail: string; department?: string; location?: string; active: boolean; nudges?: boolean }[]; challenges: PublicChallenge[]; onClose: () => void; onSend: (b: NudgeBody) => Promise<string> }) {
+  const live = roster.filter((p) => p.active && p.email && p.nudges !== false);
+  const mine = live.filter((p) => p.managerEmail.toLowerCase() === myEmail.toLowerCase());
+  const teams = Array.from(new Set(live.map((p) => p.department || p.location).filter(Boolean) as string[])).sort();
+  const mgrs = new Set(roster.filter((p) => p.active).map((p) => p.managerEmail.toLowerCase()).filter(Boolean));
+  const [aud, setAud] = useState<string>(exec ? "everyone" : "mine");
+  const [team, setTeam] = useState(teams[0] ?? "");
+  const [w, setW] = useState<1 | 3>(exec ? 3 : 1);
+  const [lineI, setLineI] = useState(Math.floor(Date.now() / 864e5) % NUDGE_LINES.length);
+  const [custom, setCustom] = useState("");
+  const [note, setNote] = useState("");
+  const [chId, setChId] = useState(challenges.find((c) => c.kind !== "welcome")?.id ?? challenges[0]?.id ?? "");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const audience = aud === "team" ? `team:${team}` : aud;
+  const count = aud === "everyone" ? live.length : aud === "managers" ? mgrs.size : aud === "mine" ? mine.length : live.filter((p) => (p.department || p.location) === team).length;
+  const line = custom.trim() || NUDGE_LINES[lineI];
+  const ch = challenges.find((c) => c.id === chId);
+  const cl = challengeLine(ch);
+  const day = (n: number) => new Date(Date.now() + n * 864e5).toLocaleDateString("en-US", { weekday: "short" });
+  const canWave = count >= 6;
+  return (
+    <Sheet title="💛 Nudge people to recognize someone" onClose={onClose}>
+      <span className="flabel">Who</span>
+      <div className="so-values" style={{ marginBottom: 8 }}>
+        {exec && <button className={aud === "everyone" ? "on" : ""} onClick={() => setAud("everyone")}>Everyone ({live.length})</button>}
+        {exec && <button className={aud === "managers" ? "on" : ""} onClick={() => setAud("managers")}>Managers ({mgrs.size})</button>}
+        {exec && teams.length > 0 && <button className={aud === "team" ? "on" : ""} onClick={() => setAud("team")}>A team</button>}
+        {mine.length > 0 && <button className={aud === "mine" ? "on" : ""} onClick={() => setAud("mine")}>My team ({mine.length})</button>}
+      </div>
+      {aud === "team" && (
+        <select className="f" value={team} onChange={(e) => setTeam(e.target.value)}>{teams.map((t) => <option key={t} value={t}>{t}</option>)}</select>
+      )}
+      <span className="flabel" style={{ marginTop: 10 }}>When</span>
+      <div className="seg" style={{ gridTemplateColumns: "1fr 1fr", marginBottom: 4 }}>
+        <button className={w === 1 || !canWave ? "on" : ""} onClick={() => setW(1)}>All at once</button>
+        <button className={w === 3 && canWave ? "on" : ""} disabled={!canWave} onClick={() => setW(3)}>In 3 waves</button>
+      </div>
+      <p className="tiny muted" style={{ margin: "0 0 10px" }}>{w === 3 && canWave ? `A third today, a third ${day(2)}, a third ${day(4)}. Shoutouts keep coming all week instead of all at once.` : `Everyone gets it now.${!canWave ? " (Waves need at least 6 people.)" : ""}`}</p>
+
+      {challenges.length > 0 && (
+        <label className="f">Tie it to a challenge
+          <select className="f" value={chId} onChange={(e) => setChId(e.target.value)}>
+            <option value="">No, just a reminder</option>
+            {challenges.map((c) => <option key={c.id} value={c.id}>{c.kind === "chain" ? "🔗" : c.kind === "goal" ? "🎯" : "👋"} {c.title}</option>)}
+          </select>
+        </label>
+      )}
+      <span className="flabel">Opening line</span>
+      <div className="row" style={{ gap: 8, alignItems: "center" }}>
+        <input className="f grow" style={{ margin: 0 }} value={custom} onChange={(e) => setCustom(e.target.value)} placeholder={NUDGE_LINES[lineI]} maxLength={140} />
+        <button className="btn ghost sm" title="Another line" onClick={() => { setCustom(""); setLineI((lineI + 1) % NUDGE_LINES.length); }}>🔀</button>
+      </div>
+      <label className="f" style={{ marginTop: 8 }}>A note from you <span className="tiny muted">(optional)</span><textarea className="f" style={{ minHeight: 56 }} value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} placeholder="e.g. Busy week on the install crew. Let's make sure people know we noticed." /></label>
+
+      <div className="so-preview">
+        <span className="tiny muted">Preview</span>
+        <b style={{ display: "block", margin: "4px 0 6px", fontFamily: "var(--serif, Georgia, serif)", fontSize: 18 }}>{line}</b>
+        <p className="small" style={{ margin: "0 0 6px" }}>Hi Alex,</p>
+        {note.trim() && <p className="small" style={{ margin: "0 0 6px" }}>{note}</p>}
+        {cl && <p className="small" style={{ margin: "0 0 6px" }}>{cl}</p>}
+        <p className="small" style={{ margin: "0 0 6px" }}>{aud === "managers" ? "On your team, Sam and Jo haven't had a shoutout in the last 30 days. A quick one from you would mean a lot." : "Think of one person who made your week better, and tell them. It takes 20 seconds."}</p>
+        <span className="tiny" style={{ color: "var(--blue)" }}>🎉 Give a shoutout</span>
+        <p className="tiny muted" style={{ margin: "6px 0 0" }}>Managers also see who on their team hasn&apos;t been recognized lately. Everyone can turn these off from the email.</p>
+      </div>
+      {err && <p className="small" style={{ color: "var(--red)" }}>{err}</p>}
+      <div className="sheet-actions">
+        <button className="btn ghost sm" onClick={onClose}>Cancel</button>
+        <button className="btn primary sm" disabled={busy || count === 0} onClick={async () => { setBusy(true); setErr(await onSend({ audience, waves: w === 3 && canWave ? 3 : 1, line, note: note.trim() || undefined, challengeId: chId || undefined })); setBusy(false); }}>
+          {busy ? "Sending…" : `💛 Nudge ${count} ${count === 1 ? "person" : "people"}`}
+        </button>
+      </div>
+    </Sheet>
   );
 }
 
