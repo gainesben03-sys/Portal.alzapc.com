@@ -3,16 +3,18 @@
 // The page behind the QR code. No login: give a shoutout in about 20 seconds, see the wall, react.
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { Pick, PersonSearch, Scoreboard, ShoutCard, WallItem } from "@/components/shoutui";
+import { ChallengeCards, Pick, PersonSearch, Scoreboard, ShoutCard, WallItem } from "@/components/shoutui";
+import { PublicChallenge, publicChallenge } from "@/lib/challenges";
 import { Board, Celebration, celebrateLine, MAX_MESSAGE, shortName, STARTERS } from "@/lib/recognition";
-import { DEMO_CELEBRATE, DEMO_PEOPLE, DEMO_SHOUTS, DEMO_VALUES, demoBoard, demoReactions } from "@/lib/shoutdemo";
+import { DEMO_CELEBRATE, DEMO_CHALLENGES, DEMO_PEOPLE, DEMO_ROSTER, DEMO_SHOUTS, DEMO_VALUES, demoBoard, demoReactions } from "@/lib/shoutdemo";
 
-type Info = { company: string; accent: string; logo: string | null; values: string[]; sms: string | null; showWall: boolean; board: Board | null; wall: WallItem[]; celebrate: Celebration[] };
+type Info = { company: string; accent: string; logo: string | null; values: string[]; sms: string | null; showWall: boolean; board: Board | null; wall: WallItem[]; celebrate: Celebration[]; challenges: PublicChallenge[]; pass: Pass | null };
+type Pass = { id: string; title: string; link: number; holder: { id: string; name: string; team: string }; daysLeft: number; error?: string };
 type Lang = "en" | "es";
 
 const W = {
-  en: { give: "Give a shoutout", wall: "Wall", who: "Who are you recognizing?", whoPh: "Start typing their name", what: "What did they do?", whatPh: "Be specific. What happened, and why it mattered.", value: "Which value does it show?", skip: "Skip", from: "Who's it from?", fromPh: "Find your name", notListed: "I'm not on the list", yourName: "Your name", send: "Send shoutout", sending: "Sending…", sentT: "Sent! 🎉", sentB: (n: string) => `${n} will get it right away.`, heldB: "Thanks! It'll post after a quick check.", another: "Recognize someone else", seeWall: "See the wall", text: (n: string) => `Or text a name to ${n}`, empty: "No shoutouts yet. Be the first.", private: "Shoutouts are checked before they post. Keep it about the work.", report: "Thanks. We'll take a look.", limit: "That's the limit for today. Thank you for recognizing so many people!", err: "That didn't send. Try again.", cel: "Celebrate", today: "Today", week: "This week", next: "Next week", newp: "New on the team", bday: "Birthday", anniv: (y: number) => `${y} ${y === 1 ? "year" : "years"} with the team`, started: "Started", starts: "Starts", sendOne: "Send a shoutout", noCel: "Nothing coming up in the next two weeks.", optNote: "Rather not have your birthday here? Use the link in your birthday email, or ask your manager." },
-  es: { give: "Dar un reconocimiento", wall: "Muro", who: "¿A quién quieres reconocer?", whoPh: "Escribe su nombre", what: "¿Qué hizo?", whatPh: "Sé específico. Qué pasó y por qué importó.", value: "¿Qué valor muestra?", skip: "Omitir", from: "¿De parte de quién?", fromPh: "Busca tu nombre", notListed: "No estoy en la lista", yourName: "Tu nombre", send: "Enviar", sending: "Enviando…", sentT: "¡Enviado! 🎉", sentB: (n: string) => `${n} lo recibirá enseguida.`, heldB: "¡Gracias! Se publicará después de una revisión rápida.", another: "Reconocer a alguien más", seeWall: "Ver el muro", text: (n: string) => `O manda un mensaje con un nombre al ${n}`, empty: "Aún no hay reconocimientos. Sé el primero.", private: "Los reconocimientos se revisan antes de publicarse. Habla del trabajo.", report: "Gracias. Lo revisaremos.", limit: "Llegaste al límite de hoy. ¡Gracias por reconocer a tantas personas!", err: "No se envió. Intenta de nuevo.", cel: "Celebrar", today: "Hoy", week: "Esta semana", next: "La próxima semana", newp: "Nuevos en el equipo", bday: "Cumpleaños", anniv: (y: number) => `${y} ${y === 1 ? "año" : "años"} con el equipo`, started: "Empezó", starts: "Empieza", sendOne: "Enviar un reconocimiento", noCel: "No hay nada en las próximas dos semanas.", optNote: "¿Prefieres que tu cumpleaños no aparezca aquí? Usa el enlace en tu correo de cumpleaños o habla con tu gerente." },
+  en: { give: "Give a shoutout", wall: "Wall", who: "Who are you recognizing?", whoPh: "Start typing their name", what: "What did they do?", whatPh: "Be specific. What happened, and why it mattered.", value: "Which value does it show?", skip: "Skip", from: "Who's it from?", fromPh: "Find your name", notListed: "I'm not on the list", yourName: "Your name", send: "Send shoutout", sending: "Sending…", sentT: "Sent! 🎉", sentB: (n: string) => `${n} will get it right away.`, heldB: "Thanks! It'll post after a quick check.", another: "Recognize someone else", seeWall: "See the wall", text: (n: string) => `Or text a name to ${n}`, empty: "No shoutouts yet. Be the first.", private: "Shoutouts are checked before they post. Keep it about the work.", report: "Thanks. We'll take a look.", limit: "That's the limit for today. Thank you for recognizing so many people!", err: "That didn't send. Try again.", cel: "Celebrate", today: "Today", week: "This week", next: "Next week", newp: "New on the team", bday: "Birthday", anniv: (y: number) => `${y} ${y === 1 ? "year" : "years"} with the team`, started: "Started", starts: "Starts", sendOne: "Send a shoutout", noCel: "Nothing coming up in the next two weeks.", optNote: "Rather not have your birthday here? Use the link in your birthday email, or ask your manager.", passT: (n: number) => `You're link #${n - 1}. Pass it on!`, passB: (t: string, d: number) => `Keep the ${t} growing: recognize someone new${d > 0 ? ` in the next ${d === 1 ? "day" : `${d} days`}` : " today"}.`, passFrom: "From", passDone: (n: number) => `The chain grows! You added link #${n}. 🔗`, inChain: "They're already in the chain. Pick someone new so it keeps spreading!", chainOver: "This chain has ended, but you can still give a shoutout." },
+  es: { give: "Dar un reconocimiento", wall: "Muro", who: "¿A quién quieres reconocer?", whoPh: "Escribe su nombre", what: "¿Qué hizo?", whatPh: "Sé específico. Qué pasó y por qué importó.", value: "¿Qué valor muestra?", skip: "Omitir", from: "¿De parte de quién?", fromPh: "Busca tu nombre", notListed: "No estoy en la lista", yourName: "Tu nombre", send: "Enviar", sending: "Enviando…", sentT: "¡Enviado! 🎉", sentB: (n: string) => `${n} lo recibirá enseguida.`, heldB: "¡Gracias! Se publicará después de una revisión rápida.", another: "Reconocer a alguien más", seeWall: "Ver el muro", text: (n: string) => `O manda un mensaje con un nombre al ${n}`, empty: "Aún no hay reconocimientos. Sé el primero.", private: "Los reconocimientos se revisan antes de publicarse. Habla del trabajo.", report: "Gracias. Lo revisaremos.", limit: "Llegaste al límite de hoy. ¡Gracias por reconocer a tantas personas!", err: "No se envió. Intenta de nuevo.", cel: "Celebrar", today: "Hoy", week: "Esta semana", next: "La próxima semana", newp: "Nuevos en el equipo", bday: "Cumpleaños", anniv: (y: number) => `${y} ${y === 1 ? "año" : "años"} con el equipo`, started: "Empezó", starts: "Empieza", sendOne: "Enviar un reconocimiento", noCel: "No hay nada en las próximas dos semanas.", optNote: "¿Prefieres que tu cumpleaños no aparezca aquí? Usa el enlace en tu correo de cumpleaños o habla con tu gerente.", passT: (n: number) => `Eres el eslabón #${n - 1}. ¡Pásalo!`, passB: (t: string, d: number) => `Haz crecer la ${t}: reconoce a alguien nuevo${d > 0 ? ` en los próximos ${d === 1 ? "día" : `${d} días`}` : " hoy"}.`, passFrom: "De", passDone: (n: number) => `¡La cadena crece! Agregaste el eslabón #${n}. 🔗`, inChain: "Esa persona ya está en la cadena. ¡Elige a alguien nuevo para que siga creciendo!", chainOver: "Esta cadena terminó, pero aún puedes dar un reconocimiento." },
 };
 
 function deviceId() {
@@ -47,7 +49,8 @@ export default function ShoutPage() {
   const t = W[lang];
 
   const load = useCallback(async () => {
-    const r = await fetch(`/api/shout/${encodeURIComponent(token)}?d=${deviceId()}`, { cache: "no-store" }).then((x) => x.json()).catch(() => ({ ok: false }));
+    const passQ = new URLSearchParams(window.location.search).get("pass");
+    const r = await fetch(`/api/shout/${encodeURIComponent(token)}?d=${deviceId()}${passQ ? `&pass=${encodeURIComponent(passQ)}` : ""}`, { cache: "no-store" }).then((x) => x.json()).catch(() => ({ ok: false }));
     if (r.ok) {
       setInfo(r);
       setState("ok");
@@ -61,6 +64,8 @@ export default function ShoutPage() {
         sms: "+14155550123",
         showWall: true,
         celebrate: DEMO_CELEBRATE,
+        challenges: DEMO_CHALLENGES.map((c) => publicChallenge(c, DEMO_SHOUTS, DEMO_ROSTER)),
+        pass: passQ ? { id: passQ, title: "November Appreciation Chain", link: 5, holder: { id: "pp2", name: "Ana R.", team: "Install crew" }, daysLeft: 2 } : null,
         board: demoBoard(),
         wall: DEMO_SHOUTS.filter((s) => s.status === "live").map((s) => ({ id: s.id, to: shortName(s.to.name), team: s.to.department ?? "", from: shortName(s.from.name), value: s.value ?? null, message: s.message, at: s.at, reactions: demoReactions[s.id] ?? {}, mine: [] })),
       });
@@ -105,12 +110,13 @@ export default function ShoutPage() {
     setTimeout(() => setToast(""), 2400);
   };
 
+  const passing = info?.pass && !info.pass.error ? info.pass : null;
   const send = async () => {
-    if (!to || msg.trim().length < 3 || (!from && !typed?.trim())) return;
+    if (!to || msg.trim().length < 3 || (!passing && !from && !typed?.trim())) return;
     setBusy(true);
-    const r = await post({ action: "give", to: to.id, fromId: from?.id, fromName: from ? undefined : typed, value, message: msg, lang });
+    const r = await post({ action: "give", to: to.id, fromId: passing ? passing.holder.id : from?.id, fromName: from || passing ? undefined : typed, value, message: msg, lang, pass: passing?.id });
     setBusy(false);
-    if (!r.ok) return flash(r.reason === "limit" ? t.limit : r.reason === "self" ? "😄" : t.err);
+    if (!r.ok) return flash(r.reason === "limit" ? t.limit : r.reason === "self" ? "😄" : r.reason === "already_in_chain" ? t.inChain : r.reason?.startsWith("chain") ? t.chainOver : t.err);
     try {
       if (from) localStorage.setItem("alza-shout-me", JSON.stringify(from));
     } catch {}
@@ -182,12 +188,20 @@ export default function ShoutPage() {
           <div className="so-panel so-done">
             <div className="so-burst" aria-hidden="true">🎉</div>
             <h2>{t.sentT}</h2>
-            <p>{done === "live" ? t.sentB(to?.name.split(" ")[0] ?? "") : t.heldB}</p>
+            <p>{passing && done === "live" ? t.passDone(passing.link) : done === "live" ? t.sentB(to?.name.split(" ")[0] ?? "") : t.heldB}</p>
             <button className="so-btn" onClick={reset}>{t.another}</button>
             {info.showWall && <button className="so-link" onClick={() => { reset(); setTab("wall"); }}>{t.seeWall}</button>}
           </div>
         ) : (
           <div className="so-panel">
+            {passing && (
+              <div className="so-pass">
+                <span className="so-kicker">🔗 {passing.title}</span>
+                <b style={{ display: "block", marginTop: 2 }}>{t.passT(passing.link)}</b>
+                <span className="so-meta">{t.passB(passing.title, passing.daysLeft)}</span>
+              </div>
+            )}
+            {info.pass?.error && <p className="so-demo">{t.chainOver}</p>}
             <label className="so-label">{t.who}</label>
             <PersonSearch search={search} value={to} onPick={setTo} placeholder={t.whoPh} exclude={from?.id} />
 
@@ -204,7 +218,9 @@ export default function ShoutPage() {
             </div>
 
             <label className="so-label">{t.from}</label>
-            {typed === null ? (
+            {passing ? (
+              <div className="so-picked"><span className="so-av sm" aria-hidden="true">{passing.holder.name.split(" ").map((w) => w[0]).join("").slice(0, 2)}</span><b>{passing.holder.name}</b></div>
+            ) : typed === null ? (
               <>
                 <PersonSearch search={search} value={from} onPick={setFrom} placeholder={t.fromPh} exclude={to?.id} />
                 {!from && <button className="so-link" onClick={() => setTyped("")}>{t.notListed}</button>}
@@ -216,15 +232,19 @@ export default function ShoutPage() {
               </>
             )}
 
-            <button className="so-btn" disabled={busy || !to || msg.trim().length < 3 || (!from && !typed?.trim())} onClick={send}>{busy ? t.sending : t.send}</button>
+            <button className="so-btn" disabled={busy || !to || msg.trim().length < 3 || (!passing && !from && !typed?.trim())} onClick={send}>{busy ? t.sending : passing ? `🔗 ${t.send}` : t.send}</button>
             <p className="so-meta so-fine">{t.private}</p>
             {info.sms && <p className="so-meta so-fine">📱 {t.text(info.sms.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3"))}</p>}
           </div>
         )
       ) : tab === "celebrate" ? (
+        <>
+        <ChallengeCards list={info.challenges.filter((c) => c.kind === "welcome")} lang={lang} />
         <Celebrate list={info.celebrate} t={t} lang={lang} onShout={(c) => { reset(); setTo({ id: c.personId, name: c.name, team: c.team }); setMsg(celebrateLine(c, lang)); setTab("give"); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
+        </>
       ) : (
         <>
+          <ChallengeCards list={info.challenges} lang={lang} />
           {info.board && <Scoreboard b={info.board} />}
           {info.wall.length === 0 ? (
             <div className="so-panel so-meta">{t.empty}</div>

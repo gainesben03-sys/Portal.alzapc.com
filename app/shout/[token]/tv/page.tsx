@@ -4,11 +4,12 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { Scoreboard, ShoutCard, WallItem } from "@/components/shoutui";
+import { ChallengeCards, Scoreboard, ShoutCard, WallItem } from "@/components/shoutui";
+import { PublicChallenge, publicChallenge } from "@/lib/challenges";
 import { Board, Celebration, shortName } from "@/lib/recognition";
-import { DEMO_CELEBRATE, DEMO_SHOUTS, demoBoard, demoReactions } from "@/lib/shoutdemo";
+import { DEMO_CELEBRATE, DEMO_CHALLENGES, DEMO_ROSTER, DEMO_SHOUTS, demoBoard, demoReactions } from "@/lib/shoutdemo";
 
-type Info = { company: string; accent: string; logo: string | null; board: Board | null; wall: WallItem[]; celebrate?: Celebration[] };
+type Info = { company: string; accent: string; logo: string | null; board: Board | null; wall: WallItem[]; celebrate?: Celebration[]; challenges?: PublicChallenge[] };
 
 export default function ShoutTv() {
   const { token } = useParams<{ token: string }>();
@@ -23,7 +24,7 @@ export default function ShoutTv() {
         .then((j) => {
           if (j.ok) setInfo(j);
           else if (j.reason === "demo")
-            setInfo({ company: "Blueprint Studios", accent: "#2b3cf5", logo: null, celebrate: DEMO_CELEBRATE, board: demoBoard(), wall: DEMO_SHOUTS.filter((s) => s.status === "live").map((s) => ({ id: s.id, to: shortName(s.to.name), team: s.to.department ?? "", from: shortName(s.from.name), value: s.value ?? null, message: s.message, at: s.at, reactions: demoReactions[s.id] ?? {}, mine: [] })) });
+            setInfo({ company: "Blueprint Studios", accent: "#2b3cf5", logo: null, celebrate: DEMO_CELEBRATE, challenges: DEMO_CHALLENGES.map((c) => publicChallenge(c, DEMO_SHOUTS, DEMO_ROSTER)), board: demoBoard(), wall: DEMO_SHOUTS.filter((s) => s.status === "live").map((s) => ({ id: s.id, to: shortName(s.to.name), team: s.to.department ?? "", from: shortName(s.from.name), value: s.value ?? null, message: s.message, at: s.at, reactions: demoReactions[s.id] ?? {}, mine: [] })) });
         })
         .catch(() => undefined);
     load();
@@ -60,6 +61,7 @@ export default function ShoutTv() {
           <div className="so-tv-next">{next.map((s) => <ShoutCard key={s.id + i} s={s} />)}</div>
         </section>
         <aside>
+          <ChallengeCards list={(info.challenges ?? []).filter((c) => c.kind !== "welcome")} big />
           {info.board && <Scoreboard b={info.board} big />}
           {qr && (
             <div className="so-tv-qr">

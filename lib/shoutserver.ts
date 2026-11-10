@@ -7,6 +7,8 @@ import { advisorEmails, pushTo } from "./push";
 import { CelebrateKind, celebrateSender, fillCelebrate, RecognitionSettings, shortName, Shoutout, ShoutChannel, templateFor } from "./recognition";
 import { emailLogoUrl } from "./brand";
 import { funFact } from "./onthisday";
+import type { Challenge } from "./challenges";
+import { checkGoals } from "./challengeserver";
 import { Brand, celebrationEmail, festiveEmail } from "./hires";
 import { sendEmail } from "./server";
 import type { TeamMember } from "./team";
@@ -80,7 +82,7 @@ export async function createShout(
   db: SupabaseClient,
   site: string,
   c: ShoutClient,
-  input: { to: TeamMember; from: Shoutout["from"]; value?: string; message: string; channel: ShoutChannel; lang?: "en" | "es" }
+  input: { to: TeamMember; from: Shoutout["from"]; value?: string; message: string; channel: ShoutChannel; lang?: "en" | "es"; challengeId?: string; parentId?: string; depth?: number }
 ): Promise<Shoutout> {
   const message = input.message.replace(/\s+/g, " ").trim().slice(0, 280);
   const value = input.value && c.rec.values.includes(input.value) ? input.value : undefined;
@@ -99,11 +101,16 @@ export async function createShout(
     heldReason: held ? check.reason ?? "Check the sender" : undefined,
     at: new Date().toISOString(),
     lang: input.lang,
+    challengeId: input.challengeId,
+    parentId: input.parentId,
+    depth: input.depth,
   };
   const { error } = await db.from("shoutouts").insert({ id: s.id, client_id: c.id, data: s });
   if (error) throw new Error(error.message);
-  if (s.status === "live") await tellThem(db, site, c, s, input.to);
-  else await tellReviewers(db, site, c, s);
+  if (s.status === "live") {
+    await tellThem(db, site, c, s, input.to);
+    await checkGoals(db, site, c.id, c.name).catch(() => undefined);
+  } else await tellReviewers(db, site, c, s);
   return s;
 }
 
@@ -120,11 +127,23 @@ export async function tellThem(db: SupabaseClient, site: string, c: ShoutClient,
   const first = person.name.split(" ")[0];
   const line = `${from} gave you a shoutout${s.value ? ` for ${s.value}` : ""}: "${s.message}"`;
   const sender = celebrateSender(c.rec, c.name);
+  // part of an Appreciation Chain? Ask them to pass it on
+  let chain: { title: string; link: number; due: string; url: string } | null = null;
+  if (s.challengeId) {
+    const { data: ch } = await db.from("challenges").select("data").eq("id", s.challengeId).maybeSingle();
+    const cc = ch?.data as Challenge | undefined;
+    if (cc?.kind === "chain") {
+      const due = new Date(new Date(s.at).getTime() + (cc.chain?.windowDays ?? 3) * 864e5);
+      chain = { title: cc.title, link: s.depth ?? 1, due: due.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", timeZone: "America/Los_Angeles" }), url: `${site}/shout/${c.rec.token}?pass=${s.id}` };
+    }
+  }
   if (person.email) {
-    const m = festiveEmail(brandFor(c, site), { emoji: "&#127881;&#128079;&#127775;", kicker: s.value ? `Shoutout · ${s.value}` : "You got a shoutout", headline: `${from} gave you a shoutout!`, quote: s.message, paragraphs: [`Hi ${first}, someone noticed. 🙌`, "Pass it on: recognize someone who made your day better."], cta: { label: "🎉 See it on the wall", url: link }, optOut: { url: optOutUrl(site, c.id, person.id), label: OPT_LABEL } });
+    const m = chain
+      ? festiveEmail(brandFor(c, site), { emoji: "&#128279;&#127881;&#128079;", kicker: `${chain.title} · link #${chain.link}`, headline: `${from} passed you the chain!`, quote: s.message, paragraphs: [`Hi ${first}, you're link #${chain.link} in the ${chain.title}. 🔗`, `Don't let the chain of recognition end with you. Recognize someone by ${chain.due} and keep it growing.`], cta: { label: "🔗 Pass it on", url: chain.url }, optOut: { url: optOutUrl(site, c.id, person.id), label: OPT_LABEL } })
+      : festiveEmail(brandFor(c, site), { emoji: "&#127881;&#128079;&#127775;", kicker: s.value ? `Shoutout · ${s.value}` : "You got a shoutout", headline: `${from} gave you a shoutout!`, quote: s.message, paragraphs: [`Hi ${first}, someone noticed. 🙌`, "Pass it on: recognize someone who made your day better."], cta: { label: "🎉 See it on the wall", url: link }, optOut: { url: optOutUrl(site, c.id, person.id), label: OPT_LABEL } });
     await sendEmail({ to: [person.email], subject: `🎉 ${from} gave you a shoutout`, text: m.text, html: m.html, ...sender }).catch(() => undefined);
   }
-  if (person.cell && smsReady()) await sendSms(db, person.cell, c.rec.smsNumber, `${c.name}: ${line} ${link}\nReply STOP to stop texts.`);
+  if (person.cell && smsReady()) await sendSms(db, person.cell, c.rec.smsNumber, chain ? `${c.name}: ${line} 🔗 You're link #${chain.link} in the ${chain.title}. Pass it on by ${chain.due}: ${chain.url}\nReply STOP to stop texts.` : `${c.name}: ${line} ${link}\nReply STOP to stop texts.`);
   if (c.rec.notifyManagers !== false && person.managerEmail && person.managerEmail !== person.email) {
     const m = celebrationEmail(brandFor(c, site), "Your team", `${first} got a shoutout`, [`${person.name} got a shoutout from ${from}${s.value ? ` for ${s.value}` : ""}:`, `"${s.message}"`, `A quick "I saw this, nice work" from you goes a long way.`], { label: "See it", url: link });
     await sendEmail({ to: [person.managerEmail], subject: `${first} got a shoutout`, text: m.text, html: m.html, ...sender }).catch(() => undefined);

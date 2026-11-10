@@ -6,19 +6,20 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
 import { ClientNav, ClientTopbar, Sheet, Toast, useGuard, useToast } from "@/components/ui";
-import { Pick, PersonSearch, Scoreboard, ShoutCard, WallItem } from "@/components/shoutui";
+import { ChallengeCards, Pick, PersonSearch, Scoreboard, ShoutCard, WallItem } from "@/components/shoutui";
+import { Baton, Challenge, CHALLENGE_INFO, ChallengeKind, chainStats, challengeLive, publicChallenge } from "@/lib/challenges";
 import { useStore } from "@/lib/store";
 import { authHeader, LIVE, sb } from "@/lib/supabase";
 import { CELEBRATE_FILL_INS, CelebrateKind, CelebrateTemplate, celebrateSender, DEFAULT_CELEBRATE_TEMPLATES, DEFAULT_VALUES, fillCelebrate, MAX_MESSAGE, newRecognition, randomToken, REACTIONS, RecognitionSettings, scoreboard, Shoutout, STARTERS, templateFor } from "@/lib/recognition";
-import { DEMO_PEOPLE, DEMO_SHOUTS, demoReactions } from "@/lib/shoutdemo";
+import { DEMO_CHALLENGES, DEMO_PEOPLE, DEMO_SHOUTS, demoReactions } from "@/lib/shoutdemo";
 
 type Rx = { shout_id: string; who: string; emoji: string };
-type Tab = "wall" | "board" | "review" | "setup";
+type Tab = "wall" | "board" | "challenges" | "review" | "setup";
 
 export default function Recognition() {
   const { client: clientId } = useParams<{ client: string }>();
   const ok = useGuard("client", clientId);
-  const { getClient, config, patch, viewer, me } = useStore();
+  const { getClient, config, patch, viewer, me, people } = useStore();
   const client = getClient(clientId);
   const toast = useToast();
   const cfg = config[clientId];
@@ -28,18 +29,23 @@ export default function Recognition() {
   const [tab, setTab] = useState<Tab>("wall");
   const [list, setList] = useState<Shoutout[]>([]);
   const [rx, setRx] = useState<Rx[]>([]);
-  const [giving, setGiving] = useState(false);
+  const [giving, setGiving] = useState<false | { pass?: Baton & { title: string } }>(false);
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [starting, setStarting] = useState(false);
   const myKey = `e:${(me?.email ?? "ben").toLowerCase()}`;
 
   const load = useCallback(async () => {
     if (!LIVE) {
       setList(DEMO_SHOUTS);
+      setChallenges(DEMO_CHALLENGES);
       setRx(Object.entries(demoReactions).flatMap(([id, m]) => Object.entries(m).flatMap(([emoji, n]) => Array.from({ length: n }, (_, k) => ({ shout_id: id, who: `x${k}`, emoji })))));
       return;
     }
     const { data } = await sb().from("shoutouts").select("data").eq("client_id", clientId).order("created_at", { ascending: false }).limit(400);
     const l = (data ?? []).map((r) => r.data as Shoutout);
     setList(l);
+    const { data: chs } = await sb().from("challenges").select("data").eq("client_id", clientId).order("created_at", { ascending: false }).limit(40);
+    setChallenges((chs ?? []).map((r) => r.data as Challenge));
     const ids = l.filter((s) => s.status === "live").slice(0, 120).map((s) => s.id);
     if (ids.length) {
       const { data: r } = await sb().from("shout_reactions").select("shout_id, who, emoji").in("shout_id", ids);
@@ -48,7 +54,9 @@ export default function Recognition() {
   }, [clientId]);
   useEffect(() => {
     if (ok && rec?.token) load();
-    if (new URLSearchParams(window.location.search).get("review")) setTab("review");
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get("review")) setTab("review");
+    if (sp.get("tab") === "challenges") setTab("challenges");
   }, [ok, rec?.token, load]);
 
   const since = useMemo(() => {
@@ -62,6 +70,13 @@ export default function Recognition() {
   const setRec = (p: Partial<RecognitionSettings>) => patch({ config: { ...config, [clientId]: { ...cfg, recognition: { ...(rec ?? newRecognition()), ...p } } } });
   const live = list.filter((s) => s.status === "live");
   const held = list.filter((s) => s.status === "held");
+  const roster = people.filter((p) => p.clientId === clientId);
+  const manages = roster.some((p) => !!me?.email && p.managerEmail.toLowerCase() === me.email.toLowerCase());
+  const canStart = exec || manages;
+  const myPerson = roster.find((p) => !!me?.email && p.email?.toLowerCase() === me.email.toLowerCase());
+  const activeCh = challenges.filter((c) => challengeLive(c));
+  // batons I'm holding in an Appreciation Chain
+  const myBatons = activeCh.filter((c) => c.kind === "chain").flatMap((c) => chainStats(c, list).open.filter((b) => myPerson && b.personId === myPerson.id).map((b) => ({ ...b, title: c.title })));
   const board = scoreboard(list, rec?.values ?? DEFAULT_VALUES, since);
   const toItem = (s: Shoutout): WallItem => ({
     id: s.id,
@@ -109,7 +124,7 @@ export default function Recognition() {
             <h1 style={{ margin: 0 }}>Shoutouts</h1>
             <p className="muted" style={{ margin: "4px 0 0" }}>Recognition from anyone, by QR code, text or right here.</p>
           </div>
-          {rec?.token && <button className="btn primary" onClick={() => setGiving(true)}>🎉 Give one</button>}
+          {rec?.token && <button className="btn primary" onClick={() => setGiving({})}>🎉 Give one</button>}
         </div>
         {!on && isAdvisor && <div className="pr-draft tiny">Shoutouts is off for {client.name}. Turn it on in their settings under Modules.</div>}
 
@@ -124,10 +139,39 @@ export default function Recognition() {
             <div className="pr-tabs section" role="tablist">
               <button className={tab === "wall" ? "on" : ""} onClick={() => setTab("wall")}>Wall</button>
               <button className={tab === "board" ? "on" : ""} onClick={() => setTab("board")}>Scoreboard</button>
+              <button className={tab === "challenges" ? "on" : ""} onClick={() => setTab("challenges")}>Challenges{activeCh.length ? ` · ${activeCh.length}` : ""}</button>
               {exec && <button className={tab === "review" ? "on" : ""} onClick={() => setTab("review")}>To review{held.length ? ` · ${held.length}` : ""}</button>}
               {isAdvisor && <button className={tab === "setup" ? "on" : ""} onClick={() => setTab("setup")}>Set up</button>}
             </div>
+            {myBatons.map((b) => (
+              <div key={b.shoutId} className="so-pass section">
+                <span className="so-kicker">🔗 {b.title}</span>
+                <b style={{ display: "block", marginTop: 2 }}>You&apos;re holding link #{b.link}. Don&apos;t let it end with you!</b>
+                <div className="row" style={{ gap: 10, marginTop: 8, alignItems: "center" }}>
+                  <span className="tiny muted grow">{b.daysLeft <= 0 ? "Last day to pass it on" : `${b.daysLeft} ${b.daysLeft === 1 ? "day" : "days"} left to pass it on`}</span>
+                  <button className="btn primary sm" onClick={() => setGiving({ pass: b })}>🔗 Pass it on</button>
+                </div>
+              </div>
+            ))}
             <div className="section">
+              {tab === "challenges" && (
+                <Challenges
+                  list={challenges}
+                  shouts={list}
+                  roster={roster}
+                  canStart={canStart}
+                  canEnd={(c) => exec || (!!me?.email && c.createdBy.email?.toLowerCase() === me.email.toLowerCase())}
+                  onStart={() => setStarting(true)}
+                  onEnd={async (c) => {
+                    if (!confirm(`End "${c.title}"?`)) return;
+                    const j = await api({ action: "endChallenge", id: c.id });
+                    if (!j.ok) return toast.show("Couldn't end it");
+                    setChallenges(challenges.map((x) => (x.id === c.id ? { ...x, status: "ended" } : x)));
+                    toast.show("Challenge ended");
+                  }}
+                />
+              )}
+              {tab === "wall" && activeCh.length > 0 && <ChallengeCards list={activeCh.map((c) => publicChallenge(c, list, roster))} />}
               {tab === "wall" &&
                 (live.length === 0 ? (
                   <div className="card small muted">No shoutouts yet. Print the QR code and be the first.</div>
@@ -180,12 +224,34 @@ export default function Recognition() {
         <GiveSheet
           token={rec.token}
           values={rec.values}
+          pass={giving.pass}
           onClose={() => setGiving(false)}
           onSend={async (body) => {
-            const j = await api({ action: "give", ...body });
-            if (!j.ok) return j.reason === "self" ? "You can't give yourself one 😄" : "That didn't send. Try again.";
+            const j = await api({ action: "give", ...body, pass: giving.pass?.shoutId });
+            if (!j.ok) return j.reason === "self" ? "You can't give yourself one 😄" : j.reason === "already_in_chain" ? "They're already in the chain. Pick someone new so it keeps spreading!" : j.reason?.startsWith("chain") ? "This chain has ended." : "That didn't send. Try again.";
             setGiving(false);
-            toast.show(j.demo ? "Sent (demo)" : j.status === "held" ? "Thanks! It'll post after a quick check." : "Sent! 🎉");
+            toast.show(j.demo ? "Sent (demo)" : j.status === "held" ? "Thanks! It'll post after a quick check." : giving.pass ? `The chain grows! Link #${giving.pass.link + 1} 🔗` : "Sent! 🎉");
+            load();
+            return "";
+          }}
+        />
+      )}
+      {starting && rec && (
+        <StartSheet
+          token={rec.token}
+          values={rec.values}
+          hasWelcome={activeCh.some((c) => c.kind === "welcome")}
+          onClose={() => setStarting(false)}
+          onStart={async (body) => {
+            const j = await api({ action: "startChallenge", ...body });
+            if (!j.ok) return j.reason === "first_link" ? "Pick who gets the first link and write the shoutout." : j.reason === "welcome_on" ? "A Welcome Wagon is already running." : j.reason === "forbidden" ? "Only leaders and managers can start challenges." : "Couldn't start it. Try again.";
+            setStarting(false);
+            if (j.demo) {
+              toast.show("Started (demo)");
+              return "";
+            }
+            toast.show(body.kind === "chain" ? "Chain started! 🔗 The first link is on its way." : "Challenge started! 🎉");
+            setTab("challenges");
             load();
             return "";
           }}
@@ -193,6 +259,163 @@ export default function Recognition() {
       )}
       <Toast msg={toast.msg} onDone={toast.clear} />
     </div>
+  );
+}
+
+/** Live and past challenges, with the chain drawn out link by link. */
+function Challenges({ list, shouts, roster, canStart, canEnd, onStart, onEnd }: { list: Challenge[]; shouts: Shoutout[]; roster: { id: string; name: string; department?: string; location?: string; hireDate?: string; active?: boolean }[]; canStart: boolean; canEnd: (c: Challenge) => boolean; onStart: () => void; onEnd: (c: Challenge) => void }) {
+  const [open, setOpen] = useState<string | null>(null);
+  const live = list.filter((c) => challengeLive(c));
+  const past = list.filter((c) => !challengeLive(c));
+  return (
+    <>
+      <div className="row" style={{ alignItems: "center", gap: 10, marginBottom: 10 }}>
+        <p className="small muted grow" style={{ margin: 0 }}>Friendly challenges that keep recognition going. Everyone sees them on the wall and the TV.</p>
+        {canStart && <button className="btn primary sm" onClick={onStart}>+ Start a challenge</button>}
+      </div>
+      {live.length === 0 && <div className="card small muted">No challenges running.{canStart ? " Start an Appreciation Chain: it's the easiest way to get everyone recognizing each other." : ""}</div>}
+      {live.map((c) => {
+        const pc = publicChallenge(c, shouts, roster);
+        const st = c.kind === "chain" ? chainStats(c, shouts) : null;
+        return (
+          <div key={c.id} className="card so-chcard">
+            <ChallengeCards list={[pc]} />
+            <div className="tiny muted">Started by {c.createdBy.name} · {new Date(c.startedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}{c.endsAt ? ` · ends ${new Date(c.endsAt + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : ""}{c.kind === "chain" ? ` · ${c.chain?.windowDays ?? 3} days to pass it on` : ""}</div>
+            {st && (
+              <>
+                {st.open.length > 0 && (
+                  <div className="so-batons">
+                    <b className="tiny">Holding the chain right now</b>
+                    {st.open.map((b) => <span key={b.shoutId} className="chip">{b.name} · link #{b.link} · {b.daysLeft <= 0 ? "last day" : `${b.daysLeft}d left`}</span>)}
+                  </div>
+                )}
+                <button className="linklike tiny" onClick={() => setOpen(open === c.id ? null : c.id)}>{open === c.id ? "Hide the chain" : `See the chain (${st.links} links)`}</button>
+                {open === c.id && (
+                  <div className="so-tree">
+                    {st.tree.map((n) => (
+                      <div key={n.id} className="so-node" style={{ marginLeft: Math.min(n.depth - 1, 8) * 14 }}>
+                        <span className={`so-node-dot ${n.passed ? "passed" : n.expired ? "quiet" : "open"}`} />
+                        <span className="small"><b>{n.from.split(" ")[0]}</b> → <b>{n.to}</b>{n.team ? <span className="tiny muted"> · {n.team}</span> : null}</span>
+                        <span className="tiny muted" style={{ display: "block" }}>“{n.message}”</span>
+                      </div>
+                    ))}
+                    <p className="tiny muted" style={{ margin: "6px 0 0" }}>🟢 passed it on · 🟡 has it now · ⚪ went quiet</p>
+                  </div>
+                )}
+              </>
+            )}
+            {canEnd(c) && <div style={{ textAlign: "right" }}><button className="linklike tiny" style={{ color: "var(--red)" }} onClick={() => onEnd(c)}>End challenge</button></div>}
+          </div>
+        );
+      })}
+      {past.length > 0 && (
+        <>
+          <div className="section-head section"><h2>Past challenges</h2></div>
+          <div className="card">
+            {past.map((c) => {
+              const pc = publicChallenge(c, shouts, roster);
+              return (
+                <div key={c.id} className="row" style={{ padding: "8px 0" }}>
+                  <span className="grow small"><b>{CHALLENGE_INFO[c.kind].icon} {c.title}</b></span>
+                  <span className="tiny muted">{pc.chain ? `${pc.chain.links} links · longest ${pc.chain.longest}` : pc.goal ? `${pc.goal.count}/${pc.goal.target}${pc.goal.reached ? " 🏆" : ""}` : ""}</span>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+type StartBody = { kind: ChallengeKind; title: string; endsAt?: string; windowDays?: number; target?: number; reward?: string; value?: string; welcomeTarget?: number; welcomeDays?: number; to?: string; message?: string };
+
+function StartSheet({ token, values, hasWelcome, onClose, onStart }: { token: string; values: string[]; hasWelcome: boolean; onClose: () => void; onStart: (b: StartBody) => Promise<string> }) {
+  const [kind, setKind] = useState<ChallengeKind>("chain");
+  const inDays = (n: number) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
+  const [title, setTitle] = useState("");
+  const [endsAt, setEndsAt] = useState(inDays(30));
+  const [windowDays, setWindowDays] = useState(3);
+  const [target, setTarget] = useState(50);
+  const [reward, setReward] = useState("");
+  const [value, setValue] = useState("");
+  const [wt, setWt] = useState(5);
+  const [wd, setWd] = useState(30);
+  const [to, setTo] = useState<Pick | null>(null);
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const search = useCallback(
+    async (q: string): Promise<Pick[]> => {
+      if (!LIVE) return DEMO_PEOPLE.filter((p) => p.name.toLowerCase().includes(q.toLowerCase()));
+      const r = await fetch(`/api/shout/${encodeURIComponent(token)}?q=${encodeURIComponent(q)}`).then((x) => x.json()).catch(() => ({}));
+      return r.people ?? [];
+    },
+    [token]
+  );
+  const month = new Date().toLocaleDateString("en-US", { month: "long" });
+  const placeholder = kind === "chain" ? `${month} Appreciation Chain` : kind === "goal" ? "100 shoutouts by Thanksgiving" : "Welcome Wagon";
+  return (
+    <Sheet title="Start a challenge" onClose={onClose}>
+      <div className="so-kinds">
+        {(["chain", "goal", "welcome"] as ChallengeKind[]).map((k) => (
+          <button key={k} className={kind === k ? "on" : ""} disabled={k === "welcome" && hasWelcome} onClick={() => setKind(k)}>
+            <span aria-hidden="true">{CHALLENGE_INFO[k].icon}</span>
+            <b>{CHALLENGE_INFO[k].name}</b>
+            <span className="tiny muted">{k === "welcome" && hasWelcome ? "Already running" : CHALLENGE_INFO[k].blurb}</span>
+          </button>
+        ))}
+      </div>
+      <label className="f">Name<input className="f" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={placeholder} maxLength={80} /></label>
+      {kind === "chain" && (
+        <>
+          <div className="two">
+            <label className="f">Days to pass it on
+              <select className="f" value={windowDays} onChange={(e) => setWindowDays(Number(e.target.value))}>{[1, 2, 3, 5, 7].map((d) => <option key={d} value={d}>{d} {d === 1 ? "day" : "days"}</option>)}</select>
+            </label>
+            <label className="f">Ends<input className="f" type="date" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} /></label>
+          </div>
+          <span className="flabel">You start it: who gets the first link?</span>
+          <PersonSearch search={search} value={to} onPick={setTo} placeholder="Start typing their name" />
+          <textarea className="f" style={{ minHeight: 70, marginTop: 8 }} value={msg} onChange={(e) => setMsg(e.target.value.slice(0, MAX_MESSAGE))} placeholder="Your shoutout to them" />
+          <p className="tiny muted" style={{ margin: "4px 0 0" }}>They get it with &quot;Don&apos;t let the chain of recognition end with you,&quot; and {windowDays} {windowDays === 1 ? "day" : "days"} to pass it on to someone new. Anyone can pass it to more than one person, so it can branch. You&apos;ll see the streaks on the wall, the TV and here.</p>
+        </>
+      )}
+      {kind === "goal" && (
+        <>
+          <div className="two">
+            <label className="f">Shoutouts<input className="f" type="number" min={5} max={5000} value={target} onChange={(e) => setTarget(Number(e.target.value))} /></label>
+            <label className="f">By<input className="f" type="date" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} /></label>
+          </div>
+          <label className="f">Team reward <span className="tiny muted">(optional)</span><input className="f" value={reward} onChange={(e) => setReward(e.target.value)} placeholder="e.g. Taco lunch for everyone 🌮" maxLength={120} /></label>
+          <label className="f">Only count one value <span className="tiny muted">(optional)</span>
+            <select className="f" value={value} onChange={(e) => setValue(e.target.value)}><option value="">Any shoutout</option>{values.map((v) => <option key={v} value={v}>{v}</option>)}</select>
+          </label>
+        </>
+      )}
+      {kind === "welcome" && (
+        <div className="two">
+          <label className="f">Shoutouts per new person<input className="f" type="number" min={1} max={20} value={wt} onChange={(e) => setWt(Number(e.target.value))} /></label>
+          <label className="f">In their first<select className="f" value={wd} onChange={(e) => setWd(Number(e.target.value))}>{[14, 30, 60, 90].map((d) => <option key={d} value={d}>{d} days</option>)}</select></label>
+        </div>
+      )}
+      {kind === "welcome" && <p className="tiny muted" style={{ margin: "4px 0 0" }}>Runs until you end it. New people show on the Celebrate tab and the wall with how many welcomes they&apos;ve had, so the team can see who still needs some.</p>}
+      {err && <p className="small" style={{ color: "var(--red)" }}>{err}</p>}
+      <div className="sheet-actions">
+        <button className="btn ghost sm" onClick={onClose}>Cancel</button>
+        <button
+          className="btn primary sm"
+          disabled={busy || (kind === "chain" && (!to || msg.trim().length < 3))}
+          onClick={async () => {
+            setBusy(true);
+            setErr(await onStart({ kind, title: title.trim() || placeholder, endsAt: kind === "welcome" ? undefined : endsAt, windowDays, target, reward, value: value || undefined, welcomeTarget: wt, welcomeDays: wd, to: to?.id, message: msg }));
+            setBusy(false);
+          }}
+        >
+          {busy ? "Starting…" : kind === "chain" ? "🔗 Start the chain" : "Start"}
+        </button>
+      </div>
+    </Sheet>
   );
 }
 
@@ -215,7 +438,7 @@ function Missing({ list }: { list: Shoutout[] }) {
   );
 }
 
-function GiveSheet({ token, values, onClose, onSend }: { token: string; values: string[]; onClose: () => void; onSend: (b: { to: string; value?: string; message: string }) => Promise<string> }) {
+function GiveSheet({ token, values, pass, onClose, onSend }: { token: string; values: string[]; pass?: Baton & { title: string }; onClose: () => void; onSend: (b: { to: string; value?: string; message: string }) => Promise<string> }) {
   const [to, setTo] = useState<Pick | null>(null);
   const [msg, setMsg] = useState("");
   const [value, setValue] = useState<string | null>(null);
@@ -230,7 +453,8 @@ function GiveSheet({ token, values, onClose, onSend }: { token: string; values: 
     [token]
   );
   return (
-    <Sheet title="Give a shoutout" onClose={onClose}>
+    <Sheet title={pass ? "Pass on the chain 🔗" : "Give a shoutout"} onClose={onClose}>
+      {pass && <p className="small" style={{ marginTop: 0 }}>You&apos;re link #{pass.link} in the <b>{pass.title}</b>. Recognize someone new to keep it growing.</p>}
       <span className="flabel">Who</span>
       <PersonSearch search={search} value={to} onPick={setTo} placeholder="Start typing their name" autoFocus />
       <span className="flabel" style={{ marginTop: 12 }}>What did they do?</span>

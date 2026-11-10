@@ -2,7 +2,9 @@
 //   1. Task reminders, overdue notices and escalations, following Ben's reminder rules.
 //   2. HR Huddle recap emails for clients whose Huddle day is today.
 // Each email is logged in email_log so a re-run never double-sends.
-import { celebrations } from "@/lib/recognition";
+import { celebrateSender, celebrations } from "@/lib/recognition";
+import { Challenge, chainStats, challengeLive } from "@/lib/challenges";
+import { shoutsSince } from "@/lib/challengeserver";
 import { celebrateMail, localToday } from "@/lib/shoutserver";
 import { NextResponse } from "next/server";
 import { Action, Client, DEFAULT_RULES, fmt, Project, reminderPlan, Rules, toISO, today } from "@/lib/data";
@@ -305,6 +307,38 @@ export async function GET(req: Request) {
         if (!p?.email) continue;
         const m = await celebrateMail(sc, PORTAL_URL, p, cel.kind, cel.years);
         await once(`cel:${cel.kind}:${c.id}:${p.id}:${day}`, () => sendEmail({ to: [p.email!], subject: m.subject, text: m.text, html: m.html, fromName: m.fromName, fromBox: m.fromBox }));
+      }
+    }
+  }
+
+  // ---------- 7. Appreciation Chain: remind whoever holds the baton when about half their time is left
+  {
+    const chR = await db.from("challenges").select("id, client_id, data");
+    if (!chR.error) {
+      for (const row of chR.data ?? []) {
+        const ch = row.data as Challenge;
+        if (ch.kind !== "chain" || !challengeLive(ch)) continue;
+        const cl = (clientsR.data ?? []).find((x) => x.id === row.client_id);
+        const cfg = (cl?.config ?? {}) as ClientConfig;
+        if (!cl || !cfg.recognition?.token || !(cfg.modules as Record<string, boolean> | undefined)?.recognition) continue;
+        const shouts = await shoutsSince(db, cl.id, ch.startedAt);
+        const people = rows(peopleR) as unknown as TeamMember[];
+        const win = ch.chain?.windowDays ?? 3;
+        for (const b of chainStats(ch, shouts).open) {
+          const left = b.daysLeft;
+          if (left !== Math.max(1, Math.floor(win / 2))) continue;
+          const p = people.find((x) => x.id === b.personId);
+          if (!p?.email) continue;
+          const url = `${PORTAL_URL}/shout/${cfg.recognition.token}?pass=${b.shoutId}`;
+          await once(`chain:${b.shoutId}:remind`, () =>
+            sendEmail({
+              to: [p.email!],
+              subject: `🔗 ${left === 1 ? "1 day" : `${left} days`} left to pass on the ${ch.title}`,
+              text: `Hi ${p.name.split(" ")[0]},\n\nYou're holding link #${b.link} in the ${ch.title}. Don't let the chain of recognition end with you: recognize someone in the next ${left === 1 ? "day" : `${left} days`}.\n\nPass it on: ${url}`,
+              ...celebrateSender(cfg.recognition, cl.name),
+            })
+          );
+        }
       }
     }
   }

@@ -18,6 +18,9 @@ export interface Shoutout {
   reports?: number;
   at: string;
   lang?: "en" | "es";
+  challengeId?: string; // part of a challenge (Appreciation Chain, Team Goal)
+  parentId?: string; // chain: the shoutout this one passes on from
+  depth?: number; // chain: link number along this branch (1 = the first)
 }
 
 export interface RecognitionSettings {

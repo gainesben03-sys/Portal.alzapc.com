@@ -1031,3 +1031,45 @@ audio.rv-media { background: none; }
 .so-auto-row .linklike { white-space: nowrap; flex: none; }
 .so-fact { background: var(--card); border-left: 4px solid var(--accent); border-radius: 6px; padding: 10px 12px; margin: 4px 0 10px; }
 .so-quote { background: #fff6e9; color: #1c1a19; border-radius: 8px; padding: 10px 12px; font-family: var(--serif, Georgia, serif); }
+
+/* challenges */
+.so-ch-list { display: grid; gap: 10px; margin-bottom: 12px; }
+.so-ch { display: flex; gap: 12px; align-items: flex-start; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
+.so-ch.chain { background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 9%, var(--card)), var(--card)); }
+.so-ch.goal.done { border-color: #f5b83d; background: linear-gradient(135deg, #fff6e0, var(--card)); }
+.so-ch-ic { font-size: 28px; line-height: 1; flex: none; }
+.so-ch-stats { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 4px; font-size: 13px; color: var(--muted); }
+.so-ch-stats em { font-style: normal; font-weight: 800; color: var(--ink); font-size: 15px; }
+.so-chainviz { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 8px; align-items: center; }
+.so-chainviz i { width: 16px; height: 10px; border: 2.5px solid var(--accent); border-radius: 8px; margin-right: -6px; background: transparent; }
+.so-chainviz i:nth-child(even) { transform: translateY(2px); }
+.so-chainviz span { margin-left: 10px; font-size: 12px; font-weight: 700; color: var(--accent); }
+.so-goalbar { height: 12px; border-radius: 12px; background: var(--soft); overflow: hidden; margin-top: 8px; }
+.so-goalbar i { display: block; height: 100%; border-radius: 12px; background: linear-gradient(90deg, var(--accent), #2ec4b6); transition: width .6s; }
+.so-ch.goal.done .so-goalbar i { background: linear-gradient(90deg, #f5b83d, #ff6f61); }
+.so-wagon { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.so-wagon span { background: var(--soft); border-radius: 999px; padding: 4px 10px; font-size: 13px; }
+.so-wagon span em { font-style: normal; font-weight: 800; color: var(--accent); }
+.so-wagon span.full { background: var(--green-bg); }
+.so-wagon span.full em { color: var(--green); }
+.so-pass { background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 14%, var(--card)), var(--card)); border: 1.5px solid var(--accent); border-radius: 16px; padding: 14px; margin-bottom: 12px; }
+.so-pass b { font-size: 17px; }
+.so-ch-list.big .so-ch { padding: 2vh 1.4vw; }
+.so-ch-list.big b { font-size: 2.4vh; }
+.so-ch-list.big .so-ch-stats { font-size: 1.8vh; }
+.so-tv .so-ch { background: var(--card); }
+.so-chcard { margin: 0 0 12px; }
+.so-chcard .so-ch-list { margin-bottom: 6px; }
+.so-chcard .so-ch { border: 0; padding: 4px 0; background: none; }
+.so-batons { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 8px 0; }
+.so-tree { margin-top: 8px; border-left: 2px dashed var(--line); padding-left: 10px; }
+.so-node { position: relative; padding: 6px 0 6px 16px; }
+.so-node-dot { position: absolute; left: 0; top: 11px; width: 10px; height: 10px; border-radius: 50%; }
+.so-node-dot.passed { background: #2f9e44; }
+.so-node-dot.open { background: #f5b83d; }
+.so-node-dot.quiet { background: #ced4da; }
+.so-kinds { display: grid; gap: 8px; margin-bottom: 12px; }
+.so-kinds button { display: grid; grid-template-columns: 30px 1fr; column-gap: 8px; text-align: left; border: 1.5px solid var(--line); background: var(--card); border-radius: 12px; padding: 10px 12px; font: inherit; color: var(--ink); cursor: pointer; }
+.so-kinds button > span:first-child { grid-row: span 2; font-size: 22px; }
+.so-kinds button.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, var(--card)); }
+.so-kinds button:disabled { opacity: .5; cursor: default; }

@@ -4,6 +4,7 @@
 // and the person search.
 import { useEffect, useRef, useState } from "react";
 import { ago, Board, REACTIONS } from "@/lib/recognition";
+import type { PublicChallenge } from "@/lib/challenges";
 
 export type WallItem = { id: string; to: string; team: string; from: string; value: string | null; message: string; at: string; reactions: Record<string, number>; mine: string[]; status?: string; heldReason?: string };
 export type Pick = { id: string; name: string; team: string };
@@ -123,6 +124,62 @@ export function PersonSearch({ search, value, onPick, placeholder, exclude, auto
         </div>
       )}
       {q.trim().length >= 2 && hits.length === 0 && <p className="so-meta" style={{ margin: "6px 2px 0" }}>No match yet. Try their first name.</p>}
+    </div>
+  );
+}
+
+// ---------- challenges ----------
+
+/** Live challenges as cards: the chain's length and streak, a goal's progress bar, the Welcome Wagon. */
+export function ChallengeCards({ list, lang = "en", big }: { list: PublicChallenge[]; lang?: "en" | "es"; big?: boolean }) {
+  if (!list.length) return null;
+  const es = lang === "es";
+  return (
+    <div className={`so-ch-list ${big ? "big" : ""}`}>
+      {list.map((c) =>
+        c.kind === "chain" && c.chain ? (
+          <div key={c.id} className="so-ch chain">
+            <span className="so-ch-ic" aria-hidden="true">🔗</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <b>{c.title}</b>
+              <div className="so-ch-stats">
+                <span><em>{c.chain.links}</em>{es ? " eslabones" : c.chain.links === 1 ? " link" : " links"}</span>
+                <span><em>{c.chain.longest}</em>{es ? " racha más larga" : " longest streak"}</span>
+                {c.chain.teams > 1 && <span><em>{c.chain.teams}</em>{es ? " equipos" : " teams"}</span>}
+                {c.chain.open > 0 && <span><em>{c.chain.open}</em>{es ? " pasándolo ahora" : " passing it on now"}</span>}
+              </div>
+              <div className="so-chainviz" aria-hidden="true">{Array.from({ length: Math.min(c.chain.links, 24) }, (_, i) => <i key={i} />)}{c.chain.links > 24 && <span>+{c.chain.links - 24}</span>}</div>
+            </div>
+          </div>
+        ) : c.kind === "goal" && c.goal ? (
+          <div key={c.id} className={`so-ch goal ${c.goal.reached ? "done" : ""}`}>
+            <span className="so-ch-ic" aria-hidden="true">{c.goal.reached ? "🏆" : "🎯"}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <b>{c.title}</b>
+              <div className="so-goalbar"><i style={{ width: `${c.goal.pct}%` }} /></div>
+              <div className="so-ch-stats">
+                <span><em>{c.goal.count}</em> / {c.goal.target}{c.goal.value ? ` · ${c.goal.value}` : ""}</span>
+                {c.goal.reached ? <span>🎉 {es ? "¡Meta lograda!" : "Goal reached!"}</span> : c.goal.daysLeft != null && <span>{c.goal.daysLeft} {es ? "días" : c.goal.daysLeft === 1 ? "day left" : "days left"}</span>}
+                {c.goal.reward && <span>🎁 {c.goal.reward}</span>}
+              </div>
+            </div>
+          </div>
+        ) : c.kind === "welcome" && c.welcome && c.welcome.length > 0 ? (
+          <div key={c.id} className="so-ch welcome">
+            <span className="so-ch-ic" aria-hidden="true">👋</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <b>{c.title}</b>
+              <div className="so-wagon">
+                {c.welcome.slice(0, big ? 4 : 6).map((n) => (
+                  <span key={n.personId} className={n.got >= n.target ? "full" : ""}>
+                    {n.name} <em>{Math.min(n.got, n.target)}/{n.target}</em>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : null
+      )}
     </div>
   );
 }

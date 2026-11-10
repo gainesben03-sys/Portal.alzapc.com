@@ -9,6 +9,8 @@ import { createHash } from "crypto";
 import { NextResponse } from "next/server";
 import { celebrations, REACTIONS, scoreboard, shortName, Shoutout } from "@/lib/recognition";
 import { clientByToken, createShout, localToday, matchPeople, rosterFor, tellReviewers } from "@/lib/shoutserver";
+import { challengesFor, checkChainPass, shoutsSince } from "@/lib/challengeserver";
+import { publicChallenge } from "@/lib/challenges";
 import { admin, SERVER_LIVE, siteUrl } from "@/lib/server";
 
 type D = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -30,6 +32,21 @@ export async function GET(req: Request, { params }: { params: Promise<{ token: s
     const hits = matchPeople(await rosterFor(db, c.id), q);
     return json({ ok: true, people: hits.map((p) => ({ id: p.id, name: shortName(p.name), team: p.department || p.location || "" })) });
   }
+  const roster = await rosterFor(db, c.id);
+  // opened from a "pass it on" link
+  const passId = u.searchParams.get("pass");
+  let pass: { id: string; title: string; link: number; holder: { id: string; name: string; team: string }; daysLeft: number; error?: string } | null = null;
+  if (passId) {
+    const { data: pr } = await db.from("shoutouts").select("data").eq("id", passId).eq("client_id", c.id).maybeSingle();
+    const ps = pr?.data as Shoutout | undefined;
+    const { data: chr } = ps?.challengeId ? await db.from("challenges").select("data").eq("id", ps.challengeId).maybeSingle() : { data: null };
+    const ch = chr?.data as { title: string; chain?: { windowDays: number }; status: string } | undefined;
+    if (ps && ch) {
+      const left = Math.ceil((new Date(ps.at).getTime() + (ch.chain?.windowDays ?? 3) * 864e5 - Date.now()) / 864e5);
+      const holder = roster.find((p) => p.id === ps.to.personId);
+      pass = { id: ps.id, title: ch.title, link: (ps.depth ?? 1) + 1, holder: { id: ps.to.personId, name: shortName(ps.to.name), team: holder?.department || holder?.location || "" }, daysLeft: left, error: ch.status !== "active" ? "over" : left < -1 ? "expired" : undefined };
+    }
+  }
   const device = cleanDevice(u.searchParams.get("d"));
   const { data: rows } = await db.from("shoutouts").select("data").eq("client_id", c.id).eq("data->>status", "live").order("created_at", { ascending: false }).limit(300);
   const list = (rows ?? []).map((r) => r.data as Shoutout);
@@ -40,9 +57,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ token: s
   const ids = wall.map((s) => s.id);
   const { data: rx } = ids.length ? await db.from("shout_reactions").select("shout_id, who, emoji").in("shout_id", ids) : { data: [] };
   const me = device ? `d:${hash(device)}` : "";
-  const celebrate = c.rec.celebrate === false ? [] : celebrations(await rosterFor(db, c.id), localToday(), 14);
+  const celebrate = c.rec.celebrate === false ? [] : celebrations(roster, localToday(), 14);
+  const active = await challengesFor(db, c.id);
+  const chShouts = active.length ? await shoutsSince(db, c.id, active.reduce((m, x) => (x.startedAt < m ? x.startedAt : m), active[0].startedAt)) : [];
+  // a person on the Welcome Wagon only needs to know counts, so shoutouts before the earliest new hire don't matter
+  const wagon = active.some((x) => x.kind === "welcome") ? await shoutsSince(db, c.id, new Date(Date.now() - 120 * 864e5).toISOString()) : [];
   return json({
     celebrate,
+    pass,
+    challenges: active.map((x) => publicChallenge(x, x.kind === "welcome" ? wagon : chShouts, roster)),
     ok: true,
     company: c.name,
     accent: c.config.accent || "#19283c",
@@ -95,7 +118,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
       db.from("shoutouts").select("id", { count: "exact", head: true }).eq("client_id", c.id).eq("data->>net", net).gte("created_at", dayAgo),
     ]);
     if ((byDevice.count ?? 0) >= 10 || (byNet.count ?? 0) >= 40) return json({ ok: false, reason: "limit" }, 429);
-    const fromP = b.fromId ? roster.find((p) => p.id === String(b.fromId)) : undefined;
+    let chain: { challengeId: string; parentId: string; depth: number } | undefined;
+    let fromP = b.fromId ? roster.find((p) => p.id === String(b.fromId)) : undefined;
+    if (b.pass) {
+      const ck = await checkChainPass(db, c.id, String(b.pass), to.id);
+      if (!ck.ok) return json({ ok: false, reason: ck.reason }, 400);
+      chain = { challengeId: ck.challenge.id, parentId: ck.parent.id, depth: ck.depth };
+      fromP = roster.find((p) => p.id === ck.parent.to.personId) ?? fromP; // the baton holder passes it on
+    }
     if (fromP && fromP.id === to.id) return json({ ok: false, reason: "self" }, 400);
     const fromName = fromP?.name ?? String(b.fromName ?? "").replace(/\s+/g, " ").trim().slice(0, 60);
     if (!fromName) return json({ ok: false, reason: "from" }, 400);
@@ -106,6 +136,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
       message,
       channel: "qr",
       lang: b.lang === "es" ? "es" : "en",
+      ...chain,
     });
     // who sent it (hashed) for the daily limit; never shown
     await db.from("shoutouts").update({ data: { ...s, device: who, net } }).eq("id", s.id);

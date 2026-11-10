@@ -6,6 +6,8 @@
 
 import { NextResponse } from "next/server";
 import { REACTIONS, Shoutout } from "@/lib/recognition";
+import { Challenge, CHALLENGE_INFO } from "@/lib/challenges";
+import { challengesFor, checkChainPass, checkGoals } from "@/lib/challengeserver";
 import { celebrateMail, createShout, rosterFor, tellThem, ShoutClient } from "@/lib/shoutserver";
 import { admin, caller, sendEmail, SERVER_LIVE, siteUrl } from "@/lib/server";
 import type { ClientConfig } from "@/lib/modules";
@@ -44,13 +46,70 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: r.ok, reason: r.reason, to: me.email });
   }
 
+  const mine = roster.find((p) => p.email?.toLowerCase() === me.email.toLowerCase());
+  const manages = roster.some((p) => (p.managerEmail || "").toLowerCase() === me.email.toLowerCase());
+
   if (b.action === "give") {
     const to = roster.find((p) => p.id === String(b.to ?? ""));
     if (!to) return NextResponse.json({ ok: false, reason: "who" }, { status: 400 });
-    if (to.email && to.email.toLowerCase() === me.email.toLowerCase()) return NextResponse.json({ ok: false, reason: "self" }, { status: 400 });
-    const mine = roster.find((p) => p.email?.toLowerCase() === me.email.toLowerCase());
-    const s = await createShout(db, siteUrl(req), c, { to, from: { name: myName, personId: mine?.id, email: me.email, verified: true }, value: b.value ? String(b.value) : undefined, message: String(b.message ?? ""), channel: "portal" });
+    if ((to.email && to.email.toLowerCase() === me.email.toLowerCase()) || to.id === mine?.id) return NextResponse.json({ ok: false, reason: "self" }, { status: 400 });
+    let chain: { challengeId: string; parentId: string; depth: number } | undefined;
+    if (b.pass) {
+      const ck = await checkChainPass(db, clientId, String(b.pass), to.id);
+      if (!ck.ok) return NextResponse.json({ ok: false, reason: ck.reason }, { status: 400 });
+      // only the person holding the baton (or Ben) passes it on
+      if (!me.advisor && ck.parent.to.personId !== mine?.id) return NextResponse.json({ ok: false, reason: "not_yours" }, { status: 403 });
+      chain = { challengeId: ck.challenge.id, parentId: ck.parent.id, depth: ck.depth };
+    }
+    const s = await createShout(db, siteUrl(req), c, { to, from: { name: myName, personId: mine?.id, email: me.email, verified: true }, value: b.value ? String(b.value) : undefined, message: String(b.message ?? ""), channel: "portal", ...chain });
     return NextResponse.json({ ok: true, status: s.status, shout: s });
+  }
+
+  // start a challenge: Ben, an executive, or anyone who manages people on the roster
+  if (b.action === "startChallenge") {
+    if (!exec && !manages) return NextResponse.json({ ok: false, reason: "forbidden" }, { status: 403 });
+    const kind = b.kind === "goal" ? "goal" : b.kind === "welcome" ? "welcome" : "chain";
+    const id = `ch${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+    const endsAt = /^\d{4}-\d{2}-\d{2}$/.test(String(b.endsAt ?? "")) ? String(b.endsAt) : undefined;
+    const title = String(b.title ?? "").trim().slice(0, 80) || CHALLENGE_INFO[kind].name;
+    const ch: Challenge = {
+      id,
+      clientId,
+      kind,
+      title,
+      status: "active",
+      startedAt: new Date().toISOString(),
+      endsAt,
+      createdBy: { name: myName, email: me.email },
+      ...(kind === "chain" ? { chain: { windowDays: Math.min(14, Math.max(1, Number(b.windowDays) || 3)) } } : {}),
+      ...(kind === "goal" ? { goal: { target: Math.min(5000, Math.max(5, Number(b.target) || 50)), reward: String(b.reward ?? "").trim().slice(0, 120) || undefined, value: b.value && c.rec.values.includes(String(b.value)) ? String(b.value) : undefined } } : {}),
+      ...(kind === "welcome" ? { welcome: { target: Math.min(20, Math.max(1, Number(b.welcomeTarget) || 5)), days: Math.min(90, Math.max(7, Number(b.welcomeDays) || 30)) } } : {}),
+    };
+    if (kind === "welcome" && (await challengesFor(db, clientId)).some((x) => x.kind === "welcome")) return NextResponse.json({ ok: false, reason: "welcome_on" });
+    let first: Shoutout | undefined;
+    if (kind === "chain") {
+      const to = roster.find((p) => p.id === String(b.to ?? ""));
+      if (!to || String(b.message ?? "").trim().length < 3) return NextResponse.json({ ok: false, reason: "first_link" }, { status: 400 });
+      if (to.id === mine?.id) return NextResponse.json({ ok: false, reason: "self" }, { status: 400 });
+      const { error } = await db.from("challenges").insert({ id, client_id: clientId, data: ch });
+      if (error) return NextResponse.json({ ok: false, reason: "save_failed" }, { status: 500 });
+      first = await createShout(db, siteUrl(req), c, { to, from: { name: myName, personId: mine?.id, email: me.email, verified: true }, value: b.value ? String(b.value) : undefined, message: String(b.message), channel: "portal", challengeId: id, depth: 1 });
+      await db.from("challenges").update({ data: { ...ch, chain: { ...ch.chain!, rootId: first.id } } }).eq("id", id);
+    } else {
+      const { error } = await db.from("challenges").insert({ id, client_id: clientId, data: ch });
+      if (error) return NextResponse.json({ ok: false, reason: "save_failed" }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true, challenge: ch, first });
+  }
+
+  if (b.action === "endChallenge") {
+    const { data: row } = await db.from("challenges").select("data").eq("id", String(b.id ?? "")).eq("client_id", clientId).maybeSingle();
+    const ch = row?.data as Challenge | undefined;
+    if (!ch) return NextResponse.json({ ok: false, reason: "not_found" }, { status: 404 });
+    if (!exec && ch.createdBy.email?.toLowerCase() !== me.email.toLowerCase()) return NextResponse.json({ ok: false, reason: "forbidden" }, { status: 403 });
+    const next = { ...ch, status: "ended" as const };
+    await db.from("challenges").update({ data: next, updated_at: new Date().toISOString() }).eq("id", ch.id);
+    return NextResponse.json({ ok: true, challenge: next });
   }
 
   const id = String(b.id ?? "");
@@ -74,6 +133,7 @@ export async function POST(req: Request) {
     const next: Shoutout = { ...s, status: approve ? "live" : "removed", reviewedBy: myName, heldReason: approve ? undefined : s.heldReason };
     await db.from("shoutouts").update({ data: next }).eq("id", id);
     if (approve && s.status === "held" && !s.reviewedBy && !s.reports) await tellThem(db, siteUrl(req), c, next);
+    if (approve) await checkGoals(db, siteUrl(req), clientId, c.name).catch(() => undefined);
     return NextResponse.json({ ok: true, shout: next });
   }
 
