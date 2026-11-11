@@ -1,7 +1,7 @@
 "use client";
 
 // Shoutouts inside the portal: the wall, the scoreboard, give one, and (Ben and executives)
-// review anything held and set up the QR code, values and texting.
+// review anything held and set up the QR code and texting.
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
@@ -231,7 +231,6 @@ export default function Recognition() {
       {giving && rec?.token && (
         <GiveSheet
           token={rec.token}
-          values={rec.values}
           pass={giving.pass}
           onClose={() => setGiving(false)}
           onSend={async (body) => {
@@ -268,7 +267,6 @@ export default function Recognition() {
       {starting && rec && (
         <StartSheet
           token={rec.token}
-          values={rec.values}
           hasWelcome={activeCh.some((c) => c.kind === "welcome")}
           onClose={() => setStarting(false)}
           onStart={async (body) => {
@@ -438,7 +436,7 @@ function Challenges({ list, shouts, roster, canStart, canEnd, onStart, onEnd }: 
 
 type StartBody = { kind: ChallengeKind; title: string; endsAt?: string; windowDays?: number; target?: number; reward?: string; value?: string; welcomeTarget?: number; welcomeDays?: number; to?: string; message?: string };
 
-function StartSheet({ token, values, hasWelcome, onClose, onStart }: { token: string; values: string[]; hasWelcome: boolean; onClose: () => void; onStart: (b: StartBody) => Promise<string> }) {
+function StartSheet({ token, hasWelcome, onClose, onStart }: { token: string; hasWelcome: boolean; onClose: () => void; onStart: (b: StartBody) => Promise<string> }) {
   const [kind, setKind] = useState<ChallengeKind>("chain");
   const inDays = (n: number) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
   const [title, setTitle] = useState("");
@@ -446,7 +444,6 @@ function StartSheet({ token, values, hasWelcome, onClose, onStart }: { token: st
   const [windowDays, setWindowDays] = useState(3);
   const [target, setTarget] = useState(50);
   const [reward, setReward] = useState("");
-  const [value, setValue] = useState("");
   const [wt, setWt] = useState(5);
   const [wd, setWd] = useState(30);
   const [to, setTo] = useState<Pick | null>(null);
@@ -496,9 +493,6 @@ function StartSheet({ token, values, hasWelcome, onClose, onStart }: { token: st
             <label className="f">By<input className="f" type="date" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} /></label>
           </div>
           <label className="f">Team reward <span className="tiny muted">(optional)</span><input className="f" value={reward} onChange={(e) => setReward(e.target.value)} placeholder="e.g. Taco lunch for everyone 🌮" maxLength={120} /></label>
-          <label className="f">Only count one value <span className="tiny muted">(optional)</span>
-            <select className="f" value={value} onChange={(e) => setValue(e.target.value)}><option value="">Any shoutout</option>{values.map((v) => <option key={v} value={v}>{v}</option>)}</select>
-          </label>
         </>
       )}
       {kind === "welcome" && (
@@ -516,7 +510,7 @@ function StartSheet({ token, values, hasWelcome, onClose, onStart }: { token: st
           disabled={busy || (kind === "chain" && (!to || msg.trim().length < 3))}
           onClick={async () => {
             setBusy(true);
-            setErr(await onStart({ kind, title: title.trim() || placeholder, endsAt: kind === "welcome" ? undefined : endsAt, windowDays, target, reward, value: value || undefined, welcomeTarget: wt, welcomeDays: wd, to: to?.id, message: msg }));
+            setErr(await onStart({ kind, title: title.trim() || placeholder, endsAt: kind === "welcome" ? undefined : endsAt, windowDays, target, reward, welcomeTarget: wt, welcomeDays: wd, to: to?.id, message: msg }));
             setBusy(false);
           }}
         >
@@ -546,10 +540,9 @@ function Missing({ list }: { list: Shoutout[] }) {
   );
 }
 
-function GiveSheet({ token, values, pass, onClose, onSend }: { token: string; values: string[]; pass?: Baton & { title: string }; onClose: () => void; onSend: (b: { to: string; value?: string; message: string }) => Promise<string> }) {
+function GiveSheet({ token, pass, onClose, onSend }: { token: string; pass?: Baton & { title: string }; onClose: () => void; onSend: (b: { to: string; value?: string; message: string }) => Promise<string> }) {
   const [to, setTo] = useState<Pick | null>(null);
   const [msg, setMsg] = useState("");
-  const [value, setValue] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const search = useCallback(
@@ -568,12 +561,10 @@ function GiveSheet({ token, values, pass, onClose, onSend }: { token: string; va
       <span className="flabel" style={{ marginTop: 12 }}>What did they do?</span>
       <div className="so-starters">{STARTERS.en.map((s) => <button key={s} onClick={() => setMsg(s.replace("…", " "))}>{s}</button>)}</div>
       <textarea className="f" style={{ minHeight: 80 }} value={msg} onChange={(e) => setMsg(e.target.value.slice(0, MAX_MESSAGE))} placeholder="Be specific. What happened, and why it mattered." />
-      <span className="flabel">Value</span>
-      <div className="so-values">{values.map((v) => <button key={v} className={value === v ? "on" : ""} onClick={() => setValue(value === v ? null : v)}>{v}</button>)}</div>
       {err && <p className="small" style={{ color: "var(--red)" }}>{err}</p>}
       <div className="sheet-actions">
         <button className="btn ghost sm" onClick={onClose}>Cancel</button>
-        <button className="btn primary sm" disabled={busy || !to || msg.trim().length < 3} onClick={async () => { setBusy(true); setErr(await onSend({ to: to!.id, value: value ?? undefined, message: msg })); setBusy(false); }}>{busy ? "Sending…" : "Send"}</button>
+        <button className="btn primary sm" disabled={busy || !to || msg.trim().length < 3} onClick={async () => { setBusy(true); setErr(await onSend({ to: to!.id, message: msg })); setBusy(false); }}>{busy ? "Sending…" : "Send"}</button>
       </div>
     </Sheet>
   );
@@ -582,7 +573,6 @@ function GiveSheet({ token, values, pass, onClose, onSend }: { token: string; va
 const MAIL_DOMAIN = process.env.NEXT_PUBLIC_MAIL_DOMAIN || "alzapc.com";
 
 function Setup({ rec, onSave, clientName, accent, onTest }: { rec: RecognitionSettings | null | undefined; onSave: (r: RecognitionSettings) => void; clientName: string; accent: string; onTest?: (k: CelebrateKind, draft: Partial<RecognitionSettings>) => void }) {
-  const [values, setValues] = useState((rec?.values ?? DEFAULT_VALUES).join("\n"));
   const [sms, setSms] = useState(rec?.smsNumber ?? "");
   const [notify, setNotify] = useState(rec?.notifyManagers !== false);
   const [wall, setWall] = useState(rec?.showWall !== false);
@@ -601,7 +591,6 @@ function Setup({ rec, onSave, clientName, accent, onTest }: { rec: RecognitionSe
   useEffect(() => {
     if (link) QRCode.toDataURL(link, { margin: 1, width: 600 }).then(setQr);
   }, [link]);
-  const vals = values.split("\n").map((v) => v.trim()).filter(Boolean).slice(0, 8);
   const clean = sms.replace(/[^\d+]/g, "");
   const smsNumber = clean ? (clean.startsWith("+") ? clean : clean.length === 10 ? `+1${clean}` : `+${clean}`) : undefined;
   const cleanBox = senderBox.toLowerCase().replace(/[^a-z0-9._-]/g, "");
@@ -615,16 +604,13 @@ function Setup({ rec, onSave, clientName, accent, onTest }: { rec: RecognitionSe
     celebrate: cel,
     theme,
   });
-  const save = () => onSave({ ...(rec ?? newRecognition()), values: vals.length ? vals : DEFAULT_VALUES, smsNumber, notifyManagers: notify, showWall: wall, ...extras() });
+  const save = () => onSave({ ...(rec ?? newRecognition()), values: rec?.values ?? DEFAULT_VALUES, smsNumber, notifyManagers: notify, showWall: wall, ...extras() });
   const copy = (t: string) => navigator.clipboard?.writeText(t);
 
   return (
     <div className="so-setup">
-      {!rec && <p className="small" style={{ marginTop: 0 }}>Set the values, then print the QR code for {clientName}&apos;s break rooms, trucks and shop floor.</p>}
+      {!rec && <p className="small" style={{ marginTop: 0 }}>Print the QR code for {clientName}&apos;s break rooms, trucks and shop floor.</p>}
       <div className="card">
-        <label className="f">Company values <span className="tiny muted">(one per line, up to 8. Every shoutout can be tied to one.)</span>
-          <textarea className="f" style={{ minHeight: 110 }} value={values} onChange={(e) => setValues(e.target.value)} />
-        </label>
         <label className="check"><input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} /> Email the person&apos;s manager when they get a shoutout</label>
         <label className="check"><input type="checkbox" checked={wall} onChange={(e) => setWall(e.target.checked)} /> Show the wall and scoreboard on the QR page</label>
         <label className="check"><input type="checkbox" checked={cel} onChange={(e) => setCel(e.target.checked)} /> Celebrate tab: birthdays, work anniversaries and new people (next 2 weeks, month and day only). Anyone can opt out from their birthday email, or you can uncheck them on the roster.</label>

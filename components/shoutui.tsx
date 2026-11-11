@@ -19,7 +19,6 @@ export function ShoutCard({ s, onReact, onReport, onRemove, big, highlight }: { 
           <b className="so-to">{s.to}</b>
           <span className="so-meta">{[s.team, `from ${s.from}`, ago(s.at)].filter(Boolean).join(" · ")}</span>
         </div>
-        {s.value && <span className="so-value">{s.value}</span>}
       </div>
       <p className="so-msg">{s.message}</p>
       {(onReact || onReport || onRemove) && (
@@ -57,18 +56,6 @@ export function Scoreboard({ b, big }: { b: Board; big?: boolean }) {
         <div><b>{b.people}</b><span>people recognized</span></div>
         <div><b>{b.streakWeeks}</b><span>{b.streakWeeks === 1 ? "week" : "weeks"} in a row</span></div>
       </div>
-      {b.byValue.some((v) => v.n) && (
-        <div className="so-sec">
-          <h3>Our values in action</h3>
-          {b.byValue.map((v) => (
-            <div className="so-bar" key={v.value}>
-              <span>{v.value}</span>
-              <i><em style={{ width: `${(v.n / max) * 100}%` }} /></i>
-              <b>{v.n}</b>
-            </div>
-          ))}
-        </div>
-      )}
       {b.byTeam.length > 0 && (
         <div className="so-sec">
           <h3>Teams</h3>

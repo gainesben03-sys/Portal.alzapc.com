@@ -42,7 +42,6 @@ export default function ShoutPage() {
   const [from, setFrom] = useState<Pick | null>(null);
   const [typed, setTyped] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
-  const [value, setValue] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<null | "live" | "held">(null);
   const [toast, setToast] = useState("");
@@ -116,7 +115,7 @@ export default function ShoutPage() {
   const send = async () => {
     if (!to || msg.trim().length < 3 || (!passing && !from && !typed?.trim())) return;
     setBusy(true);
-    const r = await post({ action: "give", to: to.id, fromId: passing ? passing.holder.id : from?.id, fromName: from || passing ? undefined : typed, value, message: msg, lang, pass: passing?.id });
+    const r = await post({ action: "give", to: to.id, fromId: passing ? passing.holder.id : from?.id, fromName: from || passing ? undefined : typed, message: msg, lang, pass: passing?.id });
     setBusy(false);
     if (!r.ok) return flash(r.reason === "limit" ? t.limit : r.reason === "self" ? "😄" : r.reason === "already_in_chain" ? t.inChain : r.reason?.startsWith("chain") ? t.chainOver : t.err);
     try {
@@ -142,7 +141,6 @@ export default function ShoutPage() {
   const reset = () => {
     setTo(null);
     setMsg("");
-    setValue(null);
     setDone(null);
   };
   const setL = (l: Lang) => {
@@ -214,11 +212,6 @@ export default function ShoutPage() {
             </div>
             <textarea className="so-text" value={msg} onChange={(e) => setMsg(e.target.value.slice(0, MAX_MESSAGE))} placeholder={t.whatPh} rows={3} />
             <span className="so-count">{msg.length}/{MAX_MESSAGE}</span>
-
-            <label className="so-label">{t.value}</label>
-            <div className="so-values">
-              {info.values.map((v) => <button key={v} className={value === v ? "on" : ""} onClick={() => setValue(value === v ? null : v)}>{v}</button>)}
-            </div>
 
             <label className="so-label">{t.from}</label>
             {passing ? (

@@ -37,7 +37,6 @@ const T = {
     pick: (list: string) => `Which one? Reply with the number:\n${list}`,
     none: "I couldn't find that name. Try first and last name, or reply NEW to start over.",
     what: (n: string) => `What did ${n} do? One or two sentences.`,
-    value: (vals: string) => `Which value does it show? Reply with a number, or 0 to skip:\n${vals}`,
     live: (n: string, url: string) => `Sent! ${n} will see it on the wall. 🙌 Text NEW to recognize someone else. Wall: ${url}`,
     held: (n: string) => `Thanks! Your shoutout to ${n} will post after a quick check. Text NEW for another.`,
     name: "Before we post it: what's your name?",
@@ -51,7 +50,6 @@ const T = {
     pick: (list: string) => `¿Cuál? Responde con el número:\n${list}`,
     none: "No encontré ese nombre. Prueba con nombre y apellido, o responde OTRO para empezar de nuevo.",
     what: (n: string) => `¿Qué hizo ${n}? Una o dos frases.`,
-    value: (vals: string) => `¿Qué valor muestra? Responde con un número, o 0 para omitir:\n${vals}`,
     live: (n: string, url: string) => `¡Enviado! ${n} lo verá en el muro. 🙌 Escribe OTRO para reconocer a alguien más. Muro: ${url}`,
     held: (n: string) => `¡Gracias! Tu reconocimiento para ${n} se publicará después de una revisión rápida.`,
     name: "Antes de publicarlo: ¿cuál es tu nombre?",
@@ -94,17 +92,25 @@ export async function POST(req: Request) {
   const L = T[lang];
   const save = (next: Thread | null) => (next ? db.from("sms_threads").upsert({ phone: from, client_id: c.id, data: { ...next, at: new Date().toISOString() }, updated_at: new Date().toISOString() }) : db.from("sms_threads").delete().eq("phone", from).eq("client_id", c.id));
   const nameOf = (id?: string) => roster.find((x) => x.id === id)?.name.split(" ")[0] ?? "";
-  const valuesList = c.rec.values.map((v, i) => `${i + 1} ${v}`).join("\n");
+  // got the message: send it, or ask for their name first if their phone isn't on the roster
+  const finish = async (th: Thread): Promise<Response> => {
+    if (!me) {
+      await save({ ...th, step: "value", fromName: "?", choices: [] });
+      return xml(L.name);
+    }
+    const person = roster.find((x) => x.id === th.to);
+    await save(null);
+    if (!person || !th.message) return xml(L.who(c.name));
+    const s = await createShout(db, site, c, { to: person, from: { name: me.name, personId: me.id, verified: true }, message: th.message, channel: "sms", lang });
+    return xml(s.status === "live" ? L.live(person.name.split(" ")[0], `${site}/shout/${c.rec.token}`) : L.held(person.name.split(" ")[0]));
+  };
 
   const chose = async (person: TeamMember, rest?: string): Promise<Response> => {
     if (me && person.id === me.id) {
       await save(null);
       return xml(L.self);
     }
-    if (rest && rest.length >= 8) {
-      await save({ step: "value", to: person.id, message: rest, lang, at: "" });
-      return xml(L.value(valuesList));
-    }
+    if (rest && rest.length >= 8) return finish({ step: "value", to: person.id, message: rest, lang, at: "" });
     await save({ step: "what", to: person.id, lang, at: "" });
     return xml(L.what(person.name.split(" ")[0]));
   };
@@ -141,24 +147,18 @@ export async function POST(req: Request) {
   }
   if (t.step === "what") {
     if (body.length < 4) return xml(L.what(nameOf(t.to)));
-    await save({ ...t, step: "value", message: body });
-    return xml(L.value(valuesList));
+    return finish({ ...t, step: "value", message: body });
   }
-  // value, then the sender's name if they're not on the roster
-  let value: string | undefined;
-  if (t.step === "value" && !t.fromName) {
-    const n = parseInt(body, 10);
-    value = n >= 1 && n <= c.rec.values.length ? c.rec.values[n - 1] : c.rec.values.find((v) => v.toLowerCase() === body.toLowerCase());
-    if (!me) {
-      await save({ ...t, fromName: "?", choices: value ? [value] : [] });
-      return xml(L.name);
-    }
-  } else value = t.choices?.[0];
+  // their name, when their phone isn't on the roster
+  if (t.step !== "value") {
+    await save(null);
+    return xml(L.who(c.name));
+  }
   const fromName = me ? me.name : body.replace(/\s+/g, " ").trim().slice(0, 60);
   const person = roster.find((x) => x.id === t!.to);
   await save(null);
   if (!person || !t.message) return xml(L.who(c.name));
-  const s = await createShout(db, site, c, { to: person, from: { name: fromName, personId: me?.id, verified: !!me }, value, message: t.message, channel: "sms", lang });
+  const s = await createShout(db, site, c, { to: person, from: { name: fromName, personId: me?.id, verified: !!me }, message: t.message, channel: "sms", lang });
   return xml(s.status === "live" ? L.live(person.name.split(" ")[0], `${site}/shout/${c.rec.token}`) : L.held(person.name.split(" ")[0]));
 }
 
