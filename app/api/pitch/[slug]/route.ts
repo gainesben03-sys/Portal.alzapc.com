@@ -1,7 +1,8 @@
 // Public: the candidate side of video screening. No sign-in.
 // start: checks the link is open, returns one-time upload links straight to private storage.
 // finish: checks the files arrived, then adds the candidate to the role.
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
+import { writeBriefs } from "@/lib/candidatebrief";
 import { emailLogoUrl } from "@/lib/brand";
 import { noticeEmail, onboardingFor, senderFor } from "@/lib/hires";
 import { Candidate, ClientConfig } from "@/lib/modules";
@@ -10,7 +11,7 @@ import { extFor, newCandidateId, readTicket, roleBySlug, signTicket } from "@/li
 import { advisorEmails, pushTo } from "@/lib/push";
 import { admin, sendEmail, SERVER_LIVE, siteUrl } from "@/lib/server";
 
-export const maxDuration = 30;
+export const maxDuration = 60;
 const BUCKET = "client-files";
 const s = (v: unknown, n: number) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
 const emailOk = (e: string) => /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(e);
@@ -39,7 +40,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     allowUpload: p.allowUpload,
     allowAudio: p.allowAudio,
     allowWritten: false,
-    askResume: p.askResume,
+    askResume: true, // a resume is required: the candidate card summary is built from it
     askLinkedin: p.askLinkedin,
     limits: { uploadMB: MAX_UPLOAD_MB, resumeMB: MAX_RESUME_MB },
   });
@@ -80,6 +81,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     if (!/^(video|audio)\//.test(mime)) return NextResponse.json({ ok: false, reason: "type" });
     if (size > MAX_UPLOAD_MB * 1024 * 1024) return NextResponse.json({ ok: false, reason: "too_big" });
     const resume = b.resume as { name?: string; type?: string; size?: number } | undefined;
+    if (!resume?.name) return NextResponse.json({ ok: false, reason: "resume" });
+    if (!/\.(pdf|docx?)$/i.test(String(resume.name))) return NextResponse.json({ ok: false, reason: "resume_type" });
     if (resume && (Number(resume.size) || 0) > MAX_RESUME_MB * 1024 * 1024) return NextResponse.json({ ok: false, reason: "resume_too_big" });
 
     const c = newCandidateId();
@@ -145,6 +148,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     };
     const { error } = await db.from("candidates").insert({ id: t.c, client_id: role.clientId, created_by: "pitch@portal", data: cand });
     if (error) return NextResponse.json({ ok: false, reason: "save_failed" }, { status: 500 });
+    // the AI summary for the card, after the candidate has their answer
+    after(() => writeBriefs(db, [t.c]).then(() => undefined, () => undefined));
 
     // let people know
     const base = siteUrl(req);

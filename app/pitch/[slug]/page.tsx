@@ -35,6 +35,8 @@ const REASONS: Record<string, string> = {
   expired: "This took a while, so the upload link expired. Tap Send again.",
   media_missing: "Your recording didn't finish uploading. Tap Send again; it's saved on this device.",
   resume_missing: "Your resume didn't finish uploading. Tap Send again.",
+  resume: "Please attach your resume.",
+  resume_type: "Attach your resume as a PDF or Word file.",
   text: "Write at least a couple of sentences.",
 };
 
@@ -325,11 +327,9 @@ export default function PitchPage() {
           <label className="f">Email<input className="f" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" inputMode="email" /></label>
           <label className="f">Phone <span className="tiny muted">(optional)</span><input className="f" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" /></label>
           {info.askLinkedin && <label className="f">LinkedIn <span className="tiny muted">(optional)</span><input className="f" value={linkedin} onChange={(e) => setLinkedin(e.target.value)} placeholder="https://linkedin.com/in/..." inputMode="url" /></label>}
-          {info.askResume && (
-            <label className="f">Resume <span className="tiny muted">(optional, PDF or Word)</span>
-              <input className="f" type="file" accept=".pdf,.doc,.docx,application/pdf" onChange={(e) => setResume(e.target.files?.[0] ?? null)} />
-            </label>
-          )}
+          <label className="f">Resume <span className="tiny muted">(PDF or Word)</span>
+            <input className="f" type="file" accept=".pdf,.doc,.docx,application/pdf" onChange={(e) => setResume(e.target.files?.[0] ?? null)} />
+          </label>
           {err && <p className="small" style={{ color: "var(--red)" }}>{err}</p>}
           <div className="sheet-actions">
             <button className="btn ghost sm" onClick={() => setStep("intro")}>Back</button>
@@ -338,6 +338,8 @@ export default function PitchPage() {
               onClick={() => {
                 if (name.trim().length < 2) return setErr("Add your full name.");
                 if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email.trim())) return setErr("Check your email address.");
+                if (!resume) return setErr("Please attach your resume.");
+                if (!/\.(pdf|docx?)$/i.test(resume.name)) return setErr("Attach your resume as a PDF or Word file.");
                 if (resume && resume.size > info.limits.resumeMB * 1048576) return setErr("That resume file is too large. Try a PDF under 10 MB.");
                 setErr("");
                 setStep("record");

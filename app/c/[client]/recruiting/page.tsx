@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ClientNav, ClientTopbar, Sheet, Toast, useGuard, useToast } from "@/components/ui";
 import { fmtTime } from "@/lib/data";
-import { Candidate, daysSince, Decision, DECISION_LABEL } from "@/lib/modules";
+import { Candidate, CandidateBrief, daysSince, Decision, DECISION_LABEL } from "@/lib/modules";
 import { notifyBen, useStore } from "@/lib/store";
-import { deletePitchFiles, PitchLinkCard, PitchView, ReviewerLinks, RoleSheet, ShareSheet } from "@/components/pitch";
+import { BriefBlock, deletePitchFiles, PitchContact, PitchLinkCard, PitchMedia, ReviewerLinks, RoleSheet, ShareSheet } from "@/components/pitch";
 import { OutsideReview, pastCutoff } from "@/lib/pitch";
-import { LIVE, sb } from "@/lib/supabase";
+import { authHeader, LIVE, sb } from "@/lib/supabase";
 import { Role } from "@/lib/modules";
 
 function Score({ n }: { n: number }) {
@@ -50,6 +50,35 @@ export default function Recruiting() {
         setOutside(m);
       });
   }, [ok, clientId]);
+  // AI resume summaries: write any that are missing when Ben or an executive opens the page
+  const [filter, setFilter] = useState<Record<string, string>>({});
+  const [briefing, setBriefing] = useState("");
+  const candRef = useRef(candidates);
+  candRef.current = candidates;
+  const writeBriefs = async (ids: string[] | "missing", msg: string) => {
+    if (!LIVE) return;
+    setBriefing(msg);
+    try {
+      for (let round = 0; round < 5; round++) {
+        const r = await fetch("/api/candidates/brief", { method: "POST", headers: { "Content-Type": "application/json", ...(await authHeader()) }, body: JSON.stringify(ids === "missing" ? { clientId, missing: true } : { clientId, ids }) });
+        const j = await r.json().catch(() => ({ ok: false }));
+        if (!j.ok) break;
+        const got = j.briefs as Record<string, CandidateBrief>;
+        if (Object.keys(got).length) patch({ candidates: candRef.current.map((x) => (got[x.id] ? { ...x, brief: got[x.id] } : x)) });
+        if (ids !== "missing" || !j.left) break;
+      }
+    } finally {
+      setBriefing("");
+    }
+  };
+  const canBrief = viewer?.kind === "advisor" || me?.access === "exec";
+  const missingBriefs = candidates.filter((c) => roles.some((r) => r.id === c.roleId && r.clientId === clientId) && c.pitch && !c.cleared && !c.brief).length;
+  const asked = useRef(false);
+  useEffect(() => {
+    if (!ok || !LIVE || !canBrief || asked.current || missingBriefs === 0) return;
+    asked.current = true;
+    writeBriefs("missing", `Writing summaries for ${missingBriefs} candidate${missingBriefs === 1 ? "" : "s"}…`);
+  }, [ok, canBrief, missingBriefs]); // eslint-disable-line react-hooks/exhaustive-deps
   const reviewsFor = (c: Candidate) => (LIVE ? outside[c.id] ?? [] : c.reviews ?? []).slice().sort((a, b) => a.at.localeCompare(b.at));
 
   if (!ok || !client) return null;
@@ -110,6 +139,7 @@ export default function Recruiting() {
           <h1 className="grow" style={{ margin: 0 }}>Recruiting</h1>
           {canEdit && <button className="btn primary sm" onClick={() => setRoleEdit("new")}>New role</button>}
         </div>
+        {briefing && <div className="cc-status small">{briefing}</div>}
         {myRoles.length === 0 && (
           <div className="card section small muted">No open roles yet.{canEdit ? " Add one with New role" + (cfg?.videoScreening ? ", then create a pitch link to share with candidates." : ".") : " Ben adds roles here when a search starts."}</div>
         )}
@@ -180,80 +210,101 @@ export default function Recruiting() {
                 </div>
               )}
 
-              {mode === "cards" &&
-                list.map((c) => (
-                  <div className={`card ${c.hidden ? "screening" : ""}`} key={c.id} style={{ marginTop: 10 }}>
-                    <div className="action-top">
-                      <div>
-                        <h3>{c.name}</h3>
-                        <div className="small muted">{c.headline}</div>
-                      </div>
-                      {c.hidden ? (
-                        <span className={`pill ${c.screened === "passed" ? "later" : "soon"}`}>{c.screened === "passed" ? "Passed" : "To screen"}</span>
-                      ) : c.cleared ? (
-                        <span className="pill later">Cleared</span>
-                      ) : c.decision ? (
-                        <span className={`pill ${c.decision === "pass" ? "later" : "done"}`}>{c.decision === "pass" ? "✕ No" : c.decision === "advance" ? "✓ Yes" : DECISION_LABEL[c.decision]}</span>
-                      ) : (
-                        <span className={`pill ${c.otherOffers ? "overdue" : "soon"}`}>
-                          <span className="dot" />
-                          Waiting {daysSince(c.sentAt)}d
-                        </span>
+              {mode === "cards" && (() => {
+                const f = filter[role.id] ?? "all";
+                const st = (c: Candidate) => (c.hidden ? (c.screened === "passed" ? "no" : "screen") : c.cleared ? "cleared" : c.decision === "pass" ? "no" : c.decision ? "yes" : "waiting");
+                const pills: [string, string][] = [["all", "All"], ...(isAdvisor && list.some((c) => st(c) === "screen") ? [["screen", "To screen"] as [string, string]] : []), ["waiting", "Waiting"], ["yes", "Yes"], ["no", "No"]];
+                const shown = f === "all" ? list : list.filter((c) => st(c) === f);
+                return (
+                  <>
+                    <div className="cc-filters">
+                      {pills.map(([k, l]) => (
+                        <button key={k} className={f === k ? "on" : ""} onClick={() => setFilter({ ...filter, [role.id]: k })}>
+                          {l} <span>{k === "all" ? list.length : list.filter((c) => st(c) === k).length}</span>
+                        </button>
+                      ))}
+                      {isAdvisor && live && list.some((c) => c.pitch) && (
+                        <button className="cc-rewrite" disabled={!!briefing} onClick={() => writeBriefs(list.filter((c) => c.pitch && !c.cleared).map((c) => c.id), `Rewriting ${role.title} summaries…`)}>Rewrite summaries</button>
                       )}
                     </div>
-                    {c.hidden && <div className="tiny" style={{ marginTop: 6, color: "var(--amber)" }}>Only you can see this pitch until you share it.</div>}
-                    {c.summary && <p className="small" style={{ marginTop: 10 }}>{c.summary}</p>}
-                    {c.strengths.length > 0 && (
-                      <div className="chips">
-                        {c.strengths.map((s) => (
-                          <span className="chip" key={s}>{s}</span>
-                        ))}
-                      </div>
-                    )}
-                    {c.pitch && <PitchView c={c} />}
-                    {c.assessment && (
-                      <div className="impact">
-                        <b>Alza assessment:</b> {c.assessment}
-                      </div>
-                    )}
-                    {c.feedback !== undefined && c.decision && (
-                      <div className="reply">
-                        <b>{c.feedbackBy}:</b> {c.feedback || "No note"}
-                        <div className="tiny muted">{c.feedbackAt && fmtTime(c.feedbackAt)}</div>
-                      </div>
-                    )}
-                    {reviewsFor(c).length > 0 && (
-                      <div className="reply outside-reviews">
-                        <span className="tiny muted" style={{ display: "block", marginBottom: 2 }}>Outside reviewers</span>
-                        {reviewsFor(c).map((r) => (
-                          <div key={r.reviewerId} className="small">
-                            <b>{r.name}:</b> <span style={{ color: r.decision === "yes" ? "var(--green)" : "var(--red)", fontWeight: 600 }}>{r.decision === "yes" ? "Yes" : "No"}</span>
-                            {r.note ? ` · ${r.note}` : ""} <span className="tiny muted">{fmtTime(r.at)}</span>
+                    {shown.length === 0 && <p className="small muted">Nobody here.</p>}
+                    <div className="cc-grid">
+                      {shown.map((c) => (
+                        <article className={`cc-card ${c.hidden ? "screening" : ""}`} key={c.id}>
+                          {c.pitch && <PitchMedia c={c} />}
+                          <div className="cc-body">
+                            <div className="cc-head">
+                              <div className="cc-who">
+                                <h3>{c.name}</h3>
+                                <span className="small muted">{[c.brief?.now || (!c.pitch ? c.headline : ""), c.pitch ? `Sent ${new Date(c.pitch.submittedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : ""].filter(Boolean).join(" · ")}</span>
+                              </div>
+                              {c.hidden ? (
+                                <span className={`pill ${c.screened === "passed" ? "later" : "soon"}`}>{c.screened === "passed" ? "Passed" : "To screen"}</span>
+                              ) : c.cleared ? (
+                                <span className="pill later">Cleared</span>
+                              ) : c.decision ? (
+                                <span className={`pill ${c.decision === "pass" ? "later" : "done"}`}>{c.decision === "pass" ? "✕ No" : c.decision === "advance" ? "✓ Yes" : DECISION_LABEL[c.decision]}</span>
+                              ) : (
+                                <span className={`pill ${c.otherOffers ? "overdue" : "soon"}`}>Waiting {daysSince(c.sentAt)}d</span>
+                              )}
+                            </div>
+                            {c.hidden && <div className="tiny" style={{ color: "var(--amber)" }}>Only you can see this pitch until you share it.</div>}
+                            {c.pitch ? (
+                              <BriefBlock b={c.brief} pending={!!briefing && !c.brief} />
+                            ) : (
+                              <>
+                                {c.summary && <p className="small" style={{ margin: 0 }}>{c.summary}</p>}
+                                {c.strengths.length > 0 && <div className="chips">{c.strengths.map((x) => <span className="chip" key={x}>{x}</span>)}</div>}
+                              </>
+                            )}
+                            {c.assessment && <div className="impact" style={{ margin: 0 }}><b>Alza assessment:</b> {c.assessment}</div>}
+                            {c.feedback !== undefined && c.decision && (
+                              <div className="reply" style={{ margin: 0 }}>
+                                <b>{c.feedbackBy}:</b> {c.feedback || "No note"}
+                                <div className="tiny muted">{c.feedbackAt && fmtTime(c.feedbackAt)}</div>
+                              </div>
+                            )}
+                            {reviewsFor(c).length > 0 && (
+                              <div className="reply outside-reviews" style={{ margin: 0 }}>
+                                <span className="tiny muted" style={{ display: "block", marginBottom: 2 }}>Outside reviewers</span>
+                                {reviewsFor(c).map((r) => (
+                                  <div key={r.reviewerId} className="small">
+                                    <b>{r.name}:</b> <span style={{ color: r.decision === "yes" ? "var(--green)" : "var(--red)", fontWeight: 600 }}>{r.decision === "yes" ? "Yes" : "No"}</span>
+                                    {r.note ? ` · ${r.note}` : ""} <span className="tiny muted">{fmtTime(r.at)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            {c.pitch && <PitchContact c={c} />}
+                            <div className="cc-foot">
+                              {c.hidden ? (
+                                <>
+                                  {c.screened !== "passed" && <button className="btn ghost sm" onClick={() => pass(c)}>Pass</button>}
+                                  <button className="btn sm primary grow" onClick={() => setSharing({ c, role })}>Share with {role.hiringManager.name.split(" ")[0]}</button>
+                                </>
+                              ) : c.cleared ? null : (
+                                <>
+                                  <button className={`btn sm yn-no ${c.decision === "pass" ? "on" : ""}`} aria-pressed={c.decision === "pass"} onClick={() => c.decision !== "pass" && saveFeedback(c, "pass", c.feedback ?? "")}>No</button>
+                                  <button className={`btn sm yn-yes grow ${c.decision === "advance" || c.decision === "offer" ? "on" : ""}`} aria-pressed={c.decision === "advance"} onClick={() => c.decision !== "advance" && c.decision !== "offer" && saveFeedback(c, "advance", c.feedback ?? "")}>Yes</button>
+                                </>
+                              )}
+                            </div>
+                            <div className="cc-more">
+                              {!c.hidden && !c.cleared && c.decision && <button className="linklike tiny" onClick={() => setFb(c)}>{c.feedback ? "Edit note" : "Add a note"}</button>}
+                              {!c.hidden && !c.cleared && (c.decision === "offer" || c.decision === "advance") && config[clientId]?.modules.hires && (viewer?.kind === "advisor" || me?.access === "exec") && !hires.some((h) => h.clientId === clientId && h.name === c.name) && (
+                                <Link href={`/c/${clientId}/hires/new?candidate=${c.id}`} className="linklike tiny">Start the hire</Link>
+                              )}
+                              {isAdvisor && c.pitch && live && <button className="linklike tiny" disabled={!!briefing} onClick={() => writeBriefs([c.id], "Rewriting the summary…")}>Rewrite summary</button>}
+                              {isAdvisor && <button className="linklike tiny" onClick={() => setRemoving(c)}>{c.cleared ? "Delete" : "Clear"}</button>}
+                              <span className="tiny muted">{c.stage}</span>
+                            </div>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                    <div className="action-foot">
-                      <span className="tiny muted">Stage: {c.stage}</span>
-                      {c.hidden ? (
-                        <>
-                          {c.screened !== "passed" && <button className="btn ghost sm" style={{ marginLeft: "auto" }} onClick={() => pass(c)}>Pass</button>}
-                          <button className={`btn sm primary`} style={c.screened === "passed" ? { marginLeft: "auto" } : undefined} onClick={() => setSharing({ c, role })}>Share with {role.hiringManager.name.split(" ")[0]}</button>
-                        </>
-                      ) : c.cleared ? null : (
-                        <span className="yn" style={{ marginLeft: "auto" }}>
-                          {c.decision && <button className="linklike tiny" onClick={() => setFb(c)}>{c.feedback ? "Edit note" : "Add a note"}</button>}
-                          <button className={`btn sm yn-no ${c.decision === "pass" ? "on" : ""}`} aria-pressed={c.decision === "pass"} onClick={() => c.decision !== "pass" && saveFeedback(c, "pass", c.feedback ?? "")}>No</button>
-                          <button className={`btn sm yn-yes ${c.decision === "advance" || c.decision === "offer" ? "on" : ""}`} aria-pressed={c.decision === "advance"} onClick={() => c.decision !== "advance" && c.decision !== "offer" && saveFeedback(c, "advance", c.feedback ?? "")}>Yes</button>
-                        </span>
-                      )}
-                      {!c.hidden && !c.cleared && (c.decision === "offer" || c.decision === "advance") && config[clientId]?.modules.hires && (viewer?.kind === "advisor" || me?.access === "exec") && !hires.some((h) => h.clientId === clientId && h.name === c.name) && (
-                        <Link href={`/c/${clientId}/hires/new?candidate=${c.id}`} className="btn sm primary">Start the hire</Link>
-                      )}
-                      {isAdvisor && <button className="btn ghost sm" onClick={() => setRemoving(c)}>{c.cleared ? "Delete" : "Clear"}</button>}
+                        </article>
+                      ))}
                     </div>
-                  </div>
-                ))}
+                  </>
+                );
+              })()}
 
               {mode === "compare" && list.some((x) => !x.hidden) && (
                 <div className="card" style={{ marginTop: 10 }}>

@@ -19,7 +19,7 @@ export function tidy<T>(v: T): T {
 
 export type SysBlock = { type: "text"; text: string; cache_control?: { type: "ephemeral" } };
 
-export async function claude(opts: { system: string | SysBlock[]; messages: { role: "user" | "assistant"; content: string }[]; maxTokens: number; temperature?: number }): Promise<{ ok: true; text: string } | { ok: false; reason: string; detail?: string }> {
+export async function claude(opts: { system: string | SysBlock[]; messages: { role: "user" | "assistant"; content: string | D[] }[]; maxTokens: number; temperature?: number }): Promise<{ ok: true; text: string } | { ok: false; reason: string; detail?: string }> {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) return { ok: false, reason: "no_key" };
   const r = await fetch("https://api.anthropic.com/v1/messages", {

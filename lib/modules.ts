@@ -180,6 +180,17 @@ export interface Role {
   feedbackActionId?: string;
   pitch?: import("./pitch").PitchSettings; // video screening link
   reviewers?: import("./pitch").ReviewLink[]; // Ben's private links for people outside the portal
+  description?: string; // the job description; the AI resume summaries compare against it
+}
+
+/** What the AI pulled from a candidate's resume, compared with the job. Describes; never scores or ranks. */
+export interface CandidateBrief {
+  status: "ok" | "no_resume" | "unreadable" | "error";
+  now?: string; // current or most recent role, e.g. "Project coordinator at an exhibit firm"
+  summary?: string; // two sentences
+  points?: string[]; // experience related to this job
+  gap?: string; // something the job needs that the resume doesn't show
+  at: string;
 }
 
 export interface Candidate {
@@ -207,6 +218,7 @@ export interface Candidate {
   clearedAt?: string;
   mediaDeletedAt?: string;
   reviews?: import("./pitch").OutsideReview[]; // yes/no from reviewer links
+  brief?: CandidateBrief; // AI summary of the resume against the job
 }
 
 // ---------- resources ----------
@@ -414,8 +426,8 @@ export function seedModules() {
       sentAt: d(-5),
       otherOffers: true,
     },
-    { id: "c-pitch1", roleId: "r-coord", name: "Riley Santos", headline: "Video pitch, 74s", summary: "", strengths: [], assessment: "", scores: [], stage: "Pitch received", sentAt: d(-1), source: "pitch", hidden: true, pitch: { kind: "video", seconds: 74, email: "riley@example.com", phone: "(415) 555-0199", linkedin: "https://linkedin.com/in/example", resumeName: "Riley Santos Resume.pdf", resumePath: "demo", mediaPath: "demo", submittedAt: at(-1, 15) } },
-    { id: "c-pitch2", roleId: "r-coord", name: "Avery Brooks", headline: "Written intro", summary: "", strengths: [], assessment: "", scores: [], stage: "Pitch received", sentAt: d(0), source: "pitch", hidden: true, pitch: { kind: "written", text: "I've run receiving and inventory for a 40,000 sq ft event rental warehouse for four years. I'm forklift certified, I know Asset Panda and NetSuite, and I'm the person who stays until the last truck is checked in. I'd love to bring that to Blueprint.", email: "avery@example.com", submittedAt: at(0, 9) } },
+    { id: "c-pitch1", roleId: "r-coord", name: "Riley Santos", headline: "Video pitch, 74s", summary: "", strengths: [], assessment: "", scores: [], stage: "Pitch received", sentAt: d(-1), source: "pitch", hidden: true, pitch: { kind: "video", seconds: 74, email: "riley@example.com", phone: "(415) 555-0199", linkedin: "https://linkedin.com/in/example", resumeName: "Riley Santos Resume.pdf", resumePath: "demo", mediaPath: "demo", submittedAt: at(-1, 15) }, brief: { status: "ok", now: "Warehouse lead, event rental company", summary: "Four years in warehouse operations for an event rental company, the last two as lead. Strong on receiving, inventory counts and scheduling crews for load-outs.", points: ["Leads a crew of 5 on receiving and load-outs", "Runs weekly inventory counts in Asset Panda", "Schedules trucks for 20+ events a month"], gap: "No NetSuite experience listed", at: at(-1, 15) } },
+    { id: "c-pitch2", roleId: "r-coord", name: "Avery Brooks", headline: "Written intro", summary: "", strengths: [], assessment: "", scores: [], stage: "Pitch received", sentAt: d(0), source: "pitch", hidden: true, pitch: { kind: "written", text: "I've run receiving and inventory for a 40,000 sq ft event rental warehouse for four years. I'm forklift certified, I know Asset Panda and NetSuite, and I'm the person who stays until the last truck is checked in. I'd love to bring that to Blueprint.", email: "avery@example.com", submittedAt: at(0, 9) }, brief: { status: "no_resume", at: at(0, 9) } },
   ];
 
   const resources: Resource[] = [

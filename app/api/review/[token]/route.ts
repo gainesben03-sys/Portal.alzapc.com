@@ -59,6 +59,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
         summary: c.summary,
         strengths: c.strengths ?? [],
         assessment: c.assessment,
+        brief: c.pitch ? c.brief ?? null : undefined,
         kind: c.pitch?.kind ?? null,
         seconds: c.pitch?.seconds ?? null,
         hasMedia: !!c.pitch?.mediaPath && !c.mediaDeletedAt,

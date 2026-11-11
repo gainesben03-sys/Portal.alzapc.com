@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Action, addBusinessDays, Person, toISO, today } from "@/lib/data";
-import { Candidate, PortalUser, Role } from "@/lib/modules";
+import { Candidate, CandidateBrief, PortalUser, Role } from "@/lib/modules";
 import { DEFAULT_PROMPTS, newPitch, newReviewLink, OutsideReview, reviewerSees, pitchDeleteOn, PitchSettings, pitchOpen, ReviewLink, reviewLinkLive } from "@/lib/pitch";
 import { pingTask } from "@/lib/pushclient";
 import { useStore } from "@/lib/store";
@@ -30,6 +30,7 @@ export function RoleSheet({ clientId, role, people, onClose, onSaved }: { client
   const [comp, setComp] = useState(role?.compRange ?? "");
   const [mgr, setMgr] = useState(role?.hiringManager.email ?? people.find((p) => p.access === "exec")?.email ?? "");
   const [criteria, setCriteria] = useState((role?.criteria ?? []).join("\n"));
+  const [description, setDescription] = useState(role?.description ?? "");
   const [status, setStatus] = useState(role?.status ?? "Sourcing");
   const [err, setErr] = useState("");
 
@@ -37,7 +38,7 @@ export function RoleSheet({ clientId, role, people, onClose, onSaved }: { client
     if (!title.trim()) return setErr("Add the role title.");
     const u = people.find((p) => p.email === mgr);
     const hiringManager: Person = u ? { name: u.name, role: u.role, email: u.email } : role?.hiringManager ?? { name: "Not set", role: "" };
-    const base = { title: title.trim(), dept: dept.trim(), location: location.trim(), type, compRange: comp.trim(), hiringManager, status, criteria: criteria.split("\n").map((x) => x.trim()).filter(Boolean) };
+    const base = { title: title.trim(), dept: dept.trim(), location: location.trim(), type, compRange: comp.trim(), hiringManager, status, criteria: criteria.split("\n").map((x) => x.trim()).filter(Boolean), description: description.trim() || undefined };
     if (role) patch({ roles: roles.map((r) => (r.id === role.id ? { ...r, ...base } : r)) });
     else patch({ roles: [...roles, { id: `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, clientId, ...base }] });
     onSaved(role ? "Role updated" : "Role added");
@@ -67,6 +68,9 @@ export function RoleSheet({ clientId, role, people, onClose, onSaved }: { client
           <select className="f" value={status} onChange={(e) => setStatus(e.target.value)}>{["Sourcing", "Interviewing", "Offer out", "Filled", "Paused"].map((t) => <option key={t}>{t}</option>)}</select>
         </label>
       </div>
+      <label className="f">Job description <span className="tiny muted">(paste it in; the AI resume summaries compare against it)</span>
+        <textarea className="f" style={{ minHeight: 120 }} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Responsibilities, requirements, nice-to-haves" />
+      </label>
       <label className="f">What matters most <span className="tiny muted">(one per line; used to score candidates)</span>
         <textarea className="f" value={criteria} onChange={(e) => setCriteria(e.target.value)} placeholder={"Runs large events end to end\nCalm with clients\nBudget ownership"} />
       </label>
@@ -271,7 +275,6 @@ function PitchSettingsSheet({ p, onClose, onSave }: { p: PitchSettings; onClose:
         <span className="flabel">Candidates can also</span>
         {tog("allowUpload", "Upload a video they recorded on their phone")}
         {tog("allowAudio", "Send audio only")}
-        {tog("askResume", "Attach a resume")}
         {tog("askLinkedin", "Add their LinkedIn")}
       </div>
       <div className="sheet-actions">
@@ -335,6 +338,112 @@ export function PitchView({ c }: { c: Candidate }) {
         </div>
       )}
       {err && <p className="tiny" style={{ color: "var(--amber)" }}>{err}</p>}
+    </div>
+  );
+}
+
+/** The video (or audio) at the top of a candidate card. Loads only when someone taps play. */
+export function PitchMedia({ c }: { c: Candidate }) {
+  const p = c.pitch!;
+  const [src, setSrc] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const day = (d: string) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  if (c.mediaDeletedAt || !p.mediaPath && p.kind !== "written")
+    return <div className="cc-media gone"><span>{c.mediaDeletedAt ? `Video deleted ${day(c.mediaDeletedAt)}` : "No video"}</span></div>;
+  if (p.kind === "written") return <div className="cc-written">{p.text}</div>;
+  const play = async () => {
+    if (!LIVE) return setErr("Demo: pitches play in the live portal.");
+    setBusy(true);
+    setErr("");
+    try {
+      const r = await fetch(`/api/pitch/media?c=${encodeURIComponent(c.id)}&f=media`, { headers: await authHeader() });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.reason);
+      setSrc(j.url);
+    } catch {
+      setErr("Couldn't open it. Try again.");
+    }
+    setBusy(false);
+  };
+  if (src)
+    return p.kind === "video" ? (
+      <div className="cc-media playing"><video src={src} controls autoPlay playsInline /></div>
+    ) : (
+      <div className="cc-media audio"><audio src={src} controls autoPlay /></div>
+    );
+  return (
+    <div className="cc-media">
+      <span className="cc-kind">{p.kind === "audio" ? "Audio" : "Video"}</span>
+      {p.seconds ? <span className="cc-len">{fmtSec(p.seconds)}</span> : null}
+      <button className="cc-play" onClick={play} disabled={busy} aria-label={`Play ${c.name}'s ${p.kind === "audio" ? "audio" : "video"}`}>
+        {busy ? <span className="tiny">…</span> : <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor" /></svg>}
+      </button>
+      {err && <span className="cc-err">{err}</span>}
+    </div>
+  );
+}
+
+/** Email, phone, LinkedIn, resume and when the video is deleted. */
+export function PitchContact({ c }: { c: Candidate }) {
+  const { roles } = useStore();
+  const p = c.pitch!;
+  const [err, setErr] = useState("");
+  const resume = async () => {
+    if (!LIVE) return setErr("Demo: resumes open in the live portal.");
+    const w = window.open("", "_blank");
+    try {
+      const r = await fetch(`/api/pitch/media?c=${encodeURIComponent(c.id)}&f=resume`, { headers: await authHeader() });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.reason);
+      if (w) w.location.href = j.url;
+      else window.location.href = j.url;
+    } catch {
+      w?.close();
+      setErr("Couldn't open the resume.");
+    }
+  };
+  const closesAt = roles.find((r) => r.id === c.roleId)?.pitch?.closesAt;
+  const delOn = pitchDeleteOn(c, closesAt);
+  const day = (d: Date | string) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return (
+    <div className="cc-contact tiny muted">
+      <div>
+        <a href={`mailto:${p.email}`}>{p.email}</a>
+        {p.phone && <> · <a href={`tel:${p.phone}`}>{p.phone}</a></>}
+        {p.linkedin && <> · <a href={p.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn</a></>}
+        {p.resumePath && <> · <button className="linklike" onClick={resume}>Resume</button></>}
+      </div>
+      {!c.mediaDeletedAt && p.kind !== "written" && delOn && (
+        <div>{c.screened === "passed" ? `Video deletes ${day(delOn)} (a week after you passed)` : closesAt ? `Video deletes ${day(delOn)} (a week after the ${day(closesAt + "T12:00")} cutoff)` : `Video deletes ${day(delOn)} (30 days after it was sent)`}</div>
+      )}
+      {err && <div style={{ color: "var(--amber)" }}>{err}</div>}
+    </div>
+  );
+}
+
+/** The AI resume summary on a card. */
+export function BriefBlock({ b, pending }: { b?: CandidateBrief; pending?: boolean }) {
+  if (!b) return pending ? <p className="small muted cc-pending">Writing a summary from the resume…</p> : null;
+  if (b.status === "no_resume") return <p className="small muted cc-none">No résumé available.</p>;
+  if (b.status === "unreadable") return <p className="small muted cc-none">The résumé couldn&apos;t be read. Open it to review.</p>;
+  if (b.status === "error") return <p className="small muted cc-none">Couldn&apos;t write a summary this time.</p>;
+  return (
+    <div className="cc-brief">
+      {b.summary && <p className="cc-sum">{b.summary}</p>}
+      {(b.points ?? []).length > 0 && (
+        <div className="cc-points">
+          <span className="cc-label">Related to this job</span>
+          {(b.points ?? []).map((p) => (
+            <div key={p} className="cc-point">
+              <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              <span>{p}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {b.gap && <div className="cc-gap">Ask about: {b.gap}</div>}
+      <span className="cc-src">AI summary of the résumé. It doesn&apos;t score or rank anyone.</span>
     </div>
   );
 }
