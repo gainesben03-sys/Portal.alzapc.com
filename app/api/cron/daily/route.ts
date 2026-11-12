@@ -14,7 +14,7 @@ import { buildHuddle } from "@/lib/huddle";
 import { Candidate, ClientConfig, HuddleSettings, SharedFile } from "@/lib/modules";
 import { pitchDeleteOn } from "@/lib/pitch";
 import { addDaysISO, firstDayEmail, forCompany, Hire, hireCompany, listEmail, onboardingFor, senderFor, stageIndex, welcomeEmail } from "@/lib/hires";
-import { anniversary, nextYearly, TeamLog, TeamMember, teamFor, weekItems } from "@/lib/team";
+import { anniversary, cleanCell, nextYearly, TeamLog, TeamMember, teamFor, weekItems } from "@/lib/team";
 import { emailLogoUrl } from "@/lib/brand";
 import { admin, PORTAL_URL, sendEmail } from "@/lib/server";
 import { advisorEmails, pushTo } from "@/lib/push";
@@ -206,6 +206,39 @@ export async function GET(req: Request) {
     if (signed && day >= h.startDate && data.status !== "Started") {
       data.status = "Started";
       note("Started");
+    }
+    // on (or after) the start date: add them to the team roster, so shoutouts, celebrations
+    // and the Welcome Wagon pick them up. Matches an existing roster entry by name instead of duplicating.
+    if (signed && day >= h.startDate && !h.rosterId && h.name?.trim()) {
+      const { data: ppl } = await db.from("people").select("id, data").eq("client_id", c.id);
+      const same = (a?: string, b?: string) => !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase();
+      const hit = (ppl ?? []).find((r) => same((r.data as TeamMember).name, h.name));
+      const mgr = (ppl ?? []).map((r) => r.data as TeamMember).find((p) => same(p.name, h.managerName));
+      if (hit) {
+        const p = hit.data as TeamMember;
+        if (!p.hireDate || !p.active) await db.from("people").update({ data: { ...p, hireDate: p.hireDate || h.startDate, active: true } }).eq("id", hit.id);
+        data.rosterId = hit.id as string;
+        note("Already on the team roster");
+      } else {
+        const id = `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+        const person: Omit<TeamMember, "id" | "clientId"> = {
+          name: h.name.trim(),
+          title: h.title || "",
+          managerName: h.managerName || "",
+          managerEmail: (mgr?.email || "").toLowerCase(),
+          hireDate: h.startDate,
+          location: h.location || undefined,
+          department: mgr?.department || undefined,
+          cell: cleanCell(h.cell || "") || undefined,
+          active: true,
+        };
+        const { error } = await db.from("people").insert({ id, client_id: c.id, data: person });
+        if (!error) {
+          data.rosterId = id;
+          note("Added to the team roster");
+        }
+      }
+      changed = true;
     }
     if (day === addDaysISO(h.startDate, 30) && !h.emails?.checkIn) {
       await once(`hire:checkin:${h.id}`, async () => {

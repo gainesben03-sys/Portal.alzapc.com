@@ -2,6 +2,7 @@
 // Same flow as the Presidio Bay / The Main Post New Hire Console, made configurable per client.
 // Pure functions, used by the browser and by the daily email job.
 import { readableInk } from "./brand";
+import { emailForHire, OnboardEmail, renderOnboard } from "./onboardemail";
 
 export const STAGES = ["Approved to hire", "Offer sent", "Offer signed", "Background check", "Package ready", "First-day email sent", "Started"] as const;
 export type Stage = (typeof STAGES)[number];
@@ -48,7 +49,13 @@ export interface Hire {
   docs?: { kind: "offer" | "agreement" | "signed"; name: string; path?: string; at: string }[];
   // welcome email
   actionItems?: string;
-  emails?: { welcome?: string; firstDay?: string; checkIn?: string }; // ISO sent times
+  emails?: { welcome?: string; firstDay?: string; checkIn?: string; [emailId: string]: string | undefined }; // ISO sent times, by email
+  /** This hire's own edited copy of an email, by email id. */
+  emailCustom?: Record<string, OnboardEmail>;
+  /** Their entry on the team roster, once added on the start date. */
+  rosterId?: string;
+  /** When the offer was signed (newer hires; older ones use the history). */
+  signedAt?: string;
   requestedBy?: string;
   createdAt: string;
   history: { at: string; by: string; text: string }[];
@@ -196,6 +203,8 @@ export interface OnboardingSettings {
   senderBox?: string;
   /** This account's own wording for the welcome and first-day emails (with fill-ins). */
   emailTemplates?: { welcome?: EmailEdits; firstDay?: EmailEdits };
+  /** Every onboarding email for this account, built from blocks (welcome, first day, and any added). */
+  emails?: OnboardEmail[];
   /** Places new hires report to, one per line. */
   officeLocations?: string;
 }
@@ -345,8 +354,11 @@ export interface Brand {
   logoUrl?: string; // only http(s) logos are used in email
 }
 
-const esc = (s: string) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+export const esc = (s: string) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
+export function frameEmail(brand: Brand, inner: string) {
+  return frame(brand, inner);
+}
 function frame(brand: Brand, inner: string) {
   const logo = brand.logoUrl && /^(https?:\/\/|data:image\/|\/)/.test(brand.logoUrl)
     ? `<img src="${esc(brand.logoUrl)}" alt="${esc(brand.company)}" height="40" style="display:block;border:0;height:40px;width:auto">`
@@ -361,6 +373,9 @@ ${inner.split("<!--HERO_END-->")[1] ?? ""}
 </table></td></tr></table></body></html>`;
 }
 
+export const labelHtml = (t: string, color: string) => label(t, color);
+export const sectionHtml = (bg: string, html: string) => section(bg, html);
+export const signoffHtml = (s: OnboardingSettings, accent: string, close: string) => signoff(s, accent, close);
 const label = (t: string, color: string) => `<p style="margin:0;font-family:Arial,sans-serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:${color}">${esc(t)}</p>`;
 const section = (bg: string, html: string) => `<tr><td bgcolor="${bg}" style="background:${bg};padding:28px 40px;font-family:Arial,sans-serif;font-size:15px;line-height:23px;color:#1C1A19">${html}</td></tr>`;
 const big = (t: string) => `<p style="margin:10px 0 0 0;font-family:Georgia,serif;font-size:44px;line-height:50px;color:#1C1A19">${t}</p>`;
@@ -384,67 +399,20 @@ function numbered(items: [string, string][], accent: string) {
     .join("")}</table>`;
 }
 
-/** Welcome email: goes out once the offer is signed. */
+/** Welcome email: goes out once the offer is signed. Built from the account's template (or this hire's edited copy). */
 export function welcomeEmail(h: Hire, s: OnboardingSettings, b: Brand) {
-  const brand: Brand = { ...b, bar: b.bar ?? b.accent, accent: readableInk(b.accent) };
-  const first = firstName(h);
-  const mgr = (h.managerName || "").split(/\s+/)[0];
-  const steps: [string, string][] = [
-    ["In the next few business days", `<b>Watch for an email from ${esc(s.payroll)}</b> to start your onboarding. Check your spam folder too.`],
-  ];
-  if (s.orientation) steps.push(["Your first week", "<b>Join an HR orientation,</b> where we'll review important information, answer your questions, and help you settle in."]);
-  const actions = (h.actionItems || "").split("\n").map((x) => x.trim()).filter(Boolean);
-  const w = wording("welcome", h, s, brand.company);
-  const inner = `${label("Welcome aboard", "#6B645E").replace("margin:0", "margin:40px 0 0 0")}
-${big(`Welcome, <i>${esc(first)}.</i>`)}
-<p style="margin:14px 0 0 0;font-family:Arial,sans-serif;font-size:16px;line-height:24px;color:#4A4441">Your first day at ${esc(brand.company)} is ${esc(longDate(h.startDate))}.</p><!--HERO_END-->
-${section("#F4F1EC", paras(w.message))}
-${section("#F4F1EC", label("What happens next", brand.accent) + numbered(steps, brand.accent))}
-${actions.length ? section("#F4F1EC", label(actions.length === 1 ? "Action item" : "Action items", brand.accent) + `<ul style="margin:10px 0 0 0;padding-left:18px">${actions.map((a) => `<li style="margin:4px 0">${esc(a)}</li>`).join("")}</ul>`) : ""}
-${section("#EFECE8", label("Good to know", "#6B645E") + `<p style="margin:12px 0 0 0">${esc(s.benefitsNote)}</p><p style="margin:10px 0 0 0">Before your start date, we'll send your first-day details${mgr ? `, and ${esc(mgr)} will reach out too` : ""}.</p>`)}
-${signoff(s, brand.accent, w.closing)}`;
-  return { subject: w.subject, html: frame(brand, inner), text: `${w.message.trim()}\n\nYour first day at ${brand.company} is ${longDate(h.startDate)}.\n\nIn the next few business days, watch for an email from ${s.payroll} to start your onboarding (check spam).${s.orientation ? "\nIn your first week, you'll join an HR orientation." : ""}${actions.length ? `\n\nAction items:\n${actions.map((a) => `- ${a}`).join("\n")}` : ""}\n\n${s.benefitsNote}\n\nQuestions? Reply or email ${s.hrEmail}.\n\n${w.closing}\n${s.hrName}` };
+  return onboardEmail("welcome", h, s, b)!;
 }
 
 /** First-day email: goes out N days before the start date. */
 export function firstDayEmail(h: Hire, s: OnboardingSettings, b: Brand) {
-  const brand: Brand = { ...b, bar: b.bar ?? b.accent, accent: readableInk(b.accent) };
-  const first = firstName(h);
-  const where = (h.location || s.hqAddress || "").trim();
-  const w = wording("firstDay", h, s, brand.company);
-  const grid = (pairs: [string, string][]) =>
-    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:2px solid ${brand.accent}">${[0, 2]
-      .map((i) => `<tr>${pairs.slice(i, i + 2).map(([k, v]) => `<td width="50%" valign="top" style="padding:14px 10px 10px 0">${label(k, brand.accent)}<p style="margin:6px 0 0 0;font-family:Georgia,serif;font-size:19px;line-height:25px">${esc(v)}</p></td>`).join("")}</tr>`)
-      .join("")}</table>`;
-  const values = (s.values || "").split("\n").map((v) => v.trim()).filter(Boolean);
-  const before: [string, string][] = [
-    ["", `Find your ${esc(s.payroll)} invite in your personal email. Check spam.`],
-    ["", `Complete Section 1 of your Form I-9 in ${esc(s.payroll)}.`],
-    ["", "Gather your I-9 documents and bank info."],
-  ];
-  const clocking =
-    h.exempt === "nonexempt" && s.clockingSection
-      ? section("#F4F1EC", label("Clocking in and out", brand.accent) + `<ul style="margin:10px 0 0 0;padding-left:18px"><li>Clock in when you start work and out when you finish.</li><li>Take your unpaid 30-minute meal break before the end of your 5th hour of work.</li><li>Take a paid 10-minute rest break for every 4 hours worked.</li><li>Overtime must be approved in advance by your manager.</li><li>Missed a punch? Tell your manager the same day.</li></ul>`)
-      : "";
-  const inner = `${label("You start soon", "#6B645E").replace("margin:0", "margin:40px 0 0 0")}
-${big(`Welcome, <i>${esc(first)}.</i>`)}
-<div style="margin:14px 0 0 0;font-family:Arial,sans-serif;font-size:16px;line-height:24px;color:#4A4441">${paras(w.message, "margin:0 0 12px 0;font-family:Arial,sans-serif;font-size:16px;line-height:24px;color:#4A4441")}</div><!--HERO_END-->
-${section("#F4F1EC", grid([["Start date", longDate(h.startDate)], ["Arrive by", h.arrivalTime || s.defaultArrival], ["Where", where || "Your manager will confirm"], ["Ask for", h.managerName || "Your manager"]]))}
-${s.leaderQuote ? section("#F4F1EC", `<p style="margin:0;font-family:Georgia,serif;font-size:22px;font-style:italic;line-height:30px">&ldquo;${esc(s.leaderQuote)}&rdquo;</p>${s.leaderNames ? `<p style="margin:8px 0 0 0;font-size:13px;color:#6B645E">${esc(s.leaderNames)}</p>` : ""}`) : ""}
-${s.videoUrl ? section("#F4F1EC", `<a href="${esc(s.videoUrl)}" style="display:inline-block;border:2px solid ${brand.accent};padding:12px 20px;color:${brand.accent};text-decoration:none;font-weight:bold">Watch the welcome video</a>`) : ""}
-${s.mission ? section("#EFECE8", label("Our mission", "#6B645E") + `<p style="margin:10px 0 0 0;font-family:Georgia,serif;font-size:19px;line-height:27px">${esc(s.mission)}</p>`) : ""}
-${values.length ? section("#EFECE8", label("What we stand for", "#6B645E") + `<p style="margin:10px 0 0 0;line-height:26px">${values.map((v, i) => `${String(i + 1).padStart(2, "0")}&nbsp;&nbsp;${esc(v)}`).join("<br>")}</p>`) : ""}
-${section("#F4F1EC", label("Before day one", brand.accent) + numbered(before, brand.accent))}
-${section("#F4F1EC", label("Bring on day one", brand.accent) + `<ul style="margin:10px 0 0 0;padding-left:18px"><li><b>Original ID.</b> Unexpired. No photocopies.</li><li><b>Bank details.</b> Account and routing number, or a voided check.</li><li><b>Emergency contact.</b> Name and phone number.</li></ul><p style="margin:10px 0 0 0;font-size:13px;color:#6B645E">${esc(s.idNote)}</p>`)}
-${section("#F4F1EC", label("On day one", brand.accent) + `<ul style="margin:10px 0 0 0;padding-left:18px"><li>I-9 review with your manager and HR</li><li>${esc(s.payroll)} setup: direct deposit, emergency contact, tax forms</li><li>Handbook: review and acknowledge</li><li>Time off: ask your manager how to request it and who to tell when you're sick</li></ul>`)}
-${section("#EFECE8", label("Don't miss this", "#6B645E") + `<p style="margin:10px 0 0 0;font-family:Georgia,serif;font-size:20px">You have ${s.enrollDays} days to enroll in benefits.</p><p style="margin:6px 0 0 0">Make your elections within ${s.enrollDays} days of your start date.</p>`)}
-${clocking}
-${signoff(s, brand.accent, w.closing)}`;
-  return {
-    subject: w.subject,
-    html: frame(brand, inner),
-    text: `Hi ${first},\n\n${w.message.trim()}\n\nYour first day at ${brand.company} is ${longDate(h.startDate)}.\nArrive by: ${h.arrivalTime || s.defaultArrival}\nWhere: ${where}\nAsk for: ${h.managerName}\n\nBefore day one:\n- Find your ${s.payroll} invite (check spam)\n- Complete Section 1 of your I-9\n- Gather your I-9 documents and bank info\n\nBring: original unexpired ID, bank details, emergency contact.\n\nYou have ${s.enrollDays} days to enroll in benefits.\n\n${w.closing}\n${s.hrName}`,
-  };
+  return onboardEmail("firstDay", h, s, b)!;
+}
+
+/** Any onboarding email by id, for this hire. null if the account has no such email. */
+export function onboardEmail(id: string, h: Hire, s: OnboardingSettings, b: Brand) {
+  const e = emailForHire(id, h, s);
+  return e ? renderOnboard(e, h, s, b) : null;
 }
 
 /** Signing request: "your offer is ready to review and sign". */

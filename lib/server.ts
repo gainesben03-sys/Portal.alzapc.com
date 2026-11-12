@@ -77,7 +77,7 @@ export function siteUrl(req: Request): string {
   return `${/^localhost/.test(host) ? "http" : "https"}://${host}`;
 }
 
-export async function sendEmail(opts: { to: string[]; subject: string; text: string; html?: string; scheduledAt?: string; attachments?: { filename: string; content: string }[]; replyTo?: string; fromName?: string; fromBox?: string }): Promise<{ ok: boolean; reason?: string }> {
+export async function sendEmail(opts: { to: string[]; cc?: string[]; subject: string; text: string; html?: string; scheduledAt?: string; attachments?: { filename: string; content: string }[]; replyTo?: string; fromName?: string; fromBox?: string }): Promise<{ ok: boolean; reason?: string }> {
   const key = process.env.RESEND_API_KEY;
   let from = process.env.NOTIFY_FROM;
   if (!key || !from) return { ok: false, reason: "not_configured" };
@@ -90,7 +90,7 @@ export async function sendEmail(opts: { to: string[]; subject: string; text: str
   const r = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from, to: opts.to, subject: opts.subject.replace(/[\r\n]+/g, " ").slice(0, 200), text: opts.text, html: opts.html, scheduled_at: opts.scheduledAt, attachments: opts.attachments, reply_to: opts.replyTo }),
+    body: JSON.stringify({ from, to: opts.to, cc: opts.cc?.length ? opts.cc : undefined, subject: opts.subject.replace(/[\r\n]+/g, " ").slice(0, 200), text: opts.text, html: opts.html, scheduled_at: opts.scheduledAt, attachments: opts.attachments, reply_to: opts.replyTo }),
   });
   if (r.ok) return { ok: true };
   let msg = "";
