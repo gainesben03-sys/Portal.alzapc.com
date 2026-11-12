@@ -463,11 +463,14 @@ function HireInner() {
                   <dt>Where</dt><dd>{h.location || s.hqAddress || "—"}</dd>
                   <dt>Email</dt><dd>{h.personalEmail || <span className="muted">Not added</span>}</dd>
                   <dt>Cell</dt><dd>{h.cell || <span className="muted">Not added</span>}</dd>
+                  <dt>Work email</dt><dd>{h.workEmail || <span className="muted">Not added</span>}</dd>
                   {h.contingencies && (<><dt>Contingent on</dt><dd>{h.contingencies}</dd></>)}
                   {canManage && h.notes && (<><dt>HR notes</dt><dd style={{ whiteSpace: "pre-wrap" }}>{h.notes}</dd></>)}
                 </dl>
               </div>
             )}
+
+            <RosterCard h={h} canManage={canManage} recognition={!!cfg.modules?.recognition} onSave={(p, log) => { updateHire(h.id, p, log); toast.show("Saved"); }} />
 
             {canManage && <div className="section"><Checks h={editing ?? h} s={s} /></div>}
 
@@ -574,5 +577,64 @@ export default function HirePage() {
     <Suspense>
       <HireInner />
     </Suspense>
+  );
+}
+
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+/** Onboarding step: work email and birthday, so they join the team roster ready for shoutouts and celebrations. */
+function RosterCard({ h, canManage, recognition, onSave }: { h: Hire; canManage: boolean; recognition: boolean; onSave: (p: Partial<Hire>, log: string) => void }) {
+  const [email, setEmail] = useState(h.workEmail ?? "");
+  const [mm, setMm] = useState(h.birthday?.slice(0, 2) ?? "");
+  const [dd, setDd] = useState(h.birthday?.slice(3, 5) ?? "");
+  const [err, setErr] = useState("");
+  const done = !!h.workEmail && !!h.birthday;
+  const days = mm ? new Date(2024, Number(mm), 0).getDate() : 31;
+  const dirty = email.trim().toLowerCase() !== (h.workEmail ?? "") || (mm && dd ? `${mm}-${dd}` : "") !== (h.birthday ?? "");
+  const save = () => {
+    const e = email.trim().toLowerCase();
+    if (e && !/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(e)) return setErr("That work email doesn't look right.");
+    if ((mm && !dd) || (!mm && dd)) return setErr("Pick both the month and the day.");
+    setErr("");
+    const birthday = mm && dd ? `${mm}-${dd}` : undefined;
+    onSave({ workEmail: e || undefined, birthday }, [e ? "Work email added" : "", birthday ? "Birthday added" : ""].filter(Boolean).join(", ") || "Roster details cleared");
+  };
+  return (
+    <div className="section">
+      <div className="section-head"><h2>Team roster</h2>{done && <span className="pill done">✓ Ready</span>}</div>
+      <div className="card">
+        <p className="small muted" style={{ marginTop: 0 }}>
+          {h.rosterId
+            ? "On the team roster."
+            : `${firstName(h)} joins the team roster on ${h.startDate ? longDate(h.startDate) : "their start date"}${recognition ? ", so coworkers can give them shoutouts and their birthday and work anniversary get celebrated" : ""}.`}{" "}
+          Add these before then.
+        </p>
+        {canManage ? (
+          <>
+            <label className="f">Work email<input className="f" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Their company email, once it's set up" /></label>
+            <label className="f" htmlFor="bday-m">Birthday <span className="tiny muted">(month and day only, never the year)</span></label>
+            <div className="lv-ent">
+              <select id="bday-m" className="f" value={mm} onChange={(e) => setMm(e.target.value)} aria-label="Birthday month">
+                <option value="">Month</option>
+                {MONTHS.map((m, i) => <option key={m} value={String(i + 1).padStart(2, "0")}>{m}</option>)}
+              </select>
+              <select className="f" value={dd} onChange={(e) => setDd(e.target.value)} aria-label="Birthday day">
+                <option value="">Day</option>
+                {Array.from({ length: days }, (_, i) => String(i + 1).padStart(2, "0")).map((d) => <option key={d} value={d}>{Number(d)}</option>)}
+              </select>
+            </div>
+            {err && <p className="small" style={{ color: "var(--red)" }}>{err}</p>}
+            <div className="action-foot" style={{ justifyContent: "flex-end" }}>
+              <button className="btn primary sm" disabled={!dirty} onClick={save}>Save</button>
+            </div>
+          </>
+        ) : (
+          <dl className="facts">
+            <dt>Work email</dt><dd>{h.workEmail || <span className="muted">Not added</span>}</dd>
+            <dt>Birthday</dt><dd>{h.birthday ? `${MONTHS[Number(h.birthday.slice(0, 2)) - 1]} ${Number(h.birthday.slice(3, 5))}` : <span className="muted">Not added</span>}</dd>
+          </dl>
+        )}
+      </div>
+    </div>
   );
 }

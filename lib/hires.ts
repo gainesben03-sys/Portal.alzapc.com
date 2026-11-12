@@ -52,6 +52,9 @@ export interface Hire {
   emails?: { welcome?: string; firstDay?: string; checkIn?: string; [emailId: string]: string | undefined }; // ISO sent times, by email
   /** This hire's own edited copy of an email, by email id. */
   emailCustom?: Record<string, OnboardEmail>;
+  /** Collected during onboarding for the team roster (shoutouts, celebrations). Birthday is month and day only. */
+  workEmail?: string;
+  birthday?: string; // "MM-DD"
   /** Their entry on the team roster, once added on the start date. */
   rosterId?: string;
   /** When the offer was signed (newer hires; older ones use the history). */

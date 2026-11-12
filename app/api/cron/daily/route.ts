@@ -216,7 +216,7 @@ export async function GET(req: Request) {
       const mgr = (ppl ?? []).map((r) => r.data as TeamMember).find((p) => same(p.name, h.managerName));
       if (hit) {
         const p = hit.data as TeamMember;
-        if (!p.hireDate || !p.active) await db.from("people").update({ data: { ...p, hireDate: p.hireDate || h.startDate, active: true } }).eq("id", hit.id);
+        if (!p.hireDate || !p.active || (!p.email && h.workEmail) || (!p.birthday && h.birthday)) await db.from("people").update({ data: { ...p, hireDate: p.hireDate || h.startDate, email: p.email || h.workEmail || undefined, birthday: p.birthday || h.birthday || undefined, active: true } }).eq("id", hit.id);
         data.rosterId = hit.id as string;
         note("Already on the team roster");
       } else {
@@ -224,6 +224,8 @@ export async function GET(req: Request) {
         const person: Omit<TeamMember, "id" | "clientId"> = {
           name: h.name.trim(),
           title: h.title || "",
+          email: h.workEmail?.trim().toLowerCase() || undefined,
+          birthday: /^\d{2}-\d{2}$/.test(h.birthday || "") ? h.birthday : undefined,
           managerName: h.managerName || "",
           managerEmail: (mgr?.email || "").toLowerCase(),
           hireDate: h.startDate,
@@ -239,6 +241,12 @@ export async function GET(req: Request) {
         }
       }
       changed = true;
+    }
+    // added before the work email or birthday was known: fill them in later
+    if (h.rosterId && (h.workEmail || h.birthday)) {
+      const { data: pr } = await db.from("people").select("data").eq("id", h.rosterId).maybeSingle();
+      const p = pr?.data as TeamMember | undefined;
+      if (p && ((!p.email && h.workEmail) || (!p.birthday && h.birthday))) await db.from("people").update({ data: { ...p, email: p.email || h.workEmail?.toLowerCase(), birthday: p.birthday || h.birthday } }).eq("id", h.rosterId);
     }
     if (day === addDaysISO(h.startDate, 30) && !h.emails?.checkIn) {
       await once(`hire:checkin:${h.id}`, async () => {
