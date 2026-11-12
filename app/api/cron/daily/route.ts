@@ -13,11 +13,13 @@ import { Action, Client, DEFAULT_RULES, fmt, Project, reminderPlan, Rules, toISO
 import { buildHuddle } from "@/lib/huddle";
 import { Candidate, ClientConfig, HuddleSettings, SharedFile } from "@/lib/modules";
 import { pitchDeleteOn } from "@/lib/pitch";
-import { addDaysISO, firstDayEmail, forCompany, Hire, hireCompany, listEmail, onboardingFor, senderFor, stageIndex, welcomeEmail } from "@/lib/hires";
+import { addDaysISO, forCompany, Hire, hireCompany, listEmail, onboardingFor, senderFor, stageIndex } from "@/lib/hires";
 import { anniversary, cleanCell, nextYearly, TeamLog, TeamMember, teamFor, weekItems } from "@/lib/team";
 import { emailLogoUrl } from "@/lib/brand";
 import { admin, PORTAL_URL, sendEmail } from "@/lib/server";
 import { advisorEmails, pushTo } from "@/lib/push";
+import { dueOn, emailForHire, emailsFor, renderOnboard } from "@/lib/onboardemail";
+import { ccFor } from "@/lib/hireemailserver";
 import { Departure, offboardFor, sendOn } from "@/lib/offboard";
 import { offRoster, sendGoodbye } from "@/lib/offboardserver";
 import { DEFAULT_SETTINGS as LEAVE_DEFAULTS, dueItems, Due, fmtDay, LeaveCase, LeaveSettings, OPEN_STATUSES } from "@/lib/leave";
@@ -182,28 +184,28 @@ export async function GET(req: Request) {
     };
     const signed = stageIndex(h.status) >= 2;
     const to = (h.personalEmail || "").trim().toLowerCase();
-    if (s.autoSend && signed && to && !h.emails?.welcome) {
-      const m = welcomeEmail(h, s, brand);
-      await once(`hire:welcome:${h.id}`, async () => {
-        const r = await sendEmail({ to: [to], subject: m.subject, html: m.html, text: m.text, ...sender });
-        if (r.ok) {
-          data.emails = { ...(data.emails ?? {}), welcome: new Date().toISOString() };
-          note(`Welcome email sent to ${to}`);
-        }
-        return r;
-      });
-    }
-    if (s.autoSend && signed && to && !h.emails?.firstDay && day >= addDaysISO(h.startDate, -s.firstDayDaysBefore) && day <= h.startDate) {
-      const m = firstDayEmail(h, s, brand);
-      await once(`hire:firstday:${h.id}`, async () => {
-        const r = await sendEmail({ to: [to], subject: m.subject, html: m.html, text: m.text, ...sender });
-        if (r.ok) {
-          data.emails = { ...(data.emails ?? {}), firstDay: new Date().toISOString() };
-          if (stageIndex(data.status) < 4) data.status = "First-day email sent";
-          note(`First-day email sent to ${to}`);
-        }
-        return r;
-      });
+    // onboarding emails, each on its own timing (welcome, first day, and any the account added)
+    if (s.autoSend && signed && to) {
+      for (const tpl of emailsFor(s)) {
+        if (!tpl.on || tpl.when.anchor === "manual" || data.emails?.[tpl.id]) continue;
+        const e = emailForHire(tpl.id, h, s);
+        const due = e ? dueOn(e, h) : null;
+        if (!e || !due || day < due) continue;
+        // don't send something long overdue: start-date emails only within a few days of their date
+        if (e.when.anchor === "start" && day > (tpl.id === "firstDay" ? h.startDate : addDaysISO(due, 3))) continue;
+        const key = tpl.id === "welcome" ? `hire:welcome:${h.id}` : tpl.id === "firstDay" ? `hire:firstday:${h.id}` : `hire:${tpl.id}:${h.id}`;
+        await once(key, async () => {
+          const m = renderOnboard(e, h, s, brand);
+          const cc = await ccFor(db, c.id, e, h, s);
+          const r = await sendEmail({ to: [to], cc, subject: m.subject, html: m.html, text: m.text, ...sender });
+          if (r.ok) {
+            data.emails = { ...(data.emails ?? {}), [tpl.id]: new Date().toISOString() };
+            if (tpl.id === "firstDay" && stageIndex(data.status) < stageIndex("First-day email sent")) data.status = "First-day email sent";
+            note(`${e.name} sent to ${to}${cc.length ? ` (cc ${cc.join(", ")})` : ""}`);
+          }
+          return r;
+        });
+      }
     }
     if (signed && day >= h.startDate && data.status !== "Started") {
       data.status = "Started";
