@@ -8,3 +8,8 @@ create or replace function public.is_member(cid text) returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (select 1 from public.members where client_id = cid and lower(email) = public.me_email())
 $$;
+
+create or replace function public.is_exec(cid text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.members where client_id = cid and lower(email) = public.me_email() and access = 'exec')
+$$;
