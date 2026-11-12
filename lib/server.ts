@@ -47,8 +47,9 @@ export async function caller(req: Request): Promise<Caller | null> {
   const email = data.user.email.toLowerCase();
   const db = admin();
   const [{ data: adv }, { data: mem }] = await Promise.all([
-    db.from("advisors").select("email, name").eq("email", email).maybeSingle(),
-    db.from("members").select("client_id, access, name").eq("email", email),
+    db.from("advisors").select("email, name").ilike("email", email.replace(/[\\%_]/g, "\\$&")).maybeSingle(),
+    // match regardless of how the email was capitalized when the person was added
+    db.from("members").select("client_id, access, name").ilike("email", email.replace(/[\\%_]/g, "\\$&")),
   ]);
   return {
     email,

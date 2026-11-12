@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ClientNav, ClientTopbar, Sheet, Toast, useGuard, useToast } from "@/components/ui";
-import { fmtTime } from "@/lib/data";
+import { fmtTime, toISO, today } from "@/lib/data";
 import { Candidate, CandidateBrief, daysSince, Decision, DECISION_LABEL } from "@/lib/modules";
 import { notifyBen, useStore } from "@/lib/store";
 import { BriefBlock, deletePitchFiles, PitchContact, PitchLinkCard, PitchMedia, ReviewerLinks, RoleSheet, ShareSheet } from "@/components/pitch";
@@ -79,6 +79,11 @@ export default function Recruiting() {
     asked.current = true;
     writeBriefs("missing", `Writing summaries for ${missingBriefs} candidate${missingBriefs === 1 ? "" : "s"}…`);
   }, [ok, canBrief, missingBriefs]); // eslint-disable-line react-hooks/exhaustive-deps
+  const shareAll = (roleId: string) => {
+    const n = candidates.filter((c) => c.roleId === roleId && c.hidden && c.screened !== "passed").length;
+    if (!n || !confirm(`Share ${n} pitch${n === 1 ? "" : "es"} with everyone at ${client?.name ?? "the client"} who can see Recruiting? They'll be able to watch the videos and say yes or no.`)) return;
+    patch({ candidates: candidates.map((c) => (c.roleId === roleId && c.hidden && c.screened !== "passed" ? { ...c, hidden: false, screened: "shared" as const, stage: "Shared with you", sentAt: toISO(today()) } : c)) });
+  };
   const reviewsFor = (c: Candidate) => (LIVE ? outside[c.id] ?? [] : c.reviews ?? []).slice().sort((a, b) => a.at.localeCompare(b.at));
 
   if (!ok || !client) return null;
@@ -223,6 +228,9 @@ export default function Recruiting() {
                           {l} <span>{k === "all" ? list.length : list.filter((c) => st(c) === k).length}</span>
                         </button>
                       ))}
+                      {isAdvisor && list.some((c) => st(c) === "screen") && (
+                        <button className="cc-rewrite" onClick={() => shareAll(role.id)}>Share all {list.filter((c) => st(c) === "screen").length} with the team</button>
+                      )}
                       {isAdvisor && live && list.some((c) => c.pitch) && (
                         <button className="cc-rewrite" disabled={!!briefing} onClick={() => writeBriefs(list.filter((c) => c.pitch && !c.cleared).map((c) => c.id), `Rewriting ${role.title} summaries…`)}>Rewrite summaries</button>
                       )}

@@ -358,9 +358,9 @@ export function PitchMedia({ c }: { c: Candidate }) {
     setErr("");
     try {
       const r = await fetch(`/api/pitch/media?c=${encodeURIComponent(c.id)}&f=media`, { headers: await authHeader() });
-      const j = await r.json();
-      if (!j.ok) throw new Error(j.reason);
-      setSrc(j.url);
+      const j = await r.json().catch(() => ({ ok: false, reason: "network" }));
+      if (!j.ok) setErr(j.reason === "forbidden" ? "You don't have access to this pitch yet. Ask Ben." : j.reason === "none" || j.reason === "not_found" ? "The recording isn't there anymore." : j.reason === "signed_out" ? "Sign in again to play it." : "Couldn't open it. Try again.");
+      else setSrc(j.url);
     } catch {
       setErr("Couldn't open it. Try again.");
     }

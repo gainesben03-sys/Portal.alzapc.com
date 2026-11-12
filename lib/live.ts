@@ -148,7 +148,7 @@ export async function saveDiff(db: SupabaseClient, prev: State, next: State, me:
     for (const u of b.users) {
       const old = au.find((x) => x.email.toLowerCase() === u.email.toLowerCase());
       if (!old) {
-        run(db.from("members").upsert({ client_id: cid, email: u.email, name: u.name, role: u.role, access: u.access, invited: true, added_by: u.addedBy ?? null, huddle: recB.size === 0 || recB.has(u.email) }, { onConflict: "client_id,email", ignoreDuplicates: true }));
+        run(db.from("members").upsert({ client_id: cid, email: u.email.toLowerCase(), name: u.name, role: u.role, access: u.access, invited: true, added_by: u.addedBy ?? null, huddle: recB.size === 0 || recB.has(u.email) }, { onConflict: "client_id,email", ignoreDuplicates: true }));
       } else {
         const patch: Record<string, unknown> = {};
         if (old.access !== u.access) patch.access = u.access;
