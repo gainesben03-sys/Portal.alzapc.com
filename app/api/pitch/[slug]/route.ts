@@ -38,7 +38,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     prompts: p.prompts,
     maxSeconds: p.maxSeconds,
     allowUpload: p.allowUpload,
-    allowAudio: p.allowAudio,
+    allowAudio: false, // video only
     allowWritten: false,
     askResume: true, // a resume is required: the candidate card summary is built from it
     askLinkedin: p.askLinkedin,
@@ -69,12 +69,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   if (b.action === "start") {
     const name = s(b.name, 100);
     const email = s(b.email, 200).toLowerCase();
-    // written intros are retired: video or audio only
+    // written intros and audio are retired: video only
     if (b.kind === "written") return NextResponse.json({ ok: false, reason: "kind" });
     const kind: "video" | "audio" = b.kind === "audio" ? "audio" : "video";
     if (name.length < 2) return NextResponse.json({ ok: false, reason: "name" });
     if (!emailOk(email)) return NextResponse.json({ ok: false, reason: "email" });
-    if (kind === "audio" && !p.allowAudio) return NextResponse.json({ ok: false, reason: "kind" });
+    if (kind === "audio") return NextResponse.json({ ok: false, reason: "kind" }); // video only
     if (await already(email)) return NextResponse.json({ ok: false, reason: "already_applied" });
     const mime = s(b.mime, 80).toLowerCase();
     const size = Number(b.size) || 0;

@@ -72,7 +72,7 @@ export function newPitch(title: string): PitchSettings {
     maxSeconds: 90,
     intro: "Thanks for your interest. Instead of a cover letter, we'd love a short video so we can get to know you.",
     allowUpload: true,
-    allowAudio: true,
+    allowAudio: false,
     allowWritten: false,
     askResume: true,
     askLinkedin: true,

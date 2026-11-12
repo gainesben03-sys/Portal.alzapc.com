@@ -274,7 +274,6 @@ function PitchSettingsSheet({ p, onClose, onSave }: { p: PitchSettings; onClose:
       <div style={{ marginTop: 10 }}>
         <span className="flabel">Candidates can also</span>
         {tog("allowUpload", "Upload a video they recorded on their phone")}
-        {tog("allowAudio", "Send audio only")}
         {tog("askLinkedin", "Add their LinkedIn")}
       </div>
       <div className="sheet-actions">

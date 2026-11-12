@@ -31,7 +31,7 @@ const REASONS: Record<string, string> = {
   closed: "This role isn't taking new pitches right now.",
   too_big: "That video is too large. Record it here instead (it keeps files small), or trim it and try again.",
   resume_too_big: "That resume file is too large. Try a PDF under 10 MB.",
-  type: "That file isn't a video or audio file we can use.",
+  type: "That file isn't a video we can use.",
   expired: "This took a while, so the upload link expired. Tap Send again.",
   media_missing: "Your recording didn't finish uploading. Tap Send again; it's saved on this device.",
   resume_missing: "Your resume didn't finish uploading. Tap Send again.",
