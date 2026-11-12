@@ -3,7 +3,7 @@
 // Pure functions, used by the browser and by the daily email job.
 import { readableInk } from "./brand";
 
-export const STAGES = ["Approved to hire", "Offer sent", "Offer signed", "Package ready", "First-day email sent", "Started"] as const;
+export const STAGES = ["Approved to hire", "Offer sent", "Offer signed", "Background check", "Package ready", "First-day email sent", "Started"] as const;
 export type Stage = (typeof STAGES)[number];
 
 /** Short labels for the tracker. */
@@ -11,8 +11,9 @@ export const STAGE_SHORT: Record<Stage, string> = {
   "Approved to hire": "Approved",
   "Offer sent": "Offer sent",
   "Offer signed": "Signed",
+  "Background check": "BG check",
   "Package ready": "Paperwork",
-  "First-day email sent": "Day 1 set",
+  "First-day email sent": "Day 1",
   Started: "Started",
 };
 
@@ -56,6 +57,8 @@ export interface Hire {
   emailEdits?: { welcome?: EmailEdits; firstDay?: EmailEdits };
   /** For accounts with sister companies: which one is hiring (sets the name, logo and sender). */
   companyId?: string;
+  /** Background check after the offer is signed. "review" means the report needs a closer look before any decision. */
+  backgroundCheck?: { status: "started" | "clear" | "review" | "skipped"; at: string; vendor?: string; note?: string };
   /** Built-in e-signature requests, by document type. */
   esign?: { offer?: EsignState; agreement?: EsignState };
 }

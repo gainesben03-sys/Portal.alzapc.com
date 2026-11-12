@@ -394,11 +394,11 @@ textarea.f.draft-text { min-height: 260px; margin-top: 10px; line-height: 1.5; }
 .tracker.compact li { gap: 4px; }
 .tracker.compact .lbl { font-size: 10px; line-height: 1.15; white-space: normal; width: 54px; }
 /* equal columns: each label centered under its dot, line runs dot center to dot center */
-.tracker ol { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.tracker ol { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .tracker li { width: auto; min-width: 0; }
 .tracker .lbl { width: 100%; white-space: normal; line-height: 1.2; padding: 0 2px; box-sizing: border-box; }
-.tracker .tracker-line { left: calc(100% / 12); right: calc(100% / 12); }
-.tracker.compact .tracker-line { left: calc(100% / 12); right: calc(100% / 12); }
+.tracker .tracker-line { left: calc(100% / 14); right: calc(100% / 14); }
+.tracker.compact .tracker-line { left: calc(100% / 14); right: calc(100% / 14); }
 .tracker.compact li { width: auto; }
 .tracker.compact .lbl { width: 100%; }
 @keyframes tracker-pulse { 70% { box-shadow: 0 0 0 9px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
@@ -1302,3 +1302,4 @@ audio.rv-media { background: none; }
 .cc-foot .grow { flex: 1; }
 .cc-more { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; }
 .cc-more .tiny.muted:last-child { margin-left: auto; }
+@media (max-width: 480px) { .tracker:not(.compact) .dot { width: 26px; height: 26px; font-size: 11px; } .tracker:not(.compact) .tracker-line { top: 11px; } .tracker .lbl { font-size: 10px; } }

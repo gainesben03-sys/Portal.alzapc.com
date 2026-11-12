@@ -61,6 +61,7 @@ function HireInner() {
 
   // ---------------------------------------------------------------- actions
   const setStage = (status: Stage, log: string) => updateHire(h.id, { status }, log);
+  const bg = (status: NonNullable<Hire["backgroundCheck"]>["status"], stage: Stage, log: string) => updateHire(h.id, { status: stage, backgroundCheck: { ...h.backgroundCheck, status, at: status === "started" || !h.backgroundCheck?.at ? new Date().toISOString() : h.backgroundCheck.at } }, log);
 
   const send = async (kind: "welcome" | "firstDay", test = false, f?: EmailEditFields): Promise<boolean> => {
     const label = kind === "welcome" ? "Welcome email" : "First-day email";
@@ -199,11 +200,42 @@ function HireInner() {
         text: (
           <>
             Signed. {h.emails?.welcome ? `Welcome email went out ${shortDate(h.emails.welcome.slice(0, 10))}.` : s.autoSend ? "The welcome email goes out with tomorrow morning's run if it isn't sent before then." : "Send the welcome email when you're ready."}{" "}
-            Next: new-hire paperwork in {s.payroll}.
+            Next: the background check.
           </>
         ),
-        buttons: canManage && <button className="btn primary sm" onClick={() => setStage("Package ready", "New-hire paperwork done")}>Paperwork done</button>,
+        buttons: canManage && (
+          <>
+            <button className="btn sm" onClick={() => bg("skipped", "Background check", "No background check for this hire")}>No check for this hire</button>
+            <button className="btn primary sm" onClick={() => bg("started", "Background check", "Background check started")}>Background check started</button>
+          </>
+        ),
       };
+      break;
+    case "Background check":
+      next =
+        h.backgroundCheck?.status === "clear" || h.backgroundCheck?.status === "skipped"
+          ? {
+              text: `${h.backgroundCheck.status === "clear" ? "Background check clear." : "No background check for this hire."} Next: new-hire paperwork in ${s.payroll}.`,
+              buttons: canManage && <button className="btn primary sm" onClick={() => setStage("Package ready", "New-hire paperwork done")}>Paperwork done</button>,
+            }
+          : h.backgroundCheck?.status === "review"
+          ? {
+              text: (
+                <>
+                  The report needs a closer look. Don&apos;t withdraw the offer yet: talk with Ben first. In California the offer can only be pulled after an individual assessment, a written pre-adverse action notice with a copy of the report, and at least 5 business days for {first} to respond.
+                </>
+              ),
+              buttons: canManage && <button className="btn primary sm" onClick={() => bg("clear", "Background check", "Background check reviewed and cleared")}>Cleared after review</button>,
+            }
+          : {
+              text: `Background check in progress${h.backgroundCheck?.at ? ` since ${shortDate(h.backgroundCheck.at.slice(0, 10))}` : ""}. Once it comes back clear, move on to new-hire paperwork in ${s.payroll}.`,
+              buttons: canManage && (
+                <>
+                  <button className="btn sm" onClick={() => bg("review", "Background check", "Background check needs review")}>Needs review</button>
+                  <button className="btn primary sm" onClick={() => bg("clear", "Background check", "Background check clear")}>Clear</button>
+                </>
+              ),
+            };
       break;
     case "Package ready":
       next = {

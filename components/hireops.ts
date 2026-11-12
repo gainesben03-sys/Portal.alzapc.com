@@ -67,7 +67,7 @@ export async function requestSignature(hireId: string, path: string, kind: "offe
 
 /** What the server writes after a real send, mirrored locally so the next save keeps it. */
 export function afterSend(h: Hire, kind: "welcome" | "firstDay", at: string): Partial<Hire> {
-  const status: Stage = kind === "firstDay" && ["Approved to hire", "Offer sent", "Offer signed", "Package ready"].includes(h.status) ? "First-day email sent" : h.status;
+  const status: Stage = kind === "firstDay" && ["Approved to hire", "Offer sent", "Offer signed", "Background check", "Package ready"].includes(h.status) ? "First-day email sent" : h.status;
   return { emails: { ...(h.emails ?? {}), [kind]: at }, status };
 }
 

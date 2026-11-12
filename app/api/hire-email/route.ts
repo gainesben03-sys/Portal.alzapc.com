@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     const data = { ...(row.data as Hire), ...changes };
     data.emails = { ...(data.emails ?? {}), [kind]: at };
     data.history = [...(data.history ?? []), { at, by: me.name, text: kind === "welcome" ? `Welcome email sent to ${to}` : `First-day email sent to ${to}` }];
-    if (kind === "firstDay" && ["Approved to hire", "Offer sent", "Offer signed", "Package ready"].includes(data.status)) data.status = "First-day email sent";
+    if (kind === "firstDay" && ["Approved to hire", "Offer sent", "Offer signed", "Background check", "Package ready"].includes(data.status)) data.status = "First-day email sent";
     await db.from("hires").update({ data }).eq("id", row.id);
   }
   return NextResponse.json({ sent: true, to });
