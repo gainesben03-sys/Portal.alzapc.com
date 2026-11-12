@@ -1,6 +1,7 @@
 "use client";
 
 import { LeaveTile } from "@/components/leaveui";
+import { Greeting } from "@/components/greeting";
 import { MyListTile } from "@/components/mylist";
 import { ContactBenLine } from "@/components/contactben";
 import { useLeaveAccess } from "@/lib/leaveclient";
@@ -198,7 +199,7 @@ export default function Home() {
       const reqs = openClient.filter((a) => a.kind === "document" || a.kind === "information");
       const sent = files.filter((f) => f.clientId === client.id).length;
       return (
-        <Tile title="Send files to Ben" href={`${base}/share`} linkLabel="Upload">
+        <Tile title="Send files" href={`${base}/share`} linkLabel="Upload">
           <p className="small muted" style={{ marginBottom: 10 }}>Send documents securely. No email attachments.</p>
           {reqs.slice(0, 2).map((r) => (
             <Link href={`${base}/share`} className="row" key={r.id}>
@@ -358,18 +359,7 @@ export default function Home() {
       <ClientTopbar client={client} />
       <ClientNav clientId={client.id} />
       <main className="wrap wide">
-        <div className="row hero" style={{ alignItems: "flex-end" }}>
-          <div>
-            <h1>Hi {firstName}</h1>
-            <p>
-              {overdue.length > 0 && <span className="big">{overdue.length} overdue</span>}
-              {overdue.length > 0 && dueToday.length > 0 && " · "}
-              {dueToday.length > 0 && <b>{dueToday.length} due today</b>}
-              {overdue.length + dueToday.length === 0 ? "You're all caught up." : ` across ${client.name}.`}
-            </p>
-          </div>
-          <button className="btn sm" onClick={() => (s.preview ? setPreviewNote(true) : setEditing(true))}>Customize</button>
-        </div>
+        <Greeting clientId={client.id} onCustomize={() => (s.preview ? setPreviewNote(true) : setEditing(true))} />
 
         <AskBox clientId={client.id} />
 

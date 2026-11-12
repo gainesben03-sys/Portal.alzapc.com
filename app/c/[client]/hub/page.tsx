@@ -97,7 +97,7 @@ export default function HubHome() {
               )}
             </div>
 
-            {myTasks.length > 0 && (
+            {false && myTasks.length > 0 && (
               <>
                 <div className="section-head section"><h2>From Ben</h2><Link href={`/c/${clientId}/tasks`}>All tasks</Link></div>
                 <div className="card">

@@ -1368,3 +1368,29 @@ audio.rv-media { background: none; }
 .ml-btns { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
 .ml-done { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
 .ml-private { margin: 10px 0 0; }
+
+/* ---------- Dashboard greeting ---------- */
+.gr { display: flex; flex-direction: column; gap: 14px; margin-bottom: 18px; }
+.gr-top { display: flex; align-items: flex-end; gap: 12px; justify-content: space-between; }
+.gr-hello { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.gr-date { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.gr-hello h1 { margin: 0; font-size: clamp(28px, 4.2vw, 40px); line-height: 1.1; }
+.gr-party { color: var(--accent); }
+.gr-sub { margin: 2px 0 0; color: var(--muted); font-size: 16px; }
+.gr-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.gr-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; }
+.gr-chip:hover { border-color: var(--accent); }
+.gr-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--accent); flex: none; }
+.gr-dot.warn { background: #d97706; }
+.gr-dot.info { background: #0f766e; }
+.gr-thought { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; }
+.gr-thead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.gr-label { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.gr-theme { font-size: 12px; font-weight: 600; color: var(--muted); background: var(--soft2); padding: 3px 9px; border-radius: 999px; }
+.gr-hide { border: 0; background: none; color: var(--muted); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 6px 4px; }
+.gr-q { margin: 0; font-family: Georgia, "Source Serif 4", serif; font-size: clamp(20px, 2.4vw, 25px); line-height: 1.38; color: var(--ink); }
+.gr-try { display: flex; gap: 10px; align-items: flex-start; background: var(--bg); border-radius: 12px; padding: 12px 14px; color: var(--accent); }
+.gr-try svg { flex: none; margin-top: 2px; }
+.gr-try p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--ink); }
+.gr-foot { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.gr-show { align-self: flex-start; border: 1px dashed var(--line); background: none; border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; }
