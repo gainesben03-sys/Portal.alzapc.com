@@ -64,7 +64,7 @@ export function AskBenSheet({ clientId, onClose, onDone, projectId, startKind, s
       `${client.name}: ${urgent ? "URGENT " : ""}request from ${person.name}`,
       `${person.name} asked for: ${a.title}\nType: ${kind}${project ? `\nProject: ${project.name}` : ""}\nNeeded by: ${due}${urgent ? "\nMarked urgent" : ""}\n\n${detail.trim() || "(no details)"}\n\nOpen it: https://portal.alzapc.com/c/${clientId}/a/${a.id}`
     );
-    onDone("Sent to Ben. You'll see it under Ben is working on.");
+    onDone("Sent to Ben. You'll see it under In progress.");
   };
 
   return (

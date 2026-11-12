@@ -138,7 +138,7 @@ ${note}
 ${section("Needs your team", needsHtml ? needsHtml + needsFoot : "")}
 ${section("Projects", projHtml)}
 ${section("Done recently", winsHtml)}
-${section("Ben is working on", alzaHtml)}
+${section("In progress", alzaHtml)}
 ${section("Coming up", roadmapHtml)}
 <tr><td style="padding:24px"><table role="presentation" cellpadding="0" cellspacing="0"><tr>
 <td style="background:${accent};border-radius:10px"><a href="${PORTAL}/c/${client.id}" style="display:inline-block;padding:12px 18px;font:700 15px Arial,sans-serif;color:#ffffff;text-decoration:none">Open your portal</a></td>
@@ -158,7 +158,7 @@ ${softAsk ? `<tr><td style="padding:0 24px 14px;font:13px/1.5 Arial,sans-serif;c
     lines("Needs your team", needs.map((a) => `${a.title} (${a.owner.name}), due ${fmt(a.due)}`)) +
     lines("Projects", active.map((p) => `${p.name}: ${projectProgress(p)}%, next ${p.nextMilestone}`)) +
     lines("Done recently", [...doneProjects.map((p) => p.name), ...doneRecently.map((a) => a.title)]) +
-    lines("Ben is working on", alzaWorking.map((a) => a.title)) +
+    lines("In progress", alzaWorking.map((a) => a.title)) +
     lines("Coming up", upcoming.map((p) => `${p.name}, around ${fmt(p.milestoneDue)}`)) +
     `\nOpen your portal: ${PORTAL}/c/${client.id}\nShare with HR: ${PORTAL}/c/${client.id}/share\n`;
 

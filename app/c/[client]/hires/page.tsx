@@ -40,7 +40,7 @@ export default function Hires() {
           {canStart && <Link href={`/c/${clientId}/hires/new`} className="btn primary sm">New hire</Link>}
         </div>
         <p className="small muted" style={{ marginTop: 6 }}>
-          From approved to day one. Offer letters, welcome emails and first-day details are handled here{isAdvisor ? "" : " with Ben"}.
+          From approved to day one. Offer letters, welcome emails and first-day details are handled here.
         </p>
 
         <div className="section-head section"><h2>On the way</h2><span className="tiny muted">{coming.length}</span></div>

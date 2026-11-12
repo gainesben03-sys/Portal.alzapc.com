@@ -55,7 +55,7 @@ function NewHireInner() {
       personalEmail: v.personalEmail.trim(),
       requestedBy: who,
       createdAt: now,
-      history: [{ at: now, by: who, text: isAdvisor ? "Hire started" : `${who} started the hire. Waiting on Ben to prepare the offer.` }],
+      history: [{ at: now, by: who, text: isAdvisor ? "Hire started" : `${who} started the hire. Next: the offer letter.` }],
     };
     patch({ hires: [...hires, h] });
     if (!isAdvisor) {

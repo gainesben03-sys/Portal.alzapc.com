@@ -292,8 +292,8 @@ export default function Home() {
     alza: () => {
       const list = sort(mine.filter((a) => a.side === "alza" && a.status !== "completed"));
       return (
-        <Tile title="Ben is working on" count={list.length} href={`${base}/tasks`}>
-          {list.length === 0 && <p className="small muted">Nothing outstanding from Ben.</p>}
+        <Tile title="In progress" count={list.length} href={`${base}/tasks`}>
+          {list.length === 0 && <p className="small muted">Nothing in progress right now.</p>}
           {list.map((a) => (
             <Link href={`${base}/a/${a.id}`} className="row" key={a.id}>
               <div className="grow">

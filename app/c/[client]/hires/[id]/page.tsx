@@ -99,12 +99,12 @@ function HireInner() {
     }
     const prep = tasks.find((t) => t.side === "client");
     const owners = prep ? [prep.owner.name] : [];
-    updateHire(h.id, { status: "Offer signed", tasksCreated: true }, `Offer signed${tasks.length ? `. Payroll setup added to Ben's list${prep ? `; first-day prep sent to ${prep.owner.name}` : ""}` : ""}`);
+    updateHire(h.id, { status: "Offer signed", tasksCreated: true }, `Offer signed${tasks.length ? `. Payroll setup is in progress${prep ? `; first-day prep sent to ${prep.owner.name}` : ""}` : ""}`);
     if (s.autoSend && !h.emails?.welcome && h.personalEmail) {
       toast.show("Offer signed. Sending the welcome email...");
       await wait(LIVE ? 1800 : 300); // let the change save first
       await send("welcome");
-    } else toast.show(owners.length ? `Offer signed. Payroll setup is on Ben's list; first-day prep went to ${owners[0]}.` : "Offer signed");
+    } else toast.show(owners.length ? `Offer signed. Payroll setup is in progress; first-day prep went to ${owners[0]}.` : "Offer signed");
   };
 
   const addDoc = async (file: File, kind: "offer" | "agreement" | "signed") => {
