@@ -1,6 +1,8 @@
 "use client";
 
 import { LeaveTile } from "@/components/leaveui";
+import { MyListTile } from "@/components/mylist";
+import { ContactBenLine } from "@/components/contactben";
 import { useLeaveAccess } from "@/lib/leaveclient";
 import { AskBox } from "@/components/askbox";
 import Link from "next/link";
@@ -161,9 +163,9 @@ export default function Home() {
             })}
           </div>
           {!isAdvisor && (
-            <button className="btn ghost sm" style={{ marginTop: 10 }} onClick={() => { setAskKind("A new project"); setAsking(true); }}>
-              + Ask Ben to take on a project
-            </button>
+            <Link href={`${base}/projects?new=1`} className="btn ghost sm" style={{ marginTop: 10 }}>
+              + Start a project
+            </Link>
           )}
         </Tile>
       );
@@ -324,6 +326,7 @@ export default function Home() {
       );
     },
     leave: () => <LeaveTile clientId={client.id} Tile={Tile} />,
+    mylist: () => <MyListTile clientId={client.id} Tile={Tile} />,
     huddle: () =>
       me && cfg ? (
         <Tile title="HR Huddle email">
@@ -382,6 +385,7 @@ export default function Home() {
           toast.show(kind === "referral" ? "Thank you. Ben will take it from here." : "Sent. Ben will follow up.");
         }} />}
         <p className="demo-note">Fictional sample data for the prototype.</p>
+        {!isAdvisor && <ContactBenLine />}
       </main>
 
       {previewNote && (
@@ -426,7 +430,7 @@ export default function Home() {
 }
 
 /** Tiles added after people may have saved a layout. They appear on saved layouts too, unless someone turned them off. */
-const NEW_TILES: [string, string][] = [["projects", "tasks"], ["leave", "hires"]]; // [tile, show it after]
+const NEW_TILES: [string, string][] = [["mylist", "projects"], ["leave", "hires"]]; // [tile, show it after]
 function withNewTiles(saved: string[]): string[] {
   const out = saved.filter((id) => !id.startsWith("!"));
   for (const [id, after] of NEW_TILES) {

@@ -18,6 +18,7 @@ import { anniversary, cleanCell, nextYearly, TeamLog, TeamMember, teamFor, weekI
 import { emailLogoUrl } from "@/lib/brand";
 import { admin, PORTAL_URL, sendEmail } from "@/lib/server";
 import { advisorEmails, pushTo } from "@/lib/push";
+import { ListRow, syncReminder } from "@/lib/mylistserver";
 import { Departure, offboardFor, sendOn } from "@/lib/offboard";
 import { offRoster, sendGoodbye } from "@/lib/offboardserver";
 import { DEFAULT_SETTINGS as LEAVE_DEFAULTS, dueItems, Due, fmtDay, LeaveCase, LeaveSettings, OPEN_STATUSES } from "@/lib/leave";
@@ -479,6 +480,13 @@ export async function GET(req: Request) {
         }
       }
     }
+  }
+
+  // ---------- 11. My list: schedule reminder emails that are now within two days
+  {
+    const soon = new Date(Date.now() + 48 * 3600e3).toISOString();
+    const { data: due, error } = await db.from("my_list").select("*").eq("done", false).is("reminded_at", null).not("remind_at", "is", null).lte("remind_at", soon).limit(500);
+    if (!error) for (const row of due ?? []) await syncReminder(db, row as ListRow);
   }
 
   return NextResponse.json({ ok: true, day, log });

@@ -1342,3 +1342,29 @@ audio.rv-media { background: none; }
 .ex-send { margin-top: 24px; width: 100%; min-height: 50px; border: 0; border-radius: 12px; background: var(--ex, #19283c); color: #fff; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
 .ex-err { color: #b42318; font-size: 14px; margin: 14px 0 0; }
 .ex-thanks { text-align: center; padding: 48px 24px; }
+
+/* ---------- My list + Contact Ben ---------- */
+.contact-ben { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.contact-ben a.btn { text-decoration: none; }
+.contact-line { text-align: center; margin: 28px 0 0; }
+.ml-add { display: flex; gap: 8px; }
+.ml-add .f { margin: 0; flex: 1; min-width: 0; }
+.ml-item { border-top: 1px solid var(--line); }
+.ml-item:first-of-type { border-top: 0; }
+.ml-add + .ml-item, .ml-add + p + .ml-item { margin-top: 8px; }
+.ml-row { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; }
+.ml-row input[type="checkbox"] { width: 18px; height: 18px; margin-top: 2px; flex: none; accent-color: var(--accent); }
+.ml-row.done { padding: 6px 0; align-items: center; }
+.ml-row.done s { flex: 1; color: var(--muted); }
+.ml-text { flex: 1; min-width: 0; text-align: left; border: 0; background: none; padding: 0; font: inherit; color: var(--ink); cursor: pointer; display: flex; flex-direction: column; gap: 4px; font-size: 14px; line-height: 1.4; }
+.ml-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ml-meta:empty { display: none; }
+.ml-x { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 4px 6px; }
+.ml-details { padding: 0 0 12px 28px; }
+.ml-details .f { margin-top: 6px; }
+.ml-fields { display: grid; gap: 0 10px; grid-template-columns: 1fr; }
+@media (min-width: 520px) { .ml-fields { grid-template-columns: 1fr 1.4fr; } }
+.ml-fields label.f input.f { color: var(--ink); }
+.ml-btns { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+.ml-done { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.ml-private { margin: 10px 0 0; }

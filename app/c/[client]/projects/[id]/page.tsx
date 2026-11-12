@@ -114,7 +114,7 @@ export default function ProjectProgressPage() {
 
         <div className="section-head section">
           <h2>Open items</h2>
-          {!isAdvisor && p.status !== "done" && <button className="btn sm" onClick={() => setAsking(true)}>Ask Ben about this</button>}
+
         </div>
         {openItems.length === 0 ? (
           <div className="card small muted">Nothing open on this project right now.</div>

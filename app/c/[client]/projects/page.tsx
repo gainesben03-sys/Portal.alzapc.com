@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ClientNav, ClientTopbar, Sheet, Toast, useGuard, useToast } from "@/components/ui";
 import { addBusinessDays, fmt, parseDay, Project, projectProgress, toISO, today } from "@/lib/data";
 import { useStore } from "@/lib/store";
@@ -24,6 +24,10 @@ export default function Projects() {
   const [asking, setAsking] = useState(false);
   const [editP, setEditP] = useState<Project | null>(null);
   const [newP, setNewP] = useState<Project | null>(null);
+  const [wantsNew, setWantsNew] = useState(false);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("new") === "1") setWantsNew(true);
+  }, []);
   const toast = useToast();
   const people = useAssignees(clientId);
   const saveProject = useSaveProject();
@@ -38,6 +42,11 @@ export default function Projects() {
   };
   const can = (p: Project) => canEditProject(p, { advisor: isAdvisor, access: me?.access, email: me?.email });
   const startNew = () => setNewP(blankProject(clientId, viewer?.kind === "client" ? { name: viewer.person.name, role: viewer.person.role, email: me?.email ?? viewer.person.email } : undefined));
+  if (wantsNew && !newP) {
+    setWantsNew(false);
+    window.history.replaceState(null, "", window.location.pathname);
+    setTimeout(startNew, 0);
+  }
 
   const planned = by("planned");
   const months: Record<string, Project[]> = {};
@@ -60,7 +69,7 @@ export default function Projects() {
             <button className="btn primary" onClick={() => setAdding(true)}>Add</button>
           ) : (
             <span style={{ display: "inline-flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-              <button className="btn sm" onClick={() => setAsking(true)}>Ask Ben for one</button>
+
               <button className="btn primary sm" onClick={startNew}>New project</button>
             </span>
           )}

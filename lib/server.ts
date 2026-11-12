@@ -60,6 +60,14 @@ export async function caller(req: Request): Promise<Caller | null> {
   };
 }
 
+/** Cancel an email scheduled with sendEmail({ scheduledAt }). */
+export async function cancelEmail(id: string): Promise<boolean> {
+  const key = process.env.RESEND_API_KEY;
+  if (!key || !id) return false;
+  const r = await fetch(`https://api.resend.com/emails/${encodeURIComponent(id)}/cancel`, { method: "POST", headers: { Authorization: `Bearer ${key}` } }).catch(() => null);
+  return !!r?.ok;
+}
+
 export const PORTAL_URL = (process.env.PORTAL_URL || "https://portal.alzapc.com").replace(/\/$/, "");
 
 /**
@@ -77,7 +85,7 @@ export function siteUrl(req: Request): string {
   return `${/^localhost/.test(host) ? "http" : "https"}://${host}`;
 }
 
-export async function sendEmail(opts: { to: string[]; cc?: string[]; subject: string; text: string; html?: string; scheduledAt?: string; attachments?: { filename: string; content: string }[]; replyTo?: string; fromName?: string; fromBox?: string }): Promise<{ ok: boolean; reason?: string }> {
+export async function sendEmail(opts: { to: string[]; cc?: string[]; subject: string; text: string; html?: string; scheduledAt?: string; attachments?: { filename: string; content: string }[]; replyTo?: string; fromName?: string; fromBox?: string }): Promise<{ ok: boolean; reason?: string; id?: string }> {
   const key = process.env.RESEND_API_KEY;
   let from = process.env.NOTIFY_FROM;
   if (!key || !from) return { ok: false, reason: "not_configured" };
@@ -92,7 +100,10 @@ export async function sendEmail(opts: { to: string[]; cc?: string[]; subject: st
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({ from, to: opts.to, cc: opts.cc?.length ? opts.cc : undefined, subject: opts.subject.replace(/[\r\n]+/g, " ").slice(0, 200), text: opts.text, html: opts.html, scheduled_at: opts.scheduledAt, attachments: opts.attachments, reply_to: opts.replyTo }),
   });
-  if (r.ok) return { ok: true };
+  if (r.ok) {
+    const j = await r.json().catch(() => ({}));
+    return { ok: true, id: typeof j?.id === "string" ? j.id : undefined };
+  }
   let msg = "";
   try {
     const j = await r.json();

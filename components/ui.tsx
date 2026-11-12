@@ -1,5 +1,6 @@
 "use client";
 
+import { ContactBen } from "./contactben";
 import { useLeaveAccess } from "@/lib/leaveclient";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -345,8 +346,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
       key: "todo",
       label: "Action Center",
       subs: access === "hiring" ? [] : [
-        { href: `${base}/tasks`, label: "Tasks", match: [`${base}/tasks`, `${base}/a/`] },
-        { href: `${base}/projects`, label: "Projects", match: [`${base}/projects`] },
+        { href: `${base}/projects`, label: "Projects", match: [`${base}/projects`, `${base}/tasks`, `${base}/a/`] },
       ],
     },
     {
@@ -364,7 +364,6 @@ export function ClientNav({ clientId }: { clientId: string }) {
       key: "ask",
       label: "Ask Alza",
       subs: access === "hiring" ? [] : [
-        ...(mod("board") ? [{ href: `${base}/board`, label: "Messages", match: [`${base}/board`], badge: unread }] : []),
         { href: `${base}/share`, label: "Send files", match: [`${base}/share`] },
       ],
     },
@@ -403,10 +402,8 @@ export function ClientNav({ clientId }: { clientId: string }) {
                   {!!x.badge && <span className="badge">{x.badge}</span>}
                 </Link>
               ))}
-            {current.key === "ask" && !isAdvisor && (
-              <button className="btn primary sm" style={{ marginLeft: "auto" }} onClick={() => setAsking(true)}>
-                Ask Ben for something
-              </button>
+            {current.key === "ask" && (
+              <span style={{ marginLeft: "auto" }}><ContactBen /></span>
             )}
           </div>
         </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { ContactBen } from "@/components/contactben";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -19,8 +20,8 @@ const EXAMPLES: Record<Mode, string[]> = {
   situation: ["Someone on my team keeps showing up 10 minutes late", "Two people on my crew aren't getting along", "My best performer is rude to coworkers", "Someone got defensive when I gave feedback"],
 };
 const REASON: Record<string, string> = {
-  no_handbook: "Ben hasn't loaded your handbook yet. Ask Ben directly for now.",
-  limit: "That's today's limit for Ask HR. Ask Ben, or try again tomorrow.",
+  no_handbook: "Ben hasn't loaded your handbook yet. Email or text Ben for now.",
+  limit: "That's today's limit for Ask HR. Email or text Ben, or try again tomorrow.",
   off: "Ask HR isn't turned on for your company.",
   no_key: "Ask HR isn't switched on yet. Ben is on it.",
   forbidden: "Ask HR isn't available to you.",
@@ -176,7 +177,8 @@ export default function AskHr() {
 }
 
 function AskBenBtn({ onClick, strong }: { onClick: () => void; strong?: boolean }) {
-  return <button className={`btn sm ${strong ? "primary" : ""}`} style={{ marginTop: 10 }} onClick={onClick}>Ask Ben</button>;
+  void onClick;
+  return <div style={{ marginTop: 10 }}><ContactBen strong={strong} /></div>;
 }
 
 function HandbookCard({ a, onBen }: { a: HandbookAnswer; onBen: () => void }) {
@@ -202,6 +204,7 @@ function HandbookCard({ a, onBen }: { a: HandbookAnswer; onBen: () => void }) {
 }
 
 function SituationCard({ a, onBen, onPractice }: { a: SituationAnswer; onBen: () => void; onPractice: () => void }) {
+  void onBen;
   return (
     <div className="card ask-a">
       {a.callBen && <div className="ask-flag small">⚠️ Talk to Ben before you act.{a.why ? ` ${a.why}` : ""}</div>}
@@ -227,7 +230,7 @@ function SituationCard({ a, onBen, onPractice }: { a: SituationAnswer; onBen: ()
       {a.document && <p className="tiny" style={{ margin: "8px 0 0" }}><b>Write down:</b> {a.document}</p>}
       <div className="row" style={{ gap: 8, flexWrap: "wrap", marginTop: 10 }}>
         {!a.callBen && <button className="btn sm primary" onClick={onPractice}>🎭 Practice this conversation</button>}
-        <button className={`btn sm ${a.callBen ? "primary" : ""}`} onClick={onBen}>Ask Ben</button>
+        <ContactBen strong={a.callBen} />
       </div>
     </div>
   );
