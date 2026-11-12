@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { dateLine, greetingFor } from "@/lib/greeting";
-import { thoughtFor } from "@/lib/thoughts";
+import { lineFor } from "@/lib/quotes";
 
 const get = (k: string) => {
   try {
@@ -19,7 +19,6 @@ const set = (k: string, v: string) => {
     localStorage.setItem(k, v);
   } catch {}
 };
-const todayKey = () => new Date().toDateString();
 
 export function Greeting({ clientId, onCustomize }: { clientId: string; onCustomize: () => void }) {
   const { viewer, me, people, hires, candidates, roles, projects } = useStore();
@@ -27,10 +26,8 @@ export function Greeting({ clientId, onCustomize }: { clientId: string; onCustom
   const name = viewer?.kind === "client" ? viewer.person.name : "Ben Gaines";
   const first = name.split(" ")[0];
   const email = (me?.email ?? "").toLowerCase();
-  const exec = isAdvisor || me?.access === "exec";
   const [now, setNow] = useState<Date | null>(null);
   const [away, setAway] = useState(0);
-  const [hidden, setHidden] = useState(false);
   const [off, setOff] = useState(false);
 
   useEffect(() => {
@@ -39,15 +36,14 @@ export function Greeting({ clientId, onCustomize }: { clientId: string; onCustom
     const last = Number(get("alza-last-visit") || 0);
     if (last) setAway(Math.floor((d.getTime() - last) / 864e5));
     set("alza-last-visit", String(d.getTime()));
-    setHidden(get("alza-thought-hidden") === todayKey());
-    setOff(get("alza-thought-off") === "1");
+    setOff(get("alza-line-off") === "1");
     const t = setInterval(() => setNow(new Date()), 5 * 60e3);
     return () => clearInterval(t);
   }, []);
 
   const mePerson = people.find((p) => p.clientId === clientId && email && (p.email ?? "").toLowerCase() === email);
   const g = useMemo(() => (now ? greetingFor({ first, now, birthday: mePerson?.birthday, hireDate: mePerson?.hireDate, daysAway: away }) : null), [now, first, mePerson?.birthday, mePerson?.hireDate, away]);
-  const thought = useMemo(() => thoughtFor(exec, now ?? new Date()), [exec, now]);
+  const line = useMemo(() => lineFor(now ?? new Date()), [now]);
 
   // a few things worth knowing, each a link
   const base = `/c/${clientId}`;
@@ -90,28 +86,7 @@ export function Greeting({ clientId, onCustomize }: { clientId: string; onCustom
           ))}
         </div>
       )}
-      {!off && !hidden && (
-        <section className="gr-thought" aria-label="Today's thought">
-          <div className="gr-thead">
-            <span className="gr-label">Today&apos;s thought</span>
-            <span className="gr-theme">{thought.theme}</span>
-            <span style={{ flex: 1 }} />
-            <button className="gr-hide" onClick={() => { set("alza-thought-hidden", todayKey()); setHidden(true); }}>Hide for today</button>
-          </div>
-          <p className="gr-q">{thought.thought}</p>
-          <div className="gr-try">
-            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            <p><b>Try this today:</b> {thought.tryThis}</p>
-          </div>
-          <div className="gr-foot">
-            <span>From Ben at AlzaHR · a new one each weekday</span>
-            <button className="linklike tiny" onClick={() => { if (confirm("Stop showing the daily thought? You can turn it back on at the bottom of the dashboard.")) { set("alza-thought-off", "1"); setOff(true); } }}>Turn off</button>
-          </div>
-        </section>
-      )}
-      {(hidden || off) && (
-        <button className="gr-show" onClick={() => { set("alza-thought-hidden", ""); set("alza-thought-off", ""); setHidden(false); setOff(false); }}>Show today&apos;s thought</button>
-      )}
+      {!off && <p className="gr-line"><span aria-hidden="true">&ldquo;</span>{line}<span aria-hidden="true">&rdquo;</span> <button className="gr-x" aria-label="Hide the daily line" title="Hide" onClick={() => { set("alza-line-off", "1"); setOff(true); }}>×</button></p>}
     </div>
   );
 }
