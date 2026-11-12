@@ -1303,3 +1303,42 @@ audio.rv-media { background: none; }
 .cc-more { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; }
 .cc-more .tiny.muted:last-child { margin-left: auto; }
 @media (max-width: 480px) { .tracker:not(.compact) .dot { width: 26px; height: 26px; font-size: 11px; } .tracker:not(.compact) .tracker-line { top: 11px; } .tracker .lbl { font-size: 10px; } }
+
+/* ---------- Offboarding ---------- */
+.ob-set { display: grid; gap: 16px; }
+@media (min-width: 1000px) { .ob-set { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; } .ob-prev { position: sticky; top: 16px; } }
+.ob-prev .email-frame { height: 78vh; }
+.ob-sec { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 12px; }
+.ob-sec .f { margin-top: 6px; }
+.ob-sec .row .f { margin-top: 0; }
+.ob-group { margin-top: 10px; }
+.ob-group:first-of-type { margin-top: 0; }
+.ob-group .lv-task:first-of-type { border-top: 0; }
+.ob-ans { display: flex; flex-direction: column; gap: 2px; padding: 9px 0; border-top: 1px solid var(--line); }
+.ob-ans:first-of-type { border-top: 0; }
+.ob-ans b { font-weight: 600; white-space: pre-wrap; }
+.ob-reason { background: var(--soft2); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; }
+.ob-reason p { margin: 4px 0 0; white-space: pre-wrap; }
+.ob-roster { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+
+/* public exit survey */
+.ex-page { min-height: 100vh; background: #f4f1ec; padding: 32px 16px 64px; box-sizing: border-box; font-family: Inter, system-ui, sans-serif; color: #1c1a19; }
+.ex-card { max-width: 620px; margin: 0 auto; background: #fff; border-radius: 18px; padding: 28px 22px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); border-top: 6px solid var(--ex, #19283c); }
+.ex-card h1 { font-family: Georgia, serif; font-weight: 400; font-size: 32px; line-height: 1.15; margin: 14px 0 8px; text-transform: none; letter-spacing: 0; color: #1c1a19; }
+.ex-logo { height: 36px; width: auto; display: block; }
+.ex-co { font-family: Georgia, serif; font-size: 20px; }
+.ex-sub { color: #5c5651; font-size: 15px; line-height: 1.5; margin: 0 0 8px; }
+.ex-q { border: 0; box-shadow: inset 0 1px 0 #e6e0d8; margin: 18px 0 0; padding: 18px 0 0; min-width: 0; }
+.ex-q > :not(legend) { clear: both; }
+.ex-q legend { float: left; width: 100%; display: flex; gap: 10px; font-weight: 600; font-size: 16px; line-height: 1.4; padding: 0; margin-bottom: 12px; }
+.ex-q legend span { font-family: Georgia, serif; color: var(--ex, #19283c); font-weight: 400; font-size: 20px; line-height: 1.1; }
+.ex-scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.ex-scale button, .ex-choices button { min-height: 46px; border-radius: 10px; border: 1px solid #d9d2c8; background: #fff; font: inherit; font-weight: 600; color: #1c1a19; cursor: pointer; }
+.ex-scale button.on, .ex-choices button.on { background: var(--ex, #19283c); border-color: var(--ex, #19283c); color: #fff; }
+.ex-ends { grid-column: 1 / -1; display: flex; justify-content: space-between; font-size: 12px; color: #6b645e; }
+.ex-choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.ex-choices button { padding: 0 14px; font-weight: 500; }
+.ex-q textarea { width: 100%; box-sizing: border-box; border: 1px solid #d9d2c8; border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 15px; resize: vertical; }
+.ex-send { margin-top: 24px; width: 100%; min-height: 50px; border: 0; border-radius: 12px; background: var(--ex, #19283c); color: #fff; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
+.ex-err { color: #b42318; font-size: 14px; margin: 14px 0 0; }
+.ex-thanks { text-align: center; padding: 48px 24px; }

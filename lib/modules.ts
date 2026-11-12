@@ -4,7 +4,7 @@ import { addBusinessDays, Person, today, toISO } from "./data";
 import type { Hire } from "./hires";
 import { SEED_PRACTICE } from "./practice";
 
-export type ModuleKey = "recruiting" | "resources" | "wellness" | "board" | "hires" | "training" | "recognition" | "leave";
+export type ModuleKey = "recruiting" | "resources" | "wellness" | "board" | "hires" | "training" | "recognition" | "leave" | "offboarding";
 
 /** Which pages each access level can open. Executives see everything, including Team. */
 export function canSee(access: Access | undefined, page: ModuleKey | "projects" | "team"): boolean {
@@ -20,6 +20,7 @@ export const MODULES: { key: ModuleKey; label: string; blurb: string }[] = [
   { key: "board", label: "Messages", blurb: "A message thread with Ben, under Ask Ben" },
   { key: "recognition", label: "Shoutouts", blurb: "Employee recognition by QR code, text or the portal, with a wall everyone can react to. Every shoutout is screened first" },
   { key: "leave", label: "Leave center", blurb: "Leave of absence tracking for HR admins only: cases, deadlines, documents, reminders and return to work. Ben picks who the HR admins are" },
+  { key: "offboarding", label: "Offboarding", blurb: "When someone leaves: a checklist, a thank-you email with what they need to know, an exit survey, and they come off the roster on their last day. Executives only" },
   { key: "training", label: "Training", blurb: "Their trainings to view, with practice: quick checks, role-plays with feedback and a planner. Execs see who's practiced" },
 ];
 
@@ -135,6 +136,7 @@ export interface ClientConfig {
   softAsks?: boolean; // show the quiet referral / add-on lines (default on)
   videoScreening?: boolean; // add-on: pitch links on Recruiting roles
   recognition?: import("./recognition").RecognitionSettings; // Shoutouts: QR link, values, texting number
+  offboarding?: import("./offboard").OffboardSettings; // goodbye email wording, info sections, survey, timing
   leave?: import("./leave").LeaveSettings; // Leave center: types, reminder timing (who the HR admins are lives in its own table)
   askHr?: boolean; // Ask HR for managers (default on; answers come only from this client's handbook and policies)
   huddle: HuddleSettings;
@@ -310,7 +312,7 @@ export function seedModules() {
     blueprint: {
       huddle: { cadence: "weekly", day: 1, recipients: ["alex@example.com", "priya@example.com"], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
       recognition: { token: "DemoShoutoutLink000000", values: ["Teamwork", "Safety first", "Above and beyond", "Customer first", "Ownership"], smsNumber: "+14155550123", notifyManagers: true, showWall: true },
-      modules: { recruiting: true, resources: true, wellness: true, board: true, hires: true, training: true, recognition: true, leave: true },
+      modules: { recruiting: true, resources: true, wellness: true, board: true, hires: true, training: true, recognition: true, leave: true, offboarding: true },
       videoScreening: true,
       accent: "#2b3ff5",
       logo: "/blueprint-logo.png",
@@ -325,7 +327,7 @@ export function seedModules() {
     },
     harbor: {
       huddle: { cadence: "weekly", day: 1, recipients: ["sam@example.com"], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
-      modules: { recruiting: false, resources: true, wellness: false, board: true, hires: true, training: false, recognition: false, leave: false },
+      modules: { recruiting: false, resources: true, wellness: false, board: true, hires: true, training: false, recognition: false, leave: false, offboarding: false },
       accent: "#6b8c6b",
       codes: [],
       escalationEmail: "sam@example.com",
@@ -333,7 +335,7 @@ export function seedModules() {
     },
     northgate: {
       huddle: { cadence: "weekly", day: 1, recipients: ["rae@example.com"], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
-      modules: { recruiting: false, resources: true, wellness: true, board: true, hires: true, training: false, recognition: false, leave: false },
+      modules: { recruiting: false, resources: true, wellness: true, board: true, hires: true, training: false, recognition: false, leave: false, offboarding: false },
       accent: "#4a7ab5",
       codes: [],
       escalationEmail: "rae@example.com",
@@ -344,7 +346,7 @@ export function seedModules() {
     },
     cedar: {
       huddle: { cadence: "weekly", day: 1, recipients: ["jo@example.com"], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
-      modules: { recruiting: true, resources: false, wellness: false, board: true, hires: true, training: false, recognition: false, leave: false },
+      modules: { recruiting: true, resources: false, wellness: false, board: true, hires: true, training: false, recognition: false, leave: false, offboarding: false },
       accent: "#8a6d3b",
       codes: [],
       escalationEmail: "jo@example.com",

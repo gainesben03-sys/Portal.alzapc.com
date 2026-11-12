@@ -74,7 +74,7 @@ export function demoState(): State {
 export function newClientConfig(): ClientConfig {
   return {
     huddle: { cadence: "weekly", day: 1, recipients: [], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
-    modules: { recruiting: true, resources: true, wellness: false, board: true, hires: true, training: false, recognition: false, leave: false },
+    modules: { recruiting: true, resources: true, wellness: false, board: true, hires: true, training: false, recognition: false, leave: false, offboarding: false },
     accent: "#19283c",
     escalationEmail: "",
     users: [],

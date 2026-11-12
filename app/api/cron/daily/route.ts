@@ -18,6 +18,8 @@ import { anniversary, cleanCell, nextYearly, TeamLog, TeamMember, teamFor, weekI
 import { emailLogoUrl } from "@/lib/brand";
 import { admin, PORTAL_URL, sendEmail } from "@/lib/server";
 import { advisorEmails, pushTo } from "@/lib/push";
+import { Departure, offboardFor, sendOn } from "@/lib/offboard";
+import { offRoster, sendGoodbye } from "@/lib/offboardserver";
 import { DEFAULT_SETTINGS as LEAVE_DEFAULTS, dueItems, Due, fmtDay, LeaveCase, LeaveSettings, OPEN_STATUSES } from "@/lib/leave";
 
 export const dynamic = "force-dynamic";
@@ -447,6 +449,35 @@ export async function GET(req: Request) {
         });
       }
       if (byWho.size) await pushTo(db, [...byWho.keys()], "reminders", { title: `${cl.name}: leave items due`, body: "Open the leave center for details.", url: `/c/${cl.id}/leave?tab=tasks`, tag: `leave-${cl.id}` }).catch(() => 0);
+    }
+  }
+
+  // ---------- 10. Offboarding: goodbye email on schedule, off the roster on the last day
+  {
+    const dR = await db.from("departures").select("id, client_id, data");
+    const offToday = (() => { const t = localToday(); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`; })();
+    for (const row of dR.error ? [] : dR.data ?? []) {
+      const c = (clientsR.data ?? []).find((x) => x.id === row.client_id);
+      if (!c) continue;
+      const cfg = (c.config ?? {}) as ClientConfig;
+      if (!(cfg.modules as Record<string, boolean> | undefined)?.offboarding) continue;
+      let d = { ...(row.data as Departure), id: row.id as string };
+      if (d.status === "cancelled" || !d.lastDay) continue;
+      const o = offboardFor(cfg.offboarding);
+      if (o.autoSend && d.email?.auto !== false && !d.email?.sentAt && offToday >= sendOn(d, o) && offToday <= addDaysISO(d.lastDay, 3)) {
+        await once(`offboard:goodbye:${d.id}`, async () => {
+          const r = await sendGoodbye(db, PORTAL_URL, c.id, d, { by: "AlzaHR" });
+          if (r.ok && r.departure) d = r.departure;
+          return { ok: r.ok, reason: r.reason };
+        });
+      }
+      if (offToday > d.lastDay && !d.rosterRemovedAt) {
+        d = await offRoster(db, c.id, d, "AlzaHR");
+        if (d.status === "planned") {
+          d = { ...d, status: "departed", history: [...d.history, { at: new Date().toISOString(), by: "AlzaHR", text: "Last day passed" }] };
+          await db.from("departures").update({ data: d }).eq("id", d.id);
+        }
+      }
     }
   }
 
