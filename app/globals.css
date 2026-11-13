@@ -1467,3 +1467,7 @@ button.nt-dot:hover { border-color: var(--green); transform: scale(1.06); }
 .nt-edit-btns .btn { min-width: 34px; padding-left: 0; padding-right: 0; justify-content: center; }
 .nt-preview { margin-top: 10px; background: var(--soft); }
 .nt-notebtn.auto, .nt-auto { color: var(--muted); }
+.nt-removelink { display: block; margin-top: 18px; border: 0; background: none; padding: 0; font: inherit; font-size: 13px; color: var(--muted); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.nt-removelink:hover { color: var(--red); }
+.nt-remove { margin-top: 18px; padding: 12px; border: 1px solid color-mix(in srgb, var(--red) 35%, var(--line)); border-radius: 12px; background: var(--red-bg); }
+.nt-remove .btn.danger { background: var(--red); border-color: var(--red); color: #fff; }

@@ -239,7 +239,7 @@ function Hires() {
         {!canEdit && mine.length > 0 && <p className="tiny muted section">Your HR admin keeps this up to date.</p>}
       </main>
 
-      {openHire && <HirePanel h={openHire} steps={steps} canEdit={canEdit} who={who} clientId={clientId} onClose={() => setOpen(null)} toggle={(st) => toggle(openHire, st)} update={updateHire} />}
+      {openHire && <HirePanel h={openHire} steps={steps} canEdit={canEdit} who={who} clientId={clientId} onClose={() => setOpen(null)} toggle={(st) => toggle(openHire, st)} update={updateHire} onRemove={() => { setOpen(null); patch({ hires: hires.filter((x) => x.id !== openHire.id) }); }} />}
       {editing && (
         <StepsEditor
           steps={steps}
@@ -268,8 +268,25 @@ function Dot({ h, st, canEdit, onClick }: { h: Hire; st: TrackerStep; canEdit: b
   );
 }
 
-function HirePanel({ h, steps, canEdit, who, clientId, onClose, toggle, update }: { h: Hire; steps: TrackerStep[]; canEdit: boolean; who: string; clientId: string; onClose: () => void; toggle: (st: TrackerStep) => void; update: ReturnType<typeof useStore>["updateHire"] }) {
+function HirePanel({ h, steps, canEdit, who, clientId, onClose, toggle, update, onRemove }: { h: Hire; steps: TrackerStep[]; canEdit: boolean; who: string; clientId: string; onClose: () => void; toggle: (st: TrackerStep) => void; update: ReturnType<typeof useStore>["updateHire"]; onRemove: () => void }) {
   const [note, setNote] = useState("");
+  const [removing, setRemoving] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const remove = async () => {
+    setBusy(true);
+    setErr("");
+    try {
+      const r = await fetch("/api/hire-remove", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clientId, id: h.id }) });
+      const j = await r.json().catch(() => ({}));
+      if (j.ok || j.reason === "demo") return onRemove();
+      setErr(j.reason === "preview" ? "Preview is read-only." : "Couldn't remove. Try again.");
+    } catch {
+      setErr("Couldn't remove. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
   const p = progress(h, steps);
   const tl = timeline(h, steps);
   const add = () => {
@@ -332,6 +349,19 @@ function HirePanel({ h, steps, canEdit, who, clientId, onClose, toggle, update }
               <div className="nt-outcomes">
                 {OUTCOMES.map((o) => <button key={o.id} className="btn sm" onClick={() => setOutcome(o.id)}>{o.label}</button>)}
               </div>
+            )}
+            {removing ? (
+              <div className="nt-remove">
+                <p className="small" style={{ margin: 0 }}>Remove {h.name || "this hire"} from the tracker? Their notes and steps are deleted and no more emails go out. Signed documents already in Files stay there.</p>
+                {!h.outcome && <p className="tiny muted" style={{ margin: "6px 0 0" }}>If they declined or didn&apos;t show, Didn&apos;t start keeps a record instead.</p>}
+                {err && <p className="small" style={{ color: "var(--red)", margin: "6px 0 0" }}>{err}</p>}
+                <div className="row" style={{ gap: 8, marginTop: 10, justifyContent: "flex-start" }}>
+                  <button className="btn sm danger" onClick={remove} disabled={busy}>{busy ? "Removing…" : "Remove"}</button>
+                  <button className="btn sm" autoFocus onClick={() => setRemoving(false)} disabled={busy}>Keep</button>
+                </div>
+              </div>
+            ) : (
+              <button className="nt-removelink" onClick={() => setRemoving(true)}>Remove from tracker</button>
             )}
           </>
         )}
