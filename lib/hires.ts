@@ -71,6 +71,14 @@ export interface Hire {
   backgroundCheck?: { status: "started" | "clear" | "review" | "skipped"; at: string; vendor?: string; note?: string };
   /** Built-in e-signature requests, by document type. */
   esign?: { offer?: EsignState; agreement?: EsignState };
+  /** New hire tracker: when each step was done, by step id ("" = unmarked by hand). */
+  track?: Record<string, string>;
+  /** Set when the hire didn't start: declined, rescinded, no show, didn't pass. */
+  outcome?: import("./tracker").Outcome;
+  /** Short dated notes on the tracker ("Pending drug test"). */
+  remarks?: { at: string; by: string; text: string }[];
+  /** Brought in from a spreadsheet: no welcome or first-day emails, no roster changes. */
+  imported?: boolean;
 }
 
 /** The signing link itself is never stored here: only the signer gets it. */
@@ -210,6 +218,8 @@ export interface OnboardingSettings {
   emails?: OnboardEmail[];
   /** Places new hires report to, one per line. */
   officeLocations?: string;
+  /** The new hire tracker's steps for this company. Blank means the defaults. */
+  trackerSteps?: import("./tracker").TrackerStep[];
 }
 
 export function hireCompany(h: Pick<Hire, "companyId">, s: Pick<OnboardingSettings, "companies">): HireCompany | undefined {

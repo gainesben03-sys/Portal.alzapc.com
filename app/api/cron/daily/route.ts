@@ -16,6 +16,8 @@ import { pitchDeleteOn } from "@/lib/pitch";
 import { addDaysISO, firstDayEmail, forCompany, Hire, hireCompany, listEmail, onboardingFor, senderFor, stageIndex, welcomeEmail } from "@/lib/hires";
 import { anniversary, cleanCell, nextYearly, TeamLog, TeamMember, teamFor, weekItems } from "@/lib/team";
 import { emailLogoUrl } from "@/lib/brand";
+import { dueReminders, stepsFor } from "@/lib/tracker";
+import { managerEmail } from "@/lib/hireemailserver";
 import { admin, PORTAL_URL, sendEmail } from "@/lib/server";
 import { advisorEmails, pushTo } from "@/lib/push";
 import { ListRow, syncReminder } from "@/lib/mylistserver";
@@ -182,7 +184,7 @@ export async function GET(req: Request) {
       changed = true;
     };
     const signed = stageIndex(h.status) >= 2;
-    const to = (h.personalEmail || "").trim().toLowerCase();
+    const to = h.imported || h.outcome ? "" : (h.personalEmail || "").trim().toLowerCase();
     if (s.autoSend && signed && to && !h.emails?.welcome) {
       const m = welcomeEmail(h, s, brand);
       await once(`hire:welcome:${h.id}`, async () => {
@@ -206,13 +208,13 @@ export async function GET(req: Request) {
         return r;
       });
     }
-    if (signed && day >= h.startDate && data.status !== "Started") {
+    if (signed && !h.outcome && day >= h.startDate && data.status !== "Started") {
       data.status = "Started";
       note("Started");
     }
     // on (or after) the start date: add them to the team roster, so shoutouts, celebrations
     // and the Welcome Wagon pick them up. Matches an existing roster entry by name instead of duplicating.
-    if (signed && day >= h.startDate && !h.rosterId && h.name?.trim()) {
+    if (signed && !h.imported && !h.outcome && day >= h.startDate && !h.rosterId && h.name?.trim()) {
       const { data: ppl } = await db.from("people").select("id, data").eq("client_id", c.id);
       const same = (a?: string, b?: string) => !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase();
       const hit = (ppl ?? []).find((r) => same((r.data as TeamMember).name, h.name));
@@ -251,12 +253,26 @@ export async function GET(req: Request) {
       const p = pr?.data as TeamMember | undefined;
       if (p && ((!p.email && h.workEmail) || (!p.birthday && h.birthday))) await db.from("people").update({ data: { ...p, email: p.email || h.workEmail?.toLowerCase(), birthday: p.birthday || h.birthday } }).eq("id", h.rosterId);
     }
-    if (day === addDaysISO(h.startDate, 30) && !h.emails?.checkIn) {
-      await once(`hire:checkin:${h.id}`, async () => {
-        const r = await sendEmail({ to: [ben], subject: `[Portal] 30-day check-in: ${h.name} at ${c.name}`, text: `${h.name} (${h.title}) hit 30 days at ${c.name} today. A good time to check in with them and ${h.managerName}.\n\n${PORTAL_URL}/c/${c.id}/hires/${h.id}` });
+    // tracker steps with a day count (the 30-day check-in by default): remind HR and the manager, copy Ben
+    for (const st of dueReminders(h, stepsFor(s0), day)) {
+      if (st.id === "day30" && h.emails?.checkIn) continue; // sent by the older 30-day reminder
+      if (h.emails?.[`step:${st.id}`]) continue;
+      const hr = (s0.hrEmail || "").trim().toLowerCase();
+      const mgr = await managerEmail(db, c.id, h).catch(() => null);
+      const toList = [...new Set([hr, mgr].filter((x): x is string => !!x))];
+      const cc = toList.includes(ben.toLowerCase()) ? [] : [ben];
+      const first = (h.firstName || h.name || "").split(" ")[0];
+      const isCheck = /check|review/i.test(st.label);
+      const link = `${PORTAL_URL}/c/${c.id}/hires?open=${h.id}`;
+      const subject = isCheck ? `${h.name} is at ${st.days} days: time for a quick check-in` : `${h.name}, ${st.days} days in: ${st.label}`;
+      const text = isCheck
+        ? `${h.name} (${h.title || "new hire"}) is at ${st.days} days${c.name ? ` at ${c.name}` : ""}.\n\nA good time for a quick review with ${first}: how they're settling in, what's going well, and anything they need${h.managerName ? `. ${h.managerName.split(" ")[0]}, a short 1:1 this week works well` : ""}.\n\nMark it done in the new hire tracker once you've met:\n${link}`
+        : `${h.name} (${h.title || "new hire"}) is at ${st.days} days and "${st.label}" isn't marked done yet.\n\nUpdate the new hire tracker here:\n${link}`;
+      await once(`hire:step:${h.id}:${st.id}`, async () => {
+        const r = await sendEmail({ to: toList.length ? toList : [ben], cc: toList.length ? cc : undefined, subject, text });
         if (r.ok) {
-          data.emails = { ...(data.emails ?? {}), checkIn: new Date().toISOString() };
-          note("30-day check-in reminder sent to Ben");
+          data.emails = { ...(data.emails ?? {}), [`step:${st.id}`]: new Date().toISOString() };
+          note(`${st.label} reminder sent to ${toList.length ? toList.join(", ") : "Ben"}`);
         }
         return r;
       });

@@ -1397,3 +1397,73 @@ audio.rv-media { background: none; }
 .gr-line { margin: 2px 0 0; font-family: Georgia, "Source Serif 4", serif; font-style: italic; font-size: 16px; line-height: 1.45; color: var(--ink); opacity: 0.85; }
 .gr-x { border: 0; background: none; color: var(--muted); font-size: 16px; line-height: 1; cursor: pointer; padding: 2px 4px; vertical-align: middle; font-style: normal; opacity: 0.6; }
 .gr-x:hover { opacity: 1; }
+
+/* ---------- new hire tracker ---------- */
+.nt-bar { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.pr-tabs button .muted { font-weight: 500; margin-left: 2px; }
+.pr-tabs button.on .muted { color: inherit; opacity: .8; }
+.nt-filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.nt-locs { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--card); }
+.nt-locs button { border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; padding: 7px 12px; color: var(--muted); cursor: pointer; }
+.nt-locs button.on { background: var(--soft2); color: var(--ink); }
+.nt-find { width: 160px; height: 34px; padding: 0 12px; border-radius: 999px; font-size: 13px; }
+
+.nt-wrap { display: none; overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 16px; }
+.nt { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
+.nt th { background: var(--soft); text-align: left; vertical-align: bottom; padding: 12px 12px 10px; font-size: 12.5px; font-weight: 650; color: var(--muted); line-height: 1.3; border-bottom: 1px solid var(--line); }
+.nt th:first-child { border-top-left-radius: 16px; }
+.nt th:last-child { border-top-right-radius: 16px; }
+.nt td { padding: 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.nt tbody tr:last-child td { border-bottom: 0; }
+.nt .nt-who { min-width: 160px; position: sticky; left: 0; z-index: 1; background: var(--card); }
+.nt th.nt-who { background: var(--soft); z-index: 2; }
+.nt .nt-mgr { white-space: nowrap; }
+.nt .nt-start { width: 92px; white-space: nowrap; }
+/* step columns: fixed width, label wraps onto up to three short lines, centered, never touching its neighbor */
+.nt th.nt-step { width: 92px; min-width: 92px; max-width: 92px; text-align: center; padding: 12px 10px 10px; border-left: 1px solid var(--line); color: var(--ink); }
+.nt-step-l { display: block; text-wrap: balance; overflow-wrap: normal; word-break: normal; hyphens: manual; }
+.nt-step-d { display: inline-block; margin-top: 5px; padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 12%, transparent); font-size: 10.5px; font-weight: 600; color: var(--accent); white-space: nowrap; }
+.nt td.nt-step { text-align: center; border-left: 1px solid color-mix(in srgb, var(--line) 60%, transparent); padding: 10px 6px; }
+.nt .nt-note { min-width: 150px; max-width: 240px; }
+.nt-name { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; color: var(--ink); text-align: left; cursor: pointer; }
+.nt-name:hover { color: var(--accent); }
+.nt-notebtn { border: 0; background: none; padding: 0; font: inherit; color: var(--ink); text-align: left; cursor: pointer; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.nt-notebtn.muted { color: var(--muted); }
+.nt-soon { color: var(--amber); font-weight: 600; }
+
+.nt-dot { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); background: var(--card); display: inline-grid; place-items: center; font-size: 14px; font-weight: 800; color: #fff; padding: 0; cursor: default; box-sizing: border-box; }
+button.nt-dot { cursor: pointer; transition: transform .12s ease, border-color .12s ease; }
+button.nt-dot:hover { border-color: var(--green); transform: scale(1.06); }
+.nt-dot.done { background: var(--green); border-color: var(--green); }
+@media (prefers-color-scheme: dark) { .nt-dot.done { color: #0d1a12; } }
+@media (prefers-reduced-motion: reduce) { button.nt-dot { transition: none; } }
+
+.nt-cards { display: grid; gap: 10px; }
+.nt-card { display: flex; flex-direction: column; gap: 12px; }
+.nt-card .nt-name { display: block; }
+.nt-card-steps { display: grid; gap: 4px; text-align: center; }
+.nt-card-steps > div { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.nt-card-steps span:last-child { font-size: 10.5px; color: var(--muted); line-height: 1.15; overflow-wrap: anywhere; }
+.nt-card-steps .nt-dot { width: 28px; height: 28px; font-size: 13px; }
+@media (min-width: 860px) { .nt-wrap { display: block; } .nt-cards { display: none; } }
+
+.nt-panel { max-height: 66vh; overflow-y: auto; margin: 0 -4px; padding: 0 4px; }
+.nt-checks { list-style: none; margin: 4px 0 0; padding: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.nt-checks li + li { border-top: 1px solid var(--line); }
+.nt-checks label > span:first-of-type { flex: 1; }
+.nt-checks label { display: flex; align-items: center; gap: 10px; padding: 11px 12px; cursor: pointer; font-size: 14px; }
+.nt-checks label.ro { cursor: default; }
+.nt-checks input { width: 18px; height: 18px; accent-color: var(--green); margin: 0; }
+.nt-h { margin: 18px 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+.nt-notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 14px; }
+.nt-outcomes { display: flex; gap: 6px; flex-wrap: wrap; }
+.nt-edit { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 8px; }
+.nt-edit li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; grid-template-areas: "n l b" ". d d"; gap: 6px 8px; align-items: center; padding: 10px; border: 1px solid var(--line); border-radius: 12px; }
+.nt-edit-n { grid-area: n; font-size: 12px; font-weight: 700; color: var(--muted); text-align: center; }
+.nt-edit li > input { grid-area: l; min-width: 0; }
+.nt-edit-days { grid-area: d; display: flex; align-items: center; gap: 6px; }
+.nt-edit-days input { width: 64px; }
+.nt-edit-btns { grid-area: b; display: flex; gap: 4px; }
+.nt-edit-btns .btn { min-width: 34px; padding-left: 0; padding-right: 0; justify-content: center; }
+.nt-preview { margin-top: 10px; background: var(--soft); }
+.nt-notebtn.auto, .nt-auto { color: var(--muted); }
