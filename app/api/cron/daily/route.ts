@@ -17,6 +17,7 @@ import { addDaysISO, firstDayEmail, forCompany, Hire, hireCompany, listEmail, on
 import { anniversary, cleanCell, nextYearly, TeamLog, TeamMember, teamFor, weekItems } from "@/lib/team";
 import { emailLogoUrl } from "@/lib/brand";
 import { dueReminders, stepsFor } from "@/lib/tracker";
+import { buildManagerWeek, buildSnapshot, PeopleData, peopleItems } from "@/lib/peopleupdates";
 import { managerEmail } from "@/lib/hireemailserver";
 import { admin, PORTAL_URL, sendEmail } from "@/lib/server";
 import { advisorEmails, pushTo } from "@/lib/push";
@@ -64,6 +65,26 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, error: clientsR.error?.message || membersR.error?.message || actionsR.error?.message }, { status: 500 });
   }
   const rules: Rules = { ...DEFAULT_RULES, ...((settingsR.data?.data as { rules?: Rules })?.rules ?? {}) };
+
+  // people data for the Huddle's People section, the monthly snapshot and the managers' Monday email
+  const [pHires, pRoles, pCands, pDeps, pPeople, pShouts] = await Promise.all([
+    db.from("hires").select("id, client_id, data"),
+    db.from("roles").select("id, client_id, data"),
+    db.from("candidates").select("id, data"),
+    db.from("departures").select("id, client_id, data"),
+    db.from("people").select("id, client_id, data"),
+    db.from("shoutouts").select("client_id, data").gte("created_at", new Date(Date.now() - 70 * 864e5).toISOString()),
+  ]);
+  const prow = <T,>(r: { data: { id?: string; client_id?: string; data: unknown }[] | null; error: unknown }) => (r.error ? [] : (r.data ?? []).map((x) => ({ ...(x.data as object), ...(x.id ? { id: x.id } : {}), ...(x.client_id ? { clientId: x.client_id } : {}) }) as T));
+  const peopleData = (cfg: Partial<ClientConfig>): PeopleData => ({
+    hires: prow<Hire>(pHires),
+    roles: prow<PeopleData["roles"][number]>(pRoles),
+    candidates: prow<PeopleData["candidates"][number]>(pCands),
+    departures: prow<Departure>(pDeps),
+    roster: prow<TeamMember>(pPeople),
+    shouts: (pShouts.error ? [] : pShouts.data ?? []).map((x) => x.data as PeopleData["shouts"][number]),
+    steps: stepsFor(onboardingFor(cfg.onboarding)),
+  });
   const members = (membersR.data ?? []) as Member[];
   const rows = (r: { data: Row[] | null }) => (r.data ?? []).map((x) => ({ ...x.data, id: x.id, clientId: x.client_id }));
   const actions = rows(actionsR) as unknown as Action[];
@@ -145,7 +166,8 @@ export async function GET(req: Request) {
 
     // ---------- 2. HR Huddle
     if (huddleDue(huddle, now) && huddle.recipients.length) {
-      const out = buildHuddle({ client, settings: huddle, actions, projects, files, rules, softAsks: cfg.softAsks });
+      const people = cfg.modules?.hires || cfg.modules?.recruiting || cfg.modules?.offboarding ? peopleItems(c.id, peopleData(cfg), day) : [];
+      const out = buildHuddle({ client, settings: huddle, actions, projects, files, rules, softAsks: cfg.softAsks, people });
       if (out.quiet && huddle.skipIfQuiet) {
         log.push(`huddle skipped (quiet) ${c.id}`);
       } else {
@@ -163,6 +185,28 @@ export async function GET(req: Request) {
         }
       }
     }
+  }
+
+  // ---------- 2b. Monthly snapshot for executives: first week of the month, on the Huddle's day (same people)
+  for (const c of clientsR.data ?? []) {
+    const cfg = (c.config ?? {}) as Partial<ClientConfig>;
+    const h = { day: 1, ...(cfg.huddle ?? {}) } as HuddleSettings;
+    if (h.snapshot === false) continue;
+    const jsDay = new Date(`${day}T12:00:00`);
+    if (jsDay.getDate() > 7 || jsDay.getDay() !== (h.day || 1)) continue;
+    const to = members.filter((m) => m.client_id === c.id && m.huddle).map((m) => m.email);
+    if (!to.length) continue;
+    const ym = day.slice(0, 7);
+    const lastMonth = (iso?: string) => {
+      if (!iso) return false;
+      const d = new Date(`${ym}-01T12:00:00`);
+      d.setMonth(d.getMonth() - 1);
+      return iso.slice(0, 7) === `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    };
+    const acts = actions.filter((a) => a.clientId === c.id && a.status === "completed" && lastMonth(a.completedAt)).length;
+    const projs = (rows(projectsR) as unknown as Project[]).filter((p) => p.clientId === c.id && p.status === "done" && lastMonth(p.milestoneDue)).length;
+    const snap = buildSnapshot({ client: { id: c.id, name: c.name, accent: cfg.accent || "#19283c", logo: cfg.logo && !cfg.logo.startsWith("data:") ? cfg.logo : undefined }, data: peopleData(cfg), actionsDone: acts, projectsDone: projs, today: day });
+    for (const r of to) await once(`snapshot:${c.id}:${r}:${ym}`, () => sendEmail({ to: [r], subject: snap.subject, html: snap.html, text: snap.text }));
   }
 
   // ---------- 3. New hires: welcome email, first-day email, start, 30-day check-in
@@ -313,7 +357,10 @@ export async function GET(req: Request) {
       const brand = { company: c.name, accent: cfg.accent || "#19283c", logoUrl: emailLogoUrl(c.id, cfg.logo, cfg.logoEmail, PORTAL_URL) };
       const hubUrl = `${PORTAL_URL}/c/${c.id}/hub`;
       const roster = people.filter((p) => p.clientId === c.id && p.active !== false);
-      const mgrs = Array.from(new Set(roster.map((p) => (p.managerEmail || "").toLowerCase()).filter(Boolean)));
+      // managers: anyone with people reporting to them, plus anyone named as a new hire's manager
+      const hireMgrs = prow<Hire>(pHires).filter((h) => h.clientId === c.id && !h.outcome && h.managerName).map((h) => h.managerName.trim().toLowerCase());
+      const byName = members.filter((x) => x.client_id === c.id && hireMgrs.includes((x.name || "").trim().toLowerCase())).map((x) => x.email.toLowerCase());
+      const mgrs = Array.from(new Set([...roster.map((p) => (p.managerEmail || "").toLowerCase()), ...byName].filter(Boolean)));
       for (const mgr of mgrs) {
         // only people who can sign in get reminders
         const m = members.find((x) => x.client_id === c.id && x.email.toLowerCase() === mgr);
@@ -338,14 +385,13 @@ export async function GET(req: Request) {
             return { ok: true };
           });
         }
-        // Monday: the three things that matter most this week
-        if (monday) {
-          const top = weekItems(team, logs.filter((l) => l.clientId === c.id)).slice(0, 3);
-          if (top.length) {
-            const mail = listEmail(brand, "This week", `Your 3 for this week`, `Hi ${first}, a few minutes on these and your team will notice.`, top.map((t) => ({ title: t.title, why: t.why })), { label: "Open your Manager Hub", url: hubUrl });
-            await once(`team-week:${c.id}:${mgr}:${day}`, () => sendEmail({ to: [mgr], subject: `Your team this week: ${top[0].title}${top.length > 1 ? ` and ${top.length - 1} more` : ""}`, html: mail.html, text: mail.text, ...senderFor(s, c.name) }));
+        // Monday: the managers' weekly email (their new hires, their week, recognize someone, a thought)
+        if (monday && cfg.huddle?.managerWeekly !== false) {
+          const mw = buildManagerWeek({ client: { id: c.id, name: c.name, accent: cfg.accent || "#19283c", logo: cfg.logo && !cfg.logo.startsWith("data:") ? cfg.logo : undefined }, manager: { name: m.name, email: mgr }, team, logs, hires: prow<Hire>(pHires), steps: stepsFor(s), recognitionOn: !!cfg.modules?.recognition, trainingOn: !!cfg.modules?.training, today: day });
+          if (mw) {
+            await once(`team-week:${c.id}:${mgr}:${day}`, () => sendEmail({ to: [mgr], subject: mw.subject, html: mw.html, text: mw.text, ...senderFor(s, c.name) }));
             await once(`team-week-push:${c.id}:${mgr}:${day}`, async () => {
-              await pushTo(db, [mgr], "team", { title: "Your 3 for this week", body: top.map((t) => t.title).join(" · "), url: `/c/${c.id}/hub`, tag: `team-week-${c.id}` });
+              await pushTo(db, [mgr], "team", { title: "Your week", body: mw.subject.replace(/^Your week: /, ""), url: `/c/${c.id}/hub`, tag: `team-week-${c.id}` });
               return { ok: true };
             });
           }

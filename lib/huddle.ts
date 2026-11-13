@@ -3,6 +3,7 @@
 
 import { Action, addBusinessDays, Client, fmt, parseDay, Project, projectProgress, today, urgency, Rules, businessDiff } from "./data";
 import { HuddleSettings, SharedFile } from "./modules";
+import { PeopleItem, peopleRows } from "./peopleupdates";
 
 const PORTAL = "https://portal.alzapc.com";
 
@@ -18,6 +19,8 @@ export interface HuddleInput {
   rules: Rules;
   sinceDays?: number;
   softAsks?: boolean;
+  /** Who starts, hires in progress, decisions waiting, last days. */
+  people?: PeopleItem[];
 }
 
 export interface HuddleOutput {
@@ -28,7 +31,7 @@ export interface HuddleOutput {
   counts: { needs: number; overdue: number; done: number; active: number };
 }
 
-export function buildHuddle({ client, settings, actions, projects, files, rules, sinceDays = 7, softAsks }: HuddleInput): HuddleOutput {
+export function buildHuddle({ client, settings, actions, projects, files, rules, sinceDays = 7, softAsks, people = [] }: HuddleInput): HuddleOutput {
   const now = today();
   const since = new Date(now.getTime() - sinceDays * 86400000);
   const horizon = addBusinessDays(now, 5);
@@ -49,7 +52,7 @@ export function buildHuddle({ client, settings, actions, projects, files, rules,
     .sort((a, b) => a.milestoneDue.localeCompare(b.milestoneDue));
   const received = files.filter((f) => f.clientId === client.id && new Date(f.at) >= since);
 
-  const quiet = needs.length === 0 && doneRecently.length === 0 && doneProjects.length === 0 && received.length === 0 && !settings.personalNote.trim();
+  const quiet = needs.length === 0 && people.length === 0 && doneRecently.length === 0 && doneProjects.length === 0 && received.length === 0 && !settings.personalNote.trim();
 
   const subject =
     overdue.length > 0
@@ -108,7 +111,7 @@ export function buildHuddle({ client, settings, actions, projects, files, rules,
   const winsHtml = wins.length ? `<ul style="font:15px/1.4 Arial,sans-serif;color:#16213a;padding-left:18px;margin:4px 0">${wins.join("")}</ul>` : "";
 
   const alzaHtml = alzaWorking
-    .map((a) => row(esc(a.title), a.status === "blocked" ? "Waiting on your team before Ben can finish this" : `Ben is on it · target ${fmt(a.due)}`))
+    .map((a) => row(esc(a.title), a.status === "blocked" ? "Waiting on your team to finish this" : `In progress · target ${fmt(a.due)}`))
     .join("");
 
   const roadmapHtml = upcoming.map((p) => row(esc(p.name), `Starts around ${fmt(p.milestoneDue)}`)).join("");
@@ -122,6 +125,8 @@ export function buildHuddle({ client, settings, actions, projects, files, rules,
       ? `${overdue.length} item${overdue.length === 1 ? " is" : "s are"} past due. Each one takes a minute or two from your phone.`
       : needs.length > 0
       ? `A few things need your team this week. Everything else is moving.`
+      : people.length > 0
+      ? `Here's who's coming, going and waiting on a decision this week.`
       : `Nothing needs you this week. Here's a quick look at where things stand.`;
 
   // Quiet referral line: only in the first Huddle of each month, and only if Ben hasn't turned it off.
@@ -136,6 +141,7 @@ export function buildHuddle({ client, settings, actions, projects, files, rules,
 <tr><td style="padding:6px 24px 0;font:15px/1.5 Arial,sans-serif;color:#5b6b85">${intro}</td></tr>
 ${note}
 ${section("Needs your team", needsHtml ? needsHtml + needsFoot : "")}
+${section("People", peopleRows(people))}
 ${section("Projects", projHtml)}
 ${section("Done recently", winsHtml)}
 ${section("In progress", alzaHtml)}
@@ -156,6 +162,7 @@ ${softAsk ? `<tr><td style="padding:0 24px 14px;font:13px/1.5 Arial,sans-serif;c
     `HR Huddle for ${client.name}\n\n${intro}\n` +
     (settings.personalNote.trim() ? `\n${settings.personalNote.trim()}\n- Ben\n` : "") +
     lines("Needs your team", needs.map((a) => `${a.title} (${a.owner.name}), due ${fmt(a.due)}`)) +
+    lines("People", people.map((x) => `${x.title}${x.sub ? ` (${x.sub})` : ""}`)) +
     lines("Projects", active.map((p) => `${p.name}: ${projectProgress(p)}%, next ${p.nextMilestone}`)) +
     lines("Done recently", [...doneProjects.map((p) => p.name), ...doneRecently.map((a) => a.title)]) +
     lines("In progress", alzaWorking.map((a) => a.title)) +

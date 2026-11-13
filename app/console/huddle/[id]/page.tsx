@@ -5,6 +5,9 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { AlzaNav, AlzaTopbar, Toast, useGuard, useToast } from "@/components/ui";
 import { buildHuddle } from "@/lib/huddle";
+import { buildManagerWeek, buildSnapshot, PeopleData, peopleItems } from "@/lib/peopleupdates";
+import { onboardingFor } from "@/lib/hires";
+import { stepsFor } from "@/lib/tracker";
 import { Cadence, CADENCE_LABEL, DAY_NAMES, HuddleSettings, nextHuddle } from "@/lib/modules";
 import { useStore } from "@/lib/store";
 import { authHeader } from "@/lib/supabase";
@@ -12,7 +15,9 @@ import { authHeader } from "@/lib/supabase";
 export default function HuddleSetup() {
   const { id } = useParams<{ id: string }>();
   const ok = useGuard("advisor");
-  const { config, patch, getClient, actions, projects, files, rules, live } = useStore();
+  const { config, patch, getClient, actions, projects, files, rules, live, hires, roles, candidates, people, checkins } = useStore();
+  const [view, setView] = useState<"weekly" | "snapshot" | "manager">("weekly");
+  const [mgrPick, setMgrPick] = useState("");
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [sendErr, setSendErr] = useState("");
@@ -23,7 +28,19 @@ export default function HuddleSetup() {
 
   const h = cfg.huddle;
   const set = (p: Partial<HuddleSettings>) => patch({ config: { ...config, [id]: { ...cfg, huddle: { ...h, ...p } } } });
-  const out = buildHuddle({ client, settings: h, actions, projects, files, rules, softAsks: config[client.id]?.softAsks });
+  const todayIso = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; })();
+  const steps = stepsFor(onboardingFor(cfg.onboarding));
+  const pdata: PeopleData = { hires, roles, candidates, departures: [], roster: people, shouts: [], steps };
+  const huddleOut = buildHuddle({ client, settings: h, actions, projects, files, rules, softAsks: config[client.id]?.softAsks, people: peopleItems(id, pdata, todayIso) });
+  // the snapshot preview shows last month as if sent today
+  const snap = buildSnapshot({ client: { id, name: client.name, accent: client.accent, logo: client.logo }, data: pdata, actionsDone: 0, projectsDone: 0, today: todayIso });
+  const mgrNames = Array.from(new Set([...people.filter((p) => p.clientId === id).map((p) => p.managerName), ...hires.filter((x) => x.clientId === id && !x.outcome).map((x) => x.managerName)].filter(Boolean))).sort();
+  const mgrName = mgrPick || mgrNames[0] || "";
+  const mgrEmail = (people.find((p) => p.clientId === id && p.managerName === mgrName)?.managerEmail || cfg.users.find((u) => u.name === mgrName)?.email || "").toLowerCase();
+  const mw = mgrName
+    ? buildManagerWeek({ client: { id, name: client.name, accent: client.accent, logo: client.logo }, manager: { name: mgrName, email: mgrEmail }, team: people.filter((p) => p.clientId === id && p.active && !!mgrEmail && p.managerEmail.toLowerCase() === mgrEmail), logs: checkins, hires, steps, recognitionOn: !!cfg.modules.recognition, trainingOn: !!cfg.modules.training, today: todayIso })
+    : null;
+  const out = view === "snapshot" ? { ...huddleOut, ...snap } : view === "manager" && mw ? { ...huddleOut, ...mw } : huddleOut;
   const next = nextHuddle(h);
 
   const send = async (mode: "test" | "send") => {
@@ -100,6 +117,14 @@ export default function HuddleSetup() {
             <span className="switch"><input type="checkbox" checked={h.bundleReminders} onChange={(e) => set({ bundleReminders: e.target.checked })} /><span /></span>
             <div><b>Bundle task reminders</b><div className="tiny muted">Friendly and due-date nudges ride along in the Huddle. Overdue notices and escalations still go out on their own.</div></div>
           </label>
+          <label className="rule" style={{ cursor: "pointer" }}>
+            <span className="switch"><input type="checkbox" checked={h.snapshot !== false} onChange={(e) => set({ snapshot: e.target.checked })} /><span /></span>
+            <div><b>Monthly snapshot</b><div className="tiny muted">The month at a glance for the same people: who joined, who left, hiring, 30-day check-ins, recognition. First {DAY_NAMES[h.day] || "Monday"} of the month.</div></div>
+          </label>
+          <label className="rule" style={{ cursor: "pointer" }}>
+            <span className="switch"><input type="checkbox" checked={h.managerWeekly !== false} onChange={(e) => set({ managerWeekly: e.target.checked })} /><span /></span>
+            <div><b>Monday email for managers</b><div className="tiny muted">Each manager gets their new hires, their team this week, a nudge to recognize someone, and a short leadership thought.</div></div>
+          </label>
         </div>
 
         <div className="section-head section"><h2>Who gets it</h2></div>
@@ -125,13 +150,27 @@ export default function HuddleSetup() {
 
         <div className="section-head section">
           <h2>Preview</h2>
-          <span className="tiny muted">{out.subject}</span>
         </div>
-        <iframe title="Huddle preview" srcDoc={out.html} style={{ width: "100%", height: 720, border: "1px solid var(--line)", borderRadius: 14, background: "#eef2f8" }} />
+        <div className="pr-tabs" role="tablist" style={{ marginBottom: 8 }}>
+          <button className={view === "weekly" ? "on" : ""} onClick={() => setView("weekly")}>Weekly Huddle</button>
+          <button className={view === "snapshot" ? "on" : ""} onClick={() => setView("snapshot")}>Monthly snapshot</button>
+          <button className={view === "manager" ? "on" : ""} onClick={() => setView("manager")}>Managers&apos; Monday</button>
+        </div>
+        {view === "manager" && mgrNames.length > 1 && (
+          <select className="f" value={mgrName} onChange={(e) => setMgrPick(e.target.value)} aria-label="Preview for which manager" style={{ marginBottom: 8 }}>
+            {mgrNames.map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+        )}
+        {view === "manager" && !mw ? (
+          <div className="card small muted">No managers on the roster yet, so there&apos;s nothing to preview.</div>
+        ) : (
+          <p className="tiny muted" style={{ margin: "0 0 8px" }}>Subject: {out.subject}</p>
+        )}
+        <iframe title="Email preview" srcDoc={out.html} style={{ width: "100%", height: 720, border: "1px solid var(--line)", borderRadius: 14, background: "#eef2f8" }} />
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 14 }}>
           <button className="btn" disabled={busy} onClick={() => send("test")}>Send me a test</button>
-          <button className="btn primary" disabled={busy || !h.recipients.length} onClick={() => send("send")}>Send to client now</button>
+          <button className="btn primary" disabled={busy || !h.recipients.length || view !== "weekly"} onClick={() => send("send")}>{view === "weekly" ? "Send to client now" : "Sends on schedule"}</button>
         </div>
         {sendErr && <div className="impact" style={{ marginTop: 10, color: "var(--red)", background: "var(--red-bg)" }}>{sendErr}</div>}
         <p className="demo-note">{live ? "Sends automatically on the schedule above. Use these buttons for a test or an extra send." : "Demo mode: sends happen only when you tap."}</p>

@@ -55,6 +55,10 @@ export interface HuddleSettings {
   bundleReminders: boolean; // fold friendly/due-date nudges into the Huddle
   personalNote: string;
   lastSent?: string;
+  /** Monthly snapshot to the same people, first week of the month (default on). */
+  snapshot?: boolean;
+  /** Monday email to each manager: their new hires, their week, recognize someone, a thought (default on). */
+  managerWeekly?: boolean;
 }
 
 export const DAY_NAMES = ["", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
