@@ -88,7 +88,8 @@ export async function createShout(
   const value = input.value && c.rec.values.includes(input.value) ? input.value : undefined;
   const check = await screen(message, input.to.name);
   // a typed-in name (not picked from the list or texted from a known number) always gets a quick look
-  const held = !check.ok || (!input.from.verified && !input.from.personId);
+  const unknown = !input.from.verified && !input.from.personId;
+  const held = !check.ok || unknown || !!c.rec.approval;
   const s: Shoutout = {
     id: `so${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`,
     clientId: c.id,
@@ -98,7 +99,7 @@ export async function createShout(
     message,
     channel: input.channel,
     status: held ? "held" : "live",
-    heldReason: held ? check.reason ?? "Check the sender" : undefined,
+    heldReason: held ? (!check.ok ? check.reason ?? "Flagged" : unknown ? "Check the sender" : "Waiting for approval") : undefined,
     at: new Date().toISOString(),
     lang: input.lang,
     challengeId: input.challengeId,

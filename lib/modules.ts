@@ -18,7 +18,7 @@ export const MODULES: { key: ModuleKey; label: string; blurb: string }[] = [
   { key: "resources", label: "Resources", blurb: "Templates, guides and deliverables shared by Alza" },
   { key: "wellness", label: "Wellness", blurb: "Benefits and wellbeing programs by pillar" },
   { key: "board", label: "Messages", blurb: "A message thread with Ben, under Ask Ben" },
-  { key: "recognition", label: "Shoutouts", blurb: "Employee recognition by QR code, text or the portal, with a wall everyone can react to. Every shoutout is screened first" },
+  { key: "recognition", label: "Team Wall", blurb: "Shoutouts by QR code, text or the portal, plus birthdays, work anniversaries and new starters, on one wall everyone can react to. Every shoutout is screened first" },
   { key: "leave", label: "Leave center", blurb: "Leave of absence tracking for HR admins only: cases, deadlines, documents, reminders and return to work. Ben picks who the HR admins are" },
   { key: "offboarding", label: "Offboarding", blurb: "When someone leaves: a checklist, a thank-you email with what they need to know, an exit survey, and they come off the roster on their last day. Executives only" },
   { key: "training", label: "Training", blurb: "Their trainings to view, with practice: quick checks, role-plays with feedback and a planner. Execs see who's practiced" },

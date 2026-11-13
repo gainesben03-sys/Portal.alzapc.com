@@ -5,7 +5,7 @@
 // POST { clientId, action: "remove", id }            Ben, an executive, or the person's manager
 
 import { NextResponse } from "next/server";
-import { REACTIONS, Shoutout } from "@/lib/recognition";
+import { REACTIONS, RecognitionSettings, Shoutout } from "@/lib/recognition";
 import { Challenge, CHALLENGE_INFO } from "@/lib/challenges";
 import { challengesFor, checkChainPass, checkGoals } from "@/lib/challengeserver";
 import { Nudge, NudgeAudience, pickLine, waves } from "@/lib/nudge";
@@ -50,6 +50,21 @@ export async function POST(req: Request) {
 
   const mine = roster.find((p) => p.email?.toLowerCase() === me.email.toLowerCase());
   const manages = roster.some((p) => (p.managerEmail || "").toLowerCase() === me.email.toLowerCase());
+
+  // Team Wall settings an executive can change (Ben saves everything through the portal itself)
+  if (b.action === "settings") {
+    if (!exec) return NextResponse.json({ ok: false, reason: "forbidden" }, { status: 403 });
+    const r = (b.rec ?? {}) as Partial<RecognitionSettings>;
+    const allowed: Partial<RecognitionSettings> = {};
+    for (const k of ["approval", "notifyManagers", "showWall", "celebrate"] as const) if (typeof r[k] === "boolean") allowed[k] = r[k];
+    if (r.theme && typeof r.theme === "object") allowed.theme = r.theme;
+    if (r.autoEmail && typeof r.autoEmail === "object") allowed.autoEmail = { birthday: !!r.autoEmail.birthday, anniversary: !!r.autoEmail.anniversary };
+    if (r.templates && typeof r.templates === "object") allowed.templates = r.templates;
+    const recognition = { ...cfg.recognition, ...allowed };
+    const { error } = await db.from("clients").update({ config: { ...cfg, recognition } }).eq("id", clientId);
+    if (error) return NextResponse.json({ ok: false, reason: "save_failed" }, { status: 500 });
+    return NextResponse.json({ ok: true, recognition });
+  }
 
   if (b.action === "give") {
     const to = roster.find((p) => p.id === String(b.to ?? ""));

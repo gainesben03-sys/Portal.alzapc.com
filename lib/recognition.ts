@@ -28,6 +28,7 @@ export interface RecognitionSettings {
   values: string[]; // the company's values; every shoutout can be tied to one
   smsNumber?: string; // the company's texting number (+1...), once the texting provider is set up
   notifyManagers?: boolean; // email the person's manager when they get one (default on)
+  approval?: boolean; // every shoutout waits for an OK before it posts (default off: screened ones post right away)
   showWall?: boolean; // the wall and scoreboard on the QR page (default on)
   celebrate?: boolean; // the Celebrate tab: birthdays, work anniversaries, new people (default on; each person can opt out)
   theme?: ShoutTheme; // the look of the QR page, wall and TV

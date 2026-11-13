@@ -1,7 +1,7 @@
 "use client";
 
-// Shoutouts inside the portal: the wall, the scoreboard, give one, and (Ben and executives)
-// review anything held and set up the QR code and texting.
+// The Team Wall: shoutouts, this week's birthdays, anniversaries and new starters, the scoreboard
+// and challenges on one page. Review and settings (QR code, TV, emails, approval) sit behind the gear.
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
@@ -15,7 +15,6 @@ import { DEFAULT_HEADLINE, THEME_STYLES, ThemeStyle, themeVars, secondColor, Sho
 import { DEMO_CHALLENGES, DEMO_PEOPLE, DEMO_SHOUTS, demoReactions } from "@/lib/shoutdemo";
 
 type Rx = { shout_id: string; who: string; emoji: string };
-type Tab = "wall" | "board" | "challenges" | "review" | "setup";
 
 export default function Recognition() {
   const { client: clientId } = useParams<{ client: string }>();
@@ -27,10 +26,11 @@ export default function Recognition() {
   const rec = cfg?.recognition;
   const isAdvisor = viewer?.kind === "advisor";
   const exec = isAdvisor || me?.access === "exec";
-  const [tab, setTab] = useState<Tab>("wall");
   const [list, setList] = useState<Shoutout[]>([]);
   const [rx, setRx] = useState<Rx[]>([]);
-  const [giving, setGiving] = useState<false | { pass?: Baton & { title: string } }>(false);
+  const [giving, setGiving] = useState<false | { pass?: Baton & { title: string }; preset?: { to: Pick; msg?: string } }>(false);
+  const [shown, setShown] = useState(12);
+  const [sheet, setSheet] = useState<null | "board" | "challenges" | "review" | "settings">(null);
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [starting, setStarting] = useState(false);
   const [nudging, setNudging] = useState(false);
@@ -57,8 +57,8 @@ export default function Recognition() {
   useEffect(() => {
     if (ok && rec?.token) load();
     const sp = new URLSearchParams(window.location.search);
-    if (sp.get("review")) setTab("review");
-    if (sp.get("tab") === "challenges") setTab("challenges");
+    if (sp.get("review")) setSheet("review");
+    if (sp.get("tab") === "challenges") setSheet("challenges");
   }, [ok, rec?.token, load]);
 
   const since = useMemo(() => {
@@ -116,128 +116,216 @@ export default function Recognition() {
   };
 
   const on = !!cfg?.modules.recognition;
+  // Ben saves through the portal; an executive's changes go through the server (they can't write settings directly)
+  const saveRec = async (r: RecognitionSettings, msg = "Saved") => {
+    if (isAdvisor) {
+      setRec(r);
+      return toast.show(msg);
+    }
+    const j = await api({ action: "settings", rec: r });
+    if (j.demo || j.ok) {
+      patch({ config: { ...config, [clientId]: { ...cfg, recognition: j.recognition ?? r } } });
+      return toast.show(msg);
+    }
+    toast.show(j.reason === "preview" ? "Preview is read-only" : "Couldn't save. Try again.");
+  };
+
+  // this month's most recognized
+  const top = Object.entries(live.filter((x) => new Date(x.at) >= since).reduce((a, x) => ({ ...a, [x.to.name]: (a[x.to.name] ?? 0) + 1 }), {} as Record<string, number>))
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3);
+  const week = thisWeek(roster, rec?.celebrate !== false);
+  const pastCh = challenges.filter((c) => !challengeLive(c));
+  const asPick = (p: { id: string; name: string; department?: string; location?: string }): Pick => ({ id: p.id, name: p.name, team: p.department || p.location || "" });
+
   return (
     <div style={{ ["--accent" as string]: client.accent }}>
       <ClientTopbar client={client} />
       <ClientNav clientId={client.id} />
-      <main className="wrap">
-        <div className="row" style={{ alignItems: "flex-end", gap: 10 }}>
-          <div className="grow">
-            <h1 style={{ margin: 0 }}>Shoutouts</h1>
-            <p className="muted" style={{ margin: "4px 0 0" }}>Recognition from anyone, by QR code, text or right here.</p>
+      <main className="wrap wide">
+        <div className="tw-head">
+          <div className="tw-title">
+            <h1 style={{ margin: 0 }}>Team Wall</h1>
+            <p className="muted" style={{ margin: "4px 0 0" }}>Shoutouts, birthdays and milestones, all in one place.</p>
           </div>
           {rec?.token && (
-            <span style={{ display: "inline-flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-              {(exec || manages) && <button className="btn" onClick={() => setNudging(true)}>💛 Nudge</button>}
-              <button className="btn primary" onClick={() => setGiving({})}>🎉 Give one</button>
-            </span>
+            <div className="tw-actions">
+              {exec && held.length > 0 && (
+                <button className="tw-pill" onClick={() => setSheet("review")}><span aria-hidden="true" />{held.length} waiting for your OK</button>
+              )}
+              {exec && (
+                <button className="tw-gear" aria-label="Team Wall settings" title="Settings" onClick={() => setSheet("settings")}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg>
+                </button>
+              )}
+              <button className="btn primary tw-give" onClick={() => setGiving({})}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                Give a shoutout
+              </button>
+            </div>
           )}
         </div>
-        {!on && isAdvisor && <div className="pr-draft tiny">Shoutouts is off for {client.name}. Turn it on in their settings under Modules.</div>}
+        {!on && isAdvisor && <div className="pr-draft tiny">The Team Wall is off for {client.name}. Turn it on in their settings under Modules.</div>}
 
         {!rec?.token ? (
           isAdvisor ? (
-            <Setup rec={null} onSave={(r) => { setRec(r); toast.show("Shoutouts set up"); setTab("setup"); }} clientName={client.name} accent={client.accent} />
+            <div className="section"><Setup advisor rec={null} onSave={(r) => saveRec(r, "Team Wall set up")} clientName={client.name} accent={client.accent} /></div>
           ) : (
-            <div className="card section small muted">Shoutouts aren&apos;t set up yet.</div>
+            <div className="card section small muted">The Team Wall isn&apos;t set up yet.</div>
           )
         ) : (
           <>
-            <div className="pr-tabs section" role="tablist">
-              <button className={tab === "wall" ? "on" : ""} onClick={() => setTab("wall")}>Wall</button>
-              <button className={tab === "board" ? "on" : ""} onClick={() => setTab("board")}>Scoreboard</button>
-              <button className={tab === "challenges" ? "on" : ""} onClick={() => setTab("challenges")}>Challenges{activeCh.length ? ` · ${activeCh.length}` : ""}</button>
-              {exec && <button className={tab === "review" ? "on" : ""} onClick={() => setTab("review")}>To review{held.length ? ` · ${held.length}` : ""}</button>}
-              {isAdvisor && <button className={tab === "setup" ? "on" : ""} onClick={() => setTab("setup")}>Set up</button>}
-            </div>
+            {week.length > 0 && (
+              <section className="section" aria-label="This week">
+                <h2 className="tw-label">This week</h2>
+                <div className="tw-week">
+                  {week.map((w) => (
+                    <div key={w.key} className="tw-moment">
+                      <span className={`tw-badge ${w.kind}`} aria-hidden="true">{w.badge}</span>
+                      <span className="tw-moment-txt"><b>{w.name}</b><span>{w.line}</span></span>
+                      <button className="btn sm" onClick={() => setGiving({ preset: { to: asPick(w.person), msg: w.starter } })}>{w.action}</button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
             {myBatons.map((b) => (
               <div key={b.shoutId} className="so-pass section">
-                <span className="so-kicker">🔗 {b.title}</span>
+                <span className="so-kicker">{b.title}</span>
                 <b style={{ display: "block", marginTop: 2 }}>You&apos;re holding link #{b.link}. Don&apos;t let it end with you!</b>
                 <div className="row" style={{ gap: 10, marginTop: 8, alignItems: "center" }}>
                   <span className="tiny muted grow">{b.daysLeft <= 0 ? "Last day to pass it on" : `${b.daysLeft} ${b.daysLeft === 1 ? "day" : "days"} left to pass it on`}</span>
-                  <button className="btn primary sm" onClick={() => setGiving({ pass: b })}>🔗 Pass it on</button>
+                  <button className="btn primary sm" onClick={() => setGiving({ pass: b })}>Pass it on</button>
                 </div>
               </div>
             ))}
-            <div className={`section ${tab === "wall" || tab === "board" ? `so-portal so-theme-${rec.theme?.style ?? "classic"}` : ""}`} style={themeVars(client.accent, rec.theme)}>
-              {tab === "challenges" && (
-                <Challenges
-                  list={challenges}
-                  shouts={list}
-                  roster={roster}
-                  canStart={canStart}
-                  canEnd={(c) => exec || (!!me?.email && c.createdBy.email?.toLowerCase() === me.email.toLowerCase())}
-                  onStart={() => setStarting(true)}
-                  onEnd={async (c) => {
-                    if (!confirm(`End "${c.title}"?`)) return;
-                    const j = await api({ action: "endChallenge", id: c.id });
-                    if (!j.ok) return toast.show("Couldn't end it");
-                    setChallenges(challenges.map((x) => (x.id === c.id ? { ...x, status: "ended" } : x)));
-                    toast.show("Challenge ended");
-                  }}
-                />
-              )}
-              {tab === "wall" && activeCh.length > 0 && <ChallengeCards list={activeCh.map((c) => publicChallenge(c, list, roster))} />}
-              {tab === "wall" &&
-                (live.length === 0 ? (
-                  <div className="card small muted">No shoutouts yet. Print the QR code and be the first.</div>
+
+            <div className="tw-cols section">
+              <div className={`tw-main so-portal so-theme-${rec.theme?.style ?? "classic"}`} style={themeVars(client.accent, rec.theme)}>
+                {activeCh.length > 0 && <ChallengeCards list={activeCh.map((c) => publicChallenge(c, list, roster))} />}
+                {live.length === 0 ? (
+                  <div className="card small muted">No shoutouts yet. Be the first: tap Give a shoutout.</div>
                 ) : (
-                  <div className="so-wall">{live.slice(0, 80).map((s) => <ShoutCard key={s.id} s={toItem(s)} onReact={(e) => react(s.id, e)} onRemove={exec ? () => remove(s) : undefined} />)}</div>
-                ))}
-              {tab === "board" && (
-                <>
-                  <Scoreboard b={board} />
-                  <Missing list={live} />
-                </>
-              )}
-              {tab === "review" && exec && (
-                <>
-                  <p className="small muted" style={{ marginTop: 0 }}>Anything the screen wasn&apos;t sure about, sent by someone not on the list, or reported twice by coworkers. Nobody else sees these.</p>
-                  {held.length === 0 ? (
-                    <div className="card small muted">Nothing waiting. 👍</div>
+                  <>
+                    <div className="so-wall">{live.slice(0, shown).map((s) => <ShoutCard key={s.id} s={toItem(s)} onReact={(e) => react(s.id, e)} onRemove={exec ? () => remove(s) : undefined} />)}</div>
+                    {live.length > shown && shown < 80 && <button className="btn block" onClick={() => setShown(Math.min(80, shown + 20))}>Show more</button>}
+                  </>
+                )}
+              </div>
+
+              <aside className="tw-side">
+                <div className="card">
+                  <h2 className="tw-h">Most recognized this month</h2>
+                  {top.length ? (
+                    <ol className="tw-top">
+                      {top.map(([n, c], i) => <li key={n}><span>{i + 1}</span><span className="grow">{n}</span><b>{c}</b></li>)}
+                    </ol>
                   ) : (
-                    held.map((s) => (
-                      <div className="card so-review" key={s.id}>
-                        <div className="tiny" style={{ color: "var(--amber)", fontWeight: 600 }}>⚠ {s.heldReason ?? "Held"}</div>
-                        <p style={{ margin: "6px 0" }}>“{s.message}”</p>
-                        <div className="tiny muted">To {s.to.name} · from {s.from.name}{s.from.verified ? "" : s.from.personId ? " (picked from the list)" : " (typed their own name)"} · {s.channel === "sms" ? "text" : s.channel === "qr" ? "QR code" : "portal"} · {new Date(s.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</div>
-                        <div className="sheet-actions">
-                          <button className="btn sm" style={{ color: "var(--red)" }} onClick={() => review(s, false)}>Remove</button>
-                          <button className="btn primary sm" onClick={() => review(s, true)}>Post it</button>
-                        </div>
-                      </div>
-                    ))
+                    <p className="small muted" style={{ margin: 0 }}>No one yet this month.</p>
                   )}
-                </>
-              )}
-              {tab === "setup" && isAdvisor && (
-                <Setup
-                  rec={rec}
-                  onSave={(r) => { setRec(r); toast.show("Saved"); }}
-                  clientName={client.name}
-                  accent={client.accent}
-                  onTest={async (kind, draft) => {
-                    if (!LIVE) return toast.show("Demo: test emails send from the live portal");
-                    const j = await api({ action: "testEmail", kind, rec: draft });
-                    toast.show(j.ok ? `Test sent to ${j.to}` : `Couldn't send the test (${j.reason ?? "error"})`);
-                  }}
-                />
-              )}
+                  <button className="linklike small tw-more" onClick={() => setSheet("board")}>Full scoreboard</button>
+                </div>
+                <div className="card">
+                  <h2 className="tw-h">Challenges</h2>
+                  <p className="small muted" style={{ margin: "0 0 10px" }}>A short push, like a week of thank-yous, with a goal everyone can see.</p>
+                  <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+                    {canStart && <button className="btn sm" onClick={() => setStarting(true)}>Start a challenge</button>}
+                    {(exec || manages) && <button className="btn sm" onClick={() => setNudging(true)}>Send a nudge</button>}
+                  </div>
+                  {(pastCh.length > 0 || activeCh.length > 0) && <button className="linklike small tw-more" onClick={() => setSheet("challenges")}>{pastCh.length ? "Past challenges" : "Challenge details"}</button>}
+                </div>
+              </aside>
             </div>
           </>
         )}
       </main>
+
+      {sheet === "board" && (
+        <Sheet title="Scoreboard" onClose={() => setSheet(null)}>
+          <div className="tw-scroll so-portal" style={themeVars(client.accent, rec?.theme)}>
+            <Scoreboard b={board} />
+            <Missing list={live} />
+          </div>
+          <div className="sheet-actions"><button className="btn primary sm" onClick={() => setSheet(null)}>Done</button></div>
+        </Sheet>
+      )}
+      {sheet === "challenges" && (
+        <Sheet title="Challenges" onClose={() => setSheet(null)}>
+          <div className="tw-scroll">
+            <Challenges
+              list={challenges}
+              shouts={list}
+              roster={roster}
+              canStart={canStart}
+              canEnd={(c) => exec || (!!me?.email && c.createdBy.email?.toLowerCase() === me.email.toLowerCase())}
+              onStart={() => { setSheet(null); setStarting(true); }}
+              onEnd={async (c) => {
+                if (!confirm(`End "${c.title}"?`)) return;
+                const j = await api({ action: "endChallenge", id: c.id });
+                if (!j.ok) return toast.show("Couldn't end it");
+                setChallenges(challenges.map((x) => (x.id === c.id ? { ...x, status: "ended" } : x)));
+                toast.show("Challenge ended");
+              }}
+            />
+          </div>
+          <div className="sheet-actions"><button className="btn primary sm" onClick={() => setSheet(null)}>Done</button></div>
+        </Sheet>
+      )}
+      {sheet === "review" && exec && (
+        <Sheet title="Waiting for your OK" onClose={() => setSheet(null)}>
+          <div className="tw-scroll">
+            <p className="small muted" style={{ marginTop: 0 }}>{rec?.approval ? "Approval is on, so every shoutout waits here. " : ""}Anything the screen flagged or sent from a name not on the list waits here too. Nobody else sees these.</p>
+            {held.length === 0 ? (
+              <div className="card small muted">Nothing waiting.</div>
+            ) : (
+              held.map((s) => (
+                <div className="card so-review" key={s.id}>
+                  <div className="tiny" style={{ color: "var(--amber)", fontWeight: 600 }}>{s.heldReason ?? "Held"}</div>
+                  <p style={{ margin: "6px 0" }}>&ldquo;{s.message}&rdquo;</p>
+                  <div className="tiny muted">To {s.to.name} · from {s.from.name}{s.from.verified ? "" : s.from.personId ? " (picked from the list)" : " (typed their own name)"} · {s.channel === "sms" ? "text" : s.channel === "qr" ? "QR code" : "portal"} · {new Date(s.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</div>
+                  <div className="sheet-actions">
+                    <button className="btn sm" style={{ color: "var(--red)" }} onClick={() => review(s, false)}>Remove</button>
+                    <button className="btn primary sm" onClick={() => review(s, true)}>Post it</button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="sheet-actions"><button className="btn sm" onClick={() => setSheet(null)}>Close</button></div>
+        </Sheet>
+      )}
+      {sheet === "settings" && exec && rec && (
+        <Sheet title="Team Wall settings" onClose={() => setSheet(null)}>
+          <div className="tw-scroll">
+            <p className="small muted" style={{ marginTop: 0 }}>Only you{isAdvisor ? " and the client's executives" : " and AlzaHR"} see this.</p>
+            <Setup
+              advisor={isAdvisor}
+              rec={rec}
+              onSave={(r) => saveRec(r)}
+              clientName={client.name}
+              accent={client.accent}
+              onTest={isAdvisor ? async (kind, draft) => {
+                if (!LIVE) return toast.show("Demo: test emails send from the live portal");
+                const j = await api({ action: "testEmail", kind, rec: draft });
+                toast.show(j.ok ? `Test sent to ${j.to}` : `Couldn't send the test (${j.reason ?? "error"})`);
+              } : undefined}
+            />
+          </div>
+          <div className="sheet-actions"><button className="btn sm" onClick={() => setSheet(null)}>Close</button></div>
+        </Sheet>
+      )}
       {giving && rec?.token && (
         <GiveSheet
           token={rec.token}
           pass={giving.pass}
+          preset={giving.preset}
           onClose={() => setGiving(false)}
           onSend={async (body) => {
             const j = await api({ action: "give", ...body, pass: giving.pass?.shoutId });
-            if (!j.ok) return j.reason === "self" ? "You can't give yourself one 😄" : j.reason === "already_in_chain" ? "They're already in the chain. Pick someone new so it keeps spreading!" : j.reason?.startsWith("chain") ? "This chain has ended." : "That didn't send. Try again.";
+            if (!j.ok) return j.reason === "self" ? "You can't give yourself one." : j.reason === "already_in_chain" ? "They're already in the chain. Pick someone new so it keeps spreading!" : j.reason?.startsWith("chain") ? "This chain has ended." : "That didn't send. Try again.";
             setGiving(false);
-            toast.show(j.demo ? "Sent (demo)" : j.status === "held" ? "Thanks! It'll post after a quick check." : giving.pass ? `The chain grows! Link #${giving.pass.link + 1} 🔗` : "Sent! 🎉");
+            toast.show(j.demo ? "Sent (demo)" : j.status === "held" ? "Thanks! It'll post once it's approved." : giving.pass ? `The chain grows! Link #${giving.pass.link + 1}` : "Sent!");
             load();
             return "";
           }}
@@ -259,7 +347,7 @@ export default function Recognition() {
             }
             if (!j.ok) return j.reason === "recent" ? "This group got a nudge in the last 3 days. Give it a little time." : j.reason === "nobody" ? "Nobody in that group has an email on the roster." : j.reason === "forbidden" ? "Managers can nudge their own team." : "Couldn't send it. Try again.";
             setNudging(false);
-            toast.show(j.waves === 3 ? `Wave 1 sent to ${j.sent}. The rest go out over the next 4 days.` : `Nudge sent to ${j.sent} ${j.sent === 1 ? "person" : "people"} 💛`);
+            toast.show(j.waves === 3 ? `Wave 1 sent to ${j.sent}. The rest go out over the next 4 days.` : `Nudge sent to ${j.sent} ${j.sent === 1 ? "person" : "people"}`);
             return "";
           }}
         />
@@ -277,8 +365,7 @@ export default function Recognition() {
               toast.show("Started (demo)");
               return "";
             }
-            toast.show(body.kind === "chain" ? "Chain started! 🔗 The first link is on its way." : "Challenge started! 🎉");
-            setTab("challenges");
+            toast.show(body.kind === "chain" ? "Chain started! The first link is on its way." : "Challenge started!");
             load();
             return "";
           }}
@@ -287,6 +374,40 @@ export default function Recognition() {
       <Toast msg={toast.msg} onDone={toast.clear} />
     </div>
   );
+}
+
+type Moment = { key: string; kind: "new" | "bday" | "anniv"; badge: string; name: string; line: string; action: string; starter: string; person: { id: string; name: string; department?: string; location?: string } };
+
+/** New starters, birthdays and work anniversaries in the next 7 days (new starters: the last 7 too). Month and day only. */
+function thisWeek(roster: { id: string; name: string; title?: string; hireDate?: string; birthday?: string; active: boolean; celebrate?: boolean; department?: string; location?: string }[], on: boolean): Moment[] {
+  if (!on) return [];
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const dayName = (n: number, d: Date) => (n === 0 ? "Today" : n === 1 ? "Tomorrow" : d.toLocaleDateString("en-US", { weekday: "long" }));
+  const out: (Moment & { sort: number })[] = [];
+  for (const p of roster) {
+    if (!p.active || p.celebrate === false) continue;
+    const first = p.name.split(" ")[0];
+    const initials = p.name.split(/\s+/).map((x) => x[0]).slice(0, 2).join("").toUpperCase();
+    if (p.hireDate) {
+      const [y, m, d] = p.hireDate.split("-").map(Number);
+      const start = new Date(y, m - 1, d);
+      const diff = Math.round((start.getTime() - now.getTime()) / 864e5);
+      if (diff >= -7 && diff <= 7)
+        out.push({ key: `n${p.id}`, kind: "new", badge: initials, name: p.name, line: diff <= 0 ? `New this week${p.title ? ` · ${p.title}` : ""}` : `Starts ${dayName(diff, start)}${p.title ? ` · ${p.title}` : ""}`, action: "Say welcome", starter: `Welcome to the team, ${first}! `, person: p, sort: Math.abs(diff) - 100 });
+    }
+    for (let n = 0; n < 7; n++) {
+      const d = new Date(now.getTime() + n * 864e5);
+      const md = iso(d).slice(5);
+      if (p.birthday === md) out.push({ key: `b${p.id}`, kind: "bday", badge: "", name: p.name, line: `Birthday · ${dayName(n, d)}`, action: "Send wishes", starter: `Happy birthday, ${first}! `, person: p, sort: n });
+      if (p.hireDate && p.hireDate.slice(5) === md) {
+        const yrs = d.getFullYear() - Number(p.hireDate.slice(0, 4));
+        if (yrs >= 1) out.push({ key: `a${p.id}`, kind: "anniv", badge: String(yrs), name: p.name, line: `${yrs} ${yrs === 1 ? "year" : "years"} · ${dayName(n, d)}`, action: "Congrats", starter: `Congrats on ${yrs} ${yrs === 1 ? "year" : "years"}, ${first}! `, person: p, sort: n });
+      }
+    }
+  }
+  return out.sort((a, b) => a.sort - b.sort).slice(0, 6);
 }
 
 type NudgeBody = { audience: string; waves: 1 | 3; line: string; note?: string; challengeId?: string };
@@ -540,9 +661,9 @@ function Missing({ list }: { list: Shoutout[] }) {
   );
 }
 
-function GiveSheet({ token, pass, onClose, onSend }: { token: string; pass?: Baton & { title: string }; onClose: () => void; onSend: (b: { to: string; value?: string; message: string }) => Promise<string> }) {
-  const [to, setTo] = useState<Pick | null>(null);
-  const [msg, setMsg] = useState("");
+function GiveSheet({ token, pass, preset, onClose, onSend }: { token: string; pass?: Baton & { title: string }; preset?: { to: Pick; msg?: string }; onClose: () => void; onSend: (b: { to: string; value?: string; message: string }) => Promise<string> }) {
+  const [to, setTo] = useState<Pick | null>(preset?.to ?? null);
+  const [msg, setMsg] = useState(preset?.msg ?? "");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const search = useCallback(
@@ -554,10 +675,10 @@ function GiveSheet({ token, pass, onClose, onSend }: { token: string; pass?: Bat
     [token]
   );
   return (
-    <Sheet title={pass ? "Pass on the chain 🔗" : "Give a shoutout"} onClose={onClose}>
+    <Sheet title={pass ? "Pass on the chain" : "Give a shoutout"} onClose={onClose}>
       {pass && <p className="small" style={{ marginTop: 0 }}>You&apos;re link #{pass.link} in the <b>{pass.title}</b>. Recognize someone new to keep it growing.</p>}
       <span className="flabel">Who</span>
-      <PersonSearch search={search} value={to} onPick={setTo} placeholder="Start typing their name" autoFocus />
+      <PersonSearch search={search} value={to} onPick={setTo} placeholder="Start typing their name" autoFocus={!preset} />
       <span className="flabel" style={{ marginTop: 12 }}>What did they do?</span>
       <div className="so-starters">{STARTERS.en.map((s) => <button key={s} onClick={() => setMsg(s.replace("…", " "))}>{s}</button>)}</div>
       <textarea className="f" style={{ minHeight: 80 }} value={msg} onChange={(e) => setMsg(e.target.value.slice(0, MAX_MESSAGE))} placeholder="Be specific. What happened, and why it mattered." />
@@ -572,8 +693,9 @@ function GiveSheet({ token, pass, onClose, onSend }: { token: string; pass?: Bat
 
 const MAIL_DOMAIN = process.env.NEXT_PUBLIC_MAIL_DOMAIN || "alzapc.com";
 
-function Setup({ rec, onSave, clientName, accent, onTest }: { rec: RecognitionSettings | null | undefined; onSave: (r: RecognitionSettings) => void; clientName: string; accent: string; onTest?: (k: CelebrateKind, draft: Partial<RecognitionSettings>) => void }) {
+function Setup({ advisor, rec, onSave, clientName, accent, onTest }: { advisor?: boolean; rec: RecognitionSettings | null | undefined; onSave: (r: RecognitionSettings) => void; clientName: string; accent: string; onTest?: (k: CelebrateKind, draft: Partial<RecognitionSettings>) => void }) {
   const [sms, setSms] = useState(rec?.smsNumber ?? "");
+  const [approval, setApproval] = useState(!!rec?.approval);
   const [notify, setNotify] = useState(rec?.notifyManagers !== false);
   const [wall, setWall] = useState(rec?.showWall !== false);
   const [cel, setCel] = useState(rec?.celebrate !== false);
@@ -604,20 +726,34 @@ function Setup({ rec, onSave, clientName, accent, onTest }: { rec: RecognitionSe
     celebrate: cel,
     theme,
   });
-  const save = () => onSave({ ...(rec ?? newRecognition()), values: rec?.values ?? DEFAULT_VALUES, smsNumber, notifyManagers: notify, showWall: wall, ...extras() });
+  const save = (next?: Partial<RecognitionSettings>) => onSave({ ...(rec ?? newRecognition()), values: rec?.values ?? DEFAULT_VALUES, smsNumber, notifyManagers: notify, showWall: wall, approval, ...extras(), ...(next ?? {}) });
   const copy = (t: string) => navigator.clipboard?.writeText(t);
 
   return (
     <div className="so-setup">
       {!rec && <p className="small" style={{ marginTop: 0 }}>Print the QR code for {clientName}&apos;s break rooms, trucks and shop floor.</p>}
-      <div className="card">
+      <div className="card tw-approval">
+        <label className="tw-switch">
+          <span className="grow">
+            <b>Approve shoutouts before they post</b>
+            <span className="tiny muted" style={{ display: "block", marginTop: 2 }}>
+              {approval ? "On: every shoutout waits for an OK from you or an executive." : "Off: shoutouts post right away. Anything the screen flags, or from a name not on the roster, still waits for a look."}
+            </span>
+          </span>
+          <input type="checkbox" role="switch" checked={approval} onChange={(e) => { setApproval(e.target.checked); if (rec) save({ approval: e.target.checked }); }} aria-label="Approve shoutouts before they post" />
+        </label>
+      </div>
+
+      <div className="card section">
         <label className="check"><input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} /> Email the person&apos;s manager when they get a shoutout</label>
         <label className="check"><input type="checkbox" checked={wall} onChange={(e) => setWall(e.target.checked)} /> Show the wall and scoreboard on the QR page</label>
-        <label className="check"><input type="checkbox" checked={cel} onChange={(e) => setCel(e.target.checked)} /> Celebrate tab: birthdays, work anniversaries and new people (next 2 weeks, month and day only). Anyone can opt out from their birthday email, or you can uncheck them on the roster.</label>
-        <label className="f" style={{ marginTop: 8 }}>Texting number <span className="tiny muted">(optional, once the texting provider is set up)</span>
-          <input className="f" value={sms} onChange={(e) => setSms(e.target.value)} placeholder="(415) 555-0123" />
-        </label>
-        <div className="sheet-actions"><button className="btn primary sm" onClick={save}>{rec ? "Save" : "Turn on shoutouts"}</button></div>
+        <label className="check"><input type="checkbox" checked={cel} onChange={(e) => setCel(e.target.checked)} /> Show birthdays, work anniversaries and new starters on the wall (This week, month and day only). Anyone can opt out from their birthday email, or you can uncheck them on the roster.</label>
+        {advisor && (
+          <label className="f" style={{ marginTop: 8 }}>Texting number <span className="tiny muted">(optional, once the texting provider is set up)</span>
+            <input className="f" value={sms} onChange={(e) => setSms(e.target.value)} placeholder="(415) 555-0123" />
+          </label>
+        )}
+        <div className="sheet-actions"><button className="btn primary sm" onClick={() => save()}>{rec ? "Save" : "Turn on the Team Wall"}</button></div>
       </div>
 
       <div className="card section">
@@ -656,12 +792,12 @@ function Setup({ rec, onSave, clientName, accent, onTest }: { rec: RecognitionSe
       <div className="card section">
         <b className="small">Emails to employees</b>
         <p className="tiny muted" style={{ margin: "2px 0 10px" }}>Shoutout, birthday and anniversary emails come from this name and address. Every one has a one-click opt-out at the bottom.</p>
-        <div className="two">
+        {advisor && <div className="two">
           <label className="f">From name<input className="f" value={senderName} onChange={(e) => setSenderName(e.target.value)} placeholder={defSender.fromName} maxLength={60} /></label>
           <label className="f">Address
             <span className="so-addr"><input className="f" value={senderBox} onChange={(e) => setSenderBox(e.target.value)} placeholder={defSender.fromBox} maxLength={40} /><span className="tiny muted">@{MAIL_DOMAIN}</span></span>
           </label>
-        </div>
+        </div>}
         <p className="tiny muted" style={{ margin: "0 0 10px" }}>They&apos;ll see: <b>{senderName.trim() || defSender.fromName}</b> &lt;{cleanBox || defSender.fromBox}@{MAIL_DOMAIN}&gt;</p>
 
         {(["birthday", "anniversary"] as CelebrateKind[]).map((k) => {
@@ -716,7 +852,7 @@ function Setup({ rec, onSave, clientName, accent, onTest }: { rec: RecognitionSe
           );
         })}
         <p className="tiny muted" style={{ margin: "8px 0 0" }}>Only people with an email on the roster who haven&apos;t opted out. Month and day only, never their age.</p>
-        <div className="sheet-actions"><button className="btn primary sm" onClick={save}>Save</button></div>
+        <div className="sheet-actions"><button className="btn primary sm" onClick={() => save()}>Save</button></div>
       </div>
 
       {rec && (
@@ -745,10 +881,10 @@ function Setup({ rec, onSave, clientName, accent, onTest }: { rec: RecognitionSe
               <li><b>Text:</b> they text a coworker&apos;s name to the company number and it walks them through. STOP always works, and stopping texts never stops them giving or getting shoutouts.</li>
               <li><b>Email:</b> the person gets an email (and a text, if their cell is on the roster) with a link to see it on the wall and pass it on. Their manager gets a heads-up.</li>
             </ul>
-            <p style={{ margin: "8px 0 0" }}><b>Keeping it positive:</b> every shoutout is screened before it posts. Anything questionable, or from a name not on the roster, waits in To review. Two reports from coworkers takes one down until you look.</p>
+            <p style={{ margin: "8px 0 0" }}><b>Keeping it positive:</b> every shoutout is screened before it posts. Anything questionable, or from a name not on the roster, waits for your OK (the pill at the top of the wall). Two reports from coworkers takes one down until you look.</p>
             {!rec.smsNumber && <p style={{ margin: "8px 0 0" }}><b>To turn on texting:</b> set up a Twilio number with carrier registration, add TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN in Vercel, point the number&apos;s incoming messages to <code>{origin}/api/shout/sms</code>, then enter the number above.</p>}
           </div>
-          <button className="linklike tiny" style={{ color: "var(--red)" }} onClick={() => { if (confirm("Get a new link? The current QR code and TV link stop working, so you'll need to reprint the poster.")) onSave({ ...rec, token: randomToken(22) }); }}>Get a new link (old QR codes stop working)</button>
+          {advisor && <button className="linklike tiny" style={{ color: "var(--red)" }} onClick={() => { if (confirm("Get a new link? The current QR code and TV link stop working, so you'll need to reprint the poster.")) onSave({ ...rec, token: randomToken(22) }); }}>Get a new link (old QR codes stop working)</button>}
         </>
       )}
     </div>

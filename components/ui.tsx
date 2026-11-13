@@ -328,7 +328,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
             ]
           : []),
         ...(tools && cfg?.askHr !== false ? [{ href: `${base}/hub/ask`, label: "Ask HR", match: [`${base}/hub/ask`] }] : []),
-        ...(cfg?.modules.recognition && access !== "hiring" ? [{ href: `${base}/recognition`, label: "Shoutouts", match: [`${base}/recognition`] }] : []),
+        ...(cfg?.modules.recognition && access !== "hiring" ? [{ href: `${base}/recognition`, label: "Team Wall", match: [`${base}/recognition`] }] : []),
         ...(tools ? [{ href: `${base}/hub/library`, label: training ? "Toolkit" : "Learn", match: [`${base}/hub/library`, ...(training ? [] : [`${base}/hub/learn`, `${base}/hub/view`])] }] : []),
       ],
     },
