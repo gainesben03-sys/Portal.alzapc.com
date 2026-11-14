@@ -135,6 +135,7 @@ export const DEFAULT_TILES = ["projects", "mylist", "hires", "recruiting"];
 export interface ClientConfig {
   onboarding?: Partial<import("./hires").OnboardingSettings>;
   tiles?: string[]; // default dashboard for everyone at this client (set by Ben)
+  rosterColumns?: Record<string, string>; // the last roster upload's column matches, reused next time
   softAsks?: boolean; // show the quiet referral / add-on lines (default on)
   videoScreening?: boolean; // add-on: pitch links on Recruiting roles
   recognition?: import("./recognition").RecognitionSettings; // Shoutouts: QR link, values, texting number

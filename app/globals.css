@@ -1591,3 +1591,11 @@ button.nt-dot:hover { border-color: var(--green); transform: scale(1.06); }
 .askbox-tag { flex: none; font-size: 13px; font-weight: 700; color: var(--accent); }
 .askbox-slim input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: inherit; font-size: 15px; color: var(--ink); height: 36px; }
 .askbox-slim .btn { flex: none; border-radius: 999px; }
+.roster-match { border: 1px solid var(--line); border-radius: 12px; margin-bottom: 12px; }
+.roster-match-h { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: 0; background: none; font: inherit; color: var(--ink); text-align: left; cursor: pointer; }
+.roster-match-grid { display: grid; gap: 8px; padding: 4px 12px 12px; max-height: 46vh; overflow-y: auto; }
+.roster-match-row { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 2px 10px; align-items: center; }
+.roster-match-row .f { margin: 0; }
+.roster-match-f { font-size: 13px; font-weight: 600; }
+.roster-match-s { grid-column: 2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 520px) { .roster-match-row { grid-template-columns: 1fr; } .roster-match-s { grid-column: 1; } }

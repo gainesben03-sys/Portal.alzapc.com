@@ -171,10 +171,10 @@ const H = {
   first: /^(first|first name|legal first name|preferred first name)$/i,
   last: /^(last|last name|legal last name|surname)$/i,
   name: /^(name|full name|employee|employee name|worker)$/i,
-  title: /^(title|job title|position|role|job)$/i,
-  email: /^(email|work email|e-mail|employee email|work e-mail)$/i,
-  managerEmail: /^(manager email|supervisor email|reports to email|manager e-mail)$/i,
-  managerName: /^(manager|manager name|supervisor|reports to|supervisor name)$/i,
+  title: /^(title|job title|position|role|job|job (title )?description|position title|business title|job name)$/i,
+  email: /^(?!.*(manager|supervisor|reports|personal|home))(.*\bwork e-?mail\b.*|email|e-mail|employee email|email address)$/i,
+  managerEmail: /^(manager|supervisor|reports to)( work)? e-?mail( address)?$/i,
+  managerName: /^(manager|manager name|supervisor|reports to|supervisor name|reports to name|manager full name)$/i,
   hire: /^(hire date|start date|date of hire|original hire date|hired)$/i,
   birthday: /^(birthday|birth date|date of birth|dob|birthdate)$/i,
   department: /^(department|dept|team)$/i,
@@ -183,6 +183,35 @@ const H = {
   cell: /^(cell|cell phone|mobile|mobile phone|personal mobile|phone|phone number|text|sms)$/i,
   employeeId: /^(employee id|employee number|emp id|emp #|employee #|associate id|file number|file #|id|worker id|position id)$/i,
 };
+
+export type RosterField = keyof typeof H;
+/** The roster fields, in the order the column matcher shows them. */
+export const ROSTER_FIELDS: { key: RosterField; label: string }[] = [
+  { key: "name", label: "Full name" },
+  { key: "first", label: "First name" },
+  { key: "last", label: "Last name" },
+  { key: "title", label: "Job title" },
+  { key: "email", label: "Work email" },
+  { key: "managerEmail", label: "Manager email" },
+  { key: "managerName", label: "Manager name" },
+  { key: "location", label: "Location / property" },
+  { key: "department", label: "Department" },
+  { key: "hire", label: "Hire date" },
+  { key: "birthday", label: "Birthday" },
+  { key: "cell", label: "Cell" },
+  { key: "employeeId", label: "Employee ID" },
+];
+/** Which column each field would use on its own. */
+export function guessColumns(headers: string[]): Record<RosterField, string | undefined> {
+  const used = new Set<string>();
+  const out = {} as Record<RosterField, string | undefined>;
+  for (const k of Object.keys(H) as RosterField[]) {
+    const h = headers.find((x) => !used.has(x) && H[k].test(x.trim()));
+    out[k] = h;
+    if (h) used.add(h);
+  }
+  return out;
+}
 
 /** US-friendly phone cleanup: returns +1XXXXXXXXXX or undefined. */
 export function cleanCell(v?: string): string | undefined {
@@ -221,9 +250,13 @@ function toMonthDay(v: string): string | undefined {
 }
 
 /** Turn parsed rows into team members. Managers can be given by email or by name (matched to the client's people). */
-export function rowsToTeam(rows: Record<string, string>[], headers: string[], clientId: string, users: { name: string; email: string }[]) {
-  const col = (re: RegExp) => headers.find((h) => re.test(h.trim()));
-  const c = Object.fromEntries(Object.entries(H).map(([k, re]) => [k, col(re)])) as Record<keyof typeof H, string | undefined>;
+export function rowsToTeam(rows: Record<string, string>[], headers: string[], clientId: string, users: { name: string; email: string }[], override?: Partial<Record<RosterField, string>>) {
+  // "" in the override means "don't use any column for this"; a header the file doesn't have falls back to the guess
+  const g = guessColumns(headers);
+  const c = Object.fromEntries((Object.keys(H) as RosterField[]).map((k) => {
+    const o = override?.[k];
+    return [k, o === "" ? undefined : o && headers.includes(o) ? o : g[k]];
+  })) as Record<RosterField, string | undefined>;
   const people: TeamMember[] = [];
   const problems: string[] = [];
   rows.forEach((r, i) => {

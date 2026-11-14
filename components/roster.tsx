@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import { sendInvite } from "@/lib/invite";
 import { PortalUser } from "@/lib/modules";
-import { parseRoster, ROSTER_TEMPLATE, rowsToTeam, sameEmail, TeamMember, tenure } from "@/lib/team";
+import { guessColumns, parseRoster, ROSTER_FIELDS, ROSTER_TEMPLATE, RosterField, rowsToTeam, sameEmail, TeamMember, tenure } from "@/lib/team";
 import { cleanCell, diffRoster } from "@/lib/team";
 import { Sheet } from "./ui";
 
@@ -20,7 +20,11 @@ export function RosterCard({ clientId, onToast }: { clientId: string; onToast: (
   const { people, config, patch } = useStore();
   const cfg = config[clientId];
   const team = useMemo(() => people.filter((p) => p.clientId === clientId).sort((a, b) => a.managerName.localeCompare(b.managerName) || a.name.localeCompare(b.name)), [people, clientId]);
-  const [preview, setPreview] = useState<ReturnType<typeof rowsToTeam> | null>(null);
+  const [parsed, setParsed] = useState<{ rows: Record<string, string>[]; headers: string[] } | null>(null);
+  const [cols, setCols] = useState<Partial<Record<RosterField, string>>>({});
+  const [matching, setMatching] = useState(false);
+  const preview = useMemo(() => (parsed && cfg ? rowsToTeam(parsed.rows, parsed.headers, clientId, cfg.users, cols) : null), [parsed, cols, clientId, cfg]);
+  const setPreview = (v: null) => setParsed(v);
   const [mode, setMode] = useState<"refresh" | "add">("refresh");
   const [paste, setPaste] = useState<string | null>(null);
   const [edit, setEdit] = useState<TeamMember | null>(null);
@@ -42,13 +46,24 @@ export function RosterCard({ clientId, onToast }: { clientId: string; onToast: (
   const read = (text: string) => {
     const { rows, headers } = parseRoster(text);
     if (!rows.length) return onToast("Couldn't find any rows. Use the template's column names, one person per row.");
-    setPreview(rowsToTeam(rows, headers, clientId, users));
+    // start from the automatic guess, then whatever was matched by hand last time (if this file has those columns)
+    const g = guessColumns(headers);
+    const saved = cfg.rosterColumns ?? {};
+    const next: Partial<Record<RosterField, string>> = {};
+    for (const f of ROSTER_FIELDS) {
+      const s = saved[f.key];
+      next[f.key] = s !== undefined && (s === "" || headers.includes(s)) ? s : g[f.key] ?? "";
+    }
+    setCols(next);
+    setParsed({ rows, headers });
+    // open the matcher when something important wasn't found
+    setMatching(!(next.name || (next.first && next.last)) || !next.title || !next.location);
   };
 
   const diff = preview ? diffRoster(team, preview.people, mode === "refresh") : null;
   const doImport = () => {
     if (!preview || !diff) return;
-    patch({ people: [...people.filter((p) => p.clientId !== clientId), ...diff.next] });
+    patch({ people: [...people.filter((p) => p.clientId !== clientId), ...diff.next], config: { ...config, [clientId]: { ...cfg, rosterColumns: Object.fromEntries(Object.entries(cols).map(([k, v]) => [k, v ?? ""])) } } });
     setPreview(null);
     setPaste(null);
     onToast([diff.added.length && `${diff.added.length} added`, diff.updated.length && `${diff.updated.length} updated`, diff.back.length && `${diff.back.length} back`, diff.leaving.length && `${diff.leaving.length} marked as left`].filter(Boolean).join(", ") || "No changes");
@@ -175,15 +190,42 @@ export function RosterCard({ clientId, onToast }: { clientId: string; onToast: (
               No {preview.missing.map((m) => ({ name: "name", title: "title", hire: "hire date", birthday: "birthday" })[m]).join(", ")} column found. You can still import and add those later.
             </p>
           )}
+          <div className="roster-match">
+            <button className="roster-match-h" onClick={() => setMatching(!matching)} aria-expanded={matching}>
+              <b>Columns</b>
+              <span className="tiny muted grow">{ROSTER_FIELDS.filter((f) => cols[f.key]).length} of {ROSTER_FIELDS.length} matched{!cols.location ? " · no location / property" : ""}</span>
+              <span className="tiny" style={{ color: "var(--accent)", fontWeight: 600 }}>{matching ? "Done" : "Change"}</span>
+            </button>
+            {matching && parsed && (
+              <div className="roster-match-grid">
+                {ROSTER_FIELDS.map((f) => {
+                  const h = cols[f.key];
+                  const sample = h ? parsed.rows.find((r) => (r[h] ?? "").trim())?.[h] ?? "" : "";
+                  return (
+                    <label key={f.key} className="roster-match-row">
+                      <span className="roster-match-f">{f.label}</span>
+                      <select className="f" value={h ?? ""} onChange={(e) => setCols({ ...cols, [f.key]: e.target.value })}>
+                        <option value="">Not in this file</option>
+                        {parsed.headers.filter(Boolean).map((x) => <option key={x} value={x}>{x}</option>)}
+                      </select>
+                      <span className="tiny muted roster-match-s">{sample ? (f.key === "birthday" ? "e.g. (month and day kept)" : `e.g. ${sample.slice(0, 40)}`) : ""}</span>
+                    </label>
+                  );
+                })}
+                <p className="tiny muted" style={{ margin: 0, gridColumn: "1 / -1" }}>Use Full name, or First and Last name. Location / property fills Our Properties. Your choices are remembered for the next upload.</p>
+              </div>
+            )}
+          </div>
           <div className="roster-preview">
             <table>
-              <thead><tr><th>Name</th><th>Title</th><th>Manager</th><th>Hired</th><th>Birthday</th></tr></thead>
+              <thead><tr><th>Name</th><th>Title</th><th>Manager</th><th>Location</th><th>Hired</th><th>Birthday</th></tr></thead>
               <tbody>
                 {preview.people.slice(0, 60).map((p) => (
                   <tr key={p.id}>
                     <td>{p.name}</td>
                     <td>{p.title}</td>
                     <td>{p.managerName || p.managerEmail || <span style={{ color: "var(--red)" }}>missing</span>}</td>
+                    <td>{p.location ?? ""}</td>
                     <td>{p.hireDate ?? ""}</td>
                     <td>{mdLabel(p.birthday)}</td>
                   </tr>
