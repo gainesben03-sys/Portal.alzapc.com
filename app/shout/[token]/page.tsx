@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { ChallengeCards, Pick, PersonSearch, Scoreboard, ShoutCard, WallItem } from "@/components/shoutui";
 import { demoPoll, demoVote, PollCard } from "@/components/poll";
+import { Wall, WallStyle } from "@/components/wall";
 import type { PollView } from "@/lib/polls";
 import { PublicChallenge, publicChallenge } from "@/lib/challenges";
 import { Board, Celebration, celebrateLine, DEFAULT_HEADLINE, MAX_MESSAGE, shortName, ShoutTheme, STARTERS, themeVars } from "@/lib/recognition";
@@ -164,8 +165,11 @@ export default function ShoutPage() {
       </div>
     );
 
+  // the company's Team Wall style (cork, chalk, brick, graffiti); clean keeps the plain look
+  const themed = info.theme?.wall && info.theme.wall !== "clean" ? (info.theme.wall as Exclude<WallStyle, "clean">) : null;
+
   return (
-    <div className={`so-page so-theme-${info.theme?.style ?? "classic"}`} style={themeVars(info.accent, info.theme ?? undefined)}>
+    <div className={`so-page so-theme-${info.theme?.style ?? "classic"} ${themed ? "so-walled" : ""}`} style={themeVars(info.accent, info.theme ?? undefined)}>
       <header className="so-head">
         {info.logo ? <img src={info.logo} alt={info.company} className="so-logo" /> : <b>{info.company}</b>}
         <div className="so-lang" role="group" aria-label="Language">
@@ -243,8 +247,36 @@ export default function ShoutPage() {
         </>
       ) : (
         <>
-          <ChallengeCards list={info.challenges} lang={lang} />
-          {info.board && <Scoreboard b={info.board} />}
+          {!themed && <ChallengeCards list={info.challenges} lang={lang} />}
+          {!themed && info.board && <Scoreboard b={info.board} />}
+          {themed ? (
+            <Wall style={themed}>
+              {info.wall.length === 0 ? (
+                <div className="wn wall-empty">{t.empty}</div>
+              ) : (
+                <div className="so-wall wall-grid">
+                  {info.wall.map((s) => <ShoutCard key={s.id} s={s} highlight={focus === s.id} onReact={(e) => react(s.id, e)} onReport={() => report(s.id)} />)}
+                </div>
+              )}
+              {info.poll && (
+                <div className="wall-grid wall-poll">
+                  <PollCard
+                    poll={info.poll}
+                    look={themed}
+                    onVote={async (c) => {
+                      if (demo) return void demoVote(c);
+                      const r = await post({ action: "vote", choice: c });
+                      return r.ok ? (r.poll as PollView) : null;
+                    }}
+                  />
+                </div>
+              )}
+            </Wall>
+          ) : null}
+          {themed && <div style={{ marginTop: 14 }}><ChallengeCards list={info.challenges} lang={lang} /></div>}
+          {themed && info.board && <Scoreboard b={info.board} />}
+          {themed ? null : (
+            <>
           {info.wall.length === 0 ? (
             <div className="so-panel so-meta">{t.empty}</div>
           ) : (
@@ -261,6 +293,8 @@ export default function ShoutPage() {
                 return r.ok ? (r.poll as PollView) : null;
               }}
             />
+          )}
+            </>
           )}
         </>
       )}

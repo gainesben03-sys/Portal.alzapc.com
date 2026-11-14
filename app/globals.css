@@ -2001,3 +2001,8 @@ button.wp-dot { cursor: pointer; }
 .tw-cols.themed .tw-main { flex: none; width: 100%; }
 .tw-cols.themed .tw-side { flex: none; width: 100%; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); align-items: start; }
 .wm-bday.today .wm-txt { padding-right: 34px; }
+.sheet:has(iframe[title="Email preview"]) { max-width: 700px; }
+/* QR page: the styled wall gets the full width of the page on the Wall tab */
+.so-walled .wall { margin: 12px -4px 0; border-radius: 8px; }
+.so-walled .wall-in { padding: 24px 16px 32px; }
+.so-walled .wall-grid { gap: 30px 18px; }

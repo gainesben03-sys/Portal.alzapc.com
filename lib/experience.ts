@@ -30,6 +30,10 @@ export interface ExperienceSettings {
   audience?: "all" | "site";
   wall?: boolean;
   photos?: boolean;
+  /** How the intro reads: a short list of their answers, or a few paragraphs the AI drafts from them */
+  introStyle?: "list" | "story";
+  /** HR gets the intro by email on the day and approves it before it goes to the team (on by default) */
+  introReview?: boolean;
   /** Buddy */
   buddyAsk?: Wording;
   buddyIntro?: Wording;
@@ -60,7 +64,12 @@ export interface HireXp {
   sharePhoto?: boolean;
   submittedAt?: string;
   approvedAt?: string;
-  intro?: { subject?: string; message?: string; closing?: string; audience?: Audience; wall?: boolean; on?: string; cancelled?: boolean; sentAt?: string; sentTo?: number; failed?: string };
+  intro?: {
+    subject?: string; message?: string; closing?: string; audience?: Audience; wall?: boolean; on?: string; cancelled?: boolean; sentAt?: string; sentTo?: number; failed?: string;
+    style?: "list" | "story"; story?: string;
+    /** HR approval: the link in HR's email, when it went, and who said send */
+    okToken?: string; reviewSentAt?: string; okAt?: string; okBy?: string;
+  };
   buddy?: XBuddy;
   /** Manager playbook: "stageId:index" -> when ticked */
   plan?: Record<string, string>;
@@ -191,6 +200,8 @@ export const questionsFor = (x?: ExperienceSettings) => (x?.questions?.length ? 
 export const nudgesFor = (x?: ExperienceSettings) => (x?.nudges ? x.nudges : DEFAULT_NUDGES);
 export const stagesFor = (x?: ExperienceSettings) => (x?.stages?.length ? x.stages : DEFAULT_STAGES);
 const pick = (v: string | undefined, d: string) => (v && v.trim() ? v : d);
+export const introStyleOf = (x?: ExperienceSettings, xp?: HireXp): "list" | "story" => xp?.intro?.style ?? x?.introStyle ?? "list";
+export const reviewOn = (x?: ExperienceSettings) => introOn(x) && x?.introReview !== false;
 export const mgrOn = (x?: ExperienceSettings) => playbookOn(x) && x?.mgrReminders !== false;
 export const execOn = (x?: ExperienceSettings) => !!x?.on && x.execHeadsUp !== false;
 export const linkWording = (x?: ExperienceSettings) => ({ subject: pick(x?.linkEmail?.subject, DEFAULT_LINK_EMAIL.subject), message: pick(x?.linkEmail?.message, DEFAULT_LINK_EMAIL.message) });
@@ -253,6 +264,8 @@ export function cleanExperience(v: unknown): ExperienceSettings {
     if (!out.stages.length) delete out.stages;
   }
   out.mgrReminders = b("mgrReminders");
+  out.introReview = b("introReview");
+  if (x.introStyle === "story" || x.introStyle === "list") out.introStyle = x.introStyle;
   out.execHeadsUp = b("execHeadsUp");
   out.mgrSigned = wording(x.mgrSigned);
   out.mgrStage = wording(x.mgrStage);
@@ -399,8 +412,15 @@ export function introEmail(h: Hire, x: ExperienceSettings | undefined, b: Brand,
     ? sectionHtml("#F4F1EC", ls.map((l) => `<p style="margin:0 0 8px 0;font-family:Arial,sans-serif;font-size:15px;line-height:22px"><b>${esc(l.label)}:</b> ${esc(l.text)}</p>`).join(""))
     : "";
   const brand: Brand = { ...b, bar: b.bar ?? b.accent, accent };
-  const inner = `${photo ? `<div style="margin-top:32px">${photo}</div>` : ""}${heading(subject).replace("margin:36px", photo ? "margin:0" : "margin:36px")}${para(opening)}<!--HERO_END-->${facts}${sectionHtml("#FFFFFF", para(closing) + (wallUrl ? btn("Say welcome on the Team Wall", wallUrl, accent) : ""))}`;
-  const text = `${subject}\n\n${opening}\n\n${ls.map((l) => `${l.label}: ${l.text}`).join("\n")}\n\n${closing}${wallUrl ? `\n\nSay welcome: ${wallUrl}` : ""}`;
+  const story = introStyleOf(x, h.xp) === "story" && h.xp?.intro?.story?.trim() ? h.xp.intro.story.trim().split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean) : null;
+  const top = `${photo ? `<div style="margin-top:32px">${photo}</div>` : ""}${heading(subject).replace("margin:36px", photo ? "margin:0" : "margin:36px")}`;
+  const foot = sectionHtml("#FFFFFF", para(closing) + (wallUrl ? btn("Say welcome on the Team Wall", wallUrl, accent) : ""));
+  const inner = story
+    ? `${top}${para(story[0])}<!--HERO_END-->${story.length > 1 ? sectionHtml("#F4F1EC", story.slice(1).map(para).join("")) : ""}${foot}`
+    : `${top}${para(opening)}<!--HERO_END-->${facts}${foot}`;
+  const text = story
+    ? `${subject}\n\n${story.join("\n\n")}\n\n${closing}${wallUrl ? `\n\nSay welcome: ${wallUrl}` : ""}`
+    : `${subject}\n\n${opening}\n\n${ls.map((l) => `${l.label}: ${l.text}`).join("\n")}\n\n${closing}${wallUrl ? `\n\nSay welcome: ${wallUrl}` : ""}`;
   return { subject, html: frameEmail(brand, inner), text, opening, closing, lines: ls };
 }
 
@@ -513,3 +533,20 @@ export function execHeadsUpEmail(list: { h: Hire; wallUrl?: string }[], x: Exper
 
 /** The day each manager reminder goes out. */
 export const mgrStageSendDay = (h: Hire, st: XStage) => (h.startDate ? addDaysISO(h.startDate, st.days === 0 ? -1 : st.days) : "");
+
+/** To HR on the intro day: here's the intro, approve and send (or change it first). */
+export function introReviewEmail(h: Hire, x: ExperienceSettings | undefined, b: Brand, okUrl: string, hireUrl: string, audienceText: string) {
+  const v = fillVals(h, b.company);
+  const w = introWording(x, h.xp);
+  const subject = `Ready to send: ${v.preferred}'s welcome to the team`;
+  const accent = brand0(b);
+  const brand: Brand = { ...b, bar: b.bar ?? b.accent, accent };
+  const story = introStyleOf(x, h.xp) === "story" && h.xp?.intro?.story?.trim() ? h.xp.intro.story.trim().split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean) : null;
+  const ls = introLines(h, x);
+  const preview =
+    `<p style="margin:0 0 12px 0;font-family:Georgia,serif;font-size:22px;line-height:28px;color:#1C1A19">${esc(fillXp(w.subject, v))}</p>` +
+    (story ? story.map(para).join("") : para(fillXp(w.message, v)) + ls.map((l) => `<p style="margin:0 0 8px 0;font-family:Arial,sans-serif;font-size:15px;line-height:22px"><b>${esc(l.label)}:</b> ${esc(l.text)}</p>`).join("")) +
+    para(fillXp(w.closing, v));
+  const body = `${heading(`${v.preferred}'s intro is ready`)}${para(`It goes to ${audienceText} once you approve it. Read it below, then send it. Or open it in the portal to change the wording, who gets it, or the day.`)}${btn("Approve and send", okUrl, accent)}${btn("Change it first", hireUrl, accent, true)}<!--HERO_END-->${sectionHtml("#EAE5DE", `<p style="margin:0 0 10px 0;font-family:Arial,sans-serif;font-size:11px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:#6B645E">Preview</p><div style="background:#ffffff;border-radius:8px;padding:18px 20px">${preview}</div>`)}`;
+  return { subject, html: frameEmail(brand, body), text: `${v.preferred}'s intro is ready to go to ${audienceText}.\n\nApprove and send: ${okUrl}\nChange it first: ${hireUrl}` };
+}

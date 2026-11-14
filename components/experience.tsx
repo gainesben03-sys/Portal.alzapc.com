@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Sheet } from "@/components/ui";
 import {
-  DEFAULT_EXEC, DEFAULT_MGR_SIGNED, DEFAULT_MGR_STAGE, buddyAskWording, buddyIntroWording, buddyNudgeDone, buddyOn, currentStage, DEFAULT_INTRO, DEFAULT_NUDGES, DEFAULT_QUESTIONS, DEFAULT_STAGES, ExperienceSettings, fillVals, fillXp,
+  introEmail, introStyleOf, reviewOn, DEFAULT_EXEC, DEFAULT_MGR_SIGNED, DEFAULT_MGR_STAGE, buddyAskWording, buddyIntroWording, buddyNudgeDone, buddyOn, currentStage, DEFAULT_INTRO, DEFAULT_NUDGES, DEFAULT_QUESTIONS, DEFAULT_STAGES, ExperienceSettings, fillVals, fillXp,
   HireXp, introDay, introLines, introOn, introWording, journey, linkWording, newToken, nudgeDay, nudgesFor, PAGE_TEXT, PAGE_TITLE, playbookOn, privateAnswers, questionsFor, stageDay,
   stageProgress, stagesFor, XNudge, XP_FILL_INS, XQuestion, XStage,
 } from "@/lib/experience";
@@ -91,6 +91,13 @@ export function ExperienceSetup({ clientId, base, onClose, onSaved }: { clientId
                     {sw(x.remind !== false, "Remind them once", "If they haven't answered in 3 days.", () => set({ remind: x.remind === false }))}
                     {sw(x.photos !== false, "Ask for a photo", "Only used if they say yes to it.", () => set({ photos: x.photos === false }))}
                     {sw(x.wall !== false, "Also post the intro on the Team Wall", "When the Team Wall is on.", () => set({ wall: x.wall === false }))}
+                    {sw(x.introReview !== false, "HR approves it first", "On the day, HR gets the intro by email with an Approve and send button. Off: it goes to the team on its own that morning.", () => set({ introReview: x.introReview === false }))}
+                    <label className="f">How the intro reads
+                      <select className="f" value={x.introStyle ?? "list"} onChange={(e) => set({ introStyle: e.target.value as "list" | "story" })}>
+                        <option value="list">A short list of their answers</option>
+                        <option value="story">A short story the AI writes from their answers</option>
+                      </select>
+                    </label>
                     <label className="f">Intro goes to
                       <select className="f" value={x.audience ?? "all"} onChange={(e) => set({ audience: e.target.value as "all" | "site" })}>
                         <option value="all">Everyone on the roster</option>
@@ -389,17 +396,26 @@ export function Journey({ h, clientId, company, firstDayDaysBefore, x, hr, manag
 type Act = (action: string, extra: object, demo: (xp: HireXp) => HireXp, log?: string, ok?: string) => Promise<void>;
 
 function IntroCard({ h, x, company, photo, busy, act }: { h: Hire; x: ExperienceSettings; company: string; photo?: string; busy: string; act: Act }) {
+  const { getClient, config } = useStore();
   const xp = h.xp ?? {};
   const v = fillVals(h, company);
   const w = introWording(x, xp);
   const [edit, setEdit] = useState(false);
-  const [d, setD] = useState({ subject: "", message: "", closing: "" });
+  const [d, setD] = useState({ subject: "", message: "", closing: "", story: "" });
+  const [preview, setPreview] = useState(false);
   const lines = introLines(h, x);
   const sent = !!xp.intro?.sentAt;
   const audience = xp.intro?.audience ?? x.audience ?? "all";
   const wall = xp.intro?.wall ?? x.wall ?? true;
   const day = introDay(h);
+  const style = introStyleOf(x, xp);
+  const story = (xp.intro?.story || "").trim();
+  const paras = story ? story.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean) : [];
+  const review = reviewOn(x);
   const introSave = (p: Record<string, unknown>, log: string) => act("intro", { intro: { ...xp.intro, ...p } }, (o) => ({ ...o, intro: { ...o.intro, ...p } as HireXp["intro"] }), log);
+  const cl = getClient(h.clientId);
+  const brand = { company, accent: config[h.clientId]?.accent || cl?.accent || "#19283c", logoUrl: config[h.clientId]?.logoEmail || config[h.clientId]?.logo || undefined };
+  const emailHtml = preview ? introEmail(h, x, brand, photo && xp.sharePhoto !== false ? photo : undefined, wall ? "#" : undefined).html : "";
 
   return (
     <div className="card section">
@@ -411,26 +427,49 @@ function IntroCard({ h, x, company, photo, busy, act }: { h: Hire; x: Experience
       {!xp.submittedAt && <p className="small muted" style={{ marginBottom: 0 }}>{xp.linkSentAt ? "Waiting on their answers. It's the first to-do on their welcome page." : "Their answers come in from the welcome page once it goes out."}</p>}
       {xp.submittedAt && (
         <>
+          {!sent && (
+            <div className="row xp-pills" style={{ marginTop: 10, justifyContent: "flex-start" }}>
+              <span className="tiny muted">Write it as</span>
+              <button className={`chip ${style === "list" ? "on" : ""}`} aria-pressed={style === "list"} onClick={() => introSave({ style: "list" }, "Company intro: a short list")}>A short list</button>
+              <button className={`chip ${style === "story" ? "on" : ""}`} aria-pressed={style === "story"} disabled={!!busy} onClick={() => (story ? introSave({ style: "story" }, "Company intro: a story") : act("introStory", {}, (o) => ({ ...o, intro: { ...o.intro, style: "story", story: `${v.preferred} ${v.last} joins ${company} today as our new ${v.title}${h.managerName ? ` on ${h.managerName.split(" ")[0]}'s team` : ""}.\n\n${lines.map((l) => `${l.label}: ${l.text.replace(/[.!\s]+$/, "")}.`).join("\n")}\n\n(Demo: in the live portal, the AI writes this as a short story.)` } }), "AI drafted the company intro as a story"))}>
+                {busy === "introStory" ? "Writing…" : "A story (AI writes it)"}
+              </button>
+            </div>
+          )}
           <div className="xp-intro">
             <div className="row" style={{ gap: 12, alignItems: "center", justifyContent: "flex-start" }}>
               {photo && xp.sharePhoto !== false ? <img src={photo} alt="" className="xp-av" /> : <span className="xp-av">{(v.preferred[0] ?? "") + (v.last[0] ?? "")}</span>}
               <b>{fillXp(w.subject, v)}</b>
             </div>
-            <p>{fillXp(w.message, v)}</p>
-            {lines.map((l) => <p key={l.label} style={{ margin: "4px 0" }}><b>{l.label}:</b> {l.text}</p>)}
+            {style === "story" && paras.length ? (
+              paras.map((p, i) => <p key={i}>{p}</p>)
+            ) : (
+              <>
+                <p>{fillXp(w.message, v)}</p>
+                {lines.map((l) => <p key={l.label} style={{ margin: "4px 0" }}><b>{l.label}:</b> {l.text}</p>)}
+              </>
+            )}
             <p>{fillXp(w.closing, v)}</p>
             {!xp.approvedAt && <p className="tiny" style={{ color: "var(--amber)" }}>{v.preferred} hasn&apos;t approved this yet. It won&apos;t go out until they do.</p>}
+            {style === "story" && <p className="tiny muted" style={{ marginBottom: 0 }}>Written by AI from only what {v.preferred} approved. Read it over and change anything.</p>}
           </div>
 
           {edit ? (
             <div>
               <label className="f">Subject<input className="f" value={d.subject} onChange={(e) => setD({ ...d, subject: e.target.value })} /></label>
-              <label className="f">Opening<textarea className="f" rows={3} value={d.message} onChange={(e) => setD({ ...d, message: e.target.value })} /></label>
+              {style === "story" ? (
+                <label className="f">The story (a blank line between paragraphs)<textarea className="f" rows={8} value={d.story} onChange={(e) => setD({ ...d, story: e.target.value })} /></label>
+              ) : (
+                <>
+                  <label className="f">Opening<textarea className="f" rows={3} value={d.message} onChange={(e) => setD({ ...d, message: e.target.value })} /></label>
+                  <p className="tiny muted">Their answers stay as they approved them.</p>
+                </>
+              )}
               <label className="f">Closing<textarea className="f" rows={2} value={d.closing} onChange={(e) => setD({ ...d, closing: e.target.value })} /></label>
-              <p className="tiny muted">Their answers stay as they approved them.</p>
               <div className="row" style={{ gap: 8, justifyContent: "flex-end" }}>
+                {style === "story" && <button className="btn ghost sm" disabled={!!busy} onClick={async () => { await act("introStory", {}, (o) => o, "AI rewrote the company intro"); setEdit(false); }}>Write it again</button>}
                 <button className="btn ghost sm" onClick={() => setEdit(false)}>Cancel</button>
-                <button className="btn primary sm" onClick={async () => { await introSave(d, "Company intro wording changed"); setEdit(false); }}>Save</button>
+                <button className="btn primary sm" onClick={async () => { await introSave(style === "story" ? { subject: d.subject, closing: d.closing, story: d.story } : { subject: d.subject, message: d.message, closing: d.closing }, "Company intro wording changed"); setEdit(false); }}>Save</button>
               </div>
             </div>
           ) : !sent && (
@@ -441,19 +480,35 @@ function IntroCard({ h, x, company, photo, busy, act }: { h: Hire; x: Experience
               </div>
               <div className="row" style={{ gap: 10, flexWrap: "wrap", alignItems: "center", marginTop: 10, justifyContent: "flex-start" }}>
                 <label className="small row" style={{ gap: 6, alignItems: "center" }}><input type="checkbox" checked={wall} onChange={(e) => introSave({ wall: e.target.checked }, e.target.checked ? "Intro will post on the Team Wall" : "Intro won't post on the Team Wall")} /> Also on the Team Wall</label>
-                <label className="small row" style={{ gap: 6, alignItems: "center" }}>Goes out
-                  <input type="date" className="f" style={{ width: "auto" }} value={day} min={todayISO()} onChange={(e) => e.target.value && introSave({ on: e.target.value }, `Company intro moved to ${shortDate(e.target.value)}`)} />
+                <label className="small row" style={{ gap: 6, alignItems: "center" }}>{review ? "HR gets it to approve on" : "Goes out"}
+                  <input type="date" className="f" style={{ width: "auto" }} value={day} min={todayISO()} onChange={(e) => e.target.value && introSave({ on: e.target.value, reviewSentAt: undefined }, `Company intro moved to ${shortDate(e.target.value)}`)} />
                 </label>
-                <span className="grow" />
-                <button className="btn ghost sm" onClick={() => { setD({ subject: w.subject, message: w.message, closing: w.closing }); setEdit(true); }}>Edit wording</button>
-                {xp.intro?.cancelled
-                  ? <button className="btn sm" onClick={() => introSave({ cancelled: false }, "Company intro will be sent after all")}>Send it after all</button>
-                  : <button className="btn ghost sm" style={{ color: "var(--red)" }} onClick={() => introSave({ cancelled: true }, "Company intro won't be sent")}>Don&apos;t send</button>}
               </div>
+              <div className="row" style={{ gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 10, justifyContent: "flex-start" }}>
+                <button className="btn ghost sm" onClick={() => setPreview(true)}>Preview the email</button>
+                <button className="btn ghost sm" onClick={() => { setD({ subject: w.subject, message: w.message, closing: w.closing, story }); setEdit(true); }}>Edit wording</button>
+                {xp.intro?.cancelled
+                  ? <button className="btn ghost sm" onClick={() => introSave({ cancelled: false }, "Company intro will be sent after all")}>Send it after all</button>
+                  : <button className="btn ghost sm" style={{ color: "var(--red)" }} onClick={() => introSave({ cancelled: true }, "Company intro won't be sent")}>Don&apos;t send</button>}
+                <span className="grow" />
+                {xp.approvedAt && <button className="btn primary sm" disabled={!!busy} onClick={() => act("introSendNow", {}, (o) => ({ ...o, intro: { ...o.intro, sentAt: new Date().toISOString(), sentTo: 0 } }), "Company intro sent", "Sent to the team")}>{busy === "introSendNow" ? "Sending…" : "Send it now"}</button>}
+              </div>
+              <p className="tiny muted" style={{ margin: "8px 0 0" }}>
+                {review
+                  ? xp.intro?.reviewSentAt ? `Sent to HR to approve ${shortDate(xp.intro.reviewSentAt.slice(0, 10))}. It goes to the team when someone taps Approve and send, or Send it now here.` : `On ${shortDate(day)}, HR gets it by email with an Approve and send button. Nothing goes to the team before that.`
+                  : `Goes to the team the morning of ${shortDate(day)}.`}
+              </p>
             </>
           )}
+          {sent && <p className="tiny muted" style={{ margin: "8px 0 0" }}>Sent {shortDate(xp.intro!.sentAt!.slice(0, 10))}{xp.intro?.sentTo ? ` to ${xp.intro.sentTo} people` : ""}{xp.intro?.okBy ? `, approved by ${xp.intro.okBy}` : ""}.</p>}
           {xp.intro?.failed && <p className="tiny" style={{ color: "var(--red)" }}>{xp.intro.failed}</p>}
         </>
+      )}
+      {preview && (
+        <Sheet title="Preview the company intro" onClose={() => setPreview(false)}>
+          <iframe title="Email preview" srcDoc={emailHtml} sandbox="" style={{ width: "100%", height: "70vh", border: "1px solid var(--line)", borderRadius: 12, background: "#EAE5DE" }} />
+          <div className="sheet-actions"><button className="btn sm" onClick={() => setPreview(false)}>Close</button></div>
+        </Sheet>
       )}
     </div>
   );

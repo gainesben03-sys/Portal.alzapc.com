@@ -10,7 +10,7 @@
 //   close { closed }            stop everything for this hire (left early, etc)
 import { NextResponse } from "next/server";
 import { cleanExperience, HireXp } from "@/lib/experience";
-import { askBuddy, buddyNo, buddyYes, loadHire, saveXp, sendLink, signed } from "@/lib/experienceserver";
+import { askBuddy, buddyNo, buddyYes, loadHire, saveXp, sendIntroNow, sendLink, signed, writeStory } from "@/lib/experienceserver";
 import { managerEmail } from "@/lib/hireemailserver";
 import { admin, caller, SERVER_LIVE } from "@/lib/server";
 import type { TeamMember } from "@/lib/team";
@@ -124,6 +124,9 @@ export async function POST(req: Request) {
       await saveXp(c, (xp) => {
         if (xp.intro?.sentAt) return xp; // already out
         const intro: NonNullable<HireXp["intro"]> = {
+          ...xp.intro,
+          style: i.style === "story" || i.style === "list" ? i.style : xp.intro?.style,
+          story: i.story !== undefined ? str(i.story, 1500) : xp.intro?.story,
           subject: str(i.subject, 200),
           message: str(i.message, 1500),
           closing: str(i.closing, 300),
@@ -131,10 +134,23 @@ export async function POST(req: Request) {
           wall: typeof i.wall === "boolean" ? i.wall : undefined,
           on,
           cancelled: !!i.cancelled || undefined,
+          // a new day means HR gets a fresh approval email on that day
+          reviewSentAt: on && on !== xp.intro?.on ? undefined : xp.intro?.reviewSentAt,
         };
         (Object.keys(intro) as (keyof typeof intro)[]).forEach((k) => intro[k] === undefined && delete intro[k]);
         return { ...xp, intro };
       }, { by, text: i.cancelled ? "Company intro won't be sent" : "Company intro updated" });
+      return done();
+    }
+    if (b.action === "introStory") {
+      const r = await writeStory(c.h, c.x, c.company);
+      if (!r.ok) return json({ ok: false, reason: "ai" }, 502);
+      await saveXp(c, (xp) => (xp.intro?.sentAt ? xp : { ...xp, intro: { ...(xp.intro ?? {}), style: "story", story: r.text } }), { by, text: "AI drafted the company intro as a story" });
+      return done();
+    }
+    if (b.action === "introSendNow") {
+      const r = await sendIntroNow(c, by);
+      if (!r.ok) return json({ ok: false, reason: r.reason }, r.reason === "not_approved" ? 409 : 502);
       return done();
     }
     if (b.action === "close") {

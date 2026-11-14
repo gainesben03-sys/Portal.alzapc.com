@@ -17,9 +17,10 @@ import { addDaysISO, type Brand, type OnboardingSettings, firstDayEmail, forComp
 import { anniversary, cleanCell, nextYearly, TeamLog, TeamMember, teamFor, weekItems } from "@/lib/team";
 import { emailLogoUrl } from "@/lib/brand";
 import { dueReminders, stepsFor } from "@/lib/tracker";
-import { execHeadsUpEmail, execOn, mgrOn, mgrSignedEmail, mgrStageEmail, mgrStageSendDay, stagesFor, withPage, buddyNudgeDone, buddyOn, HireXp, introDay, introEmail, introOn, linkEmail, newToken, nudgeDay, nudgeEmail, nudgesFor, xpOn } from "@/lib/experience";
+import { introReviewEmail, introStyleOf, reviewOn, execHeadsUpEmail, execOn, mgrOn, mgrSignedEmail, mgrStageEmail, mgrStageSendDay, stagesFor, withPage, buddyNudgeDone, buddyOn, HireXp, introDay, introEmail, introOn, linkEmail, newToken, nudgeDay, nudgeEmail, nudgesFor, xpOn } from "@/lib/experience";
 import { buildManagerWeek, buildSnapshot, PeopleData, peopleItems } from "@/lib/peopleupdates";
 import { managerEmail } from "@/lib/hireemailserver";
+import { deliverIntro, writeStory } from "@/lib/experienceserver";
 import { admin, PORTAL_URL, sendEmail } from "@/lib/server";
 import { advisorEmails, pushTo } from "@/lib/push";
 import { ListRow, syncReminder } from "@/lib/mylistserver";
@@ -336,56 +337,46 @@ export async function GET(req: Request) {
           return r;
         });
       }
-      // the company intro: only once they approved it, on their day (or up to 3 days late), never twice
+      // the company intro: only once they approved it, on their day (or up to 3 days late), never twice.
+      // With HR review on (the default), HR gets it by email first and sends it with one click.
       const iday = introDay({ ...h, xp });
       if (introOn(x) && xp.approvedAt && !xp.intro?.sentAt && !xp.intro?.cancelled && iday && day >= iday && day <= addDaysISO(iday, 3)) {
-        const { data: ppl } = await db.from("people").select("id, data").eq("client_id", c.id);
-        const roster = (ppl ?? []).map((r) => ({ ...(r.data as TeamMember), id: r.id as string }));
-        const audience = xp.intro?.audience ?? x?.audience ?? "all";
-        const norm = (v?: string) => (v || "").trim().toLowerCase();
-        const me = roster.find((p) => p.id === data.rosterId);
-        const site = norm(me?.location || h.location);
-        const emails = [
-          ...new Set(
-            roster
-              .filter((p) => p.active !== false && p.email && p.id !== data.rosterId && norm(p.name) !== norm(h.name))
-              .filter((p) => audience === "all" || (!!site && (norm(p.location) === site || norm(p.location).includes(site) || site.includes(norm(p.location) || "\u0000"))) || norm(p.name) === norm(h.managerName))
-              .map((p) => norm(p.email))
-              .filter((e) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) && e !== to)
-          ),
-        ];
-        const photoOk = x?.photos !== false && xp.sharePhoto !== false && !!xp.photo && /^hires\//.test(xp.photo);
-        const photoUrl = photoOk ? (await db.storage.from("client-files").createSignedUrl(xp.photo!, 60 * 60 * 24 * 30)).data?.signedUrl : undefined;
-        const wantWall = (xp.intro?.wall ?? x?.wall ?? true) && !!cfg.modules?.recognition;
-        const rec = (cfg as { recognition?: { token?: string } }).recognition;
-        const wallUrl = wantWall && rec?.token ? `${PORTAL_URL}/shout/${rec.token}` : undefined;
-        const m = introEmail({ ...h, xp }, x, brand, photoUrl, wallUrl);
-        if (emails.length)
-          await once(`xp:intro:${h.id}`, async () => {
-            let sent = 0;
-            let fail = "";
-            for (let k = 0; k < emails.length; k += 8) {
-              const rs = await Promise.all(emails.slice(k, k + 8).map((e) => sendEmail({ to: [e], subject: m.subject, html: m.html, text: m.text, ...sender })));
-              rs.forEach((r) => (r.ok ? sent++ : (fail = r.reason || "failed")));
-            }
-            if (!sent) return { ok: false, reason: fail };
-            xp.intro = { ...(xp.intro ?? {}), sentAt: new Date().toISOString(), sentTo: sent, failed: fail ? `${emails.length - sent} didn't go through (${fail})` : undefined };
-            xnote(`Company intro sent to ${sent} ${sent === 1 ? "person" : "people"}${fail ? `; ${emails.length - sent} didn't go through` : ""}`);
-            return { ok: true };
-          });
-        else if (!xp.intro?.failed) {
-          xp.intro = { ...(xp.intro ?? {}), failed: "No one on the roster has an email to send it to" };
-          xnote("Company intro not sent: no one on the roster has an email yet");
+        // story style: draft it once, if HR hasn't written one
+        if (introStyleOf(x, xp) === "story" && !xp.intro?.story?.trim()) {
+          const st = await writeStory({ ...h, xp }, x, brand.company);
+          if (st.ok) {
+            xp.intro = { ...(xp.intro ?? {}), story: st.text };
+            xpChanged = true;
+          }
         }
-        // and on the Team Wall, from the company
-        if (wantWall && data.rosterId && xp.intro?.sentAt) {
-          await once(`xp:wall:${h.id}`, async () => {
-            const id = `so${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
-            const lines = m.lines.slice(0, 2).map((l) => `${l.label}: ${l.text}`).join(". ");
-            const message = `${m.subject.replace(/!$/, "")}! ${lines}`.replace(/\s+/g, " ").trim().slice(0, 280);
-            const shout = { id, clientId: c.id, to: { personId: data.rosterId!, name: h.name, department: me?.department, location: me?.location || h.location }, from: { name: `${c.name}`, verified: true }, message, channel: "portal", status: "live", at: new Date().toISOString() };
-            const { error } = await db.from("shoutouts").insert({ id, client_id: c.id, data: shout });
-            return error ? { ok: false, reason: error.message } : { ok: true };
+        if (reviewOn(x)) {
+          const hrTo = [(s.hrEmail || "").trim().toLowerCase() || ben.toLowerCase()];
+          if (!xp.intro?.reviewSentAt && hrTo.length) {
+            const okToken = xp.intro?.okToken || newToken();
+            const aud = (xp.intro?.audience ?? x?.audience ?? "all") === "all" ? "everyone on the roster" : "their location and their manager";
+            const m = introReviewEmail({ ...h, xp }, x, brand, `${PORTAL_URL}/intro-ok/${okToken}`, `${PORTAL_URL}/c/${c.id}/hires/${h.id}#plan`, aud);
+            await once(`xp:introreview:${h.id}`, async () => {
+              const r = await sendEmail({ to: hrTo, cc: [ben.toLowerCase()].filter((e) => !hrTo.includes(e)), subject: m.subject, html: m.html, text: m.text, ...sender });
+              if (r.ok) {
+                xp.intro = { ...(xp.intro ?? {}), okToken, reviewSentAt: new Date().toISOString() };
+                xnote(`Company intro sent to HR to approve (${hrTo.join(", ")})`);
+              }
+              return r;
+            });
+          }
+        } else {
+          await once(`xp:intro:${h.id}`, async () => {
+            const r = await deliverIntro(db, c, { ...h, xp, rosterId: data.rosterId }, x, brand, sender);
+            if (!r.sent) {
+              if (!xp.intro?.failed) {
+                xp.intro = { ...(xp.intro ?? {}), failed: r.fail };
+                xnote(`Company intro not sent: ${r.fail}`);
+              }
+              return { ok: false, reason: r.fail };
+            }
+            xp.intro = { ...(xp.intro ?? {}), sentAt: new Date().toISOString(), sentTo: r.sent, failed: r.fail ? `${r.total - r.sent} didn't go through (${r.fail})` : undefined };
+            xnote(`Company intro sent to ${r.sent} ${r.sent === 1 ? "person" : "people"}`);
+            return { ok: true };
           });
         }
       }
