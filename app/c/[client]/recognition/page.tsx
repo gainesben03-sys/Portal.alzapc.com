@@ -782,17 +782,16 @@ function Setup({ advisor, rec, onSave, clientName, accent, onTest }: { advisor?:
 
       <div className="card section">
         <b className="small">The wall</b>
-        <p className="tiny muted" style={{ margin: "2px 0 10px" }}>What the Team Wall looks like for everyone. How notes hang comes with each wall.</p>
+        <p className="tiny muted" style={{ margin: "2px 0 10px" }}>What the Team Wall looks like for everyone. Tap one and it changes right away. How notes hang comes with each wall.</p>
         <div className="wall-picks">
           {WALLS.map((w) => (
-            <button key={w.id} className={`wall-pick ${(theme.wall ?? "clean") === w.id ? "on" : ""}`} aria-pressed={(theme.wall ?? "clean") === w.id} onClick={() => setTheme({ ...theme, wall: w.id })}>
+            <button key={w.id} className={`wall-pick ${(theme.wall ?? "clean") === w.id ? "on" : ""}`} aria-pressed={(theme.wall ?? "clean") === w.id} onClick={() => { const t = { ...theme, wall: w.id }; setTheme(t); save({ theme: t }); try { localStorage.setItem("alza-demo-shout-theme", JSON.stringify(t)); } catch {} }}>
               <span className={`wall-swatch sw-${w.id}`} aria-hidden="true" />
               <b>{w.name}</b>
               <span className="tiny muted">{w.blurb}</span>
             </button>
           ))}
         </div>
-        <div className="sheet-actions"><button className="btn primary sm" onClick={() => { save(); try { localStorage.setItem("alza-demo-shout-theme", JSON.stringify(theme)); } catch {} }}>Save the wall</button></div>
       </div>
 
       <div className="card section">
