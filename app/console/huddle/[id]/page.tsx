@@ -38,7 +38,7 @@ export default function HuddleSetup() {
   const mgrName = mgrPick || mgrNames[0] || "";
   const mgrEmail = (people.find((p) => p.clientId === id && p.managerName === mgrName)?.managerEmail || cfg.users.find((u) => u.name === mgrName)?.email || "").toLowerCase();
   const mw = mgrName
-    ? buildManagerWeek({ client: { id, name: client.name, accent: client.accent, logo: client.logo }, manager: { name: mgrName, email: mgrEmail }, team: people.filter((p) => p.clientId === id && p.active && !!mgrEmail && p.managerEmail.toLowerCase() === mgrEmail), logs: checkins, hires, steps, recognitionOn: !!cfg.modules.recognition, trainingOn: !!cfg.modules.training, today: todayIso })
+    ? buildManagerWeek({ client: { id, name: client.name, accent: client.accent, logo: client.logo }, manager: { name: mgrName, email: mgrEmail }, team: people.filter((p) => p.clientId === id && p.active && !!mgrEmail && p.managerEmail.toLowerCase() === mgrEmail), logs: checkins, hires, steps, recognitionOn: !!cfg.modules.recognition, trainingOn: !!cfg.modules.training, today: todayIso, experience: cfg.onboarding?.experience })
     : null;
   const out = view === "snapshot" ? { ...huddleOut, ...snap } : view === "manager" && mw ? { ...huddleOut, ...mw } : huddleOut;
   const next = nextHuddle(h);

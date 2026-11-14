@@ -9,6 +9,7 @@ import { ClientNav, ClientTopbar, Sheet, useGuard } from "@/components/ui";
 import { addDaysISO, daysUntil, Hire, onboardingFor, shortDate } from "@/lib/hires";
 import { newId } from "@/lib/hiretasks";
 import { useStore } from "@/lib/store";
+import { ExperienceSetup } from "@/components/experience";
 import { authHeader } from "@/lib/supabase";
 import { Bucket, bucket, defaultSteps, newStepId, Outcome, outcomeLabel, OUTCOMES, progress, readImport, remarkNote, shortLabel, stepDone, stepsFor, TrackerStep } from "@/lib/tracker";
 
@@ -78,6 +79,7 @@ function Hires() {
   const [open, setOpen] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [xpOpen, setXpOpen] = useState(false);
   const [today, setToday] = useState("");
   useEffect(() => setToday(todayISO()), []);
   useEffect(() => {
@@ -142,6 +144,7 @@ function Hires() {
           {canEdit && (
             <div className="row" style={{ gap: 8 }}>
               <button className="btn sm" onClick={() => setEditing(true)}>Edit steps</button>
+              <button className="btn sm" onClick={() => setXpOpen(true)}>Employee experience{s.experience?.on ? "" : " (off)"}</button>
               <button className="btn sm" onClick={() => setImporting(true)}>Import</button>
               <Link href={`/c/${clientId}/hires/new`} className="btn primary sm">+ New hire</Link>
             </div>
@@ -276,6 +279,7 @@ function Hires() {
           base={cfg.onboarding ?? {}}
         />
       )}
+      {xpOpen && <ExperienceSetup clientId={clientId} base={cfg.onboarding ?? {}} onClose={() => setXpOpen(false)} onSaved={(onboarding) => patch({ config: { ...config, [clientId]: { ...cfg, onboarding } } })} />}
       {importing && <ImportSheet steps={steps} existing={mine} onClose={() => setImporting(false)} onAdd={(add) => patch({ hires: [...hires, ...add] })} clientId={clientId} who={who} />}
     </div>
   );

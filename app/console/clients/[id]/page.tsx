@@ -9,6 +9,7 @@ import { useStore } from "@/lib/store";
 import { sendInvite } from "@/lib/invite";
 import { logoInfo, shrinkLogo } from "@/lib/logoimg";
 import { OnboardingSettingsCard } from "@/components/onboarding";
+import { ExperienceSetup } from "@/components/experience";
 import { KnowledgePanel } from "@/components/knowledge";
 import { RosterCard } from "@/components/roster";
 
@@ -67,6 +68,7 @@ export default function ClientSetup() {
   const cfg = config[id];
   const toast = useToast();
   const [nu, setNu] = useState<PortalUser>({ name: "", role: "", email: "", access: "manager" });
+  const [xpOpen, setXpOpen] = useState(false);
 
   if (!ok) return null;
   if (!client || !cfg) return (<><AlzaTopbar /><AlzaNav /><main className="wrap"><div className="card">Client not found.</div></main></>);
@@ -132,6 +134,11 @@ export default function ClientSetup() {
               What {client.name}&apos;s welcome and first-day emails say. Same flow as the Presidio Bay emails, in their colors and logo.
             </p>
             <OnboardingSettingsCard value={cfg.onboarding} clientName={client?.name} onChange={(onboarding) => set({ onboarding })} />
+            <div className="card section row" style={{ gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+              <div className="grow"><b>Employee experience</b><div className="tiny muted">{cfg.onboarding?.experience?.on ? "On: get-to-know-you intro, buddy and manager playbook." : "Off. Personal intros, a buddy and a manager plan for each new hire."}</div></div>
+              <button className="btn sm" onClick={() => setXpOpen(true)}>{cfg.onboarding?.experience?.on ? "Edit" : "Set up"}</button>
+            </div>
+            {xpOpen && <ExperienceSetup clientId={client.id} base={(cfg.onboarding ?? {}) as Record<string, unknown>} onClose={() => setXpOpen(false)} onSaved={(onboarding) => set({ onboarding: onboarding as typeof cfg.onboarding })} />}
           </>
         )}
 

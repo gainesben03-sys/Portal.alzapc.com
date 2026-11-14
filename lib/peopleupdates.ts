@@ -4,6 +4,7 @@
 // - buildManagerWeek: the Monday email for managers (their new hires, their week, recognize someone, a thought)
 // Plain inline-styled tables so they render in Gmail, Outlook and phone mail apps.
 import { addDaysISO, Hire } from "./hires";
+import { currentStage, ExperienceSettings, playbookOn, stageProgress } from "./experience";
 import type { TeamLog, TeamMember } from "./team";
 import { weekItems } from "./team";
 import { bucket, progress, stepDone, stepsFor, TrackerStep } from "./tracker";
@@ -226,6 +227,8 @@ export interface ManagerWeekInput {
   recognitionOn: boolean;
   trainingOn: boolean;
   today: string;
+  /** Employee experience: when the manager playbook is on, each hire shows where the plan is. */
+  experience?: ExperienceSettings;
 }
 
 /** Null when there's nothing for this manager at all (no team, no hires). */
@@ -233,7 +236,10 @@ export function buildManagerWeek(i: ManagerWeekInput) {
   const { client, manager, today } = i;
   const base = `${PORTAL}/c/${client.id}`;
   const fn = first(manager.name);
-  const mine = i.hires.filter((h) => h.clientId === client.id && same(h.managerName, manager.name) && bucket(h, i.steps) === "active");
+  const plan = playbookOn(i.experience);
+  // with the playbook on, a hire stays on the list through day 90
+  const inPlan = (h: Hire) => plan && !h.outcome && !h.imported && !h.xp?.closed && !!h.startDate && today >= addDaysISO(h.startDate, -10) && today <= addDaysISO(h.startDate, 95);
+  const mine = i.hires.filter((h) => h.clientId === client.id && same(h.managerName, manager.name) && (bucket(h, i.steps) === "active" || inPlan(h)));
   if (!i.team.length && !mine.length) return null;
   const d = new Date(`${today}T12:00:00`);
   const hireRows = mine
@@ -244,6 +250,13 @@ export function buildManagerWeek(i: ManagerWeekInput) {
       const starting = h.startDate >= today && h.startDate <= addDaysISO(today, 7);
       const title = starting ? `${h.name} starts ${dayName(h.startDate, today)}` : h.startDate > today ? `${h.name} starts ${short(h.startDate)}` : `${h.name}, ${Math.round((d.getTime() - new Date(`${h.startDate}T12:00:00`).getTime()) / 864e5)} days in`;
       const sub = n?.days && h.startDate ? `${n.label} due ${short(addDaysISO(h.startDate, n.days))}. Block 20 minutes: how's it going, what's unclear, what do they need?` : starting ? "Be there to greet them, and plan lunch on day one." : n ? `Next: ${n.label.toLowerCase()} (${p.done} of ${p.total} steps done)` : "";
+      if (inPlan(h)) {
+        const st = currentStage(h, i.experience, addDaysISO(today, 6));
+        const pr = stageProgress(h, st);
+        const next = st.items.find((_, k) => !h.xp?.plan?.[`${st.id}:${k}`]);
+        const psub = `${st.label}: ${pr.done} of ${pr.total} done${next ? `. Next: ${next}` : ""}`;
+        return row(title, psub, `${base}/hires/${h.id}#plan`);
+      }
       return row(title, sub, `${base}/hires?open=${h.id}`);
     })
     .join("");

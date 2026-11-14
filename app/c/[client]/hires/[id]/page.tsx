@@ -9,6 +9,8 @@ import { afterSend, approvalTask, requestSignature, sendHireEmail, signedTasks, 
 import { DraftPanel } from "@/components/draft";
 import { FillPanel } from "@/components/fillpanel";
 import { EmailEditFields, EmailEditor } from "@/components/emaileditor";
+import { Journey } from "@/components/experience";
+import { xpOn } from "@/lib/experience";
 import { fmtTime } from "@/lib/data";
 import { docxBlob, docxName, DOCX_MIME } from "@/lib/docx";
 import { addDaysISO, firstName, forCompany, Hire, hireCompany, senderFor, longDate, onboardingFor, payLine, shortDate, Stage, STAGES, stageIndex } from "@/lib/hires";
@@ -54,6 +56,7 @@ function HireInner() {
 
   const isAdvisor = viewer?.kind === "advisor";
   const canManage = isAdvisor || me?.access === "exec";
+  const isHireManager = !!me?.name && !!h.managerName && me.name.trim().toLowerCase() === h.managerName.trim().toLowerCase();
   const first = firstName(h);
   const stage = stageIndex(h.status);
   const firstDayOn = h.startDate ? addDaysISO(h.startDate, -s.firstDayDaysBefore) : "";
@@ -422,6 +425,10 @@ function HireInner() {
                 {isAdvisor && <Link href={`/console/clients/${clientId}#onboarding`} style={{ color: "var(--blue)" }}>Edit what they say</Link>}
               </div>
             </div>
+
+            {xpOn(s.experience) && (canManage || isHireManager) && !h.imported && !h.outcome && (
+              <Journey h={h} clientId={clientId} company={own.brand.company} firstDayDaysBefore={s.firstDayDaysBefore} x={s.experience!} hr={canManage} manager={isHireManager} />
+            )}
           </div>
 
           <div>

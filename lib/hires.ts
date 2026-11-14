@@ -79,6 +79,8 @@ export interface Hire {
   remarks?: { at: string; by: string; text: string }[];
   /** Brought in from a spreadsheet: no welcome or first-day emails, no roster changes. */
   imported?: boolean;
+  /** Employee experience: get to know you, intro, buddy, manager playbook. */
+  xp?: import("./experience").HireXp;
 }
 
 /** The signing link itself is never stored here: only the signer gets it. */
@@ -220,6 +222,8 @@ export interface OnboardingSettings {
   officeLocations?: string;
   /** The new hire tracker's steps for this company. Blank means the defaults. */
   trackerSteps?: import("./tracker").TrackerStep[];
+  /** Employee experience (optional). Off: onboarding works exactly as before. */
+  experience?: import("./experience").ExperienceSettings;
 }
 
 export function hireCompany(h: Pick<Hire, "companyId">, s: Pick<OnboardingSettings, "companies">): HireCompany | undefined {

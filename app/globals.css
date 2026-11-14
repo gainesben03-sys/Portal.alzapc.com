@@ -1657,3 +1657,92 @@ button.nt-dot:hover { border-color: var(--green); transform: scale(1.06); }
 .op-hq-photo { flex: 1 0 100%; width: calc(100% + 40px); margin: 0 -20px; aspect-ratio: 4 / 1; object-fit: cover; display: block; }
 @media (max-width: 640px) { .op-hq-photo { aspect-ratio: 5 / 2; } }
 .op-rk { width: 76px; padding-right: 6px; box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Employee experience: the new hire's and buddy's pages (built on the exit survey look) */
+.wl .tiny { font-size: 12px; color: #6b645e; }
+.wl-steps { display: flex; gap: 6px; margin: 16px 0 0; }
+.wl-steps span { flex: 1; height: 4px; border-radius: 4px; background: #e6e0d8; }
+.wl-steps span.on { background: var(--ex, #19283c); }
+.wl-in { width: 100%; box-sizing: border-box; border: 1px solid #d9d2c8; border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 16px; }
+.wl .ex-q textarea { font-size: 16px; }
+.wl-private { margin-top: 26px; padding: 16px; border-radius: 14px; background: #eef2f6; }
+.wl-private h2 { margin: 0; font-size: 17px; text-transform: none; letter-spacing: 0; color: #1c1a19; }
+.wl-private p { margin: 4px 0 0; font-size: 13px; color: #3d4a5c; }
+.wl-private .ex-q { box-shadow: inset 0 1px 0 #d6dee7; }
+.wl-photo { width: 180px; height: 180px; margin: 20px auto 16px; border-radius: 50%; overflow: hidden; background: #e3ded5; display: grid; place-items: center; font-family: Georgia, serif; font-size: 54px; color: #8a8378; }
+.wl-photo img { width: 100%; height: 100%; object-fit: cover; }
+.wl-row { display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap; }
+.wl-btn { position: relative; display: inline-flex; align-items: center; min-height: 46px; padding: 0 18px; border-radius: 999px; border: 1px solid #d9d2c8; font-weight: 600; font-size: 14px; cursor: pointer; }
+.wl-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.wl-link { min-height: 44px; border: 0; background: transparent; color: var(--ex, #19283c); font: inherit; font-weight: 600; font-size: 14px; cursor: pointer; padding: 0 10px; }
+.wl-intro { border: 1px solid #e6e0d8; border-radius: 14px; padding: 14px 16px; margin-top: 16px; }
+.wl-who { display: flex; gap: 12px; align-items: center; padding-bottom: 12px; border-bottom: 1px solid #efeae3; }
+.wl-who b { font-size: 17px; }
+.wl-av { width: 56px; height: 56px; flex: none; border-radius: 50%; overflow: hidden; background: #e3ded5; display: grid; place-items: center; font-family: Georgia, serif; font-size: 20px; color: #8a8378; }
+.wl-av img { width: 100%; height: 100%; object-fit: cover; }
+.wl-open { margin: 12px 0; font-size: 15px; line-height: 1.5; }
+.wl-line { display: flex; gap: 12px; align-items: flex-start; padding: 11px 0; border-top: 1px solid #efeae3; font-size: 15px; line-height: 1.45; cursor: pointer; }
+.wl-line input { flex: none; width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--ex, #19283c); }
+.wl-line.off > span { color: #9a948b; text-decoration: line-through; }
+.wl-line.hint { background: #fbf6e8; border-radius: 8px; padding-left: 8px; padding-right: 8px; }
+.wl-approve { display: flex; gap: 12px; align-items: flex-start; margin-top: 16px; padding: 14px; border-radius: 14px; border: 2px solid #e6e0d8; font-size: 15px; line-height: 1.45; cursor: pointer; }
+.wl-approve.on { border-color: var(--ex, #19283c); }
+.wl-approve input { flex: none; width: 22px; height: 22px; margin: 0; accent-color: var(--ex, #19283c); }
+.wl-nav { display: flex; gap: 10px; margin-top: 20px; }
+.wl-nav .ex-send { margin-top: 0; flex: 1; }
+.wl-nav .ex-send:disabled { opacity: .5; cursor: default; }
+.wl-back { min-height: 50px; padding: 0 18px; border-radius: 12px; border: 1px solid #d9d2c8; background: #fff; font: inherit; font-weight: 600; font-size: 15px; color: #1c1a19; cursor: pointer; }
+.wl-day { text-align: left; margin: 18px 0 8px; padding: 14px 16px; border-radius: 14px; border: 1px solid #e6e0d8; font-size: 15px; display: flex; flex-direction: column; gap: 4px; }
+.wl-h2 { margin: 22px 0 6px; font-size: 16px; text-transform: none; letter-spacing: 0; color: #1c1a19; }
+
+/* Employee experience: setup and the hire's journey */
+.pill.green { background: var(--green-bg); color: var(--green); }
+.pill.amber { background: var(--amber-bg); color: var(--amber); }
+button.link { border: 0; background: none; padding: 0; font: inherit; color: var(--blue); text-decoration: underline; cursor: pointer; }
+.sheet:has(.xp-setup) { max-width: 720px; }
+.xp-tabs { flex-wrap: wrap; margin-bottom: 12px; }
+.xp-pane .f { width: 100%; }
+.xp-sub { margin: 0 0 6px 18px; padding-left: 12px; border-left: 2px solid var(--line); }
+.xp-h { margin: 18px 0 6px; font-size: 14px; }
+.xp-list { display: flex; flex-direction: column; gap: 8px; }
+.xp-item { border: 1px solid var(--line); border-radius: 12px; padding: 10px; background: var(--soft); }
+.xp-item .f { margin: 0; }
+.xp-order { display: inline-flex; gap: 2px; flex: none; }
+.xp-order .btn { min-width: 34px; padding: 0 8px; }
+.xp-check { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+.xp-label { flex: 1 1 180px; width: auto !important; }
+.xp-days { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.xp-days input { width: 64px !important; }
+.xp-days select { width: auto !important; }
+.xp-steps { list-style: none; margin: 0; padding: 0; }
+.xp-steps li { display: flex; gap: 12px; align-items: flex-start; padding: 9px 0; border-top: 1px solid var(--line); }
+.xp-steps li:first-child { border-top: 0; }
+.xp-dot { flex: none; width: 20px; height: 20px; margin-top: 1px; border-radius: 50%; border: 2px solid var(--track); display: grid; place-items: center; font-size: 11px; color: #fff; box-sizing: border-box; }
+.xp-steps li.done .xp-dot { background: var(--green); border-color: var(--green); }
+.xp-steps li.now .xp-dot { border-color: var(--amber); }
+.xp-steps li.now b { color: var(--amber); }
+.xp-intro { margin-top: 12px; padding: 14px; border-radius: 12px; background: var(--soft); font-size: 14px; line-height: 1.5; }
+.xp-intro p { margin: 8px 0 0; }
+.xp-av { width: 44px; height: 44px; flex: none; border-radius: 50%; object-fit: cover; background: var(--soft2); display: inline-grid; place-items: center; font-family: var(--serif); color: var(--muted); }
+.xp-pills { gap: 6px; align-items: center; flex-wrap: wrap; }
+.xp-pills .chip { border: 1px solid var(--line); cursor: pointer; min-height: 32px; padding: 0 12px; }
+.xp-pills .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.xp-buddy { display: flex; gap: 10px; align-items: center; margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: var(--soft); }
+.xp-mini { list-style: none; margin: 10px 0 0; padding: 0; font-size: 13px; color: var(--muted); }
+.xp-mini li { padding: 3px 0; }
+.xp-mini li.done { color: var(--green); }
+.xp-stages { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 12px; }
+.xp-stages button { display: flex; flex-direction: column; align-items: flex-start; min-height: 46px; padding: 5px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; cursor: pointer; }
+.xp-stages button b { font-size: 13px; }
+.xp-stages button span { font-size: 11px; color: var(--muted); }
+.xp-stages button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.xp-stages button.on span { color: rgba(255,255,255,.85); }
+.xp-plan { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+.xp-checks { flex: 3 1 300px; min-width: 0; }
+.xp-check-row { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; border-top: 1px solid var(--line); font-size: 14px; line-height: 1.45; cursor: pointer; }
+.xp-check-row:first-child { border-top: 0; }
+.xp-check-row input { flex: none; width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--accent); }
+.xp-check-row.done span { color: var(--muted); }
+.xp-asks { flex: 2 1 220px; padding: 12px 14px; border-radius: 12px; background: var(--soft); font-size: 14px; }
+.xp-asks ul { margin: 6px 0 0; padding-left: 18px; }
+.xp-asks li { margin: 4px 0; line-height: 1.45; }
