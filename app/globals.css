@@ -1603,3 +1603,17 @@ button.nt-dot:hover { border-color: var(--green); transform: scale(1.06); }
 .sheet { max-height: calc(100dvh - 16px); overflow-y: auto; overscroll-behavior: contain; }
 .sheet > .sheet-actions { position: sticky; bottom: calc(-18px - env(safe-area-inset-bottom)); background: var(--card); margin: 16px -16px calc(-18px - env(safe-area-inset-bottom)); padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); z-index: 1; }
 @media (min-width: 760px) { .sheet { max-height: calc(100dvh - 48px); } }
+.op-rk { width: 84px; }
+.op-hq { display: flex; flex-wrap: wrap; gap: 18px 24px; background: color-mix(in srgb, var(--accent) 7%, var(--card)); border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line)); border-radius: 20px; padding: 18px 20px; }
+.op-hq-l { flex: 1 1 220px; min-width: 0; }
+.op-hq-k { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #fff; background: var(--accent); padding: 3px 9px; border-radius: 999px; }
+.op-hq h2 { margin: 8px 0 0; font-size: 22px; text-transform: none; letter-spacing: 0; color: var(--ink); }
+.op-hq-r { flex: 3 1 480px; min-width: 0; }
+.op-hq-people { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 8px; }
+.op-hq-people li { display: flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px 8px 8px 12px; }
+.op-hq-people b { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.op-hq-people .tiny { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.op-hqbtn { flex: none; height: 30px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); font: inherit; font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.op-hqbtn.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.bm-pin.hq { width: 34px; border-radius: 9px; font-size: 11px; letter-spacing: .02em; }
+.op-hq-people li > .grow { flex: 1; }

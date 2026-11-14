@@ -96,7 +96,7 @@ export function BayMap({ pins }: { pins: MapPin[] }) {
       {pins.map((p) => (
         <button
           key={p.key}
-          className="bm-pin"
+          className={`bm-pin ${p.key === "hq" ? "hq" : ""}`}
           aria-label={p.label}
           title={p.label}
           onClick={p.onClick}

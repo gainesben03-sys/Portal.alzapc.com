@@ -5,7 +5,7 @@
 //                     Ben or an executive at the client.
 import { NextResponse } from "next/server";
 import { admin, caller, SERVER_LIVE } from "@/lib/server";
-import { cleanSettings, propertyCards, rosterLocations, type Contact, type PropertySettings } from "@/lib/properties";
+import { cleanSettings, hqCard, propertyCards, rosterLocations, type Contact, type PropertySettings } from "@/lib/properties";
 import type { TeamMember } from "@/lib/team";
 
 const json = (b: object, status = 200) => NextResponse.json(b, { status, headers: { "Cache-Control": "no-store" } });
@@ -43,6 +43,7 @@ export async function GET(req: Request) {
   return json({
     ok: true,
     cards: propertyCards(people, settings, clientId),
+    hq: hqCard(people, settings, clientId),
     contacts,
     canEdit,
     // only editors get the roster list and raw settings

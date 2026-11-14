@@ -39,6 +39,8 @@ export interface PropertySettings {
   items?: PropItem[];
   /** roster locations that aren't properties (a corporate office, "Remote") */
   hidden?: string[];
+  /** the roster location that is headquarters: shown on its own above the properties. "" = none */
+  hq?: string;
   contacts?: Contact[];
 }
 
@@ -77,6 +79,7 @@ const person = (p: TeamMember): CardPerson => ({ id: p.id, name: p.name, title: 
 export function propertyCards(people: TeamMember[], s: PropertySettings | undefined, clientId: string): PropertyCard[] {
   const team = people.filter((p) => p.clientId === clientId && p.active !== false);
   const hidden = new Set((s?.hidden ?? []).map(keyOf));
+  const hqK = hqKey(people, s, clientId);
   const items = new Map<string, PropItem>();
   for (const it of s?.items ?? []) items.set(it.key, it);
   const byKey = new Map<string, TeamMember[]>();
@@ -87,7 +90,7 @@ export function propertyCards(people: TeamMember[], s: PropertySettings | undefi
     if (!locs.length) corporate.push(p);
     for (const l of locs) {
       const k = keyOf(l);
-      if (hidden.has(k) || CORPORATE.test(l)) {
+      if (hidden.has(k) || CORPORATE.test(l) || k === hqK) {
         corporate.push(p);
         continue;
       }
@@ -136,6 +139,47 @@ export function propertyCards(people: TeamMember[], s: PropertySettings | undefi
   return cards.sort((a, b) => order[a.status] - order[b.status] || a.name.localeCompare(b.name));
 }
 
+/** Which roster location is headquarters: the one chosen, else the first that sounds like one ("Corporate", "HQ"). */
+export function hqKey(people: TeamMember[], s: PropertySettings | undefined, clientId: string): string {
+  if (s?.hq !== undefined) return s.hq;
+  const hit = rosterLocations(people, clientId).find((l) => /corporate|head ?office|\bhq\b|headquarters|home office/i.test(l.name));
+  return hit?.key ?? "";
+}
+
+export interface HqCard {
+  key: string;
+  name: string;
+  address?: string;
+  note?: string;
+  city?: string;
+  people: CardPerson[];
+}
+const RANK: [RegExp, number][] = [
+  [/\b(ceo|chief executive|founder|owner|president|managing (principal|partner|director)|principal)\b/i, 0],
+  [/\b(chief|coo|cfo|cto|cmo|evp|svp)\b/i, 1],
+  [/\b(vp|vice president|head of)\b/i, 2],
+  [/\bdirector\b/i, 3],
+  [/\b(manager|controller|lead)\b/i, 4],
+];
+const rank = (t: string) => RANK.find(([re]) => re.test(t))?.[1] ?? 5;
+
+/** The people at headquarters, most senior first. */
+export function hqCard(people: TeamMember[], s: PropertySettings | undefined, clientId: string): HqCard | null {
+  const k = hqKey(people, s, clientId);
+  if (!k) return null;
+  const here = people.filter((p) => p.clientId === clientId && p.active !== false && locationsOf(p.location).some((l) => keyOf(l) === k));
+  const it = s?.items?.find((i) => i.key === k);
+  const name = it?.name || rosterLocations(people, clientId).find((l) => l.key === k)?.name || "Headquarters";
+  return {
+    key: k,
+    name,
+    address: it?.address,
+    note: it?.note,
+    city: it?.city ?? cityIn(it?.address || ""),
+    people: here.sort((a, b) => rank(a.title || "") - rank(b.title || "") || a.name.localeCompare(b.name)).map(person),
+  };
+}
+
 /** Locations on the roster that could be properties, for the Manage list (including hidden ones). */
 export function rosterLocations(people: TeamMember[], clientId: string) {
   const seen = new Map<string, { name: string; count: number }>();
@@ -176,11 +220,12 @@ export function cleanSettings(v: unknown): PropertySettings {
     });
   }
   const hidden = [...new Set((Array.isArray(s.hidden) ? s.hidden : []).map((h) => keyOf(str(h, 80))).filter(Boolean))].slice(0, 100);
+  const hq = typeof s.hq === "string" ? keyOf(str(s.hq, 80)) : undefined;
   const contacts = (Array.isArray(s.contacts) ? s.contacts : [])
     .slice(0, 4)
     .map((c) => ({ name: str(c?.name, 60), title: str(c?.title, 60), email: str(c?.email, 120).toLowerCase(), what: str(c?.what, 100) }))
     .filter((c) => c.name);
-  return { items, hidden, contacts };
+  return { items, hidden, contacts, ...(hq !== undefined ? { hq } : {}) };
 }
 
 // ---------------------------------------------------------------- map

@@ -8,13 +8,13 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BayMap, MapPin } from "@/components/baymap";
 import { ClientNav, ClientTopbar, Sheet, Toast, useGuard, useToast } from "@/components/ui";
-import { CITIES, cleanSettings, Contact, keyOf, pinFor, PropertyCard, propertyCards, PropertySettings, PropItem, PropStatus, RoleKey, ROLES, rosterLocations, STATUSES } from "@/lib/properties";
+import { CITIES, cleanSettings, Contact, HqCard, hqCard, hqKey, keyOf, pinFor, PropertyCard, propertyCards, PropertySettings, PropItem, PropStatus, RoleKey, ROLES, rosterLocations, STATUSES } from "@/lib/properties";
 import { useStore } from "@/lib/store";
 import { authHeader, LIVE } from "@/lib/supabase";
 
 type Roster = { id: string; name: string; title: string; location: string };
 type Loc = { key: string; name: string; count: number; corporate: boolean };
-type Data = { cards: PropertyCard[]; contacts: Contact[]; canEdit: boolean; settings?: PropertySettings; people?: Roster[]; locations?: Loc[] };
+type Data = { cards: PropertyCard[]; hq?: HqCard | null; contacts: Contact[]; canEdit: boolean; settings?: PropertySettings; people?: Roster[]; locations?: Loc[] };
 
 const DOT: Record<PropStatus, string> = { Active: "#3f8a5a", Transition: "#d0862a", Acquisition: "#3c7fc0", Inactive: "#8a857e" };
 const TXT: Record<PropStatus, string> = { Active: "var(--green)", Transition: "var(--amber)", Acquisition: "#2e6aa3", Inactive: "var(--muted)" };
@@ -46,6 +46,7 @@ function useProperties(clientId: string) {
     const esc = client?.escalation;
     return {
       cards: propertyCards(people, settings, clientId),
+      hq: hqCard(people, settings, clientId),
       contacts: settings.contacts?.length ? settings.contacts : [...(esc?.name ? [{ name: esc.name, title: esc.role, email: esc.email ?? "", what: "Operations and anything else" }] : []), { name: "Ben Gaines", title: "HR", email: "ben@alzapc.com", what: "Employee questions and issues" }],
       canEdit,
       settings,
@@ -69,6 +70,7 @@ export default function PropertiesPage() {
   const [focus, setFocus] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [managing, setManaging] = useState(false);
+  const [editHq, setEditHq] = useState(false);
 
   if (!ok || !client) return null;
   const isAdvisor = viewer?.kind === "advisor";
@@ -144,12 +146,15 @@ export default function PropertiesPage() {
                 </p>
               </div>
             ) : view === "map" ? (
-              <MapView cards={shown} num={num} canEdit={data.canEdit} onOpen={setFocus} />
+              <MapView cards={shown} hq={data.hq ?? null} num={num} canEdit={data.canEdit} onOpen={setFocus} />
             ) : (
+              <>
+              {data.hq && !f && <Hq hq={data.hq} canEdit={data.canEdit} onEdit={() => setEditHq(true)} />}
               <div className="op-grid section">
                 {shown.map((c) => <Card key={c.key} card={c} n={num.get(c.key) ?? ""} onOpen={() => setFocus(c.key)} />)}
                 {!shown.length && <p className="muted">No property or person matches that.</p>}
               </div>
+              </>
             )}
           </>
         )}
@@ -173,8 +178,9 @@ export default function PropertiesPage() {
       {editCard && data?.settings && data.people && (
         <EditSheet card={editCard} settings={data.settings} people={data.people} onClose={() => setEditing(null)} onSave={async (s) => (await save(s)) && setEditing(null)} />
       )}
+      {editHq && data?.hq && data.settings && <HqSheet hq={data.hq} settings={data.settings} onClose={() => setEditHq(false)} onSave={async (s) => (await save(s)) && setEditHq(false)} />}
       {managing && data?.settings && (
-        <ManageSheet settings={data.settings} locations={data.locations ?? []} contacts={data.contacts} onClose={() => setManaging(false)} onSave={async (s) => (await save(s)) && setManaging(false)} />
+        <ManageSheet settings={data.settings} hqNow={data.hq?.key ?? ""} locations={data.locations ?? []} contacts={data.contacts} onClose={() => setManaging(false)} onSave={async (s) => (await save(s)) && setManaging(false)} />
       )}
       <Toast msg={toast.msg} onDone={toast.clear} />
     </div>
@@ -207,7 +213,7 @@ function Card({ card, n, onOpen }: { card: PropertyCard; n: string; onOpen: () =
       <ul className="op-rows">
         {card.slots.filter((s) => s.role !== "lead").map((s) => (
           <li key={s.role}>
-            <span className="op-rk">{s.role === "backup" ? "Backup" : s.label}</span>
+            <span className="op-rk">{s.role === "backup" ? "Backup" : s.role === "maint" ? "Maint." : s.label}</span>
             <span className={`op-rn ${s.person ? "" : "gap"}`}>{s.person?.name ?? "Not assigned"}</span>
             {s.person?.email && <a className="op-mail" href={`mailto:${s.person.email}`} aria-label={`Email ${s.person.name}`}><Mail /></a>}
           </li>
@@ -217,7 +223,7 @@ function Card({ card, n, onOpen }: { card: PropertyCard; n: string; onOpen: () =
   );
 }
 
-function MapView({ cards, num, canEdit, onOpen }: { cards: PropertyCard[]; num: Map<string, string>; canEdit: boolean; onOpen: (k: string) => void }) {
+function MapView({ cards, hq, num, canEdit, onOpen }: { cards: PropertyCard[]; hq: HqCard | null; num: Map<string, string>; canEdit: boolean; onOpen: (k: string) => void }) {
   const placed = cards.filter((c) => pinFor(c.city));
   const missing = cards.filter((c) => !pinFor(c.city));
   // spread pins that land on the same spot
@@ -229,6 +235,8 @@ function MapView({ cards, num, canEdit, onOpen }: { cards: PropertyCard[]; num: 
     seen.set(k, i + 1);
     return { key: c.key, n: num.get(c.key) ?? "", x: p.x + i * 7, y: p.y + i * 5, color: DOT[c.status], label: `${num.get(c.key)}: ${c.name}`, onClick: () => onOpen(c.key) };
   });
+  const hp = hq ? pinFor(hq.city) : null;
+  if (hq && hp) pins.push({ key: "hq", n: "HQ", x: hp.x, y: hp.y, color: "#19283c", label: `Headquarters: ${hq.name}`, onClick: () => {} });
   return (
     <section className="op-map section" aria-label="Map of our properties">
       <div className="op-map-l"><BayMap pins={pins} /></div>
@@ -249,6 +257,62 @@ function MapView({ cards, num, canEdit, onOpen }: { cards: PropertyCard[]; num: 
         </div>
       </div>
     </section>
+  );
+}
+
+function Hq({ hq, canEdit, onEdit }: { hq: HqCard; canEdit: boolean; onEdit: () => void }) {
+  const [all, setAll] = useState(false);
+  const list = all ? hq.people : hq.people.slice(0, 8);
+  return (
+    <section className="op-hq section" aria-label="Headquarters">
+      <div className="op-hq-l">
+        <span className="op-hq-k">Headquarters</span>
+        <h2>{hq.name}</h2>
+        {hq.address && <p className="small" style={{ margin: "4px 0 0" }}>{hq.address} · <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(hq.address)}`} target="_blank" rel="noreferrer">Directions</a></p>}
+        {hq.note && <p className="small" style={{ margin: "6px 0 0" }}>{hq.note}</p>}
+        <p className="tiny muted" style={{ margin: "8px 0 0" }}>Leadership and company-wide teams</p>
+        {canEdit && <button className="btn sm" style={{ marginTop: 10 }} onClick={onEdit}>Edit</button>}
+      </div>
+      <div className="op-hq-r">
+        {hq.people.length ? (
+          <ul className="op-hq-people">
+            {list.map((p) => (
+              <li key={p.id}>
+                <span className="grow" style={{ minWidth: 0 }}><b>{p.name}</b><span className="tiny muted">{p.title}</span></span>
+                {p.email && <a className="op-mail" href={`mailto:${p.email}`} aria-label={`Email ${p.name}`}><Mail /></a>}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="small muted">No one on the roster is listed at headquarters.</p>
+        )}
+        {hq.people.length > 8 && <button className="linklike small" style={{ marginTop: 8 }} onClick={() => setAll(!all)}>{all ? "Show fewer" : `Show all ${hq.people.length}`}</button>}
+      </div>
+    </section>
+  );
+}
+
+function HqSheet({ hq, settings, onClose, onSave }: { hq: HqCard; settings: PropertySettings; onClose: () => void; onSave: (s: PropertySettings) => void }) {
+  const cur = settings.items?.find((i) => i.key === hq.key);
+  const [v, setV] = useState<PropItem>({ key: hq.key, name: hq.name, address: hq.address, city: cur?.city, note: hq.note });
+  const [busy, setBusy] = useState(false);
+  return (
+    <Sheet title="Edit headquarters" onClose={onClose}>
+      <label className="f">Name<input className="f" value={v.name} maxLength={80} onChange={(e) => setV({ ...v, name: e.target.value })} /></label>
+      <label className="f">Address <span className="tiny muted">(optional; puts HQ on the map)</span><input className="f" value={v.address ?? ""} maxLength={200} placeholder="123 Main St, San Francisco, CA" onChange={(e) => setV({ ...v, address: e.target.value || undefined })} /></label>
+      <label className="f">Area, for the map
+        <select className="f" value={v.city ?? ""} onChange={(e) => setV({ ...v, city: e.target.value || undefined })}>
+          <option value="">{hq.city && !cur?.city ? `Automatic (${hq.city})` : "Automatic"}</option>
+          {CITIES.map((c) => <option key={c.name}>{c.name}</option>)}
+        </select>
+      </label>
+      <label className="f">Note <span className="tiny muted">(optional)</span><textarea className="f" rows={2} maxLength={400} value={v.note ?? ""} onChange={(e) => setV({ ...v, note: e.target.value || undefined })} /></label>
+      <p className="tiny muted">Everyone on the roster with this location shows here, most senior first. Pick which location is HQ under Manage.</p>
+      <div className="sheet-actions">
+        <button className="btn sm" onClick={onClose}>Cancel</button>
+        <button className="btn primary sm" disabled={busy} onClick={async () => { setBusy(true); await onSave({ ...settings, items: [...(settings.items ?? []).filter((i) => i.key !== hq.key), { ...cur, ...v, name: v.name.trim() || hq.name }] }); setBusy(false); }}>{busy ? "Saving…" : "Save"}</button>
+      </div>
+    </Sheet>
   );
 }
 
@@ -357,14 +421,15 @@ function EditSheet({ card, settings, people, onClose, onSave }: { card: Property
   );
 }
 
-function ManageSheet({ settings, locations, contacts, onClose, onSave }: { settings: PropertySettings; locations: Loc[]; contacts: Contact[]; onClose: () => void; onSave: (s: PropertySettings) => void }) {
+function ManageSheet({ settings, hqNow, locations, contacts, onClose, onSave }: { settings: PropertySettings; hqNow: string; locations: Loc[]; contacts: Contact[]; onClose: () => void; onSave: (s: PropertySettings) => void }) {
+  const [hq, setHq] = useState<string>(hqNow);
   const [hidden, setHidden] = useState<string[]>(settings.hidden ?? []);
   const [items, setItems] = useState<PropItem[]>(settings.items ?? []);
   const [cs, setCs] = useState<Contact[]>(contacts.length ? contacts : [{ name: "", title: "", email: "", what: "" }]);
   const [add, setAdd] = useState("");
   const [busy, setBusy] = useState(false);
   const manual = items.filter((i) => i.manual);
-  const isHidden = (l: Loc) => hidden.includes(l.key) || (l.corporate && !items.some((i) => i.key === l.key));
+  const isHidden = (l: Loc) => l.key === hq || hidden.includes(l.key) || (l.corporate && !items.some((i) => i.key === l.key));
   const toggle = (l: Loc, show: boolean) => {
     setHidden((h) => (show ? h.filter((x) => x !== l.key) : [...new Set([...h, l.key])]));
     // a corporate-sounding location only shows if it's named as a property on purpose
@@ -381,7 +446,7 @@ function ManageSheet({ settings, locations, contacts, onClose, onSave }: { setti
   const setC = (i: number, c: Partial<Contact>) => setCs((xs) => xs.map((x, j) => (j === i ? { ...x, ...c } : x)));
   const submit = async () => {
     setBusy(true);
-    await onSave({ ...settings, hidden, items, contacts: cs.filter((c) => c.name.trim()) });
+    await onSave({ ...settings, hidden, items, hq, contacts: cs.filter((c) => c.name.trim()) });
     setBusy(false);
   };
   return (
@@ -393,16 +458,17 @@ function ManageSheet({ settings, locations, contacts, onClose, onSave }: { setti
             {locations.map((l) => (
               <li key={l.key}>
                 <label className="check" style={{ margin: 0 }}>
-                  <input type="checkbox" checked={!isHidden(l)} onChange={(e) => toggle(l, e.target.checked)} />
+                  <input type="checkbox" checked={!isHidden(l)} disabled={l.key === hq} onChange={(e) => toggle(l, e.target.checked)} />
                   <span className="grow">{l.name} <span className="tiny muted">· {l.count} {l.count === 1 ? "person" : "people"}</span></span>
                 </label>
+                <button className={`op-hqbtn ${l.key === hq ? "on" : ""}`} aria-pressed={l.key === hq} onClick={() => setHq(l.key === hq ? "" : l.key)}>{l.key === hq ? "HQ" : "Make HQ"}</button>
               </li>
             ))}
           </ul>
         ) : (
           <p className="small muted">No locations on the roster yet.</p>
         )}
-        <p className="tiny muted">Uncheck anything that isn&apos;t a property, like a corporate office. People there still fill company-wide slots, like accounting.</p>
+        <p className="tiny muted">Checked locations get a property card. Mark one as HQ to show your leadership team above the cards. Uncheck anything else that isn&apos;t a property; people there still fill company-wide slots, like accounting.</p>
 
         <h4 className="op-h">Added by hand</h4>
         {manual.length > 0 && (
