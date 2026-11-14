@@ -13,11 +13,11 @@ import { Action, Client, DEFAULT_RULES, fmt, Project, reminderPlan, Rules, toISO
 import { buildHuddle } from "@/lib/huddle";
 import { Candidate, ClientConfig, HuddleSettings, SharedFile } from "@/lib/modules";
 import { pitchDeleteOn } from "@/lib/pitch";
-import { addDaysISO, firstDayEmail, forCompany, Hire, hireCompany, listEmail, onboardingFor, senderFor, stageIndex, welcomeEmail } from "@/lib/hires";
+import { addDaysISO, type Brand, type OnboardingSettings, firstDayEmail, forCompany, Hire, hireCompany, listEmail, onboardingFor, senderFor, stageIndex, welcomeEmail } from "@/lib/hires";
 import { anniversary, cleanCell, nextYearly, TeamLog, TeamMember, teamFor, weekItems } from "@/lib/team";
 import { emailLogoUrl } from "@/lib/brand";
 import { dueReminders, stepsFor } from "@/lib/tracker";
-import { withPage, buddyNudgeDone, buddyOn, HireXp, introDay, introEmail, introOn, linkEmail, newToken, nudgeDay, nudgeEmail, nudgesFor, xpOn } from "@/lib/experience";
+import { execHeadsUpEmail, execOn, mgrOn, mgrSignedEmail, mgrStageEmail, mgrStageSendDay, stagesFor, withPage, buddyNudgeDone, buddyOn, HireXp, introDay, introEmail, introOn, linkEmail, newToken, nudgeDay, nudgeEmail, nudgesFor, xpOn } from "@/lib/experience";
 import { buildManagerWeek, buildSnapshot, PeopleData, peopleItems } from "@/lib/peopleupdates";
 import { managerEmail } from "@/lib/hireemailserver";
 import { admin, PORTAL_URL, sendEmail } from "@/lib/server";
@@ -212,6 +212,7 @@ export async function GET(req: Request) {
 
   // ---------- 3. New hires: welcome email, first-day email, start, 30-day check-in
   const hiresR = await db.from("hires").select("id, client_id, data");
+  const startsTomorrow = new Map<string, { c: { id: string; name: string; config: unknown }; brand: Brand; sender: ReturnType<typeof senderFor>; s0: OnboardingSettings; list: Hire[] }>();
   for (const row of hiresR.data ?? []) {
     const c = (clientsR.data ?? []).find((x) => x.id === row.client_id);
     if (!c) continue;
@@ -404,6 +405,41 @@ export async function GET(req: Request) {
             return r;
           });
         }
+      // reminders to the manager: when the offer is signed, then at each playbook stage (day one's goes the day before)
+      if (mgrOn(x)) {
+        const mgrTo = await managerEmail(db, c.id, h).catch(() => null);
+        if (mgrTo) {
+          if (!xp.planToken) {
+            xp.planToken = newToken();
+            xpChanged = true;
+          }
+          const planUrl = `${PORTAL_URL}/plan/${xp.planToken}`;
+          const sent = { ...(xp.mgrSent ?? {}) };
+          const send = async (key: string, m: { subject: string; html: string; text: string }, what: string) =>
+            once(`xp:mgr:${h.id}:${key}`, async () => {
+              const r = await sendEmail({ to: [mgrTo], subject: m.subject, html: m.html, text: m.text, ...sender });
+              if (r.ok) {
+                sent[key] = new Date().toISOString();
+                xp.mgrSent = sent;
+                xnote(`${what} sent to ${h.managerName || mgrTo}`);
+              }
+              return r;
+            });
+          if (signed && !sent.signed && day <= h.startDate) await send("signed", mgrSignedEmail({ ...h, xp }, x, brand, planUrl), "Heads-up that the offer is signed");
+          for (const st of stagesFor(x)) {
+            const sd = mgrStageSendDay(h, st);
+            if (!sd || sent[st.id] || day < sd || day > addDaysISO(sd, 3) || !signed) continue;
+            if (st.days === 0 && day > sd) continue; // "starts tomorrow" only makes sense the day before
+            await send(st.id, mgrStageEmail({ ...h, xp }, x, brand, st, planUrl, h.arrivalTime || s.defaultArrival), st.days === 0 ? "Starts-tomorrow reminder" : `Playbook reminder (${st.label})`);
+          }
+        }
+      }
+      // the executives' heads-up goes out once per company, after this loop
+      if (execOn(x) && h.startDate === addDaysISO(day, 1)) {
+        const e = startsTomorrow.get(c.id) ?? { c, brand, sender, s0, list: [] as Hire[] };
+        e.list.push({ ...h, xp });
+        startsTomorrow.set(c.id, e);
+      }
       if (xpChanged) {
         data.xp = xp;
         changed = true;
@@ -434,6 +470,22 @@ export async function GET(req: Request) {
       });
     }
     if (changed) await db.from("hires").update({ data }).eq("id", row.id);
+  }
+
+  // ---------- 3b. Starting tomorrow: one short note per company to the executives (and anyone else they listed)
+  for (const [cid, e] of startsTomorrow) {
+    const x = e.s0.experience;
+    const { data: execs } = await db.from("members").select("email").eq("client_id", cid).eq("access", "exec");
+    const toList = [...new Set([...(execs ?? []).map((m) => String(m.email || "").toLowerCase()), ...(x?.headsUpExtra ?? [])].filter(Boolean))];
+    if (!toList.length) continue;
+    const cfg = (e.c.config ?? {}) as Partial<ClientConfig>;
+    const wallUrl = cfg.modules?.recognition ? `${PORTAL_URL}/c/${cid}/recognition` : undefined;
+    const m = execHeadsUpEmail(e.list.map((h) => ({ h })), x, e.brand, (h) => h.arrivalTime || e.s0.defaultArrival || "", wallUrl);
+    await once(`xp:heads:${cid}:${day}`, async () => {
+      let ok = 0;
+      for (const t of toList) if ((await sendEmail({ to: [t], subject: m.subject, html: m.html, text: m.text, ...e.sender })).ok) ok++;
+      return ok ? { ok: true } : { ok: false, reason: "send_failed" };
+    });
   }
 
   // ---------- 4. Pitch videos: delete a week after the role's cutoff (30 days after sending if no cutoff), or when Ben clears them

@@ -18,7 +18,7 @@ const ICON: Record<HubItem["kind"], string> = { birthday: "🎂", anniversary: "
 export default function HubHome() {
   const { client: clientId } = useParams<{ client: string }>();
   const ok = useGuard("client", clientId);
-  const { getClient, actions, rules, clients, resources, config } = useStore();
+  const { getClient, actions, rules, clients, resources, config, hires } = useStore();
   const client = getClient(clientId);
   const h = useHub(clientId);
   const toast = useToast();
@@ -85,6 +85,30 @@ export default function HubHome() {
             </div>
 
             <AskBox clientId={clientId} slim />
+            {(() => {
+              // new hires on this manager's team, through day 90, with their plan
+              const today = new Date().toISOString().slice(0, 10);
+              const plus = (d: string, n: number) => new Date(new Date(d + "T12:00").getTime() + n * 864e5).toISOString().slice(0, 10);
+              const mine = config[clientId]?.onboarding?.experience?.on
+                ? hires.filter((x) => x.clientId === clientId && !x.outcome && !x.imported && !x.xp?.closed && x.startDate && !!h.managerName && (x.managerName || "").trim().toLowerCase() === h.managerName.trim().toLowerCase() && today >= plus(x.startDate, -45) && today <= plus(x.startDate, 90))
+                : [];
+              if (!mine.length) return null;
+              return (
+                <div className="card section">
+                  <h2 className="tw-h" style={{ marginTop: 0 }}>My new hires</h2>
+                  {mine.map((x) => {
+                    const days = Math.round((new Date(x.startDate + "T12:00").getTime() - new Date(today + "T12:00").getTime()) / 864e5);
+                    return (
+                      <Link key={x.id} href={`/c/${clientId}/hires/${x.id}#plan`} className="row" style={{ gap: 10, padding: "10px 0", borderTop: "1px solid var(--line)", textDecoration: "none", color: "inherit", justifyContent: "flex-start" }}>
+                        <b className="grow">{x.name}</b>
+                        <span className="tiny muted">{days > 1 ? `starts in ${days} days` : days === 1 ? "starts tomorrow" : days === 0 ? "starts today" : `day ${1 - days}`}</span>
+                        <span className="tiny" style={{ color: "var(--blue)" }}>Your plan ›</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              );
+            })()}
             <div className="hub-tools section">
               {training && (
                 <Link href={`/c/${clientId}/hub/learn/${training.id}`} className="card hub-tool">

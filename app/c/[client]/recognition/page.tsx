@@ -243,12 +243,7 @@ export default function Recognition() {
                   </>
                 ) : (
                   <Wall style={wall}>
-                    {(week.length > 0 || showPoll) && (
-                      <div className="wall-grid">
-                        {showPoll && <PollCard key={poll!.id} poll={poll!} onVote={vote} look={wall} />}
-                        {week.map((w) => <WallMoment key={w.key} m={w} style={wall} onAct={() => setGiving({ preset: { to: asPick(w.person), msg: w.starter } })} />)}
-                      </div>
-                    )}
+                    {week.length > 0 && <div className="wall-grid">{week.map((w) => <WallMoment key={w.key} m={w} style={wall} onAct={() => setGiving({ preset: { to: asPick(w.person), msg: w.starter } })} />)}</div>}
                     {activeCh.length > 0 && <div className="wall-ch"><ChallengeCards list={activeCh.map((c) => publicChallenge(c, list, roster))} /></div>}
                     {live.length === 0 ? (
                       <div className="wn wall-empty">No shoutouts yet. Be the first: tap Give a shoutout.</div>
@@ -256,12 +251,12 @@ export default function Recognition() {
                       <div className="so-wall wall-grid">{live.slice(0, shown).map((s) => <ShoutCard key={s.id} s={toItem(s)} onReact={(e) => react(s.id, e)} onRemove={exec ? () => remove(s) : undefined} />)}</div>
                     )}
                     {live.length > shown && shown < 80 && <button className="btn wall-more" onClick={() => setShown(Math.min(80, shown + 20))}>Show more</button>}
+                    {showPoll && <div className="wall-grid wall-poll"><PollCard key={poll!.id} poll={poll!} onVote={vote} look={wall} /></div>}
                   </Wall>
                 )}
               </div>
 
               <aside className="tw-side">
-                {wall === "clean" && showPoll && <PollCard key={poll!.id} poll={poll!} onVote={vote} />}
                 <div className="card">
                   <h2 className="tw-h">Most recognized this month</h2>
                   {top.length ? (
@@ -282,6 +277,7 @@ export default function Recognition() {
                   </div>
                   {(pastCh.length > 0 || activeCh.length > 0) && <button className="linklike small tw-more" onClick={() => setSheet("challenges")}>{pastCh.length ? "Past challenges" : "Challenge details"}</button>}
                 </div>
+                {wall === "clean" && showPoll && <PollCard key={poll!.id} poll={poll!} onVote={vote} />}
               </aside>
             </div>
           </>

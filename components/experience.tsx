@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Sheet } from "@/components/ui";
 import {
-  buddyAskWording, buddyIntroWording, buddyNudgeDone, buddyOn, currentStage, DEFAULT_INTRO, DEFAULT_NUDGES, DEFAULT_QUESTIONS, DEFAULT_STAGES, ExperienceSettings, fillVals, fillXp,
+  DEFAULT_EXEC, DEFAULT_MGR_SIGNED, DEFAULT_MGR_STAGE, buddyAskWording, buddyIntroWording, buddyNudgeDone, buddyOn, currentStage, DEFAULT_INTRO, DEFAULT_NUDGES, DEFAULT_QUESTIONS, DEFAULT_STAGES, ExperienceSettings, fillVals, fillXp,
   HireXp, introDay, introLines, introOn, introWording, journey, linkWording, newToken, nudgeDay, nudgesFor, PAGE_TEXT, PAGE_TITLE, playbookOn, privateAnswers, questionsFor, stageDay,
   stageProgress, stagesFor, XNudge, XP_FILL_INS, XQuestion, XStage,
 } from "@/lib/experience";
@@ -38,7 +38,7 @@ const why = (r?: string) => REASON[r ?? ""] ?? "Couldn't save. Try again.";
 
 // ================================================================== setup
 
-type Tab = "setup" | "questions" | "intro" | "buddy" | "playbook";
+type Tab = "setup" | "questions" | "intro" | "buddy" | "playbook" | "reminders";
 
 export function ExperienceSetup({ clientId, base, onClose, onSaved }: { clientId: string; base: Record<string, unknown>; onClose: () => void; onSaved: (onboarding: Record<string, unknown>) => void }) {
   const start = (base.experience ?? {}) as ExperienceSettings;
@@ -71,7 +71,7 @@ export function ExperienceSetup({ clientId, base, onClose, onSaved }: { clientId
       <div><b>{title}</b><div className="tiny muted">{sub}</div></div>
     </label>
   );
-  const tabs: [Tab, string][] = [["setup", "Setup"], ["questions", "Questions"], ["intro", "Company intro"], ["buddy", "Buddy"], ["playbook", "Manager playbook"]];
+  const tabs: [Tab, string][] = [["setup", "Setup"], ["questions", "Questions"], ["intro", "Company intro"], ["buddy", "Buddy"], ["playbook", "Manager playbook"], ["reminders", "Reminders"]];
 
   return (
     <Sheet title="Employee experience" onClose={onClose}>
@@ -101,6 +101,12 @@ export function ExperienceSetup({ clientId, base, onClose, onSaved }: { clientId
                 )}
                 {sw(x.buddyOn !== false, "Onboarding buddy", "You pick someone. They say yes before anything goes out.", () => set({ buddyOn: x.buddyOn === false }))}
                 {sw(x.playbookOn !== false, "Manager playbook", "What to do and ask at each stage, on the hire's page and in the Monday email.", () => set({ playbookOn: x.playbookOn === false }))}
+                {x.playbookOn !== false && (
+                  <div className="xp-sub">
+                    {sw(x.mgrReminders !== false, "Remind the manager", "When the offer is signed, the day before they start, and at each stage of the playbook. With a link to their plan, no login needed.", () => set({ mgrReminders: x.mgrReminders === false }))}
+                  </div>
+                )}
+                {sw(x.execHeadsUp !== false, "Tell the executives the day before", "One short email listing who starts tomorrow, with a nudge to say welcome.", () => set({ execHeadsUp: x.execHeadsUp === false }))}
                 <p className="tiny muted" style={{ marginTop: 10 }}>Check-ins on days 7, 30 and 90 are coming next.</p>
               </>
             )}
@@ -146,6 +152,22 @@ export function ExperienceSetup({ clientId, base, onClose, onSaved }: { clientId
           <div className="xp-pane">
             <p className="tiny muted">Each stage has a short checklist and questions to ask. Days count from the start date.</p>
             <StageList list={x.stages ?? []} onChange={(stages) => set({ stages })} />
+          </div>
+        )}
+        {tab === "reminders" && (
+          <div className="xp-pane">
+            <h4 className="xp-h" style={{ marginTop: 0 }}>To the manager, when the offer is signed</h4>
+            <Words value={x.mgrSigned} def={{ subject: DEFAULT_MGR_SIGNED.subject, message: DEFAULT_MGR_SIGNED.message }} onChange={(mgrSigned) => set({ mgrSigned })} />
+            <h4 className="xp-h">To the manager, at each playbook stage</h4>
+            <p className="tiny muted">The stage&apos;s checklist and questions are added below your message. The day-one reminder goes out the day before, as &ldquo;starts tomorrow&rdquo;. Fill-in: {"{stage}"}</p>
+            <Words value={x.mgrStage} def={{ subject: DEFAULT_MGR_STAGE.subject, message: DEFAULT_MGR_STAGE.message }} onChange={(mgrStage) => set({ mgrStage })} />
+            <h4 className="xp-h">To the executives, the day before</h4>
+            <p className="tiny muted">Goes to everyone with executive access. Fill-ins: {"{names}"} (who starts tomorrow), {"{company}"}</p>
+            <Words value={x.execWording} def={{ subject: DEFAULT_EXEC.subject, message: DEFAULT_EXEC.message.replace("{s}", "") }} onChange={(execWording) => set({ execWording })} />
+            <label className="f">Also send it to (emails, comma separated)
+              <input className="f" value={(x.headsUpExtra ?? []).join(", ")} placeholder="office@company.com" onChange={(e) => set({ headsUpExtra: e.target.value.split(/[,\s]+/).map((v) => v.trim()).filter(Boolean) })} />
+            </label>
+            <FillIns />
           </div>
         )}
       </div>
@@ -535,6 +557,21 @@ function PlanCard({ h, x, who, today, act, hr }: { h: Hire; x: ExperienceSetting
           </div>
         )}
       </div>
+      {h.xp?.mgrNotes && <p className="small" style={{ margin: "12px 0 0" }}><b>{hr ? `${h.managerName ? h.managerName.split(" ")[0] + "'s" : "Manager's"} notes` : "Your notes"}:</b> {h.xp.mgrNotes}</p>}
+      {hr && <PlanLink h={h} />}
+    </div>
+  );
+}
+
+function PlanLink({ h }: { h: Hire }) {
+  const [copied, setCopied] = useState(false);
+  const sent = Object.keys(h.xp?.mgrSent ?? {}).length;
+  const url = h.xp?.planToken && typeof window !== "undefined" ? `${window.location.origin}/plan/${h.xp.planToken}` : "";
+  return (
+    <div className="row tiny muted" style={{ gap: 8, marginTop: 10, flexWrap: "wrap", justifyContent: "flex-start", alignItems: "center" }}>
+      <span className="grow">{url ? `${h.managerName || "The manager"} gets reminders with a link to this plan, no login needed${sent ? ` (${sent} sent so far)` : ""}.` : "Reminders with a link to this plan start going to the manager once the offer is signed."}</span>
+      {url && <button className="btn ghost sm" onClick={() => { navigator.clipboard?.writeText(url); setCopied(true); }}>{copied ? "Copied" : "Copy the manager's link"}</button>}
+      {url && <a className="btn ghost sm" href={url} target="_blank" rel="noreferrer">See what they see</a>}
     </div>
   );
 }

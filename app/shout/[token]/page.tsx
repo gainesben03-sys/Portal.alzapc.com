@@ -243,6 +243,15 @@ export default function ShoutPage() {
         </>
       ) : (
         <>
+          <ChallengeCards list={info.challenges} lang={lang} />
+          {info.board && <Scoreboard b={info.board} />}
+          {info.wall.length === 0 ? (
+            <div className="so-panel so-meta">{t.empty}</div>
+          ) : (
+            <div className="so-wall">
+              {info.wall.map((s) => <ShoutCard key={s.id} s={s} highlight={focus === s.id} onReact={(e) => react(s.id, e)} onReport={() => report(s.id)} />)}
+            </div>
+          )}
           {info.poll && (
             <PollCard
               poll={info.poll}
@@ -252,15 +261,6 @@ export default function ShoutPage() {
                 return r.ok ? (r.poll as PollView) : null;
               }}
             />
-          )}
-          <ChallengeCards list={info.challenges} lang={lang} />
-          {info.board && <Scoreboard b={info.board} />}
-          {info.wall.length === 0 ? (
-            <div className="so-panel so-meta">{t.empty}</div>
-          ) : (
-            <div className="so-wall">
-              {info.wall.map((s) => <ShoutCard key={s.id} s={s} highlight={focus === s.id} onReact={(e) => react(s.id, e)} onReport={() => report(s.id)} />)}
-            </div>
           )}
         </>
       )}

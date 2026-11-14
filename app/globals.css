@@ -1978,3 +1978,16 @@ button.wp-dot { cursor: pointer; }
 /* setup */
 .poll-edit { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 6px; margin-top: 6px; }
 @media (max-width: 560px) { .poll-edit { grid-template-columns: 1fr 1fr auto; } .poll-edit input:first-child { grid-column: 1 / -1; } }
+
+/* Manager plan page */
+.pl-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.pl-tabs button { display: flex; flex-direction: column; align-items: flex-start; min-height: 50px; padding: 6px 12px; border-radius: 12px; border: 1px solid #e6e0d8; background: #fff; color: #1c1a19; font: inherit; cursor: pointer; }
+.pl-tabs button b { font-size: 14px; }
+.pl-tabs button span { font-size: 12px; color: #6b645e; }
+.pl-tabs button.on { background: var(--ex, #19283c); border-color: var(--ex, #19283c); color: #fff; }
+.pl-tabs button.on span { color: rgba(255,255,255,.85); }
+.pl-asks { background: #eef2f6; border-color: #dbe3ec; }
+.pl-asks ul { margin: 6px 0 0; padding-left: 18px; font-size: 15px; line-height: 1.5; }
+.pl-asks li { margin: 4px 0; }
+.wall-poll { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+.so-wall + .poll, .so-panel + .poll { margin-top: 14px; }

@@ -17,9 +17,9 @@ export async function loadHire(db: SupabaseClient, id: string): Promise<XpCtx | 
   return { db, id: data.id, clientId: data.client_id, h: { ...(data.data as Hire), id: data.id, clientId: data.client_id }, company: cl?.name ?? "", cfg, s, x: s.experience ?? {} };
 }
 
-export async function hireByToken(db: SupabaseClient, field: "token" | "buddy", token: string): Promise<XpCtx | null> {
+export async function hireByToken(db: SupabaseClient, field: "token" | "buddy" | "plan", token: string): Promise<XpCtx | null> {
   if (!/^[A-Za-z0-9]{24,64}$/.test(token)) return null;
-  const path = field === "token" ? "data->xp->>token" : "data->xp->buddy->>token";
+  const path = field === "token" ? "data->xp->>token" : field === "plan" ? "data->xp->>planToken" : "data->xp->buddy->>token";
   const { data } = await db.from("hires").select("id").eq(path, token).maybeSingle();
   return data ? loadHire(db, data.id as string) : null;
 }

@@ -36,6 +36,14 @@ export interface ExperienceSettings {
   nudges?: XNudge[];
   /** Manager playbook */
   stages?: XStage[];
+  /** Reminders to the manager: when the offer is signed, and when each playbook stage comes up (off: Monday email only) */
+  mgrReminders?: boolean;
+  mgrSigned?: Wording;
+  mgrStage?: Wording;
+  /** The day before someone starts: a short note to the executives (and anyone else listed) */
+  execHeadsUp?: boolean;
+  headsUpExtra?: string[];
+  execWording?: Wording;
 }
 
 export type Audience = "all" | "site";
@@ -60,6 +68,11 @@ export interface HireXp {
   closed?: boolean;
   /** Action items the new hire ticked off on their welcome page: index -> when */
   todos?: Record<string, string>;
+  /** The manager's plan page (no login) and their private notes */
+  planToken?: string;
+  mgrNotes?: string;
+  /** Manager reminders sent: "signed" or a stage id -> when */
+  mgrSent?: Record<string, string>;
 }
 
 export interface XBuddy {
@@ -152,6 +165,19 @@ export const DEFAULT_STAGES: XStage[] = [
   },
 ];
 
+export const DEFAULT_MGR_SIGNED: Required<Wording> = {
+  subject: "{first name} said yes! Starts {start date}",
+  message: "Good news: {full name} signed their offer and starts {start date} as {job title}.\n\nYour plan for their first 90 days is ready: what to get done before day one, what to cover in week one, and questions to ask along the way. You'll get a short reminder at each stage.",
+};
+export const DEFAULT_MGR_STAGE: Required<Wording> = {
+  subject: "{stage}: your plan for {first name}",
+  message: "Here's what's up next for {first name}.",
+};
+export const DEFAULT_EXEC: Required<Wording> = {
+  subject: "Starting tomorrow: {names}",
+  message: "A quick heads-up: {names} start{s} tomorrow. A short welcome note, or stopping by to say hi, goes a long way in someone's first week.",
+};
+
 export const XP_FILL_INS = ["{first name}", "{preferred name}", "{full name}", "{last name}", "{job title}", "{manager}", "{company}", "{start date}", "{buddy}"] as const;
 
 // ---------------------------------------------------------------- reading settings
@@ -165,6 +191,8 @@ export const questionsFor = (x?: ExperienceSettings) => (x?.questions?.length ? 
 export const nudgesFor = (x?: ExperienceSettings) => (x?.nudges ? x.nudges : DEFAULT_NUDGES);
 export const stagesFor = (x?: ExperienceSettings) => (x?.stages?.length ? x.stages : DEFAULT_STAGES);
 const pick = (v: string | undefined, d: string) => (v && v.trim() ? v : d);
+export const mgrOn = (x?: ExperienceSettings) => playbookOn(x) && x?.mgrReminders !== false;
+export const execOn = (x?: ExperienceSettings) => !!x?.on && x.execHeadsUp !== false;
 export const linkWording = (x?: ExperienceSettings) => ({ subject: pick(x?.linkEmail?.subject, DEFAULT_LINK_EMAIL.subject), message: pick(x?.linkEmail?.message, DEFAULT_LINK_EMAIL.message) });
 export const buddyAskWording = (x?: ExperienceSettings) => ({ subject: pick(x?.buddyAsk?.subject, DEFAULT_BUDDY_ASK.subject), message: pick(x?.buddyAsk?.message, DEFAULT_BUDDY_ASK.message) });
 export const buddyIntroWording = (x?: ExperienceSettings) => ({ subject: pick(x?.buddyIntro?.subject, DEFAULT_BUDDY_INTRO.subject), message: pick(x?.buddyIntro?.message, DEFAULT_BUDDY_INTRO.message) });
@@ -224,6 +252,12 @@ export function cleanExperience(v: unknown): ExperienceSettings {
       .slice(0, 10);
     if (!out.stages.length) delete out.stages;
   }
+  out.mgrReminders = b("mgrReminders");
+  out.execHeadsUp = b("execHeadsUp");
+  out.mgrSigned = wording(x.mgrSigned);
+  out.mgrStage = wording(x.mgrStage);
+  out.execWording = wording(x.execWording);
+  if (Array.isArray(x.headsUpExtra)) out.headsUpExtra = (x.headsUpExtra as unknown[]).map((e) => String(e ?? "").trim().toLowerCase()).filter((e) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)).slice(0, 10);
   (Object.keys(out) as (keyof ExperienceSettings)[]).forEach((k) => out[k] === undefined && delete out[k]);
   return out;
 }
@@ -422,3 +456,60 @@ export function withPage<T extends Hire>(h: T, x?: ExperienceSettings): T {
 
 /** The welcome page works until 90 days after the start. */
 export const pageOpen = (h: Hire, today: string) => !h.startDate || today <= addDaysISO(h.startDate, 90);
+
+// ---------------------------------------------------------------- the manager's reminders and the executives' heads-up
+
+const bullets = (items: string[]) =>
+  items.length ? `<ul style="margin:0 0 14px 0;padding-left:20px;font-family:Arial,sans-serif;font-size:15px;line-height:23px;color:#1C1A19">${items.map((i) => `<li style="margin:0 0 4px 0">${esc(i)}</li>`).join("")}</ul>` : "";
+const label = (t: string) => `<p style="margin:18px 0 6px 0;font-family:Arial,sans-serif;font-size:11px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:#6B645E">${esc(t)}</p>`;
+
+/** When the offer is signed: they said yes, here's your plan. */
+export function mgrSignedEmail(h: Hire, x: ExperienceSettings | undefined, b: Brand, planUrl: string) {
+  const v = fillVals(h, b.company);
+  const w = { subject: pick(x?.mgrSigned?.subject, DEFAULT_MGR_SIGNED.subject), message: pick(x?.mgrSigned?.message, DEFAULT_MGR_SIGNED.message) };
+  const subject = fillXp(w.subject, v);
+  const msg = fillXp(w.message, v);
+  const mgr = (h.managerName || "").split(" ")[0] || "there";
+  return { subject, html: wrap(b, `Hi ${mgr},`, para(msg) + btn(`Open your plan for ${v.preferred}`, planUrl, brand0(b))).html, text: `Hi ${mgr},\n\n${msg}\n\nYour plan: ${planUrl}` };
+}
+
+/** When a playbook stage comes up. Day one's goes out the day before ("starts tomorrow"). */
+export function mgrStageEmail(h: Hire, x: ExperienceSettings | undefined, b: Brand, st: XStage, planUrl: string, arrival?: string) {
+  const v = fillVals(h, b.company);
+  const tomorrow = st.days === 0;
+  const w = { subject: pick(x?.mgrStage?.subject, DEFAULT_MGR_STAGE.subject), message: pick(x?.mgrStage?.message, DEFAULT_MGR_STAGE.message) };
+  const subject = tomorrow ? `${v.preferred} starts tomorrow${arrival ? ` at ${arrival}` : ""}` : fillXp(w.subject.replace(/\{stage\}/gi, st.label), v);
+  const opening = tomorrow
+    ? `${v.preferred} starts tomorrow${arrival ? ` at ${arrival}` : ""}${h.location ? `, ${h.location.split(",")[0]}` : ""}.${h.xp?.buddy?.status === "yes" ? ` Their buddy is ${h.xp.buddy.name}.` : ""}`
+    : fillXp(w.message.replace(/\{stage\}/gi, st.label), v);
+  const items = st.items.map((i) => fillXp(i, v)).filter((i, k) => !h.xp?.plan?.[`${st.id}:${k}`] && i);
+  const asks = st.asks.map((q) => fillXp(q, v));
+  const mgr = (h.managerName || "").split(" ")[0] || "there";
+  const body = para(opening) + (items.length ? label(tomorrow ? "Tomorrow" : "To do") + bullets(items) : "") + (asks.length ? label("Questions to ask") + bullets(asks) : "") + btn("Open your plan", planUrl, brand0(b));
+  const text = `Hi ${mgr},\n\n${opening}\n\n${items.map((i) => `- ${i}`).join("\n")}\n\nQuestions to ask:\n${asks.map((q) => `- ${q}`).join("\n")}\n\nYour plan: ${planUrl}`;
+  return { subject, html: wrap(b, `Hi ${mgr},`, body).html, text };
+}
+
+/** The day before: everyone starting tomorrow, for the executives. */
+export function execHeadsUpEmail(list: { h: Hire; wallUrl?: string }[], x: ExperienceSettings | undefined, b: Brand, arrivalFor: (h: Hire) => string, wallUrl?: string) {
+  const names = list.map(({ h }) => fillVals(h, b.company).preferred + " " + fillVals(h, b.company).last).map((n) => n.trim());
+  const joined = names.length <= 2 ? names.join(" and ") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  const w = { subject: pick(x?.execWording?.subject, DEFAULT_EXEC.subject), message: pick(x?.execWording?.message, DEFAULT_EXEC.message) };
+  const f = (t: string) => t.replace(/\{names\}/gi, joined).replace(/\{s\}/g, names.length === 1 ? "s" : "").replace(/\{company\}/gi, b.company);
+  const subject = f(w.subject);
+  const msg = f(w.message);
+  const rows = list
+    .map(({ h }) => {
+      const v = fillVals(h, b.company);
+      const bits = [v.title, h.managerName ? `with ${h.managerName}` : "", arrivalFor(h), h.location ? h.location.split(",")[0] : ""].filter(Boolean).join(" · ");
+      return `<p style="margin:0 0 10px 0;font-family:Arial,sans-serif;font-size:15px;line-height:22px;color:#1C1A19"><b>${esc(v.preferred)} ${esc(v.last)}</b><br><span style="color:#6B645E">${esc(bits)}</span></p>`;
+    })
+    .join("");
+  const brand: Brand = { ...b, bar: b.bar ?? b.accent, accent: brand0(b) };
+  const html = frameEmail(brand, `${heading("Starting tomorrow")}${para(msg)}<!--HERO_END-->${sectionHtml("#F4F1EC", rows + (wallUrl ? `<div style="margin-top:6px">${btn("Say welcome on the Team Wall", wallUrl, brand0(b))}</div>` : ""))}`);
+  const text = `${msg}\n\n${list.map(({ h }) => `- ${fillVals(h, b.company).preferred} ${fillVals(h, b.company).last}, ${h.title || ""}`).join("\n")}${wallUrl ? `\n\nSay welcome: ${wallUrl}` : ""}`;
+  return { subject, html, text };
+}
+
+/** The day each manager reminder goes out. */
+export const mgrStageSendDay = (h: Hire, st: XStage) => (h.startDate ? addDaysISO(h.startDate, st.days === 0 ? -1 : st.days) : "");
