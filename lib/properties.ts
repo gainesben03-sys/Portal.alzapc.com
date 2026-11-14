@@ -107,7 +107,7 @@ export function propertyCards(people: TeamMember[], s: PropertySettings | undefi
   const all = new Map(team.map((p) => [p.id, p]));
   const cards: PropertyCard[] = [];
   for (const k of keys) {
-    if (hidden.has(k)) continue;
+    if (hidden.has(k) || hqK.has(k)) continue; // headquarters gets its own banner, never a property card
     const it = items.get(k);
     const here = byKey.get(k) ?? [];
     const taken = new Set<string>();
