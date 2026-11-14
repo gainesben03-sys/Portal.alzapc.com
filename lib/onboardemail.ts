@@ -226,7 +226,7 @@ function paras(t: string, accent: string, style = "margin:0 0 14px 0") {
 }
 const plain = (t: string) => t.replace(/\*\*(.+?)\*\*/g, "$1");
 
-function blockHtml(b: Block, c: Ctx, accent: string): { html: string; text: string } {
+function blockHtml(b: Block, c: Ctx, accent: string, extra = ""): { html: string; text: string } {
   const F = (t: string) => fill(t, c);
   const title = (t?: string, color = accent) => (t?.trim() ? labelHtml(F(t), color) : "");
   const gap = (t?: string) => (t?.trim() ? "margin-top:10px;" : "");
@@ -234,7 +234,7 @@ function blockHtml(b: Block, c: Ctx, accent: string): { html: string; text: stri
     case "text": {
       const t = F(b.text);
       if (!t.trim() && !b.title) return { html: "", text: "" };
-      return { html: sectionHtml("#F4F1EC", title(b.title) + `<div style="${gap(b.title)}">${paras(t, accent)}</div>`), text: `${b.title ? `${F(b.title).toUpperCase()}\n` : ""}${plain(t)}` };
+      return { html: sectionHtml("#F4F1EC", title(b.title) + `<div style="${gap(b.title)}">${paras(t, accent)}</div>` + extra), text: `${b.title ? `${F(b.title).toUpperCase()}\n` : ""}${plain(t)}` };
     }
     case "checklist":
     case "steps": {
@@ -334,20 +334,19 @@ export function renderOnboard(e: OnboardEmail, h: Hire, s: OnboardingSettings, b
   // the hire's first name in italics in the headline, the house style
   const headline = esc(F(e.headline.replace(/\{first name\}/gi, "\u0001"))).replace(/\u0001/g, `<i>${esc(firstName(h))}</i>`);
   const intro = F(e.intro);
-  const parts = e.blocks.map((x) => blockHtml(x, c, brand.accent));
   // employee experience: every onboarding email points to the new hire's welcome page
   const page = s.experience?.on && h.xp?.token && !h.xp.closed ? `${typeof window !== "undefined" ? window.location.origin : (process.env.PORTAL_URL || "https://portal.alzapc.com").replace(/\/$/, "")}/welcome/${h.xp.token}` : "";
-  if (page)
-    parts.unshift({
-      html: sectionHtml("#F4F1EC", `<p style="margin:0 0 12px 0;font-family:Arial,sans-serif;font-size:15px;line-height:22px;color:#1C1A19">Everything for your first days is on your welcome page: your first day, your to-dos and your people.</p><a href="${esc(page)}" style="display:inline-block;background:${brand.accent};padding:13px 22px;border-radius:4px;color:#FFFFFF;text-decoration:none;font-family:Arial,sans-serif;font-weight:bold;font-size:15px">Your welcome page</a>`),
-      text: `Your welcome page: ${page}`,
-    });
+  const btnHtml = page ? `<div style="margin:18px 0 0 0"><a href="${esc(page)}" style="display:inline-block;background:${brand.accent};padding:13px 22px;border-radius:4px;color:#FFFFFF;text-decoration:none;font-family:Arial,sans-serif;font-weight:bold;font-size:15px">Open your welcome page</a></div>` : "";
+  // the button goes right under the welcome message (the first written message), or under the headline if there isn't one
+  const msgAt = page ? e.blocks.findIndex((x) => x.type === "text" && fill(x.text, c).trim()) : -1;
+  const parts = e.blocks.map((x, i) => blockHtml(x, c, brand.accent, i === msgAt ? btnHtml : ""));
+  const pageBtn = page && msgAt < 0 ? btnHtml : "";
   const inner = `${e.kicker.trim() ? labelHtml(F(e.kicker), "#6B645E").replace("margin:0", "margin:40px 0 0 0") : ""}
 <p style="margin:${e.kicker.trim() ? "10px" : "40px"} 0 0 0;font-family:Georgia,serif;font-size:44px;line-height:50px;color:#1C1A19">${headline}</p>
-${intro.trim() ? `<div style="margin:14px 0 0 0">${paras(intro, brand.accent, "margin:0 0 12px 0;font-family:Arial,sans-serif;font-size:16px;line-height:24px;color:#4A4441")}</div>` : ""}<!--HERO_END-->
+${intro.trim() ? `<div style="margin:14px 0 0 0">${paras(intro, brand.accent, "margin:0 0 12px 0;font-family:Arial,sans-serif;font-size:16px;line-height:24px;color:#4A4441")}</div>` : ""}${pageBtn}<!--HERO_END-->
 ${parts.map((p) => p.html).join("\n")}
 ${signoffHtml(s, brand.accent, F(e.closing))}`;
-  const text = [`${plain(F(e.headline))}`, plain(intro), ...parts.map((p) => p.text), `${F(e.closing)}\n${s.hrName}\n${s.hrEmail}`].filter((x) => x.trim()).join("\n\n");
+  const text = [`${plain(F(e.headline))}`, plain(intro), page ? `Open your welcome page: ${page}` : "", ...parts.map((p) => p.text), `${F(e.closing)}\n${s.hrName}\n${s.hrEmail}`].filter((x) => x.trim()).join("\n\n");
   return { subject: fill(e.subject, c, true).replace(/\s+/g, " ").trim() || `${brand.company}`, html: frameEmail(brand, inner), text };
 }
 
