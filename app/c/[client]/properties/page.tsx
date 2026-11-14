@@ -243,7 +243,7 @@ function MapView({ cards, num, canEdit, onOpen }: { cards: PropertyCard[]; num: 
             </span>
           </button>
         ))}
-        {missing.length > 0 && canEdit && <p className="tiny muted" style={{ margin: "8px 6px 0" }}>Not on the map yet: {missing.map((c) => c.name).join(", ")}. Open one and tap Edit to set its area.</p>}
+        {missing.length > 0 && canEdit && <p className="tiny muted" style={{ margin: "8px 6px 0" }}>Not on the map yet: {missing.map((c) => c.name).join(", ")}. Open one and tap Edit to add its address or area.</p>}
         <div className="op-legend">
           {(["Active", "Transition", "Acquisition"] as PropStatus[]).map((s) => <span key={s}><i style={{ background: DOT[s] }} />{s}</span>)}
         </div>
@@ -269,6 +269,11 @@ function Focus({ card, n, canEdit, onBack, onEdit }: { card: PropertyCard; n: st
             <h1 style={{ margin: "4px 0 0" }}>{card.name}</h1>
           </div>
         </div>
+        {card.address && (
+          <p className="small" style={{ margin: 0 }}>
+            {card.address} · <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(card.address)}`} target="_blank" rel="noreferrer">Directions</a>
+          </p>
+        )}
         {card.note && <p className="op-note"><b>Note:</b> {card.note}</p>}
         {!lead?.person && <div className="op-warn"><b>No lead yet.</b> Until someone is named, use the contacts under Still stuck.</div>}
         <div className="op-people">
@@ -293,7 +298,7 @@ function Focus({ card, n, canEdit, onBack, onEdit }: { card: PropertyCard; n: st
 
 function EditSheet({ card, settings, people, onClose, onSave }: { card: PropertyCard; settings: PropertySettings; people: Roster[]; onClose: () => void; onSave: (s: PropertySettings) => void }) {
   const cur = settings.items?.find((i) => i.key === card.key);
-  const [v, setV] = useState<PropItem>({ key: card.key, name: card.name, status: card.status, city: card.city, note: card.note, roles: { ...(cur?.roles ?? {}) }, manual: cur?.manual });
+  const [v, setV] = useState<PropItem>({ key: card.key, name: card.name, status: card.status, city: cur?.city, address: card.address, note: card.note, roles: { ...(cur?.roles ?? {}) }, manual: cur?.manual });
   const [busy, setBusy] = useState(false);
   const setRole = (k: RoleKey, val: string) =>
     setV((x) => {
@@ -321,11 +326,12 @@ function EditSheet({ card, settings, people, onClose, onSave }: { card: Property
           </label>
           <label className="f">Area, for the map
             <select className="f" value={v.city ?? ""} onChange={(e) => setV({ ...v, city: e.target.value || undefined })}>
-              <option value="">Not set</option>
+              <option value="">{card.city && !cur?.city ? `Automatic (${card.city})` : "Automatic"}</option>
               {CITIES.map((c) => <option key={c.name}>{c.name}</option>)}
             </select>
           </label>
         </div>
+        <label className="f">Address <span className="tiny muted">(optional; if it names a Bay Area city, the map pin goes there)</span><input className="f" value={v.address ?? ""} maxLength={200} placeholder="123 Main St, Oakland, CA" onChange={(e) => setV({ ...v, address: e.target.value || undefined })} /></label>
         <label className="f">Note <span className="tiny muted">(optional, shows on the card)</span><textarea className="f" rows={2} maxLength={400} value={v.note ?? ""} onChange={(e) => setV({ ...v, note: e.target.value || undefined })} /></label>
         <h4 className="op-h">Who handles what</h4>
         <p className="tiny muted" style={{ marginTop: 0 }}>Leave a slot on Automatic and it follows the roster: when someone new takes the job, the card updates by itself.</p>

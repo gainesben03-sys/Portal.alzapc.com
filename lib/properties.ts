@@ -23,6 +23,7 @@ export interface PropItem {
   name: string;
   status?: PropStatus;
   city?: string; // one of CITIES, for the map
+  address?: string; // street address; also sets the map area when it names a city
   note?: string;
   /** person id to force a slot, "" to leave it empty on purpose; missing = filled from the roster */
   roles?: Partial<Record<RoleKey, string>>;
@@ -58,6 +59,7 @@ export interface PropertyCard {
   name: string;
   status: PropStatus;
   city?: string;
+  address?: string;
   note?: string;
   slots: CardSlot[];
   headcount: number;
@@ -128,7 +130,7 @@ export function propertyCards(people: TeamMember[], s: PropertySettings | undefi
         slot.person = person(p);
       }
     }
-    cards.push({ key: k, name: it?.name || names.get(k) || k, status: it?.status ?? "Active", city: it?.city ?? cityIn(names.get(k) || it?.name || ""), note: it?.note, slots, headcount: here.length, manual: it?.manual });
+    cards.push({ key: k, name: it?.name || names.get(k) || k, status: it?.status ?? "Active", city: it?.city ?? cityIn(it?.address || "") ?? cityIn(names.get(k) || it?.name || ""), address: it?.address, note: it?.note, slots, headcount: here.length, manual: it?.manual });
   }
   const order: Record<PropStatus, number> = { Active: 0, Transition: 1, Acquisition: 2, Inactive: 3 };
   return cards.sort((a, b) => order[a.status] - order[b.status] || a.name.localeCompare(b.name));
@@ -167,6 +169,7 @@ export function cleanSettings(v: unknown): PropertySettings {
       name: name || key,
       status: STATUSES.includes(it?.status as PropStatus) ? (it.status as PropStatus) : undefined,
       city: CITIES.some((c) => c.name === it?.city) ? it.city : undefined,
+      address: str(it?.address, 200) || undefined,
       note: str(it?.note, 400) || undefined,
       roles: Object.keys(roles).length ? roles : undefined,
       manual: !!it?.manual || undefined,
