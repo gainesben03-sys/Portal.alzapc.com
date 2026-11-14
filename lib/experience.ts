@@ -58,6 +58,8 @@ export interface HireXp {
   plan?: Record<string, string>;
   /** HR closed the journey (left early, etc): nothing else sends. */
   closed?: boolean;
+  /** Action items the new hire ticked off on their welcome page: index -> when */
+  todos?: Record<string, string>;
 }
 
 export interface XBuddy {
@@ -93,7 +95,7 @@ export const DEFAULT_QUESTIONS: XQuestion[] = [
 
 export const DEFAULT_LINK_EMAIL: Required<Wording> = {
   subject: "Before your first day, {first name}",
-  message: "We're so glad you're joining {company}!\n\nBefore you start, we'd love to get to know you a little. It takes about four minutes. Skip anything you like, and nothing is shared until you see it and say yes.",
+  message: "We're so glad you're joining {company}!\n\nYour welcome page has everything for your first days: when and where to show up, your to-dos and your people. First up: a few quick questions so the team can get to know you.",
 };
 
 export const DEFAULT_INTRO = {
@@ -315,8 +317,8 @@ export function linkEmail(h: Hire, x: ExperienceSettings | undefined, b: Brand, 
   const w = linkWording(x);
   const subject = (reminder ? "Reminder: " : "") + fillXp(w.subject, v);
   const msg = fillXp(w.message, v);
-  const { html } = wrap(b, reminder ? `Still time, ${v.first}!` : `Hi ${v.first}!`, para(msg) + btn("Tell us about you", url, brand0(b)));
-  return { subject, html, text: `${msg}\n\nTell us about you: ${url}` };
+  const { html } = wrap(b, reminder ? `Still time, ${v.first}!` : `Hi ${v.first}!`, para(msg) + btn("Open your welcome page", url, brand0(b)));
+  return { subject, html, text: `${msg}\n\nYour welcome page: ${url}` };
 }
 const brand0 = (b: Brand) => readableInk(b.accent);
 
@@ -411,3 +413,12 @@ export const newToken = () => {
   return Array.from(a, (n) => "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"[n % 56]).join("");
 };
 export const TOKEN_RE = /^[A-Za-z0-9]{24,64}$/;
+
+/** Give the hire a welcome page link if the experience is on and they don't have one yet. */
+export function withPage<T extends Hire>(h: T, x?: ExperienceSettings): T {
+  if (!x?.on || h.xp?.token || h.imported || h.outcome) return h;
+  return { ...h, xp: { ...(h.xp ?? {}), token: newToken() } };
+}
+
+/** The welcome page works until 90 days after the start. */
+export const pageOpen = (h: Hire, today: string) => !h.startDate || today <= addDaysISO(h.startDate, 90);

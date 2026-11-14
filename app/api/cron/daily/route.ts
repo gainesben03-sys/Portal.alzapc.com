@@ -17,7 +17,7 @@ import { addDaysISO, firstDayEmail, forCompany, Hire, hireCompany, listEmail, on
 import { anniversary, cleanCell, nextYearly, TeamLog, TeamMember, teamFor, weekItems } from "@/lib/team";
 import { emailLogoUrl } from "@/lib/brand";
 import { dueReminders, stepsFor } from "@/lib/tracker";
-import { buddyNudgeDone, buddyOn, HireXp, introDay, introEmail, introOn, linkEmail, newToken, nudgeDay, nudgeEmail, nudgesFor, xpOn } from "@/lib/experience";
+import { withPage, buddyNudgeDone, buddyOn, HireXp, introDay, introEmail, introOn, linkEmail, newToken, nudgeDay, nudgeEmail, nudgesFor, xpOn } from "@/lib/experience";
 import { buildManagerWeek, buildSnapshot, PeopleData, peopleItems } from "@/lib/peopleupdates";
 import { managerEmail } from "@/lib/hireemailserver";
 import { admin, PORTAL_URL, sendEmail } from "@/lib/server";
@@ -231,10 +231,12 @@ export async function GET(req: Request) {
     const signed = stageIndex(h.status) >= 2;
     const to = h.imported || h.outcome ? "" : (h.personalEmail || "").trim().toLowerCase();
     if (s.autoSend && signed && to && !h.emails?.welcome) {
-      const m = welcomeEmail(h, s, brand);
+      const hp = withPage(h, s0.experience);
+      const m = welcomeEmail(hp, s, brand);
       await once(`hire:welcome:${h.id}`, async () => {
         const r = await sendEmail({ to: [to], subject: m.subject, html: m.html, text: m.text, ...sender });
         if (r.ok) {
+          if (hp.xp?.token) data.xp = { ...(data.xp ?? {}), token: hp.xp.token, linkSentAt: data.xp?.linkSentAt || new Date().toISOString() };
           data.emails = { ...(data.emails ?? {}), welcome: new Date().toISOString() };
           note(`Welcome email sent to ${to}`);
         }

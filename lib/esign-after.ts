@@ -1,4 +1,5 @@
 // Server-only: what happens after someone signs or declines.
+import { withPage } from "./experience";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { loadClient, saveHire, SigRow } from "./esign";
 import { Hire, signedCopyEmail, stageIndex, welcomeEmail } from "./hires";
@@ -50,9 +51,11 @@ async function run(
       h.history.push({ at: o.now, by: "Portal", text: `Payroll setup is in progress; first-day prep sent to ${tasks.find((t) => t.side === "client")?.owner.name ?? "the client"}` });
     }
     if (c.s.autoSend && !h.emails?.welcome && h.personalEmail) {
-      const m = welcomeEmail(h, c.s, c.brand);
+      const hp = withPage(h, c.s.experience);
+      const m = welcomeEmail(hp, c.s, c.brand);
       const r = await sendEmail({ to: [h.personalEmail], subject: m.subject, html: m.html, text: m.text, ...c.sender });
       if (r.ok) {
+        if (hp.xp?.token) h.xp = { ...(h.xp ?? {}), token: hp.xp.token, linkSentAt: h.xp?.linkSentAt || o.now };
         h.emails = { ...(h.emails ?? {}), welcome: o.now };
         h.history.push({ at: o.now, by: "Portal", text: `Welcome email sent to ${h.personalEmail}` });
       }

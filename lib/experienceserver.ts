@@ -39,7 +39,7 @@ export async function saveXp(c: XpCtx, change: (xp: HireXp, h: Hire) => HireXp, 
 export function brandAndSender(c: Pick<XpCtx, "clientId" | "h" | "company" | "cfg" | "s">) {
   const co = hireCompany(c.h, c.s);
   const { s, brand } = forCompany(c.h, c.s, { company: c.company, accent: c.cfg.accent || "#19283c", logoUrl: emailLogoUrl(c.clientId, c.cfg.logo, c.cfg.logoEmail, PORTAL_URL) }, co ? emailLogoUrl(c.clientId, co.logo, co.logoEmail, PORTAL_URL, co.id) : undefined);
-  return { brand, sender: senderFor(s, brand.company), hrEmail: (s.hrEmail || "").trim().toLowerCase() };
+  return { brand, s, sender: senderFor(s, brand.company), hrEmail: (s.hrEmail || "").trim().toLowerCase() };
 }
 
 export const welcomeUrl = (token: string) => `${PORTAL_URL}/welcome/${token}`;

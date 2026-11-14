@@ -2,6 +2,7 @@
 // Ben or an executive at that client can send. The recipient is always the hire's
 // personal email on file (or the sender, for a test), never an address from the browser.
 import { NextResponse } from "next/server";
+import { withPage } from "@/lib/experience";
 import { firstDayEmail, forCompany, Hire, hireCompany, onboardingFor, senderFor, welcomeEmail } from "@/lib/hires";
 import { ClientConfig } from "@/lib/modules";
 import { emailLogoUrl } from "@/lib/brand";
@@ -43,7 +44,8 @@ export async function POST(req: Request) {
   const { s, brand } = forCompany(hire, s0, { company: client.name, accent: cfg.accent || "#19283c", logoUrl: emailLogoUrl(row.client_id, cfg.logo, cfg.logoEmail, siteUrl(req)) }, co ? emailLogoUrl(row.client_id, co.logo, co.logoEmail, siteUrl(req), co.id) : undefined);
   const to = b.test ? me.email : (hire.personalEmail || "").trim().toLowerCase();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) return NextResponse.json({ sent: false, reason: "no_email" });
-  const mail = kind === "welcome" ? welcomeEmail(hire, s, brand) : firstDayEmail(hire, s, brand);
+  const hp = b.test ? hire : withPage(hire, s0.experience);
+  const mail = kind === "welcome" ? welcomeEmail(hp, s, brand) : firstDayEmail(hp, s, brand);
   const r = await sendEmail({ to: [to], subject: b.test ? `[Test] ${mail.subject}` : mail.subject, html: mail.html, text: mail.text, ...senderFor(s, brand.company) });
   if (!r.ok) return NextResponse.json({ sent: false, reason: r.reason });
 
@@ -51,6 +53,7 @@ export async function POST(req: Request) {
     const at = new Date().toISOString();
     const data = { ...(row.data as Hire), ...changes };
     data.emails = { ...(data.emails ?? {}), [kind]: at };
+    if (hp.xp?.token) data.xp = { ...(data.xp ?? {}), token: hp.xp.token, linkSentAt: data.xp?.linkSentAt || at };
     data.history = [...(data.history ?? []), { at, by: me.name, text: kind === "welcome" ? `Welcome email sent to ${to}` : `First-day email sent to ${to}` }];
     if (kind === "firstDay" && ["Approved to hire", "Offer sent", "Offer signed", "Background check", "Package ready"].includes(data.status)) data.status = "First-day email sent";
     await db.from("hires").update({ data }).eq("id", row.id);

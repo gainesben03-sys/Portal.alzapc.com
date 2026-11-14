@@ -344,6 +344,7 @@ export function Journey({ h, clientId, company, firstDayDaysBefore, x, hr, manag
         </div>
       )}
 
+      {hr && <PageCard h={h} busy={busy} act={act} />}
       {hr && introOn(x) && <IntroCard h={h} x={x} company={company} photo={photo} busy={busy} act={act} />}
       {hr && buddyOn(x) && <BuddyCard h={h} x={x} roster={roster} busy={busy} act={act} />}
       {(hr || manager) && playbookOn(x) && <PlanCard h={h} x={x} who={who} today={today} act={act} hr={hr} />}
@@ -371,13 +372,11 @@ function IntroCard({ h, x, company, photo, busy, act }: { h: Hire; x: Experience
   const w = introWording(x, xp);
   const [edit, setEdit] = useState(false);
   const [d, setD] = useState({ subject: "", message: "", closing: "" });
-  const [copied, setCopied] = useState(false);
   const lines = introLines(h, x);
   const sent = !!xp.intro?.sentAt;
   const audience = xp.intro?.audience ?? x.audience ?? "all";
   const wall = xp.intro?.wall ?? x.wall ?? true;
   const day = introDay(h);
-  const link = xp.token && typeof window !== "undefined" ? `${window.location.origin}/welcome/${xp.token}` : "";
   const introSave = (p: Record<string, unknown>, log: string) => act("intro", { intro: { ...xp.intro, ...p } }, (o) => ({ ...o, intro: { ...o.intro, ...p } as HireXp["intro"] }), log);
 
   return (
@@ -387,14 +386,7 @@ function IntroCard({ h, x, company, photo, busy, act }: { h: Hire; x: Experience
         <span className={`pill ${sent ? "green" : xp.approvedAt ? "green" : xp.submittedAt ? "amber" : ""}`}>{sent ? "Sent" : xp.intro?.cancelled ? "Not sending" : xp.approvedAt ? `Approved by ${v.preferred}` : xp.submittedAt ? "Answered, not approved yet" : xp.linkSentAt ? "Link sent" : "Not started"}</span>
       </div>
 
-      {!xp.submittedAt && (
-        <div className="row small" style={{ gap: 8, flexWrap: "wrap", marginTop: 10 }}>
-          <span className="grow muted">{xp.linkSentAt ? `Link sent ${shortDate(xp.linkSentAt.slice(0, 10))}${xp.remindedAt ? ", reminded" : ""}.` : h.emails?.welcome ? "The link goes out with tomorrow morning's emails." : "The link goes out the day after the welcome email."}</span>
-          <button className="btn sm" disabled={!!busy || !h.personalEmail} onClick={() => act("sendLink", {}, (o) => ({ ...o, token: o.token || newToken(), linkSentAt: new Date().toISOString() }), `Get-to-know-you link sent to ${h.personalEmail}`, "Link sent")}>{xp.linkSentAt ? "Send it again" : "Send it now"}</button>
-          {link && <button className="btn ghost sm" onClick={() => { navigator.clipboard?.writeText(link); setCopied(true); }}>{copied ? "Copied" : "Copy link"}</button>}
-        </div>
-      )}
-
+      {!xp.submittedAt && <p className="small muted" style={{ marginBottom: 0 }}>{xp.linkSentAt ? "Waiting on their answers. It's the first to-do on their welcome page." : "Their answers come in from the welcome page once it goes out."}</p>}
       {xp.submittedAt && (
         <>
           <div className="xp-intro">
@@ -543,6 +535,32 @@ function PlanCard({ h, x, who, today, act, hr }: { h: Hire; x: ExperienceSetting
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/** The new hire's welcome page link: in every onboarding email once the welcome email goes out. */
+function PageCard({ h, busy, act }: { h: Hire; busy: string; act: Act }) {
+  const xp = h.xp ?? {};
+  const [copied, setCopied] = useState(false);
+  const url = xp.token && typeof window !== "undefined" ? `${window.location.origin}/welcome/${xp.token}` : "";
+  return (
+    <div className="card section row small" style={{ gap: 8, flexWrap: "wrap", justifyContent: "flex-start" }}>
+      <div className="grow" style={{ minWidth: 220 }}>
+        <b>Welcome page</b>
+        <div className="tiny muted">{xp.token ? (xp.linkSentAt ? `In their emails since ${shortDate(xp.linkSentAt.slice(0, 10))}. No login needed.` : "Ready. It goes out with their next onboarding email.") : "Goes out with the welcome email. Their first day, to-dos, people and intro in one place."}</div>
+      </div>
+      {url ? (
+        <>
+          <button className="btn ghost sm" onClick={() => { navigator.clipboard?.writeText(url); setCopied(true); }}>{copied ? "Copied" : "Copy link"}</button>
+          <a className="btn ghost sm" href={url} target="_blank" rel="noreferrer">See what they see</a>
+        </>
+      ) : null}
+      {h.personalEmail && (
+        <button className="btn sm" disabled={!!busy} onClick={() => act("sendLink", {}, (o) => ({ ...o, token: o.token || newToken(), linkSentAt: new Date().toISOString() }), `Welcome page link sent to ${h.personalEmail}`, "Sent")}>
+          {xp.linkSentAt ? "Email it again" : "Email it now"}
+        </button>
+      )}
     </div>
   );
 }

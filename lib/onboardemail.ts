@@ -335,6 +335,13 @@ export function renderOnboard(e: OnboardEmail, h: Hire, s: OnboardingSettings, b
   const headline = esc(F(e.headline.replace(/\{first name\}/gi, "\u0001"))).replace(/\u0001/g, `<i>${esc(firstName(h))}</i>`);
   const intro = F(e.intro);
   const parts = e.blocks.map((x) => blockHtml(x, c, brand.accent));
+  // employee experience: every onboarding email points to the new hire's welcome page
+  const page = s.experience?.on && h.xp?.token && !h.xp.closed ? `${typeof window !== "undefined" ? window.location.origin : (process.env.PORTAL_URL || "https://portal.alzapc.com").replace(/\/$/, "")}/welcome/${h.xp.token}` : "";
+  if (page)
+    parts.unshift({
+      html: sectionHtml("#F4F1EC", `<p style="margin:0 0 12px 0;font-family:Arial,sans-serif;font-size:15px;line-height:22px;color:#1C1A19">Everything for your first days is on your welcome page: your first day, your to-dos and your people.</p><a href="${esc(page)}" style="display:inline-block;background:${brand.accent};padding:13px 22px;border-radius:4px;color:#FFFFFF;text-decoration:none;font-family:Arial,sans-serif;font-weight:bold;font-size:15px">Your welcome page</a>`),
+      text: `Your welcome page: ${page}`,
+    });
   const inner = `${e.kicker.trim() ? labelHtml(F(e.kicker), "#6B645E").replace("margin:0", "margin:40px 0 0 0") : ""}
 <p style="margin:${e.kicker.trim() ? "10px" : "40px"} 0 0 0;font-family:Georgia,serif;font-size:44px;line-height:50px;color:#1C1A19">${headline}</p>
 ${intro.trim() ? `<div style="margin:14px 0 0 0">${paras(intro, brand.accent, "margin:0 0 12px 0;font-family:Arial,sans-serif;font-size:16px;line-height:24px;color:#4A4441")}</div>` : ""}<!--HERO_END-->
