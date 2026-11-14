@@ -187,6 +187,14 @@ const toISO = (v: string, yearHint?: number): string | null => {
     if (!y) return null;
     return `${y}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}`;
   }
+  // "Nov 10, 2026", "10-Nov-26" and the like
+  if (/[a-z]/i.test(s) && /\d/.test(s)) {
+    const t = Date.parse(s.replace(/-/g, " "));
+    if (!Number.isNaN(t)) {
+      const d = new Date(t);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+  }
   return null;
 };
 

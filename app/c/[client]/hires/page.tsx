@@ -43,6 +43,17 @@ function timeline(h: Hire, steps: TrackerStep[]): { at: string; by: string; text
   return out.sort((a, b) => a.at.localeCompare(b.at));
 }
 
+/** A sortable yyyy-mm-dd for a start date, even if it was saved in another format. */
+function dateKey(v: string | undefined, blank: string) {
+  const s = (v || "").trim();
+  if (!s) return blank;
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const t = Date.parse(s);
+  if (Number.isNaN(t)) return blank;
+  const d = new Date(t);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export default function HiresPage() {
   return (
     <Suspense fallback={null}>
@@ -98,7 +109,13 @@ function Hires() {
     .filter((h) => bucket(h, steps) === tab)
     .filter((h) => !loc || (h.location || "").trim() === loc)
     .filter((h) => !f || [h.name, h.title, h.managerName].some((x) => (x || "").toLowerCase().includes(f)))
-    .sort((a, b) => (tab === "active" ? (a.startDate || "9999").localeCompare(b.startDate || "9999") : (b.startDate || "").localeCompare(a.startDate || "")));
+    .sort((a, b) => dateKey(a.startDate, "9999").localeCompare(dateKey(b.startDate, "9999")));
+  // top: not started yet, soonest first (no date last). Bottom: already started, most recent first.
+  const t0 = today || todayISO();
+  const groups = [
+    { key: "upcoming", label: "Not started yet", items: list.filter((h) => dateKey(h.startDate, "9999") > t0) },
+    { key: "started", label: tab === "active" ? "Current employees" : "Started", items: list.filter((h) => dateKey(h.startDate, "9999") <= t0).reverse() },
+  ].filter((g) => g.items.length);
   const week = today ? mine.filter((h) => bucket(h, steps) === "active" && h.startDate >= today && h.startDate <= addDaysISO(today, 7)).length : 0;
 
   const toggle = (h: Hire, st: TrackerStep) => {
@@ -169,8 +186,10 @@ function Hires() {
                     <th className="nt-note">Latest note</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {list.map((h) => {
+                {groups.map((g) => (
+                <tbody key={g.key}>
+                  <tr className="nt-group"><th colSpan={steps.length + 4} scope="colgroup">{g.label} <span>{g.items.length}</span></th></tr>
+                  {g.items.map((h) => {
                     const tl = timeline(h, steps);
                     const last = tl[tl.length - 1];
                     const n = h.startDate ? daysUntil(h.startDate) : null;
@@ -201,11 +220,15 @@ function Hires() {
                     );
                   })}
                 </tbody>
+                ))}
               </table>
             </div>
 
             <div className="nt-cards section">
-              {list.map((h) => {
+              {groups.map((g) => (
+              <div key={g.key} className="nt-cardgroup">
+              <h2 className="nt-grouph">{g.label} <span>{g.items.length}</span></h2>
+              {g.items.map((h) => {
                 const tl = timeline(h, steps);
                 const last = tl[tl.length - 1];
                 const n = h.startDate ? daysUntil(h.startDate) : null;
@@ -233,6 +256,8 @@ function Hires() {
                   </article>
                 );
               })}
+              </div>
+              ))}
             </div>
           </>
         )}
