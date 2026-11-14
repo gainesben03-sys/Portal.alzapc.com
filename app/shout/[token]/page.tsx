@@ -11,6 +11,7 @@ import { PublicChallenge, publicChallenge } from "@/lib/challenges";
 import { Board, Celebration, celebrateLine, DEFAULT_HEADLINE, MAX_MESSAGE, shortName, ShoutTheme, STARTERS, themeVars } from "@/lib/recognition";
 import { Burst } from "@/components/shoutui";
 import { DEMO_CELEBRATE, DEMO_CHALLENGES, DEMO_PEOPLE, DEMO_ROSTER, DEMO_SHOUTS, DEMO_VALUES, demoBoard, demoReactions } from "@/lib/shoutdemo";
+import { DEMO_COMPANY, DEMO_ACCENT } from "@/lib/state";
 
 type Info = { company: string; accent: string; theme?: ShoutTheme | null; logo: string | null; values: string[]; sms: string | null; showWall: boolean; board: Board | null; wall: WallItem[]; celebrate: Celebration[]; challenges: PublicChallenge[]; pass: Pass | null; poll?: PollView | null };
 type Pass = { id: string; title: string; link: number; holder: { id: string; name: string; team: string }; daysLeft: number; error?: string };
@@ -60,8 +61,8 @@ export default function ShoutPage() {
     } else if (r.reason === "demo") {
       setDemo(true);
       setInfo({
-        company: "Blueprint Studios",
-        accent: "#2b3cf5",
+        company: DEMO_COMPANY,
+        accent: DEMO_ACCENT,
         theme: (() => { try { return JSON.parse(localStorage.getItem("alza-demo-shout-theme") || "null"); } catch { return null; } })(),
         logo: null,
         values: DEMO_VALUES,

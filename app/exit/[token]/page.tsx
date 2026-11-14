@@ -4,6 +4,7 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { SURVEY } from "@/lib/offboard";
+import { DEMO_COMPANY, DEMO_ACCENT } from "@/lib/state";
 
 type Info = { first: string; company: string; accent: string; logo: string | null; done: boolean; questions: typeof SURVEY };
 
@@ -21,7 +22,7 @@ export default function ExitSurvey() {
       .then((r) => r.json())
       .then((j) => {
         if (j.ok) setInfo(j);
-        else if (j.reason === "demo" || demo) setInfo({ first: "Alex", company: "Blueprint Studios", accent: "#2b3cf5", logo: null, done: false, questions: SURVEY });
+        else if (j.reason === "demo" || demo) setInfo({ first: "Alex", company: DEMO_COMPANY, accent: DEMO_ACCENT, logo: null, done: false, questions: SURVEY });
         else setMissing(true);
       })
       .catch(() => setMissing(true));

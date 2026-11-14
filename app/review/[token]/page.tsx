@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BriefBlock } from "@/components/pitch";
 import type { CandidateBrief } from "@/lib/modules";
+import { DEMO_COMPANY, DEMO_ACCENT } from "@/lib/state";
 
 type Cand = {
   id: string;
@@ -32,8 +33,8 @@ type Info = {
 };
 
 const DEMO: Info = {
-  company: "Blueprint Studios",
-  accent: "#2b3cf5",
+  company: DEMO_COMPANY,
+  accent: DEMO_ACCENT,
   logo: null,
   reviewer: "Pat Morgan",
   expiresAt: null,

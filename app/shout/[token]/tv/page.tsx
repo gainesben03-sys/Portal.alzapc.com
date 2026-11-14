@@ -8,6 +8,7 @@ import { ChallengeCards, Scoreboard, ShoutCard, WallItem } from "@/components/sh
 import { PublicChallenge, publicChallenge } from "@/lib/challenges";
 import { Board, Celebration, shortName, ShoutTheme, themeVars } from "@/lib/recognition";
 import { DEMO_CELEBRATE, DEMO_CHALLENGES, DEMO_ROSTER, DEMO_SHOUTS, demoBoard, demoReactions } from "@/lib/shoutdemo";
+import { DEMO_COMPANY, DEMO_ACCENT } from "@/lib/state";
 
 type Info = { company: string; accent: string; theme?: ShoutTheme | null; logo: string | null; board: Board | null; wall: WallItem[]; celebrate?: Celebration[]; challenges?: PublicChallenge[] };
 
@@ -24,7 +25,7 @@ export default function ShoutTv() {
         .then((j) => {
           if (j.ok) setInfo(j);
           else if (j.reason === "demo")
-            setInfo({ company: "Blueprint Studios", accent: "#2b3cf5", theme: (() => { try { return JSON.parse(localStorage.getItem("alza-demo-shout-theme") || "null"); } catch { return null; } })(), logo: null, celebrate: DEMO_CELEBRATE, challenges: DEMO_CHALLENGES.map((c) => publicChallenge(c, DEMO_SHOUTS, DEMO_ROSTER)), board: demoBoard(), wall: DEMO_SHOUTS.filter((s) => s.status === "live").map((s) => ({ id: s.id, to: shortName(s.to.name), team: s.to.department ?? "", from: shortName(s.from.name), value: s.value ?? null, message: s.message, at: s.at, reactions: demoReactions[s.id] ?? {}, mine: [] })) });
+            setInfo({ company: DEMO_COMPANY, accent: DEMO_ACCENT, theme: (() => { try { return JSON.parse(localStorage.getItem("alza-demo-shout-theme") || "null"); } catch { return null; } })(), logo: null, celebrate: DEMO_CELEBRATE, challenges: DEMO_CHALLENGES.map((c) => publicChallenge(c, DEMO_SHOUTS, DEMO_ROSTER)), board: demoBoard(), wall: DEMO_SHOUTS.filter((s) => s.status === "live").map((s) => ({ id: s.id, to: shortName(s.to.name), team: s.to.department ?? "", from: shortName(s.from.name), value: s.value ?? null, message: s.message, at: s.at, reactions: demoReactions[s.id] ?? {}, mine: [] })) });
         })
         .catch(() => undefined);
     load();

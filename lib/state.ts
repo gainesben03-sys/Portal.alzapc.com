@@ -54,6 +54,9 @@ export function emptyState(): State {
 /** Demo data (fictional), used only when Supabase is not configured. */
 /** The public demo (demo.alzapc.com) never shows a real client: the pilot company becomes a fictional one. */
 export const DEMO_SITE = process.env.NEXT_PUBLIC_DEMO_SITE === "1";
+/** The sample company on public demo pages (exit survey, review, shoutouts, TV). */
+export const DEMO_COMPANY = DEMO_SITE ? "Harborlight Events" : "Blueprint Studios";
+export const DEMO_ACCENT = DEMO_SITE ? "#0f766e" : "#2b3cf5";
 
 export function demoState(): State {
   const s: State = { ...emptyState(), clients: CLIENTS, ...seed(), ...seedModules() };

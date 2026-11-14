@@ -102,7 +102,7 @@ export default function Clients() {
       {adding && (
         <Sheet title="Add a client" onClose={() => setAdding(false)}>
           <label className="f">Company name</label>
-          <input className="f" autoFocus value={nc.name} onChange={(e) => setNc({ ...nc, name: e.target.value })} placeholder="Blueprint Studios" />
+          <input className="f" autoFocus value={nc.name} onChange={(e) => setNc({ ...nc, name: e.target.value })} placeholder="Bayside Residential" />
           <label className="f">Engagement</label>
           <input className="f" value={nc.engagement} onChange={(e) => setNc({ ...nc, engagement: e.target.value })} placeholder="Fractional HR + recruiting" />
           <p className="tiny muted" style={{ marginTop: 8 }}>Next you'll set their modules, logo, colors and invite their team.</p>
