@@ -1626,3 +1626,16 @@ button.nt-dot:hover { border-color: var(--green); transform: scale(1.06); }
 .op-photo-edit img { width: 100%; aspect-ratio: 2 / 1; object-fit: cover; border-radius: 12px; display: block; }
 .op-photo-empty { display: flex; align-items: center; justify-content: center; aspect-ratio: 4 / 1; border: 1px dashed var(--line); border-radius: 12px; text-align: center; padding: 0 12px; }
 .op-grid { align-items: start; }
+/* HQ leadership chart: tiers stacked, a thin line joining them */
+.op-org { display: flex; flex-direction: column; align-items: center; gap: 22px; padding: 4px 0; }
+.op-org-row { position: relative; display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; width: 100%; }
+.op-org-row + .op-org-row::before { content: ""; position: absolute; top: -22px; left: 50%; width: 1px; height: 22px; background: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.op-org-node { display: flex; flex-direction: column; align-items: center; text-align: center; min-width: 170px; max-width: 220px; padding: 10px 14px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
+.op-org-node b { font-size: 14.5px; }
+.op-org-node span { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.op-org-node.t0 { border: 2px solid var(--accent); padding: 12px 18px; }
+.op-org-node.t0 b { font-size: 16px; }
+.op-org-mail { font-size: 12px; margin-top: 6px; color: var(--accent); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.op-hq-more { margin-top: 14px; text-align: center; }
+.op-hq-more ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 4px 16px; text-align: left; font-size: 13.5px; }
+@media (max-width: 520px) { .op-org-node { min-width: 0; flex: 1 1 140px; } }

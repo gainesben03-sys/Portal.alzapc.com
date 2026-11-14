@@ -71,7 +71,7 @@ function guardWrites(on: boolean) {
 }
 
 const Ctx = createContext<Store | null>(null);
-const KEY = "alza-portal-demo-v19";
+const KEY = "alza-portal-demo-v20";
 export const PENDING_INVITE = "alza-pending-invite";
 
 type Who = { email: string; advisor: boolean; memberships: { clientId: string; name: string; role: string; access: string }[] };

@@ -41,8 +41,10 @@ export interface PropertySettings {
   items?: PropItem[];
   /** roster locations that aren't properties (a corporate office, "Remote") */
   hidden?: string[];
-  /** the roster location that is headquarters: shown on its own above the properties. "" = none */
-  hq?: string;
+  /** roster locations that are headquarters (one or more, shown together above the properties). [] = none */
+  hq?: string[];
+  /** who shows in the HQ leadership chart, by person id; missing = picked from titles */
+  leaders?: string[];
   contacts?: Contact[];
 }
 
@@ -82,7 +84,7 @@ const person = (p: TeamMember): CardPerson => ({ id: p.id, name: p.name, title: 
 export function propertyCards(people: TeamMember[], s: PropertySettings | undefined, clientId: string): PropertyCard[] {
   const team = people.filter((p) => p.clientId === clientId && p.active !== false);
   const hidden = new Set((s?.hidden ?? []).map(keyOf));
-  const hqK = hqKey(people, s, clientId);
+  const hqK = new Set(hqKeys(people, s, clientId));
   const items = new Map<string, PropItem>();
   for (const it of s?.items ?? []) items.set(it.key, it);
   const byKey = new Map<string, TeamMember[]>();
@@ -93,7 +95,7 @@ export function propertyCards(people: TeamMember[], s: PropertySettings | undefi
     if (!locs.length) corporate.push(p);
     for (const l of locs) {
       const k = keyOf(l);
-      if (hidden.has(k) || CORPORATE.test(l) || k === hqK) {
+      if (hidden.has(k) || CORPORATE.test(l) || hqK.has(k)) {
         corporate.push(p);
         continue;
       }
@@ -142,44 +144,64 @@ export function propertyCards(people: TeamMember[], s: PropertySettings | undefi
   return cards.sort((a, b) => order[a.status] - order[b.status] || a.name.localeCompare(b.name));
 }
 
-/** Which roster location is headquarters: the one chosen, else the first that sounds like one ("Corporate", "HQ"). */
-export function hqKey(people: TeamMember[], s: PropertySettings | undefined, clientId: string): string {
+const HQ_NAME = /corporate|head ?office|\bhq\b|headquarters|home office/i;
+/** Which roster locations are headquarters: the ones chosen, else every one that sounds like it ("Corporate", "… HQ"). */
+export function hqKeys(people: TeamMember[], s: PropertySettings | undefined, clientId: string): string[] {
   if (s?.hq !== undefined) return s.hq;
-  const hit = rosterLocations(people, clientId).find((l) => /corporate|head ?office|\bhq\b|headquarters|home office/i.test(l.name));
-  return hit?.key ?? "";
+  return rosterLocations(people, clientId).filter((l) => HQ_NAME.test(l.name)).map((l) => l.key);
 }
 
+export interface Leader extends CardPerson {
+  tier: number; // 0 = top of the chart
+}
 export interface HqCard {
-  key: string;
+  key: string; // the first HQ location; its details (name, address) live on that item
+  keys: string[];
   name: string;
+  places: string[]; // the roster locations combined here
   address?: string;
   note?: string;
   city?: string;
-  people: CardPerson[];
+  leaders: Leader[];
+  others: CardPerson[];
+  autoLeaders: boolean;
 }
+// seniority, for the leadership chart: Managing Principal, Principal, Managing Director, HR and directors…
 const RANK: [RegExp, number][] = [
-  [/\b(ceo|chief executive|founder|owner|president|managing (principal|partner|director)|principal)\b/i, 0],
-  [/\b(chief|coo|cfo|cto|cmo|evp|svp)\b/i, 1],
-  [/\b(vp|vice president|head of)\b/i, 2],
-  [/\bdirector\b/i, 3],
-  [/\b(manager|controller|lead)\b/i, 4],
+  [/\b(ceo|chief executive|founder|owner|president|managing (principal|partner)|executive chair)\b/i, 0],
+  [/\b(principal|partner|chief|coo|cfo|cto|cmo|evp|svp)\b/i, 1],
+  [/\b(managing director|vp|vice president|head of|general counsel)\b/i, 2],
+  [/\b(director|hr|human resources|people (and|&) culture|people operations|controller)\b/i, 3],
+  [/\b(manager|lead)\b/i, 4],
 ];
-const rank = (t: string) => RANK.find(([re]) => re.test(t))?.[1] ?? 5;
+export const rankOf = (t: string) => RANK.find(([re]) => re.test(t))?.[1] ?? 5;
 
-/** The people at headquarters, most senior first. */
+/** Headquarters: one card for every HQ location, with a small leadership chart and everyone else listed. */
 export function hqCard(people: TeamMember[], s: PropertySettings | undefined, clientId: string): HqCard | null {
-  const k = hqKey(people, s, clientId);
-  if (!k) return null;
-  const here = people.filter((p) => p.clientId === clientId && p.active !== false && locationsOf(p.location).some((l) => keyOf(l) === k));
-  const it = s?.items?.find((i) => i.key === k);
-  const name = it?.name || rosterLocations(people, clientId).find((l) => l.key === k)?.name || "Headquarters";
+  const keys = hqKeys(people, s, clientId);
+  if (!keys.length) return null;
+  const set = new Set(keys);
+  const team = people.filter((p) => p.clientId === clientId && p.active !== false);
+  const here = team.filter((p) => locationsOf(p.location).some((l) => set.has(keyOf(l))));
+  const locs = rosterLocations(people, clientId);
+  const places = keys.map((k) => locs.find((l) => l.key === k)?.name ?? k);
+  // the HQ's name, address and note live on whichever HQ location was edited
+  const it = s?.items?.find((i) => set.has(i.key) && (i.address || i.note || i.city || i.name)) ?? s?.items?.find((i) => set.has(i.key));
+  const byRank = [...here].sort((a, b) => rankOf(a.title || "") - rankOf(b.title || "") || a.name.localeCompare(b.name));
+  const chosen = s?.leaders?.length ? s.leaders.map((id) => team.find((p) => p.id === id)).filter((p): p is TeamMember => !!p) : byRank.filter((p) => rankOf(p.title || "") <= 3).slice(0, 9);
+  const ids = new Set(chosen.map((p) => p.id));
+  const leaders = [...chosen].sort((a, b) => rankOf(a.title || "") - rankOf(b.title || "") || a.name.localeCompare(b.name)).map((p) => ({ ...person(p), tier: Math.min(rankOf(p.title || ""), 3) }));
   return {
-    key: k,
-    name,
+    key: it?.key ?? keys[0],
+    keys,
+    name: it?.name || (places.length > 1 ? "Headquarters" : places[0]) || "Headquarters",
+    places,
     address: it?.address,
     note: it?.note,
     city: it?.city ?? cityIn(it?.address || ""),
-    people: here.sort((a, b) => rank(a.title || "") - rank(b.title || "") || a.name.localeCompare(b.name)).map(person),
+    leaders,
+    others: byRank.filter((p) => !ids.has(p.id)).map(person),
+    autoLeaders: !s?.leaders?.length,
   };
 }
 
@@ -226,12 +248,15 @@ export function cleanSettings(v: unknown, opts: { allowData?: boolean } = {}): P
     });
   }
   const hidden = [...new Set((Array.isArray(s.hidden) ? s.hidden : []).map((h) => keyOf(str(h, 80))).filter(Boolean))].slice(0, 100);
-  const hq = typeof s.hq === "string" ? keyOf(str(s.hq, 80)) : undefined;
+  // older settings kept a single HQ as a string
+  const rawHq = s.hq as unknown;
+  const hq = Array.isArray(rawHq) ? [...new Set(rawHq.map((h) => keyOf(str(h, 80))).filter(Boolean))].slice(0, 6) : typeof rawHq === "string" ? (rawHq ? [keyOf(str(rawHq, 80))] : []) : undefined;
+  const leaders = Array.isArray(s.leaders) ? s.leaders.map((x) => str(x, 64)).filter(Boolean).slice(0, 12) : undefined;
   const contacts = (Array.isArray(s.contacts) ? s.contacts : [])
     .slice(0, 4)
     .map((c) => ({ name: str(c?.name, 60), title: str(c?.title, 60), email: str(c?.email, 120).toLowerCase(), what: str(c?.what, 100) }))
     .filter((c) => c.name);
-  return { items, hidden, contacts, ...(hq !== undefined ? { hq } : {}) };
+  return { items, hidden, contacts, ...(hq !== undefined ? { hq } : {}), ...(leaders?.length ? { leaders } : {}) };
 }
 
 // ---------------------------------------------------------------- map
