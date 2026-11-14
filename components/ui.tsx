@@ -316,6 +316,8 @@ export function ClientNav({ clientId }: { clientId: string }) {
   const training = !!cfg?.modules.training && access !== "hiring";
   const groups: { key: string; label: string; subs: Sub[] }[] = [
     { key: "home", label: "Dashboard", subs: access === "hiring" ? [] : [{ href: base, label: "Home", match: [] }] },
+    // Our Properties: its own tab when the module is on
+    ...(cfg?.modules.properties && access !== "hiring" ? [{ key: "properties", label: "Our Properties", subs: [{ href: `${base}/properties`, label: "Our Properties", match: [`${base}/properties`] }] }] : []),
     {
       // Manager Hub: anyone who has people reporting to them on the roster (Ben sees it when there's a roster)
       key: "hub",
@@ -329,7 +331,6 @@ export function ClientNav({ clientId }: { clientId: string }) {
           : []),
         ...(tools && cfg?.askHr !== false ? [{ href: `${base}/hub/ask`, label: "Ask HR", match: [`${base}/hub/ask`] }] : []),
         ...(cfg?.modules.recognition && access !== "hiring" ? [{ href: `${base}/recognition`, label: "Team Wall", match: [`${base}/recognition`] }] : []),
-        ...(cfg?.modules.properties && access !== "hiring" ? [{ href: `${base}/properties`, label: "Our Properties", match: [`${base}/properties`] }] : []),
         ...(tools ? [{ href: `${base}/hub/library`, label: training ? "Toolkit" : "Learn", match: [`${base}/hub/library`, ...(training ? [] : [`${base}/hub/learn`, `${base}/hub/view`])] }] : []),
       ],
     },
