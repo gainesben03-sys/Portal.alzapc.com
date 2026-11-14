@@ -291,6 +291,9 @@ function PersonSheet({ p, users, onClose, onSave, onRemove }: { p: TeamMember; u
   const [bm, setBm] = useState(p.birthday ? Number(p.birthday.slice(0, 2)) : 0);
   const [bd, setBd] = useState(p.birthday ? Number(p.birthday.slice(3)) : 0);
   const [confirm, setConfirm] = useState(false);
+  // a manager who isn't on the portal yet can be typed in
+  const onPortal = (e: string) => users.some((u) => sameEmail(u.email, e));
+  const [typed, setTyped] = useState(!!(p.managerName || p.managerEmail) && !onPortal(p.managerEmail));
   const set = (k: keyof TeamMember, val: unknown) => setV({ ...v, [k]: val });
   const months = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleDateString("en-US", { month: "long" }));
   return (
@@ -303,17 +306,25 @@ function PersonSheet({ p, users, onClose, onSave, onRemove }: { p: TeamMember; u
           <label className="f">Manager
             <select
               className="f"
-              value={users.find((u) => sameEmail(u.email, v.managerEmail))?.email ?? (v.managerEmail ? "__other" : "")}
+              value={typed ? "__typed" : users.find((u) => sameEmail(u.email, v.managerEmail))?.email ?? ""}
               onChange={(e) => {
+                if (e.target.value === "__typed") return setTyped(true);
+                setTyped(false);
                 const u = users.find((x) => x.email === e.target.value);
                 setV({ ...v, managerEmail: u?.email.toLowerCase() ?? "", managerName: u?.name ?? "" });
               }}
             >
-              <option value="">Choose...</option>
+              <option value="">No manager (an owner or executive)</option>
               {users.map((u) => <option key={u.email} value={u.email}>{u.name}</option>)}
-              {v.managerEmail && !users.some((u) => sameEmail(u.email, v.managerEmail)) && <option value="__other">{v.managerName || v.managerEmail} (not on the portal)</option>}
+              <option value="__typed">Someone not on the portal yet…</option>
             </select>
           </label>
+          {typed && (
+            <div className="two">
+              <label className="f">Manager&apos;s name<input className="f" value={v.managerName} onChange={(e) => set("managerName", e.target.value)} /></label>
+              <label className="f">Manager&apos;s email <span className="tiny muted">(optional)</span><input className="f" type="email" value={v.managerEmail} onChange={(e) => set("managerEmail", e.target.value.trim().toLowerCase())} /></label>
+            </div>
+          )}
           <label className="f">Hire date<input className="f" type="date" value={v.hireDate ?? ""} onChange={(e) => set("hireDate", e.target.value || undefined)} /></label>
           <div className="f">
             <span className="flabel">Birthday <span className="tiny muted">(month and day only)</span></span>
@@ -335,7 +346,7 @@ function PersonSheet({ p, users, onClose, onSave, onRemove }: { p: TeamMember; u
       </div>
       <label className="rule" style={{ cursor: "pointer" }}>
         <input type="checkbox" checked={v.celebrate !== false} onChange={(e) => set("celebrate", e.target.checked ? undefined : false)} />
-        <div><b className="small">Celebrate their birthday and work anniversary with the team</b><div className="tiny muted">Shows on the Shoutouts Celebrate tab (month and day only). Uncheck if they&apos;d rather not. Their manager still gets a private reminder.</div></div>
+        <div><b className="small">Celebrate their birthday and work anniversary with the team</b><div className="tiny muted">Shows on the Team Wall (month and day only). Uncheck if they&apos;d rather not. Their manager still gets a private reminder.</div></div>
       </label>
       {p.id && (
         <label className="rule" style={{ cursor: "pointer" }}>
@@ -349,7 +360,7 @@ function PersonSheet({ p, users, onClose, onSave, onRemove }: { p: TeamMember; u
         ) : <span />}
         <div style={{ display: "flex", gap: 8 }}>
           <button className="btn ghost sm" onClick={onClose}>Cancel</button>
-          <button className="btn primary sm" disabled={!v.name.trim() || !v.managerEmail} onClick={() => onSave({ ...v, name: v.name.trim(), title: v.title.trim() })}>Save</button>
+          <button className="btn primary sm" disabled={!v.name.trim()} onClick={() => onSave({ ...v, name: v.name.trim(), title: v.title.trim(), managerName: v.managerName.trim(), managerEmail: v.managerEmail.trim().toLowerCase() })}>Save</button>
         </div>
       </div>
     </Sheet>
