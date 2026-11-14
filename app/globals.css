@@ -1927,3 +1927,11 @@ button.wp-dot { cursor: pointer; }
   .wall-cork, .wall-chalk { border-width: 10px; }
   .wall-save { font-size: 30px; top: 10px; right: 12px; }
 }
+/* wall fixes: reaction counts readable on dark walls, anniversary circles always fit */
+.wall .so-card .so-rx span { color: #5c5650; }
+.wall-graffiti .so-card .so-rx span, .wall-chalk .so-wall > .so-card:nth-child(3n+1) .so-rx span { color: #fff; }
+.wall .wm-years { width: 60px; height: 60px; flex: none; overflow: hidden; }
+.wall .wm-years b, .wall .wm-years small { display: block; font-family: Inter, system-ui, sans-serif; white-space: nowrap; line-height: 1; }
+.wall .wm-years b { font-size: 21px; font-weight: 800; }
+.wall .wm-years small { font-size: 8.5px; margin-top: 2px; }
+.wall .wm-cal b, .wall .wm-cal small { font-family: Inter, system-ui, sans-serif; white-space: nowrap; }
