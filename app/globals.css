@@ -1995,3 +1995,9 @@ button.wp-dot { cursor: pointer; }
 .nt th.nt-step { width: 108px; min-width: 108px; max-width: 124px; overflow: hidden; }
 .nt-step-l { overflow-wrap: anywhere; hyphens: auto; -webkit-hyphens: auto; }
 .nt td.nt-mgr, .nt th.nt-mgr { white-space: nowrap; }
+/* Team Wall: more room. A styled wall runs the full width, with the side cards in a row underneath */
+.wrap.wide.tw-page { max-width: 1400px; }
+.tw-cols.themed { flex-direction: column; align-items: stretch; }
+.tw-cols.themed .tw-main { flex: none; width: 100%; }
+.tw-cols.themed .tw-side { flex: none; width: 100%; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); align-items: start; }
+.wm-bday.today .wm-txt { padding-right: 34px; }

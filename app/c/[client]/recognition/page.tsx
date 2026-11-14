@@ -163,7 +163,7 @@ export default function Recognition() {
     <div style={{ ["--accent" as string]: client.accent }}>
       <ClientTopbar client={client} />
       <ClientNav clientId={client.id} />
-      <main className="wrap wide">
+      <main className="wrap wide tw-page">
         <div className="tw-head">
           <div className="tw-title">
             <h1 style={{ margin: 0 }}>Team Wall</h1>
@@ -227,7 +227,7 @@ export default function Recognition() {
               </div>
             ))}
 
-            <div className="tw-cols section">
+            <div className={`tw-cols section ${wall !== "clean" ? "themed" : ""}`}>
               <div className={`tw-main so-portal so-theme-${rec.theme?.style ?? "classic"}`} style={themeVars(client.accent, rec.theme)}>
                 {wall === "clean" ? (
                   <>
