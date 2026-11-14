@@ -1519,3 +1519,70 @@ button.nt-dot:hover { border-color: var(--green); transform: scale(1.06); }
 .nt-cardgroup { display: grid; gap: 10px; }
 .nt-cardgroup + .nt-cardgroup { margin-top: 14px; }
 .nt-grouph { margin: 4px 2px 0; font-size: 14px; }
+
+/* ---------- our properties ---------- */
+.op-head { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.op-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.op-seg { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--soft2); }
+.op-seg button { height: 36px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: var(--ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.op-seg button.on { background: var(--card); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.op-find { width: 240px; height: 40px; padding: 0 12px; border-radius: 12px; font-size: 14px; }
+.op-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 14px; }
+.op-card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.op-card-top { display: flex; align-items: flex-start; gap: 12px; }
+.op-card h2 { margin: 0; font-size: 17px; }
+.op-num { flex: none; width: 30px; height: 30px; border-radius: 50%; color: #fff; font-size: 13px; font-weight: 700; display: grid; place-items: center; }
+.op-num.sm { width: 26px; height: 26px; font-size: 12px; }
+.op-num.lg { width: 40px; height: 40px; font-size: 16px; }
+.op-lead { display: flex; align-items: center; gap: 10px; background: color-mix(in srgb, var(--accent) 8%, var(--card)); border-radius: 12px; padding: 10px 12px; }
+.op-lead.none { background: var(--amber-bg); }
+.op-lead.none b { color: var(--amber); }
+.op-k { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.op-lead.none .op-k { color: var(--amber); }
+.op-lead b { display: block; font-size: 15px; }
+.op-mail { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--accent); }
+.op-mail.ring { background: var(--card); border: 1px solid var(--line); color: var(--ink); }
+.op-mail:hover { background: var(--soft2); }
+.op-rows { list-style: none; margin: 0; padding: 0; }
+.op-rows li { display: flex; align-items: center; gap: 10px; padding: 5px 0; border-top: 1px solid var(--line); font-size: 14px; min-height: 34px; }
+.op-rk { width: 96px; flex: none; color: var(--muted); font-size: 13px; }
+.op-rn { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.op-rn.gap { color: var(--amber); font-weight: 500; }
+.op-map { display: flex; flex-wrap: wrap; gap: 18px; background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 16px; }
+.op-map-l { flex: 3 1 480px; min-width: 0; }
+.op-map-r { flex: 2 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.op-li { display: flex; align-items: center; gap: 12px; padding: 9px 8px; border: 0; border-radius: 12px; background: none; font: inherit; color: var(--ink); text-align: left; cursor: pointer; }
+.op-li:hover { background: var(--soft); }
+.op-li b { font-size: 14.5px; }
+.op-legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: auto; padding: 12px 6px 2px; font-size: 12px; color: var(--muted); }
+.op-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.op-legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.bm { position: relative; width: 100%; aspect-ratio: 310 / 290; border-radius: 14px; overflow: hidden; background: #f5f1e8; }
+.bm svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.bm-pin { position: absolute; transform: translate(-50%, -50%); width: 26px; height: 26px; padding: 0; border-radius: 50%; border: 2px solid #fff; color: #fff; font: inherit; font-size: 12px; font-weight: 700; display: grid; place-items: center; box-shadow: 0 2px 8px rgba(25,40,60,.3); cursor: pointer; transition: transform .12s ease; }
+.bm-pin:hover, .bm-pin:focus-visible { transform: translate(-50%, -50%) scale(1.15); z-index: 2; }
+@media (prefers-reduced-motion: reduce) { .bm-pin { transition: none; } }
+.op-focus { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.op-note { margin: 0; background: var(--soft); border-radius: 12px; padding: 10px 12px; font-size: 14px; }
+.op-warn { background: var(--amber-bg); color: var(--amber); border-radius: 12px; padding: 10px 12px; font-size: 14px; }
+.op-people { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 12px; }
+.op-pc { border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 3px; }
+.op-pc .op-k { color: var(--muted); }
+.op-pc.lead { border: 2px solid var(--accent); }
+.op-pc.lead .op-k { color: var(--accent); }
+.op-pc.gap { background: var(--amber-bg); border-color: transparent; }
+.op-pc.gap .op-k, .op-pc.gap .op-pn { color: var(--amber); }
+.op-pn { font-size: 16px; }
+.op-stuck { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; }
+.op-stuck-h { flex: 1 1 120px; }
+.op-stuck-p { flex: 2 1 260px; display: flex; align-items: center; gap: 10px; }
+.op-scroll { max-height: 66vh; overflow-y: auto; margin: 0 -4px; padding: 0 4px; }
+.op-h { margin: 16px 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.op-manage { list-style: none; margin: 0 0 6px; padding: 0; border: 1px solid var(--line); border-radius: 12px; }
+.op-manage li { display: flex; align-items: center; gap: 10px; padding: 9px 12px; font-size: 14px; }
+.op-manage li + li { border-top: 1px solid var(--line); }
+.op-manage .check { display: flex; align-items: center; gap: 10px; width: 100%; }
+.op-contact { border: 1px solid var(--line); border-radius: 12px; padding: 10px; margin-bottom: 8px; display: grid; gap: 6px; }
+.op-card h2, .op-focus h1 { text-transform: none; letter-spacing: 0; color: var(--ink); }
+.op-card h2 { font-family: inherit; font-size: 17px; font-weight: 700; line-height: 1.3; }
+.op-lead > .grow, .op-stuck-p > .grow, .op-li > .grow { flex: 1; }

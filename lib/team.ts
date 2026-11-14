@@ -178,7 +178,7 @@ const H = {
   hire: /^(hire date|start date|date of hire|original hire date|hired)$/i,
   birthday: /^(birthday|birth date|date of birth|dob|birthdate)$/i,
   department: /^(department|dept|team)$/i,
-  location: /^(location|work location|office|site)$/i,
+  location: /^(location|work location|office|site|property|properties|community|building|work site)$/i,
   cell: /^(cell|cell phone|mobile|mobile phone|personal mobile|phone|phone number|text|sms)$/i,
   employeeId: /^(employee id|employee number|emp id|emp #|employee #|associate id|file number|file #|id|worker id|position id)$/i,
 };

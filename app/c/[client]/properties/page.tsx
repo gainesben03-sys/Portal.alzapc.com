@@ -1,0 +1,440 @@
+"use client";
+
+// Our Properties: a card for each property with who leads it and who handles what.
+// Cards fill from the team roster (Location + Title). Ben and executives can fix any slot,
+// set a property's area for the map, hide locations that aren't properties, and pick the
+// "still stuck" contacts. Directory by default, Map view on request.
+import { useParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { BayMap, MapPin } from "@/components/baymap";
+import { ClientNav, ClientTopbar, Sheet, Toast, useGuard, useToast } from "@/components/ui";
+import { CITIES, cleanSettings, Contact, keyOf, pinFor, PropertyCard, propertyCards, PropertySettings, PropItem, PropStatus, RoleKey, ROLES, rosterLocations, STATUSES } from "@/lib/properties";
+import { useStore } from "@/lib/store";
+import { authHeader, LIVE } from "@/lib/supabase";
+
+type Roster = { id: string; name: string; title: string; location: string };
+type Loc = { key: string; name: string; count: number; corporate: boolean };
+type Data = { cards: PropertyCard[]; contacts: Contact[]; canEdit: boolean; settings?: PropertySettings; people?: Roster[]; locations?: Loc[] };
+
+const DOT: Record<PropStatus, string> = { Active: "#3f8a5a", Transition: "#d0862a", Acquisition: "#3c7fc0", Inactive: "#8a857e" };
+const TXT: Record<PropStatus, string> = { Active: "var(--green)", Transition: "var(--amber)", Acquisition: "#2e6aa3", Inactive: "var(--muted)" };
+
+function useProperties(clientId: string) {
+  const { people, config, viewer, me, getClient } = useStore();
+  const [live, setLive] = useState<Data | null>(null);
+  const [err, setErr] = useState("");
+  const load = useCallback(async () => {
+    if (!LIVE) return;
+    try {
+      const r = await fetch(`/api/properties?clientId=${encodeURIComponent(clientId)}`, { headers: await authHeader() });
+      const j = await r.json();
+      if (j.ok) setLive(j);
+      else setErr(j.reason || "error");
+    } catch {
+      setErr("error");
+    }
+  }, [clientId]);
+  useEffect(() => {
+    load();
+  }, [load]);
+  // demo: everything from this browser's sample data
+  const demo = useMemo<Data | null>(() => {
+    if (LIVE) return null;
+    const settings = cleanSettings(config[clientId]?.properties);
+    const client = getClient(clientId);
+    const canEdit = viewer?.kind === "advisor" || me?.access === "exec";
+    const esc = client?.escalation;
+    return {
+      cards: propertyCards(people, settings, clientId),
+      contacts: settings.contacts?.length ? settings.contacts : [...(esc?.name ? [{ name: esc.name, title: esc.role, email: esc.email ?? "", what: "Operations and anything else" }] : []), { name: "Ben Gaines", title: "HR", email: "ben@alzapc.com", what: "Employee questions and issues" }],
+      canEdit,
+      settings,
+      people: people.filter((p) => p.clientId === clientId && p.active !== false).map((p) => ({ id: p.id, name: p.name, title: p.title, location: p.location || "" })).sort((a, b) => a.name.localeCompare(b.name)),
+      locations: rosterLocations(people, clientId),
+    };
+  }, [people, config, clientId, viewer, me, getClient]);
+  return { data: LIVE ? live : demo, err, reload: load };
+}
+
+export default function PropertiesPage() {
+  const { client: clientId } = useParams<{ client: string }>();
+  const ok = useGuard("client", clientId);
+  const { getClient, config, patch, viewer } = useStore();
+  const client = getClient(clientId);
+  const cfg = config[clientId];
+  const { data, err, reload } = useProperties(clientId);
+  const toast = useToast();
+  const [view, setView] = useState<"directory" | "map">("directory");
+  const [q, setQ] = useState("");
+  const [focus, setFocus] = useState<string | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [managing, setManaging] = useState(false);
+
+  if (!ok || !client) return null;
+  const isAdvisor = viewer?.kind === "advisor";
+  if (!cfg?.modules.properties && !isAdvisor)
+    return (
+      <div>
+        <ClientTopbar client={client} />
+        <ClientNav clientId={client.id} />
+        <main className="wrap"><div className="card">Our Properties isn&apos;t turned on for this workspace.</div></main>
+      </div>
+    );
+
+  const save = async (settings: PropertySettings, msg = "Saved") => {
+    const clean = cleanSettings(settings);
+    if (!LIVE) {
+      patch({ config: { ...config, [clientId]: { ...cfg, properties: clean } } });
+      toast.show(msg);
+      return true;
+    }
+    const r = await fetch("/api/properties", { method: "POST", headers: { "Content-Type": "application/json", ...(await authHeader()) }, body: JSON.stringify({ clientId, settings: clean }) });
+    const j = await r.json().catch(() => ({}));
+    if (!j.ok) {
+      toast.show(j.reason === "preview" ? "Preview is read-only" : "Couldn't save. Try again.");
+      return false;
+    }
+    patch({ config: { ...config, [clientId]: { ...cfg, properties: j.settings } } });
+    await reload();
+    toast.show(msg);
+    return true;
+  };
+
+  const cards = data?.cards ?? [];
+  const f = q.trim().toLowerCase();
+  const shown = cards.filter((c) => !f || [c.name, c.city ?? "", ...c.slots.map((s) => s.person?.name ?? "")].some((t) => t.toLowerCase().includes(f)));
+  const num = new Map(cards.map((c, i) => [c.key, String(i + 1)]));
+  const open = cards.find((c) => c.key === focus);
+  const editCard = cards.find((c) => c.key === editing);
+
+  return (
+    <div style={{ ["--accent" as string]: client.accent }}>
+      <ClientTopbar client={client} />
+      <ClientNav clientId={client.id} />
+      <main className="wrap wide">
+        {!cfg?.modules.properties && isAdvisor && <div className="pr-draft tiny">Our Properties is off for {client.name}. Turn it on in their settings under Modules.</div>}
+
+        {!data ? (
+          <div className="card small muted section">{err ? "Couldn't load the properties. Refresh to try again." : "Loading…"}</div>
+        ) : open ? (
+          <Focus card={open} n={num.get(open.key) ?? ""} canEdit={data.canEdit} onBack={() => setFocus(null)} onEdit={() => setEditing(open.key)} />
+        ) : (
+          <>
+            <div className="op-head">
+              <div className="grow" style={{ minWidth: 240 }}>
+                <h1 style={{ margin: 0 }}>Our Properties</h1>
+                <p className="muted" style={{ margin: "4px 0 0" }}>Who runs each property and who to reach for what.</p>
+              </div>
+              <div className="op-tools">
+                <div className="op-seg" role="group" aria-label="View">
+                  <button aria-pressed={view === "directory"} className={view === "directory" ? "on" : ""} onClick={() => setView("directory")}>Directory</button>
+                  <button aria-pressed={view === "map"} className={view === "map" ? "on" : ""} onClick={() => setView("map")}>Map view</button>
+                </div>
+                {cards.length > 3 && <input className="op-find" placeholder="Find a property or person" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find a property or person" />}
+                {data.canEdit && <button className="btn sm" onClick={() => setManaging(true)}>Manage</button>}
+              </div>
+            </div>
+
+            {!cards.length ? (
+              <div className="card section">
+                <b>No properties yet.</b>
+                <p className="small muted" style={{ margin: "6px 0 0" }}>
+                  The cards fill themselves from the team roster: each person&apos;s Location (or Property) column is where they work, and their title says what they handle.
+                  {isAdvisor ? " Upload the census on this client's page in your console." : data.canEdit ? " Send AlzaHR your latest census, or add a property by hand under Manage." : ""}
+                </p>
+              </div>
+            ) : view === "map" ? (
+              <MapView cards={shown} num={num} canEdit={data.canEdit} onOpen={setFocus} />
+            ) : (
+              <div className="op-grid section">
+                {shown.map((c) => <Card key={c.key} card={c} n={num.get(c.key) ?? ""} onOpen={() => setFocus(c.key)} />)}
+                {!shown.length && <p className="muted">No property or person matches that.</p>}
+              </div>
+            )}
+          </>
+        )}
+
+        {data && data.contacts.length > 0 && (
+          <section className="op-stuck section" aria-label="Still stuck">
+            <b className="op-stuck-h">Still stuck?</b>
+            {data.contacts.map((c) => (
+              <div key={c.name} className="op-stuck-p">
+                <span className="grow">
+                  <b>{c.name}</b>
+                  <span className="tiny muted" style={{ display: "block" }}>{[c.title, c.what].filter(Boolean).join(" · ")}</span>
+                </span>
+                {c.email && <a className="btn sm" href={`mailto:${c.email}`}>Email</a>}
+              </div>
+            ))}
+          </section>
+        )}
+      </main>
+
+      {editCard && data?.settings && data.people && (
+        <EditSheet card={editCard} settings={data.settings} people={data.people} onClose={() => setEditing(null)} onSave={async (s) => (await save(s)) && setEditing(null)} />
+      )}
+      {managing && data?.settings && (
+        <ManageSheet settings={data.settings} locations={data.locations ?? []} contacts={data.contacts} onClose={() => setManaging(false)} onSave={async (s) => (await save(s)) && setManaging(false)} />
+      )}
+      <Toast msg={toast.msg} onDone={toast.clear} />
+    </div>
+  );
+}
+
+const Mail = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 7l9 6 9-6" /></svg>
+);
+
+function Card({ card, n, onOpen }: { card: PropertyCard; n: string; onOpen: () => void }) {
+  const lead = card.slots.find((s) => s.role === "lead")?.person;
+  return (
+    <article className="op-card">
+      <div className="op-card-top">
+        <span className="op-num" style={{ background: DOT[card.status] }}>{n}</span>
+        <div className="grow" style={{ minWidth: 0 }}>
+          <h2>{card.name}</h2>
+          <div className="tiny muted"><b style={{ color: TXT[card.status] }}>{card.status}</b>{card.city ? ` · ${card.city}` : ""}</div>
+        </div>
+        <button className="btn sm" onClick={onOpen}>Open</button>
+      </div>
+      <div className={`op-lead ${lead ? "" : "none"}`}>
+        <span className="grow" style={{ minWidth: 0 }}>
+          <span className="op-k">Property lead</span>
+          <b>{lead?.name ?? "No lead yet"}</b>
+        </span>
+        {lead?.email && <a className="op-mail ring" href={`mailto:${lead.email}`} aria-label={`Email ${lead.name}`}><Mail /></a>}
+      </div>
+      <ul className="op-rows">
+        {card.slots.filter((s) => s.role !== "lead").map((s) => (
+          <li key={s.role}>
+            <span className="op-rk">{s.role === "backup" ? "Backup" : s.label}</span>
+            <span className={`op-rn ${s.person ? "" : "gap"}`}>{s.person?.name ?? "Not assigned"}</span>
+            {s.person?.email && <a className="op-mail" href={`mailto:${s.person.email}`} aria-label={`Email ${s.person.name}`}><Mail /></a>}
+          </li>
+        ))}
+      </ul>
+    </article>
+  );
+}
+
+function MapView({ cards, num, canEdit, onOpen }: { cards: PropertyCard[]; num: Map<string, string>; canEdit: boolean; onOpen: (k: string) => void }) {
+  const placed = cards.filter((c) => pinFor(c.city));
+  const missing = cards.filter((c) => !pinFor(c.city));
+  // spread pins that land on the same spot
+  const seen = new Map<string, number>();
+  const pins: MapPin[] = placed.map((c) => {
+    const p = pinFor(c.city)!;
+    const k = `${Math.round(p.x)}:${Math.round(p.y)}`;
+    const i = seen.get(k) ?? 0;
+    seen.set(k, i + 1);
+    return { key: c.key, n: num.get(c.key) ?? "", x: p.x + i * 7, y: p.y + i * 5, color: DOT[c.status], label: `${num.get(c.key)}: ${c.name}`, onClick: () => onOpen(c.key) };
+  });
+  return (
+    <section className="op-map section" aria-label="Map of our properties">
+      <div className="op-map-l"><BayMap pins={pins} /></div>
+      <div className="op-map-r">
+        <div className="tiny muted" style={{ padding: "2px 6px 8px" }}>{cards.length} {cards.length === 1 ? "property" : "properties"}</div>
+        {cards.map((c) => (
+          <button key={c.key} className="op-li" onClick={() => onOpen(c.key)}>
+            <span className="op-num sm" style={{ background: DOT[c.status] }}>{num.get(c.key)}</span>
+            <span className="grow" style={{ minWidth: 0 }}>
+              <b>{c.name}</b>
+              <span className="tiny muted" style={{ display: "block" }}>{[c.city ?? "Area not set", c.slots.find((s) => s.role === "lead")?.person?.name ?? "No lead yet"].join(" · ")}</span>
+            </span>
+          </button>
+        ))}
+        {missing.length > 0 && canEdit && <p className="tiny muted" style={{ margin: "8px 6px 0" }}>Not on the map yet: {missing.map((c) => c.name).join(", ")}. Open one and tap Edit to set its area.</p>}
+        <div className="op-legend">
+          {(["Active", "Transition", "Acquisition"] as PropStatus[]).map((s) => <span key={s}><i style={{ background: DOT[s] }} />{s}</span>)}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Focus({ card, n, canEdit, onBack, onEdit }: { card: PropertyCard; n: string; canEdit: boolean; onBack: () => void; onEdit: () => void }) {
+  const lead = card.slots.find((s) => s.role === "lead");
+  return (
+    <>
+      <div className="row" style={{ gap: 8 }}>
+        <button className="btn sm" onClick={onBack}>← All properties</button>
+        <span className="grow" />
+        {canEdit && <button className="btn sm" onClick={onEdit}>Edit</button>}
+      </div>
+      <section className="op-focus section">
+        <div className="row" style={{ gap: 12, alignItems: "center" }}>
+          <span className="op-num lg" style={{ background: DOT[card.status] }}>{n}</span>
+          <div className="grow">
+            <div className="small muted"><b style={{ color: TXT[card.status] }}>{card.status}</b>{card.city ? ` · ${card.city}` : ""}{card.headcount ? ` · ${card.headcount} on site` : ""}</div>
+            <h1 style={{ margin: "4px 0 0" }}>{card.name}</h1>
+          </div>
+        </div>
+        {card.note && <p className="op-note"><b>Note:</b> {card.note}</p>}
+        {!lead?.person && <div className="op-warn"><b>No lead yet.</b> Until someone is named, use the contacts under Still stuck.</div>}
+        <div className="op-people">
+          {card.slots.map((s) => (
+            <div key={s.role} className={`op-pc ${s.role === "lead" ? "lead" : ""} ${s.person ? "" : "gap"}`}>
+              <span className="op-k">{s.label}</span>
+              <b className="op-pn">{s.person?.name ?? "Not assigned yet"}</b>
+              <span className="tiny muted">{s.person?.title ?? "Use Still stuck below for now"}</span>
+              {s.person?.email && (
+                <span className="row" style={{ gap: 8, marginTop: 6, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-start" }}>
+                  <a className="btn primary sm" href={`mailto:${s.person.email}`}>Email</a>
+                  <span className="tiny muted">{s.person.email}</span>
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+    </>
+  );
+}
+
+function EditSheet({ card, settings, people, onClose, onSave }: { card: PropertyCard; settings: PropertySettings; people: Roster[]; onClose: () => void; onSave: (s: PropertySettings) => void }) {
+  const cur = settings.items?.find((i) => i.key === card.key);
+  const [v, setV] = useState<PropItem>({ key: card.key, name: card.name, status: card.status, city: card.city, note: card.note, roles: { ...(cur?.roles ?? {}) }, manual: cur?.manual });
+  const [busy, setBusy] = useState(false);
+  const setRole = (k: RoleKey, val: string) =>
+    setV((x) => {
+      const roles = { ...(x.roles ?? {}) };
+      if (val === "auto") delete roles[k];
+      else roles[k] = val === "none" ? "" : val;
+      return { ...x, roles };
+    });
+  const auto = (k: RoleKey) => card.slots.find((s) => s.role === k && s.auto)?.person?.name;
+  const here = people.filter((p) => p.location.toLowerCase().includes(card.name.toLowerCase()));
+  const rest = people.filter((p) => !here.includes(p));
+  const submit = async () => {
+    setBusy(true);
+    const items = [...(settings.items ?? []).filter((i) => i.key !== card.key), { ...v, name: v.name.trim() || card.name }];
+    await onSave({ ...settings, items });
+    setBusy(false);
+  };
+  return (
+    <Sheet title={`Edit ${card.name}`} onClose={onClose}>
+      <div className="op-scroll">
+        <label className="f">Name<input className="f" value={v.name} maxLength={80} onChange={(e) => setV({ ...v, name: e.target.value })} /></label>
+        <div className="two">
+          <label className="f">Status
+            <select className="f" value={v.status ?? "Active"} onChange={(e) => setV({ ...v, status: e.target.value as PropStatus })}>{STATUSES.map((s) => <option key={s}>{s}</option>)}</select>
+          </label>
+          <label className="f">Area, for the map
+            <select className="f" value={v.city ?? ""} onChange={(e) => setV({ ...v, city: e.target.value || undefined })}>
+              <option value="">Not set</option>
+              {CITIES.map((c) => <option key={c.name}>{c.name}</option>)}
+            </select>
+          </label>
+        </div>
+        <label className="f">Note <span className="tiny muted">(optional, shows on the card)</span><textarea className="f" rows={2} maxLength={400} value={v.note ?? ""} onChange={(e) => setV({ ...v, note: e.target.value || undefined })} /></label>
+        <h4 className="op-h">Who handles what</h4>
+        <p className="tiny muted" style={{ marginTop: 0 }}>Leave a slot on Automatic and it follows the roster: when someone new takes the job, the card updates by itself.</p>
+        {ROLES.map((r) => {
+          const val = v.roles?.[r.key];
+          return (
+            <label key={r.key} className="f">{r.label}
+              <select className="f" value={val === undefined ? "auto" : val === "" ? "none" : val} onChange={(e) => setRole(r.key, e.target.value)}>
+                <option value="auto">Automatic{auto(r.key) ? ` (${auto(r.key)})` : " (no match on the roster)"}</option>
+                <option value="none">No one</option>
+                {here.length > 0 && <optgroup label="At this property">{here.map((p) => <option key={p.id} value={p.id}>{p.name}{p.title ? `, ${p.title}` : ""}</option>)}</optgroup>}
+                <optgroup label={here.length ? "Everyone else" : "Everyone"}>{rest.map((p) => <option key={p.id} value={p.id}>{p.name}{p.title ? `, ${p.title}` : ""}{p.location ? ` (${p.location})` : ""}</option>)}</optgroup>
+              </select>
+            </label>
+          );
+        })}
+      </div>
+      <div className="sheet-actions">
+        <button className="btn sm" onClick={onClose}>Cancel</button>
+        <button className="btn primary sm" disabled={busy} onClick={submit}>{busy ? "Saving…" : "Save"}</button>
+      </div>
+    </Sheet>
+  );
+}
+
+function ManageSheet({ settings, locations, contacts, onClose, onSave }: { settings: PropertySettings; locations: Loc[]; contacts: Contact[]; onClose: () => void; onSave: (s: PropertySettings) => void }) {
+  const [hidden, setHidden] = useState<string[]>(settings.hidden ?? []);
+  const [items, setItems] = useState<PropItem[]>(settings.items ?? []);
+  const [cs, setCs] = useState<Contact[]>(contacts.length ? contacts : [{ name: "", title: "", email: "", what: "" }]);
+  const [add, setAdd] = useState("");
+  const [busy, setBusy] = useState(false);
+  const manual = items.filter((i) => i.manual);
+  const isHidden = (l: Loc) => hidden.includes(l.key) || (l.corporate && !items.some((i) => i.key === l.key));
+  const toggle = (l: Loc, show: boolean) => {
+    setHidden((h) => (show ? h.filter((x) => x !== l.key) : [...new Set([...h, l.key])]));
+    // a corporate-sounding location only shows if it's named as a property on purpose
+    if (show && l.corporate && !items.some((i) => i.key === l.key)) setItems((xs) => [...xs, { key: l.key, name: l.name, manual: true }]);
+  };
+  const addOne = () => {
+    const name = add.trim();
+    if (!name) return;
+    const key = keyOf(name);
+    if (!items.some((i) => i.key === key)) setItems((xs) => [...xs, { key, name, manual: true }]);
+    setHidden((h) => h.filter((x) => x !== key));
+    setAdd("");
+  };
+  const setC = (i: number, c: Partial<Contact>) => setCs((xs) => xs.map((x, j) => (j === i ? { ...x, ...c } : x)));
+  const submit = async () => {
+    setBusy(true);
+    await onSave({ ...settings, hidden, items, contacts: cs.filter((c) => c.name.trim()) });
+    setBusy(false);
+  };
+  return (
+    <Sheet title="Manage properties" onClose={onClose}>
+      <div className="op-scroll">
+        <h4 className="op-h" style={{ marginTop: 0 }}>From the roster</h4>
+        {locations.length ? (
+          <ul className="op-manage">
+            {locations.map((l) => (
+              <li key={l.key}>
+                <label className="check" style={{ margin: 0 }}>
+                  <input type="checkbox" checked={!isHidden(l)} onChange={(e) => toggle(l, e.target.checked)} />
+                  <span className="grow">{l.name} <span className="tiny muted">· {l.count} {l.count === 1 ? "person" : "people"}</span></span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="small muted">No locations on the roster yet.</p>
+        )}
+        <p className="tiny muted">Uncheck anything that isn&apos;t a property, like a corporate office. People there still fill company-wide slots, like accounting.</p>
+
+        <h4 className="op-h">Added by hand</h4>
+        {manual.length > 0 && (
+          <ul className="op-manage">
+            {manual.map((i) => (
+              <li key={i.key}>
+                <span className="grow">{i.name}</span>
+                <button className="linklike tiny" style={{ color: "var(--red)" }} onClick={() => setItems((xs) => xs.filter((x) => x.key !== i.key))}>Remove</button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="row" style={{ gap: 6 }}>
+          <input className="f grow" placeholder="A property not on the roster yet, like a new acquisition" value={add} onChange={(e) => setAdd(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addOne()} aria-label="New property name" />
+          <button className="btn sm" onClick={addOne} disabled={!add.trim()}>Add</button>
+        </div>
+
+        <h4 className="op-h">Still stuck? contacts</h4>
+        <p className="tiny muted" style={{ marginTop: 0 }}>The last stop on every card. Up to three people.</p>
+        {cs.map((c, i) => (
+          <div key={i} className="op-contact">
+            <div className="two">
+              <input className="f" placeholder="Name" value={c.name} onChange={(e) => setC(i, { name: e.target.value })} aria-label="Contact name" />
+              <input className="f" placeholder="Title" value={c.title} onChange={(e) => setC(i, { title: e.target.value })} aria-label="Contact title" />
+            </div>
+            <div className="two">
+              <input className="f" placeholder="Email" type="email" value={c.email} onChange={(e) => setC(i, { email: e.target.value })} aria-label="Contact email" />
+              <input className="f" placeholder="Go to them for…" value={c.what} onChange={(e) => setC(i, { what: e.target.value })} aria-label="What to contact them for" />
+            </div>
+            {cs.length > 1 && <button className="linklike tiny" style={{ color: "var(--red)" }} onClick={() => setCs((xs) => xs.filter((_, j) => j !== i))}>Remove</button>}
+          </div>
+        ))}
+        {cs.length < 3 && <button className="btn sm" onClick={() => setCs((xs) => [...xs, { name: "", title: "", email: "", what: "" }])}>+ Add a contact</button>}
+      </div>
+      <div className="sheet-actions">
+        <button className="btn sm" onClick={onClose}>Cancel</button>
+        <button className="btn primary sm" disabled={busy} onClick={submit}>{busy ? "Saving…" : "Save"}</button>
+      </div>
+    </Sheet>
+  );
+}

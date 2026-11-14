@@ -4,7 +4,7 @@ import { addBusinessDays, Person, today, toISO } from "./data";
 import type { Hire } from "./hires";
 import { SEED_PRACTICE } from "./practice";
 
-export type ModuleKey = "recruiting" | "resources" | "wellness" | "board" | "hires" | "training" | "recognition" | "leave" | "offboarding";
+export type ModuleKey = "recruiting" | "resources" | "wellness" | "board" | "hires" | "training" | "recognition" | "leave" | "offboarding" | "properties";
 
 /** Which pages each access level can open. Executives see everything, including Team. */
 export function canSee(access: Access | undefined, page: ModuleKey | "projects" | "team"): boolean {
@@ -20,6 +20,7 @@ export const MODULES: { key: ModuleKey; label: string; blurb: string }[] = [
   { key: "board", label: "Messages", blurb: "A message thread with Ben, under Ask Ben" },
   { key: "recognition", label: "Team Wall", blurb: "Shoutouts by QR code, text or the portal, plus birthdays, work anniversaries and new starters, on one wall everyone can react to. Every shoutout is screened first" },
   { key: "leave", label: "Leave center", blurb: "Leave of absence tracking for HR admins only: cases, deadlines, documents, reminders and return to work. Ben picks who the HR admins are" },
+  { key: "properties", label: "Our Properties", blurb: "A card for each property: who leads it and who handles leasing, maintenance, facilities and accounting, with a map view. Fills itself from the roster's Location and Title columns" },
   { key: "offboarding", label: "Offboarding", blurb: "When someone leaves: a checklist, a thank-you email with what they need to know, an exit survey, and they come off the roster on their last day. Executives only" },
   { key: "training", label: "Training", blurb: "Their trainings to view, with practice: quick checks, role-plays with feedback and a planner. Execs see who's practiced" },
 ];
@@ -137,6 +138,7 @@ export interface ClientConfig {
   softAsks?: boolean; // show the quiet referral / add-on lines (default on)
   videoScreening?: boolean; // add-on: pitch links on Recruiting roles
   recognition?: import("./recognition").RecognitionSettings; // Shoutouts: QR link, values, texting number
+  properties?: import("./properties").PropertySettings; // Our Properties: property details, slot overrides, hidden locations, contacts
   offboarding?: import("./offboard").OffboardSettings; // goodbye email wording, info sections, survey, timing
   leave?: import("./leave").LeaveSettings; // Leave center: types, reminder timing (who the HR admins are lives in its own table)
   askHr?: boolean; // Ask HR for managers (default on; answers come only from this client's handbook and policies)
@@ -313,7 +315,7 @@ export function seedModules() {
     blueprint: {
       huddle: { cadence: "weekly", day: 1, recipients: ["alex@example.com", "priya@example.com"], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
       recognition: { token: "DemoShoutoutLink000000", values: ["Teamwork", "Safety first", "Above and beyond", "Customer first", "Ownership"], smsNumber: "+14155550123", notifyManagers: true, showWall: true },
-      modules: { recruiting: true, resources: true, wellness: true, board: true, hires: true, training: true, recognition: true, leave: true, offboarding: true },
+      modules: { recruiting: true, resources: true, wellness: true, board: true, hires: true, training: true, recognition: true, leave: true, offboarding: true, properties: false },
       videoScreening: true,
       accent: "#2b3ff5",
       logo: "/blueprint-logo.png",
@@ -328,7 +330,7 @@ export function seedModules() {
     },
     harbor: {
       huddle: { cadence: "weekly", day: 1, recipients: ["sam@example.com"], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
-      modules: { recruiting: false, resources: true, wellness: false, board: true, hires: true, training: false, recognition: false, leave: false, offboarding: false },
+      modules: { recruiting: false, resources: true, wellness: false, board: true, hires: true, training: false, recognition: false, leave: false, offboarding: false, properties: false },
       accent: "#6b8c6b",
       codes: [],
       escalationEmail: "sam@example.com",
@@ -336,7 +338,7 @@ export function seedModules() {
     },
     northgate: {
       huddle: { cadence: "weekly", day: 1, recipients: ["rae@example.com"], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
-      modules: { recruiting: false, resources: true, wellness: true, board: true, hires: true, training: false, recognition: false, leave: false, offboarding: false },
+      modules: { recruiting: false, resources: true, wellness: true, board: true, hires: true, training: false, recognition: false, leave: false, offboarding: false, properties: false },
       accent: "#4a7ab5",
       codes: [],
       escalationEmail: "rae@example.com",
@@ -345,9 +347,27 @@ export function seedModules() {
         { name: "Luis Moreno", role: "Ops Lead", email: "luis@example.com", access: "manager" },
       ],
     },
+    bayside: {
+      huddle: { cadence: "weekly", day: 1, recipients: ["morgan@example.com"], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
+      modules: { recruiting: true, resources: true, wellness: false, board: true, hires: true, training: false, recognition: false, leave: false, offboarding: false, properties: true },
+      accent: "#1d4f7a",
+      codes: [],
+      escalationEmail: "morgan@example.com",
+      users: [{ name: "Morgan Hayes", role: "Managing Director", email: "morgan@example.com", access: "exec" }],
+      properties: {
+        items: [
+          { key: "harbor view apartments", name: "Harbor View Apartments", city: "San Francisco · Marina", note: "Garage gate vendor changes Jan 1. Gate issues go to Priya until then." },
+          { key: "1450 market lofts", name: "1450 Market Lofts", city: "San Francisco · SoMa" },
+          { key: "mission terrace", name: "Mission Terrace", status: "Transition", city: "Oakland · Lake Merritt" },
+          { key: "the alder", name: "The Alder", city: "San Mateo" },
+          { key: "bayview commons", name: "Bayview Commons", status: "Acquisition", city: "San Francisco · Bayview", manual: true },
+        ],
+        hidden: [],
+      },
+    },
     cedar: {
       huddle: { cadence: "weekly", day: 1, recipients: ["jo@example.com"], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
-      modules: { recruiting: true, resources: false, wellness: false, board: true, hires: true, training: false, recognition: false, leave: false, offboarding: false },
+      modules: { recruiting: true, resources: false, wellness: false, board: true, hires: true, training: false, recognition: false, leave: false, offboarding: false, properties: false },
       accent: "#8a6d3b",
       codes: [],
       escalationEmail: "jo@example.com",
@@ -519,6 +539,17 @@ export function seedModules() {
     { id: "pp2", clientId: "blueprint", name: "Sam Patel", title: "Inventory Coordinator", email: "sam.p@example.com", ...mgr, hireDate: yearsAgo(1, 70), birthday: md(3), department: "Warehouse", location: "San Francisco", active: true },
     { id: "pp3", clientId: "blueprint", name: "Rosa Diaz", title: "Driver", email: "rosa@example.com", ...mgr, hireDate: daysAgo(26), birthday: md(120), department: "Logistics", location: "San Francisco", active: true },
     { id: "pp4", clientId: "blueprint", name: "Chris Wu", title: "Warehouse Associate", email: "chris.w@example.com", ...mgr, hireDate: yearsAgo(2, 150), birthday: md(200), department: "Warehouse", location: "Las Vegas", active: true },
+    { id: "bp1", clientId: "bayside", name: "Maria Chen", title: "Regional Manager", email: "maria@example.com", managerEmail: "morgan@example.com", managerName: "Morgan Hayes", hireDate: yearsAgo(1, 0), birthday: md(11), department: "Operations", location: "Corporate", active: true },
+    { id: "bp2", clientId: "bayside", name: "Lena Brooks", title: "Controller", email: "lena@example.com", managerEmail: "morgan@example.com", managerName: "Morgan Hayes", hireDate: yearsAgo(2, 17), birthday: md(40), department: "Finance", location: "Corporate", active: true },
+    { id: "bp3", clientId: "bayside", name: "Priya Raman", title: "Facilities Lead", email: "priya.r@example.com", managerEmail: "maria@example.com", managerName: "Maria Chen", hireDate: yearsAgo(3, 34), birthday: md(69), department: "Operations", location: "Corporate", active: true },
+    { id: "bp4", clientId: "bayside", name: "Jordan Ellis", title: "Property Manager", email: "jordan@example.com", managerEmail: "maria@example.com", managerName: "Maria Chen", hireDate: yearsAgo(4, 51), birthday: md(98), department: "Operations", location: "Harbor View Apartments; The Alder", active: true },
+    { id: "bp5", clientId: "bayside", name: "Sam Okafor", title: "Leasing Manager", email: "sam.o@example.com", managerEmail: "jordan@example.com", managerName: "Jordan Ellis", hireDate: yearsAgo(1, 68), birthday: md(127), department: "Leasing", location: "Harbor View Apartments; The Alder", active: true },
+    { id: "bp6", clientId: "bayside", name: "Rosa Medina", title: "Maintenance Technician", email: "rosa.m@example.com", managerEmail: "jordan@example.com", managerName: "Jordan Ellis", hireDate: yearsAgo(2, 85), birthday: md(156), department: "Maintenance", location: "Harbor View Apartments", active: true },
+    { id: "bp7", clientId: "bayside", name: "Tasha Greene", title: "Property Manager", email: "tasha@example.com", managerEmail: "maria@example.com", managerName: "Maria Chen", hireDate: yearsAgo(3, 102), birthday: md(185), department: "Operations", location: "1450 Market Lofts; Mission Terrace", active: true },
+    { id: "bp8", clientId: "bayside", name: "Devon Hart", title: "Leasing Agent", email: "devon@example.com", managerEmail: "tasha@example.com", managerName: "Tasha Greene", hireDate: yearsAgo(4, 119), birthday: md(214), department: "Leasing", location: "1450 Market Lofts; Mission Terrace", active: true },
+    { id: "bp9", clientId: "bayside", name: "Luis Vega", title: "Maintenance Technician", email: "luis.v@example.com", managerEmail: "tasha@example.com", managerName: "Tasha Greene", hireDate: yearsAgo(1, 136), birthday: md(243), department: "Maintenance", location: "1450 Market Lofts", active: true },
+    { id: "bp10", clientId: "bayside", name: "Ana Ruiz", title: "Porter", email: "ana.r@example.com", managerEmail: "tasha@example.com", managerName: "Tasha Greene", hireDate: yearsAgo(2, 153), birthday: md(272), department: "Maintenance", location: "Mission Terrace", active: true },
+    { id: "bp11", clientId: "bayside", name: "Kim Tran", title: "Assistant Property Manager", email: "kim.t@example.com", managerEmail: "tasha@example.com", managerName: "Tasha Greene", hireDate: yearsAgo(3, 170), birthday: md(301), department: "Operations", location: "Mission Terrace", active: true },
     { id: "pp5", clientId: "blueprint", name: "Dana Ortiz", title: "Office Manager", email: "dana@example.com", managerEmail: "alex@example.com", managerName: "Alex Rivera", hireDate: yearsAgo(4, 5), birthday: md(60), department: "Operations", location: "San Francisco", active: true },
   ];
   const checkins = [

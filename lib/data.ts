@@ -308,6 +308,15 @@ export const CLIENTS: Client[] = [
     ],
   },
   {
+    id: "bayside",
+    name: "Bayside Residential",
+    accent: "#1d4f7a",
+    pilot: false,
+    engagement: "Fractional HR",
+    escalation: { name: "Morgan Hayes", role: "Managing Director", email: "morgan@example.com" },
+    contacts: [{ name: "Morgan Hayes", role: "Managing Director" }],
+  },
+  {
     id: "cedar",
     name: "Cedar & Finch",
     accent: "#8a6d3b",

@@ -9,6 +9,7 @@ import { ClientNav, ClientTopbar, Sheet, useGuard } from "@/components/ui";
 import { addDaysISO, daysUntil, Hire, onboardingFor, shortDate } from "@/lib/hires";
 import { newId } from "@/lib/hiretasks";
 import { useStore } from "@/lib/store";
+import { authHeader } from "@/lib/supabase";
 import { Bucket, bucket, defaultSteps, newStepId, Outcome, outcomeLabel, OUTCOMES, progress, readImport, remarkNote, shortLabel, stepDone, stepsFor, TrackerStep } from "@/lib/tracker";
 
 const todayISO = () => {
@@ -302,7 +303,7 @@ function HirePanel({ h, steps, canEdit, who, clientId, onClose, toggle, update, 
     setBusy(true);
     setErr("");
     try {
-      const r = await fetch("/api/hire-remove", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clientId, id: h.id }) });
+      const r = await fetch("/api/hire-remove", { method: "POST", headers: { "Content-Type": "application/json", ...(await authHeader()) }, body: JSON.stringify({ clientId, id: h.id }) });
       const j = await r.json().catch(() => ({}));
       if (j.ok || j.reason === "demo") return onRemove();
       setErr(j.reason === "preview" ? "Preview is read-only." : "Couldn't remove. Try again.");
@@ -418,7 +419,7 @@ function StepsEditor({ steps, payroll, onClose, onSaved, clientId, base }: { ste
     setBusy(true);
     setErr("");
     try {
-      const r = await fetch("/api/hire-steps", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clientId, steps: clean }) });
+      const r = await fetch("/api/hire-steps", { method: "POST", headers: { "Content-Type": "application/json", ...(await authHeader()) }, body: JSON.stringify({ clientId, steps: clean }) });
       const j = await r.json().catch(() => ({}));
       if (j.ok) onSaved(j.onboarding);
       else if (j.reason === "demo") onSaved({ ...base, trackerSteps: clean });
