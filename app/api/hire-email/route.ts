@@ -58,5 +58,5 @@ export async function POST(req: Request) {
     if (kind === "firstDay" && ["Approved to hire", "Offer sent", "Offer signed", "Background check", "Package ready"].includes(data.status)) data.status = "First-day email sent";
     await db.from("hires").update({ data }).eq("id", row.id);
   }
-  return NextResponse.json({ sent: true, to });
+  return NextResponse.json({ sent: true, to, xp: b.test ? undefined : hp.xp });
 }

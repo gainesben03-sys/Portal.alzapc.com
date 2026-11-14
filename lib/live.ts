@@ -177,6 +177,16 @@ export async function saveDiff(db: SupabaseClient, prev: State, next: State, me:
       if (!client_id) continue;
       const data = strip(item, ["id"]);
       if (!old) run(db.from(t).upsert({ id: item.id, client_id, data }, { onConflict: "id", ignoreDuplicates: true })); // safe to resend after a dropped connection
+      else if (t === "hires")
+        // the employee experience (welcome page link, answers, buddy replies) is written by the server and outside visitors;
+        // keep the latest copy from the database so a page that was open earlier can't wipe it
+        run(
+          (async () => {
+            const { data: cur } = await db.from("hires").select("data").eq("id", item.id).maybeSingle();
+            const xp = (cur?.data as { xp?: unknown } | null)?.xp;
+            return db.from("hires").update({ data: xp ? { ...data, xp } : data }).eq("id", item.id);
+          })()
+        );
       else run(db.from(t).update({ data }).eq("id", item.id));
     }
     if (me.advisor) for (const item of A) if (!B.some((x) => x.id === item.id)) run(db.from(t).delete().eq("id", item.id));

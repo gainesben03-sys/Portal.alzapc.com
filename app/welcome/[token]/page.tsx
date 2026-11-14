@@ -56,7 +56,7 @@ export default function Welcome() {
   const { token } = useParams<{ token: string }>();
   const demo = token === "demo" || token === "sample";
   const [info, setInfo] = useState<Info | null>(null);
-  const [missing, setMissing] = useState(false);
+  const [missing, setMissing] = useState<false | string>(false);
   const [mode, setMode] = useState<"home" | "ask">("home");
   const [step, setStep] = useState(0);
   const [a, setA] = useState<Record<string, string>>({});
@@ -81,8 +81,8 @@ export default function Welcome() {
     };
     fetch(`/api/welcome/${encodeURIComponent(token)}`, { cache: "no-store" })
       .then((r) => r.json())
-      .then((j) => (j.ok ? load(j) : j.reason === "demo" || demo ? load(SAMPLE) : setMissing(true)))
-      .catch(() => (demo ? load(SAMPLE) : setMissing(true)));
+      .then((j) => (j.ok ? load(j) : j.reason === "demo" || demo ? load(SAMPLE) : setMissing(String(j.reason || "not_found"))))
+      .catch(() => (demo ? load(SAMPLE) : setMissing("network")));
   }, [token, demo]);
 
   const name = (pref.trim() || info?.first || "").trim();
@@ -96,7 +96,14 @@ export default function Welcome() {
   const lines = pub.filter((q) => (a[q.id] || "").trim());
 
   if (missing)
-    return <div className="ex-page"><div className="ex-card"><h1>This link isn&apos;t working</h1><p className="ex-sub">It may have expired. Reply to your welcome email and HR will help.</p></div></div>;
+    return (
+      <div className="ex-page"><div className="ex-card">
+        <h1>{missing === "expired" ? "Your welcome page has wrapped up" : "This link isn't working"}</h1>
+        <p className="ex-sub">
+          {missing === "expired" ? "It was here for your first 90 days. For anything else, reach out to HR." : missing === "network" ? "We couldn't load it. Check your connection and try again." : "It may be out of date. Open the latest email from HR, or reply to it and HR will help."}
+        </p>
+      </div></div>
+    );
   if (!info) return <div className="ex-page" />;
 
   const post = async (body: object) => {

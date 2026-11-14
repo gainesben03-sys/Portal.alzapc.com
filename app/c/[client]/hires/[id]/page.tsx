@@ -89,7 +89,7 @@ function HireInner() {
     toast.show(r.msg);
     if (r.sent && !test) {
       const at = new Date().toISOString();
-      updateHire(h.id, (x) => afterSend(x, kind, at), `${label} sent to ${r.to}`);
+      updateHire(h.id, (x) => ({ ...afterSend(x, kind, at), ...(r.xp ? { xp: { ...(x.xp ?? {}), ...r.xp, linkSentAt: x.xp?.linkSentAt || at } } : {}) }), `${label} sent to ${r.to}`);
     }
     return r.sent;
   };

@@ -19,7 +19,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
   if (!SERVER_LIVE) return json({ ok: false, reason: "demo" }, 404);
   const db = admin();
   const c = await hireByToken(db, "token", (await params).token);
-  if (!c || !open(c)) return json({ ok: false, reason: "not_found" }, 404);
+  if (!c) return json({ ok: false, reason: "not_found" }, 404);
+  if (!open(c)) return json({ ok: false, reason: !c.x.on ? "off" : c.h.xp?.closed || c.h.outcome ? "closed" : "expired" }, 404);
   const xp = c.h.xp ?? {};
   const v = fillVals(c.h, c.company);
   const w = introWording(c.x, xp);

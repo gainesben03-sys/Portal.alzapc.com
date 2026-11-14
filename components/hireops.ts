@@ -24,7 +24,7 @@ export function explainEmail(reason: string) {
   return `Didn't send (${reason}). Try again.`;
 }
 
-export async function sendHireEmail(hireId: string, kind: "welcome" | "firstDay", test: boolean, edits?: Record<string, string>): Promise<{ sent: boolean; to?: string; msg: string }> {
+export async function sendHireEmail(hireId: string, kind: "welcome" | "firstDay", test: boolean, edits?: Record<string, string>): Promise<{ sent: boolean; to?: string; msg: string; xp?: import("@/lib/experience").HireXp }> {
   if (!LIVE) return { sent: false, msg: "Demo mode: emails go out once the portal is live." };
   try {
     const r = await fetch("/api/hire-email", {
@@ -33,7 +33,7 @@ export async function sendHireEmail(hireId: string, kind: "welcome" | "firstDay"
       body: JSON.stringify({ hireId, kind, test, edits }),
     });
     const j = await r.json();
-    if (j.sent) return { sent: true, to: j.to, msg: test ? `Test sent to ${j.to}` : `Sent to ${j.to}` };
+    if (j.sent) return { sent: true, to: j.to, xp: j.xp, msg: test ? `Test sent to ${j.to}` : `Sent to ${j.to}` };
     return { sent: false, msg: EMAIL_REASONS[j.reason] ?? explainEmail(String(j.reason ?? r.status)) };
   } catch {
     return { sent: false, msg: "Couldn't reach the server. Try again." };
