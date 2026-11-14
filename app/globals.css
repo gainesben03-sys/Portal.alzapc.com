@@ -1599,3 +1599,7 @@ button.nt-dot:hover { border-color: var(--green); transform: scale(1.06); }
 .roster-match-f { font-size: 13px; font-weight: 600; }
 .roster-match-s { grid-column: 2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 520px) { .roster-match-row { grid-template-columns: 1fr; } .roster-match-s { grid-column: 1; } }
+/* every sheet scrolls when it's taller than the screen, and its main buttons stay in view */
+.sheet { max-height: calc(100dvh - 16px); overflow-y: auto; overscroll-behavior: contain; }
+.sheet > .sheet-actions { position: sticky; bottom: calc(-18px - env(safe-area-inset-bottom)); background: var(--card); margin: 16px -16px calc(-18px - env(safe-area-inset-bottom)); padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); z-index: 1; }
+@media (min-width: 760px) { .sheet { max-height: calc(100dvh - 48px); } }

@@ -243,8 +243,8 @@ export function RosterCard({ clientId, onToast }: { clientId: string; onToast: (
           )}
           {team.length > 0 && (
             <div className="seg" style={{ gridTemplateColumns: "1fr 1fr" }}>
-              <button className={mode === "refresh" ? "on" : ""} onClick={() => setMode("refresh")}>Refresh the list</button>
-              <button className={mode === "add" ? "on" : ""} onClick={() => setMode("add")}>Only add and update</button>
+              <button className={mode === "refresh" ? "on" : ""} onClick={() => setMode("refresh")}>This is everyone</button>
+              <button className={mode === "add" ? "on" : ""} onClick={() => setMode("add")}>This is a partial list</button>
             </div>
           )}
           {team.length > 0 && <p className="tiny muted">{mode === "refresh" ? "Use this with your full payroll export. Matches people by employee ID, then email, then name. Anyone not in the file is marked as no longer here (not deleted, so their history stays)." : "For a partial file, like this week's new hires. Nobody is marked as left."}</p>}
@@ -261,7 +261,7 @@ export function RosterCard({ clientId, onToast }: { clientId: string; onToast: (
               {diff.updated.length > 0 && <p className="small"><b>Changed:</b> {diff.updated.slice(0, 10).map((u) => `${u.p.name} (${u.changes.join(", ")})`).join("; ")}{diff.updated.length > 10 ? ` and ${diff.updated.length - 10} more` : ""}</p>}
               {diff.back.length > 0 && <p className="small"><b>Back:</b> {diff.back.map((p) => p.name).join(", ")}</p>}
               {diff.leaving.length > 0 && (
-                <p className="small" style={{ color: "var(--amber)" }}><b>Not in this file, will be marked as left:</b> {diff.leaving.slice(0, 15).map((p) => p.name).join(", ")}{diff.leaving.length > 15 ? ` and ${diff.leaving.length - 15} more` : ""}{diff.leaving.length > Math.max(5, team.filter((p) => p.active).length / 4) ? ". That's a lot. If this file is only part of the company, use Only add and update." : ""}</p>
+                <p className="small" style={{ color: "var(--amber)" }}><b>Not in this file, will be marked as left:</b> {diff.leaving.slice(0, 15).map((p) => p.name).join(", ")}{diff.leaving.length > 15 ? ` and ${diff.leaving.length - 15} more` : ""}{diff.leaving.length > Math.max(5, team.filter((p) => p.active).length / 4) ? ". That's a lot. If this file is only part of the company, choose This is a partial list." : ""}</p>
               )}
             </div>
           )}
