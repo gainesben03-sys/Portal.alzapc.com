@@ -165,6 +165,7 @@ export interface HqCard {
   leaders: Leader[];
   others: CardPerson[];
   autoLeaders: boolean;
+  photo?: string;
 }
 // seniority, for the leadership chart: Managing Principal, Principal, Managing Director, HR and directors…
 const RANK: [RegExp, number][] = [
@@ -204,6 +205,7 @@ export function hqCard(people: TeamMember[], s: PropertySettings | undefined, cl
     leaders,
     others: byRank.filter((p) => !ids.has(p.id)).map(person),
     autoLeaders: !s?.leaders?.length,
+    photo: it?.photo,
   };
 }
 

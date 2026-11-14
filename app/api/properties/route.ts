@@ -42,16 +42,18 @@ export async function GET(req: Request) {
       ];
   // photos are private files: hand out short-lived links
   const cards = propertyCards(people, settings, clientId);
-  const paths = cards.map((c) => c.photo).filter((p): p is string => !!p && PHOTO_PATH.test(p));
+  const hq = hqCard(people, settings, clientId);
+  const paths = [...cards.map((c) => c.photo), hq?.photo].filter((p): p is string => !!p && PHOTO_PATH.test(p));
   if (paths.length) {
     const { data: signed } = await admin().storage.from("client-files").createSignedUrls(paths, 3600);
     const url = new Map((signed ?? []).map((x) => [x.path, x.signedUrl ?? undefined]));
     for (const c of cards) c.photo = c.photo ? url.get(c.photo) : undefined;
+    if (hq) hq.photo = hq.photo ? url.get(hq.photo) : undefined;
   }
   return json({
     ok: true,
     cards,
-    hq: hqCard(people, settings, clientId),
+    hq,
     contacts,
     canEdit,
     // only editors get the roster list and raw settings

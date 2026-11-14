@@ -1653,3 +1653,6 @@ button.nt-dot:hover { border-color: var(--green); transform: scale(1.06); }
 .op-order li > .grow { flex: 1; }
 .op-lead-row { grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 1fr)); gap: 8px; }
 .op-lead-row li { padding: 10px 12px; }
+.op-hq.has-photo { padding-top: 0; overflow: hidden; }
+.op-hq-photo { flex: 1 0 100%; width: calc(100% + 40px); margin: 0 -20px; aspect-ratio: 4 / 1; object-fit: cover; display: block; }
+@media (max-width: 640px) { .op-hq-photo { aspect-ratio: 5 / 2; } }

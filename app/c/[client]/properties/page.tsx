@@ -198,7 +198,7 @@ export default function PropertiesPage() {
       {editCard && data?.settings && data.people && (
         <EditSheet card={editCard} settings={data.settings} people={data.people} onPhoto={(d) => setPhoto(editCard.key, editCard.name, d)} onClose={() => setEditing(null)} onSave={async (s) => (await save(s)) && setEditing(null)} />
       )}
-      {editHq && data?.hq && data.settings && <HqSheet hq={data.hq} settings={data.settings} people={data.people ?? []} onClose={() => setEditHq(false)} onSave={async (s) => (await save(s)) && setEditHq(false)} />}
+      {editHq && data?.hq && data.settings && <HqSheet hq={data.hq} settings={data.settings} people={data.people ?? []} onPhoto={(d) => setPhoto(data.hq!.key, data.hq!.name, d)} onClose={() => setEditHq(false)} onSave={async (s) => (await save(s)) && setEditHq(false)} />}
       {managing && data?.settings && (
         <ManageSheet settings={data.settings} hqNow={data.hq?.keys ?? []} locations={data.locations ?? []} contacts={data.contacts} onClose={() => setManaging(false)} onSave={async (s) => (await save(s)) && setManaging(false)} />
       )}
@@ -289,7 +289,11 @@ function MapView({ cards, hq, num, canEdit, onOpen }: { cards: PropertyCard[]; h
 function Hq({ hq, canEdit, onEdit }: { hq: HqCard; canEdit: boolean; onEdit: () => void }) {
   const [all, setAll] = useState(false);
   return (
-    <section className="op-hq section" aria-label="Headquarters">
+    <section className={`op-hq section ${hq.photo ? "has-photo" : ""}`} aria-label="Headquarters">
+      {hq.photo && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img className="op-hq-photo" src={hq.photo} alt={hq.name} />
+      )}
       <div className="op-hq-l">
         <span className="op-hq-k">Headquarters</span>
         <h2>{hq.name}</h2>
@@ -329,7 +333,8 @@ function Hq({ hq, canEdit, onEdit }: { hq: HqCard; canEdit: boolean; onEdit: () 
   );
 }
 
-function HqSheet({ hq, settings, people, onClose, onSave }: { hq: HqCard; settings: PropertySettings; people: Roster[]; onClose: () => void; onSave: (s: PropertySettings) => void }) {
+function HqSheet({ hq, settings, people, onPhoto, onClose, onSave }: { hq: HqCard; settings: PropertySettings; people: Roster[]; onPhoto: (d: string | null) => Promise<boolean>; onClose: () => void; onSave: (s: PropertySettings) => void }) {
+  const [photoBusy, setPhotoBusy] = useState(false);
   const cur = settings.items?.find((i) => i.key === hq.key);
   const [auto, setAuto] = useState(hq.autoLeaders);
   const [picked, setPicked] = useState<string[]>(hq.leaders.map((p) => p.id));
@@ -345,6 +350,21 @@ function HqSheet({ hq, settings, people, onClose, onSave }: { hq: HqCard; settin
   const [busy, setBusy] = useState(false);
   return (
     <Sheet title="Edit headquarters" onClose={onClose}>
+      <div className="op-photo-edit">
+        {hq.photo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={hq.photo} alt="" />
+        ) : (
+          <span className="op-photo-empty tiny muted">No photo. The banner looks just like it does now.</span>
+        )}
+        <div className="row" style={{ gap: 8, justifyContent: "flex-start", marginTop: 8 }}>
+          <label className="btn sm" style={{ display: "inline-flex", alignItems: "center" }}>
+            {photoBusy ? "Saving…" : hq.photo ? "Change photo" : "Add a photo"}
+            <input type="file" accept="image/*" hidden disabled={photoBusy} onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (!f || !/^image\//.test(f.type)) return; setPhotoBusy(true); try { await onPhoto(await shrink(f, LIVE ? 1600 : 800, LIVE ? 0.82 : 0.7)); } catch {} setPhotoBusy(false); }} />
+          </label>
+          {hq.photo && <button className="btn sm" disabled={photoBusy} onClick={async () => { setPhotoBusy(true); await onPhoto(null); setPhotoBusy(false); }}>Remove</button>}
+        </div>
+      </div>
       <label className="f">Name<input className="f" value={v.name} maxLength={80} onChange={(e) => setV({ ...v, name: e.target.value })} /></label>
       <label className="f">Address <span className="tiny muted">(optional; puts HQ on the map)</span><input className="f" value={v.address ?? ""} maxLength={200} placeholder="123 Main St, San Francisco, CA" onChange={(e) => setV({ ...v, address: e.target.value || undefined })} /></label>
       <label className="f">Area, for the map
@@ -384,7 +404,7 @@ function HqSheet({ hq, settings, people, onClose, onSave }: { hq: HqCard; settin
       <p className="tiny muted">Shown side by side in this order, left to right. Everyone else at HQ is listed under it. Choose which locations count as HQ under Manage.</p>
       <div className="sheet-actions">
         <button className="btn sm" onClick={onClose}>Cancel</button>
-        <button className="btn primary sm" disabled={busy} onClick={async () => { setBusy(true); await onSave({ ...settings, leaders: auto ? [] : picked.slice(0, 12), items: [...(settings.items ?? []).filter((i) => i.key !== hq.key), { ...cur, ...v, name: v.name.trim() || hq.name }] }); setBusy(false); }}>{busy ? "Saving…" : "Save"}</button>
+        <button className="btn primary sm" disabled={busy} onClick={async () => { setBusy(true); await onSave({ ...settings, leaders: auto ? [] : picked.slice(0, 12), items: [...(settings.items ?? []).filter((i) => i.key !== hq.key), { ...cur, ...v, photo: (settings.items ?? []).find((i) => i.key === hq.key)?.photo, name: v.name.trim() || hq.name }] }); setBusy(false); }}>{busy ? "Saving…" : "Save"}</button>
       </div>
     </Sheet>
   );
