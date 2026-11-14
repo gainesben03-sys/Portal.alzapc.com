@@ -239,7 +239,7 @@ function Card({ card, n, onOpen }: { card: PropertyCard; n: string; onOpen: () =
       <ul className="op-rows">
         {card.slots.filter((s) => s.role !== "lead" && s.person).map((s) => (
           <li key={s.role}>
-            <span className="op-rk">{s.role === "backup" ? "Backup" : s.role === "maint" ? "Maint." : s.label}</span>
+            <span className="op-rk">{s.role === "backup" ? "Backup" : s.role === "maint" ? "Maint." : s.role === "acct" ? "Acct." : s.role === "facil" ? "Facilities" : s.label}</span>
             <span className={`op-rn ${s.person ? "" : "gap"}`}>{s.person?.name ?? "Not assigned"}</span>
             {s.person?.email && <a className="op-mail" href={`mailto:${s.person.email}`} aria-label={`Email ${s.person.name}`}><Mail /></a>}
           </li>
