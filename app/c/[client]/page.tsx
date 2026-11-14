@@ -361,7 +361,7 @@ export default function Home() {
       <main className="wrap wide">
         <Greeting clientId={client.id} onCustomize={() => (s.preview ? setPreviewNote(true) : setEditing(true))} />
 
-        <AskBox clientId={client.id} />
+        <AskBox clientId={client.id} slim />
 
         <div className="dash section" style={{ marginTop: 16 }}>
           {shown.map((id) => <div key={id} className={TILES.find((t) => t.id === id)?.wide ? "span2" : ""}>{tiles[id]?.()}</div>)}

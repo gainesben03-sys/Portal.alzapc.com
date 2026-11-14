@@ -13,7 +13,7 @@ const CHIPS: { q: string; mode: "handbook" | "situation" }[] = [
 const SITUATION = /\b(employee|someone|he|she|they|team|crew|keeps|won't|refus|late|attitude|rude|conflict|argu|complain|upset|defensive|feedback|performance|conversation|warning|coach)\b/i;
 
 /** A plain-language question box. Questions go to Ask HR, which answers from the handbook or coaches a situation. */
-export function AskBox({ clientId, compact }: { clientId: string; compact?: boolean }) {
+export function AskBox({ clientId, compact, slim }: { clientId: string; compact?: boolean; slim?: boolean }) {
   const router = useRouter();
   const { config, me, viewer } = useStore();
   const [q, setQ] = useState("");
@@ -25,6 +25,14 @@ export function AskBox({ clientId, compact }: { clientId: string; compact?: bool
     const m = mode ?? (SITUATION.test(t) ? "situation" : "handbook");
     router.push(`/c/${clientId}/hub/ask?mode=${m}&q=${encodeURIComponent(t.slice(0, 2000))}`);
   };
+  if (slim)
+    return (
+      <form className="askbox-slim" onSubmit={(e) => { e.preventDefault(); go(q); }}>
+        <label htmlFor={`askbox-${clientId}`} className="askbox-tag">Ask HR</label>
+        <input id={`askbox-${clientId}`} value={q} onChange={(e) => setQ(e.target.value)} placeholder="The handbook, or a tricky situation" maxLength={2000} enterKeyHint="send" />
+        <button className="btn primary sm" type="submit" disabled={!q.trim()}>Ask</button>
+      </form>
+    );
   return (
     <form className={`card askbox ${compact ? "compact" : ""}`} onSubmit={(e) => { e.preventDefault(); go(q); }}>
       <label className="askbox-label" htmlFor={`askbox-${clientId}`}>

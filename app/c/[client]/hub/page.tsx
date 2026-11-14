@@ -84,7 +84,7 @@ export default function HubHome() {
               {items.length > 5 && <button className="linklike tiny" style={{ marginTop: 6 }} onClick={() => setShowAll(!showAll)}>{showAll ? "Show the top 5" : `Show all ${items.length}`}</button>}
             </div>
 
-            <div className="section"><AskBox clientId={clientId} compact /></div>
+            <AskBox clientId={clientId} slim />
             <div className="hub-tools section">
               {training && (
                 <Link href={`/c/${clientId}/hub/learn/${training.id}`} className="card hub-tool">

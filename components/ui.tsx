@@ -363,19 +363,13 @@ export function ClientNav({ clientId }: { clientId: string }) {
       ],
     },
     {
-      key: "ask",
-      label: "Ask Alza",
-      subs: access === "hiring" ? [] : [
-        { href: `${base}/share`, label: "Send files", match: [`${base}/share`] },
-      ],
-    },
-    {
       key: "library",
       label: "Resource Center",
       subs: [
         ...(mod("resources") ? [{ href: `${base}/resources`, label: "Resources", match: [`${base}/resources`] }] : []),
         ...(access !== "hiring" ? [{ href: `${base}/newsletters`, label: "Newsletters", match: [`${base}/newsletters`] }] : []),
         ...(mod("wellness") ? [{ href: `${base}/wellness`, label: "Wellness", match: [`${base}/wellness`] }] : []),
+        ...(access !== "hiring" ? [{ href: `${base}/share`, label: "Send files", match: [`${base}/share`] }] : []),
       ],
     },
   ].filter((g) => g.subs.length);
@@ -394,7 +388,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
           </Link>
         ))}
       </div>
-      {current && (current.subs.length > 1 || current.key === "ask") && (
+      {current && (current.subs.length > 1 || current.key === "library") && (
         <div className="subnav-sub">
           <div className="subnav-sub-inner">
             {current.subs.length > 1 &&
@@ -404,7 +398,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
                   {!!x.badge && <span className="badge">{x.badge}</span>}
                 </Link>
               ))}
-            {current.key === "ask" && (
+            {current.key === "library" && access !== "hiring" && (
               <span style={{ marginLeft: "auto" }}><ContactBen /></span>
             )}
           </div>
