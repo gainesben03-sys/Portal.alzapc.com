@@ -10,7 +10,9 @@ import { Challenge, CHALLENGE_INFO } from "@/lib/challenges";
 import { challengesFor, checkChainPass, checkGoals } from "@/lib/challengeserver";
 import { Nudge, NudgeAudience, pickLine, waves } from "@/lib/nudge";
 import { nudgeTargets, sendNudgeWave } from "@/lib/nudgeserver";
-import { celebrateMail, createShout, rosterFor, tellThem, ShoutClient } from "@/lib/shoutserver";
+import { celebrateMail, createShout, localTodayISO, rosterFor, tellThem, ShoutClient } from "@/lib/shoutserver";
+import { pollFor, votePoll } from "@/lib/pollserver";
+import { cleanPolls } from "@/lib/polls";
 import { admin, caller, sendEmail, SERVER_LIVE, siteUrl } from "@/lib/server";
 import type { ClientConfig } from "@/lib/modules";
 
@@ -51,6 +53,13 @@ export async function POST(req: Request) {
   const mine = roster.find((p) => p.email?.toLowerCase() === me.email.toLowerCase());
   const manages = roster.some((p) => (p.managerEmail || "").toLowerCase() === me.email.toLowerCase());
 
+  // This or That: this round's poll, and voting (one per person)
+  if (b.action === "poll") return NextResponse.json({ ok: true, poll: await pollFor(db, clientId, c.rec.polls, localTodayISO(), me.email.toLowerCase()) });
+  if (b.action === "vote") {
+    const poll = await votePoll(db, clientId, c.rec.polls, localTodayISO(), me.email.toLowerCase(), String(b.choice ?? ""));
+    return poll ? NextResponse.json({ ok: true, poll }) : NextResponse.json({ ok: false, reason: "bad_request" }, { status: 400 });
+  }
+
   // Team Wall settings an executive can change (Ben saves everything through the portal itself)
   if (b.action === "settings") {
     if (!exec) return NextResponse.json({ ok: false, reason: "forbidden" }, { status: 403 });
@@ -60,6 +69,7 @@ export async function POST(req: Request) {
     if (r.theme && typeof r.theme === "object") allowed.theme = r.theme;
     if (r.autoEmail && typeof r.autoEmail === "object") allowed.autoEmail = { birthday: !!r.autoEmail.birthday, anniversary: !!r.autoEmail.anniversary };
     if (r.templates && typeof r.templates === "object") allowed.templates = r.templates;
+    if (r.polls && typeof r.polls === "object") allowed.polls = cleanPolls(r.polls);
     const recognition = { ...cfg.recognition, ...allowed };
     const { error } = await db.from("clients").update({ config: { ...cfg, recognition } }).eq("id", clientId);
     if (error) return NextResponse.json({ ok: false, reason: "save_failed" }, { status: 500 });

@@ -12,7 +12,7 @@ export async function challengesFor(db: SupabaseClient, clientId: string, liveOn
 
 export async function shoutsSince(db: SupabaseClient, clientId: string, sinceIso: string): Promise<Shoutout[]> {
   const { data } = await db.from("shoutouts").select("data").eq("client_id", clientId).gte("created_at", sinceIso).order("created_at", { ascending: false }).limit(3000);
-  return (data ?? []).map((r) => r.data as Shoutout);
+  return (data ?? []).map((r) => r.data as Shoutout).filter((x) => (x as { kind?: string }).kind !== "poll");
 }
 
 /** Can this shoutout pass the chain on from `parentId`? Returns the chain and link number, or why not. */

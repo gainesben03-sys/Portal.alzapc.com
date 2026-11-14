@@ -203,3 +203,9 @@ export function optOutKey(clientId: string, personId: string, type = "celebrate"
   const secret = process.env.CRON_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || "alza";
   return createHmac("sha256", secret).update(`${type === "celebrate" ? "celebrate" : type}:${clientId}:${personId}`).digest("hex").slice(0, 24);
 }
+
+/** Today in the company's time, as YYYY-MM-DD. */
+export const localTodayISO = () => {
+  const d = localToday();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};

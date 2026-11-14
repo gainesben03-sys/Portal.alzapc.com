@@ -12,6 +12,8 @@ import { challengeLine, NUDGE_LINES } from "@/lib/nudge";
 import { useStore } from "@/lib/store";
 import { authHeader, LIVE, sb } from "@/lib/supabase";
 import { Wall, WallMoment, WALLS, WallStyle } from "@/components/wall";
+import { demoPoll, demoVote, PollCard } from "@/components/poll";
+import { cleanPolls, PollQ, PollSettings, PollView } from "@/lib/polls";
 import { DEFAULT_HEADLINE, THEME_STYLES, ThemeStyle, themeVars, secondColor, ShoutTheme, CELEBRATE_FILL_INS, CelebrateKind, CelebrateTemplate, celebrateSender, DEFAULT_CELEBRATE_TEMPLATES, DEFAULT_VALUES, fillCelebrate, MAX_MESSAGE, newRecognition, randomToken, REACTIONS, RecognitionSettings, scoreboard, Shoutout, STARTERS, templateFor } from "@/lib/recognition";
 import { DEMO_CHALLENGES, DEMO_PEOPLE, DEMO_SHOUTS, demoReactions } from "@/lib/shoutdemo";
 
@@ -35,9 +37,17 @@ export default function Recognition() {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [starting, setStarting] = useState(false);
   const [nudging, setNudging] = useState(false);
+  const [poll, setPoll] = useState<PollView | null>(null);
   const myKey = `e:${(me?.email ?? "ben").toLowerCase()}`;
 
   const load = useCallback(async () => {
+    // This or That
+    if (!LIVE) setPoll(demoPoll());
+    else
+      fetch("/api/shout", { method: "POST", headers: { "Content-Type": "application/json", ...(await authHeader()) }, body: JSON.stringify({ clientId, action: "poll" }) })
+        .then((r) => r.json())
+        .then((j) => setPoll(j.ok ? j.poll : null))
+        .catch(() => setPoll(null));
     if (!LIVE) {
       setList(DEMO_SHOUTS);
       setChallenges(DEMO_CHALLENGES);
@@ -45,7 +55,7 @@ export default function Recognition() {
       return;
     }
     const { data } = await sb().from("shoutouts").select("data").eq("client_id", clientId).order("created_at", { ascending: false }).limit(400);
-    const l = (data ?? []).map((r) => r.data as Shoutout);
+    const l = (data ?? []).map((r) => r.data as Shoutout).filter((x) => (x as { kind?: string }).kind !== "poll");
     setList(l);
     const { data: chs } = await sb().from("challenges").select("data").eq("client_id", clientId).order("created_at", { ascending: false }).limit(40);
     setChallenges((chs ?? []).map((r) => r.data as Challenge));
@@ -97,6 +107,14 @@ export default function Recognition() {
     const r = await fetch("/api/shout", { method: "POST", headers: { "Content-Type": "application/json", ...(await authHeader()) }, body: JSON.stringify({ clientId, ...body }) });
     return r.json().catch(() => ({ ok: false }));
   };
+  const vote = async (c: "a" | "b"): Promise<PollView | null> => {
+    if (!LIVE) {
+      demoVote(c);
+      return null;
+    }
+    const j = await api({ action: "vote", choice: c });
+    return j.ok ? j.poll : null;
+  };
   const react = async (id: string, emoji: string) => {
     const had = rx.some((r) => r.shout_id === id && r.who === myKey && r.emoji === emoji);
     setRx(had ? rx.filter((r) => !(r.shout_id === id && r.who === myKey && r.emoji === emoji)) : [...rx, { shout_id: id, who: myKey, emoji }]);
@@ -137,6 +155,7 @@ export default function Recognition() {
     .slice(0, 3);
   const week = thisWeek(roster, rec?.celebrate !== false);
   const wall: WallStyle = (rec?.theme?.wall as WallStyle) || "clean";
+  const showPoll = !!poll && rec?.polls?.on !== false;
   const pastCh = challenges.filter((c) => !challengeLive(c));
   const asPick = (p: { id: string; name: string; department?: string; location?: string }): Pick => ({ id: p.id, name: p.name, team: p.department || p.location || "" });
 
@@ -224,7 +243,12 @@ export default function Recognition() {
                   </>
                 ) : (
                   <Wall style={wall}>
-                    {week.length > 0 && <div className="wall-grid">{week.map((w) => <WallMoment key={w.key} m={w} style={wall} onAct={() => setGiving({ preset: { to: asPick(w.person), msg: w.starter } })} />)}</div>}
+                    {(week.length > 0 || showPoll) && (
+                      <div className="wall-grid">
+                        {showPoll && <PollCard key={poll!.id} poll={poll!} onVote={vote} look={wall} />}
+                        {week.map((w) => <WallMoment key={w.key} m={w} style={wall} onAct={() => setGiving({ preset: { to: asPick(w.person), msg: w.starter } })} />)}
+                      </div>
+                    )}
                     {activeCh.length > 0 && <div className="wall-ch"><ChallengeCards list={activeCh.map((c) => publicChallenge(c, list, roster))} /></div>}
                     {live.length === 0 ? (
                       <div className="wn wall-empty">No shoutouts yet. Be the first: tap Give a shoutout.</div>
@@ -237,6 +261,7 @@ export default function Recognition() {
               </div>
 
               <aside className="tw-side">
+                {wall === "clean" && showPoll && <PollCard key={poll!.id} poll={poll!} onVote={vote} />}
                 <div className="card">
                   <h2 className="tw-h">Most recognized this month</h2>
                   {top.length ? (
@@ -724,6 +749,7 @@ function Setup({ advisor, rec, onSave, clientName, accent, onTest }: { advisor?:
   const [wall, setWall] = useState(rec?.showWall !== false);
   const [cel, setCel] = useState(rec?.celebrate !== false);
   const [theme, setTheme] = useState<ShoutTheme>(rec?.theme ?? { style: "classic", burst: true });
+  const [polls, setPolls] = useState<PollSettings>(() => cleanPolls(rec?.polls));
   const defSender = celebrateSender(undefined, clientName);
   const [senderName, setSenderName] = useState(rec?.sender?.name ?? "");
   const [senderBox, setSenderBox] = useState(rec?.sender?.box ?? "");
@@ -749,6 +775,7 @@ function Setup({ advisor, rec, onSave, clientName, accent, onTest }: { advisor?:
     },
     celebrate: cel,
     theme,
+    polls: cleanPolls(polls),
   });
   const save = (next?: Partial<RecognitionSettings>) => onSave({ ...(rec ?? newRecognition()), values: rec?.values ?? DEFAULT_VALUES, smsNumber, notifyManagers: notify, showWall: wall, approval, ...extras(), ...(next ?? {}) });
   const copy = (t: string) => navigator.clipboard?.writeText(t);
@@ -792,6 +819,28 @@ function Setup({ advisor, rec, onSave, clientName, accent, onTest }: { advisor?:
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="card section">
+        <b className="small">This or That</b>
+        <p className="tiny muted" style={{ margin: "2px 0 10px" }}>A one-tap poll on the wall, new every two weeks. People see the results after they vote. Counts only: nobody sees who picked what.</p>
+        <label className="check"><input type="checkbox" checked={polls.on !== false} onChange={(e) => setPolls({ ...polls, on: e.target.checked })} /> Show This or That on the wall</label>
+        {polls.on !== false && (
+          <>
+            <p className="tiny muted" style={{ margin: "10px 0 6px" }}>Your own questions go first, in order. Leave this empty to use ours.</p>
+            {(polls.custom ?? []).map((q, i) => (
+              <div key={q.id} className="poll-edit">
+                <input className="f" value={q.q} placeholder="The question, like: Team lunch?" maxLength={80} aria-label={`Question ${i + 1}`} onChange={(e) => setPolls({ ...polls, custom: (polls.custom ?? []).map((x, k) => (k === i ? { ...x, q: e.target.value } : x)) })} />
+                <input className="f" value={q.a} placeholder="This" maxLength={30} aria-label={`Question ${i + 1}, first choice`} onChange={(e) => setPolls({ ...polls, custom: (polls.custom ?? []).map((x, k) => (k === i ? { ...x, a: e.target.value } : x)) })} />
+                <input className="f" value={q.b} placeholder="That" maxLength={30} aria-label={`Question ${i + 1}, second choice`} onChange={(e) => setPolls({ ...polls, custom: (polls.custom ?? []).map((x, k) => (k === i ? { ...x, b: e.target.value } : x)) })} />
+                <button className="btn ghost sm" aria-label={`Remove question ${i + 1}`} onClick={() => setPolls({ ...polls, custom: (polls.custom ?? []).filter((_, k) => k !== i) })}>×</button>
+              </div>
+            ))}
+            <button className="btn sm" style={{ marginTop: 6 }} onClick={() => setPolls({ ...polls, custom: [...(polls.custom ?? []), { id: `c${Date.now().toString(36)}`, q: "", a: "", b: "" } as PollQ] })}>+ Add a question</button>
+            <label className="check" style={{ marginTop: 10 }}><input type="checkbox" checked={polls.library !== false} onChange={(e) => setPolls({ ...polls, library: e.target.checked })} /> When ours run out, use the seasonal ones (pumpkin spice, beach or mountains…)</label>
+          </>
+        )}
+        <div className="sheet-actions"><button className="btn primary sm" onClick={() => save({ polls: cleanPolls(polls) })}>Save This or That</button></div>
       </div>
 
       <div className="card section">

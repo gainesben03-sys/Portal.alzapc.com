@@ -8,7 +8,8 @@
 import { createHash } from "crypto";
 import { NextResponse } from "next/server";
 import { celebrations, REACTIONS, scoreboard, shortName, Shoutout } from "@/lib/recognition";
-import { clientByToken, createShout, localToday, matchPeople, rosterFor, tellReviewers } from "@/lib/shoutserver";
+import { clientByToken, createShout, localToday, localTodayISO, matchPeople, rosterFor, tellReviewers } from "@/lib/shoutserver";
+import { pollFor, votePoll } from "@/lib/pollserver";
 import { challengesFor, checkChainPass, shoutsSince } from "@/lib/challengeserver";
 import { publicChallenge } from "@/lib/challenges";
 import { admin, SERVER_LIVE, siteUrl } from "@/lib/server";
@@ -62,7 +63,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ token: s
   const chShouts = active.length ? await shoutsSince(db, c.id, active.reduce((m, x) => (x.startedAt < m ? x.startedAt : m), active[0].startedAt)) : [];
   // a person on the Welcome Wagon only needs to know counts, so shoutouts before the earliest new hire don't matter
   const wagon = active.some((x) => x.kind === "welcome") ? await shoutsSince(db, c.id, new Date(Date.now() - 120 * 864e5).toISOString()) : [];
+  const poll = c.rec.showWall === false ? null : await pollFor(db, c.id, c.rec.polls, localTodayISO(), me || undefined);
   return json({
+    poll,
     celebrate,
     pass,
     challenges: active.map((x) => publicChallenge(x, x.kind === "welcome" ? wagon : chShouts, roster)),
@@ -105,6 +108,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   if (device.length < 12) return json({ ok: false, reason: "bad_request" }, 400);
   const who = `d:${hash(device)}`;
   const net = hash(ip(req));
+
+  if (b.action === "vote") {
+    const poll = await votePoll(db, c.id, c.rec.polls, localTodayISO(), who, String(b.choice ?? ""));
+    return poll ? json({ ok: true, poll }) : json({ ok: false, reason: "bad_request" }, 400);
+  }
 
   if (b.action === "give") {
     const roster = await rosterFor(db, c.id);

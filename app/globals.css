@@ -1935,3 +1935,46 @@ button.wp-dot { cursor: pointer; }
 .wall .wm-years b { font-size: 21px; font-weight: 800; }
 .wall .wm-years small { font-size: 8.5px; margin-top: 2px; }
 .wall .wm-cal b, .wall .wm-cal small { font-family: Inter, system-ui, sans-serif; white-space: nowrap; }
+
+/* This or That */
+.poll { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; margin-bottom: 14px; }
+.poll-kick { font: 800 11px Inter, sans-serif; letter-spacing: .12em; color: var(--muted); }
+.poll-q { margin: 4px 0 12px; font-size: 20px; line-height: 1.2; text-transform: none; letter-spacing: 0; color: inherit; }
+.poll-btns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.poll-btns button { min-height: 52px; padding: 6px 10px; border-radius: 12px; border: 2px solid currentColor; background: transparent; color: inherit; font: inherit; font-weight: 700; font-size: 16px; line-height: 1.15; cursor: pointer; }
+.poll-btns .poll-a { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.poll-note { margin: 8px 0 0; font: 12px Inter, sans-serif; color: var(--muted); }
+.poll-row { margin-bottom: 10px; }
+.poll-row-top { display: flex; justify-content: space-between; font-weight: 700; font-size: 16px; }
+.poll-bar { height: 12px; border-radius: 8px; background: rgba(0,0,0,.08); overflow: hidden; margin-top: 3px; }
+.poll-bar span { display: block; height: 100%; background: var(--accent); transition: width .4s; }
+.poll-row.b .poll-bar span { background: #8a8378; }
+.poll-last { margin: 10px 0 0; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 14px; color: var(--muted); }
+/* on the walls it's a paper note like the others */
+.wall .poll { margin: 0; border: 0; border-radius: 2px; padding: 26px 20px 16px; }
+.wall .poll .poll-kick { color: #8a6a3d; }
+.wall .poll .poll-q { font-size: 26px; }
+.wall .poll .poll-btns button { font-family: Kalam, cursive; font-size: 19px; border-color: #1f1d1b; color: #1f1d1b; }
+.wall .poll .poll-btns .poll-a { background: #f6c27a; }
+.wall .poll .poll-btns .poll-b { background: #fff; }
+.wall .poll .poll-note, .wall .poll .poll-last { color: #5c5650; border-color: #cfc6b8; }
+.wall .poll .poll-bar span { background: #e0912f; }
+/* graffiti: a pasted-up poster */
+.wall-graffiti .poll { background: #fff !important; padding: 0; overflow: hidden; border-radius: 4px; box-shadow: 0 2px 3px rgba(0,0,0,.35); font-family: Inter, sans-serif; }
+.wall-graffiti .poll-kick { display: flex; justify-content: space-between; align-items: center; background: #141414; color: #ffcf1f; padding: 10px 14px; }
+.wall-graffiti .poll-kick b { font: 400 26px Anton, Impact, sans-serif; letter-spacing: .06em; }
+.wall-graffiti .poll-kick span { color: #fff; }
+.wall-graffiti .poll-body { padding: 14px 14px 12px; }
+.wall-graffiti .poll .poll-q { font: 400 28px/1.1 "Permanent Marker", cursive; color: #141414; transform: rotate(-1.5deg); }
+.wall-graffiti .poll .poll-btns button { border-radius: 0; border: 3px solid #141414; font: 400 20px Anton, Impact, sans-serif; letter-spacing: .04em; text-transform: uppercase; }
+.wall-graffiti .poll .poll-btns .poll-a { background: #ff3d8b; color: #fff; transform: rotate(-1deg); }
+.wall-graffiti .poll .poll-btns .poll-b { background: #19c2b0; color: #141414; transform: rotate(1deg); }
+.wall-graffiti .poll .poll-row-top { font: 400 18px "Permanent Marker", cursive; }
+.wall-graffiti .poll .poll-bar { border: 2px solid #141414; border-radius: 0; background: #fff; }
+.wall-graffiti .poll .poll-bar span { background: #ff3d8b; }
+.wall-graffiti .poll .poll-row.b .poll-bar span { background: #19c2b0; }
+.wall-graffiti .poll .poll-last { font-family: "Permanent Marker", cursive; color: #444; border-top: 2px dashed #bbb; }
+.wall-graffiti .poll::before { display: none; }
+/* setup */
+.poll-edit { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 6px; margin-top: 6px; }
+@media (max-width: 560px) { .poll-edit { grid-template-columns: 1fr 1fr auto; } .poll-edit input:first-child { grid-column: 1 / -1; } }

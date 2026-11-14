@@ -4,12 +4,14 @@
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { ChallengeCards, Pick, PersonSearch, Scoreboard, ShoutCard, WallItem } from "@/components/shoutui";
+import { demoPoll, demoVote, PollCard } from "@/components/poll";
+import type { PollView } from "@/lib/polls";
 import { PublicChallenge, publicChallenge } from "@/lib/challenges";
 import { Board, Celebration, celebrateLine, DEFAULT_HEADLINE, MAX_MESSAGE, shortName, ShoutTheme, STARTERS, themeVars } from "@/lib/recognition";
 import { Burst } from "@/components/shoutui";
 import { DEMO_CELEBRATE, DEMO_CHALLENGES, DEMO_PEOPLE, DEMO_ROSTER, DEMO_SHOUTS, DEMO_VALUES, demoBoard, demoReactions } from "@/lib/shoutdemo";
 
-type Info = { company: string; accent: string; theme?: ShoutTheme | null; logo: string | null; values: string[]; sms: string | null; showWall: boolean; board: Board | null; wall: WallItem[]; celebrate: Celebration[]; challenges: PublicChallenge[]; pass: Pass | null };
+type Info = { company: string; accent: string; theme?: ShoutTheme | null; logo: string | null; values: string[]; sms: string | null; showWall: boolean; board: Board | null; wall: WallItem[]; celebrate: Celebration[]; challenges: PublicChallenge[]; pass: Pass | null; poll?: PollView | null };
 type Pass = { id: string; title: string; link: number; holder: { id: string; name: string; team: string }; daysLeft: number; error?: string };
 type Lang = "en" | "es";
 
@@ -65,6 +67,7 @@ export default function ShoutPage() {
         sms: "+14155550123",
         showWall: true,
         celebrate: DEMO_CELEBRATE,
+        poll: demoPoll(),
         challenges: DEMO_CHALLENGES.map((c) => publicChallenge(c, DEMO_SHOUTS, DEMO_ROSTER)),
         pass: passQ ? { id: passQ, title: "November Appreciation Chain", link: 5, holder: { id: "pp2", name: "Ana R.", team: "Install crew" }, daysLeft: 2 } : null,
         board: demoBoard(),
@@ -240,6 +243,16 @@ export default function ShoutPage() {
         </>
       ) : (
         <>
+          {info.poll && (
+            <PollCard
+              poll={info.poll}
+              onVote={async (c) => {
+                if (demo) return void demoVote(c);
+                const r = await post({ action: "vote", choice: c });
+                return r.ok ? (r.poll as PollView) : null;
+              }}
+            />
+          )}
           <ChallengeCards list={info.challenges} lang={lang} />
           {info.board && <Scoreboard b={info.board} />}
           {info.wall.length === 0 ? (
