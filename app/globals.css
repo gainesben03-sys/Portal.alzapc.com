@@ -1991,3 +1991,7 @@ button.wp-dot { cursor: pointer; }
 .pl-asks li { margin: 4px 0; }
 .wall-poll { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
 .so-wall + .poll, .so-panel + .poll { margin-top: 14px; }
+/* tracker: long step names (one long word, or words joined by "/") wrap inside their column instead of running into the next */
+.nt th.nt-step { width: 108px; min-width: 108px; max-width: 124px; overflow: hidden; }
+.nt-step-l { overflow-wrap: anywhere; hyphens: auto; -webkit-hyphens: auto; }
+.nt td.nt-mgr, .nt th.nt-mgr { white-space: nowrap; }
