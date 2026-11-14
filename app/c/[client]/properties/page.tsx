@@ -40,7 +40,7 @@ function useProperties(clientId: string) {
   // demo: everything from this browser's sample data
   const demo = useMemo<Data | null>(() => {
     if (LIVE) return null;
-    const settings = cleanSettings(config[clientId]?.properties);
+    const settings = cleanSettings(config[clientId]?.properties, { allowData: true });
     const client = getClient(clientId);
     const canEdit = viewer?.kind === "advisor" || me?.access === "exec";
     const esc = client?.escalation;
@@ -84,7 +84,7 @@ export default function PropertiesPage() {
     );
 
   const save = async (settings: PropertySettings, msg = "Saved") => {
-    const clean = cleanSettings(settings);
+    const clean = cleanSettings(settings, { allowData: !LIVE });
     if (!LIVE) {
       patch({ config: { ...config, [clientId]: { ...cfg, properties: clean } } });
       toast.show(msg);
@@ -99,6 +99,26 @@ export default function PropertiesPage() {
     patch({ config: { ...config, [clientId]: { ...cfg, properties: j.settings } } });
     await reload();
     toast.show(msg);
+    return true;
+  };
+
+  // card photos: live uploads go straight to storage; the demo keeps a small copy in this browser
+  const setPhoto = async (key: string, name: string, dataUrl: string | null) => {
+    if (!LIVE) {
+      const cur = cleanSettings(cfg?.properties, { allowData: true });
+      const items = cur.items ?? [];
+      const next = items.some((i) => i.key === key) ? items.map((i) => (i.key === key ? { ...i, photo: dataUrl ?? undefined } : i)) : [...items, { key, name, photo: dataUrl ?? undefined }];
+      return save({ ...cur, items: next }, dataUrl ? "Photo added" : "Photo removed");
+    }
+    const r = await fetch("/api/properties", { method: "POST", headers: { "Content-Type": "application/json", ...(await authHeader()) }, body: JSON.stringify({ clientId, action: dataUrl ? "photo" : "removePhoto", key, data: dataUrl }) });
+    const j = await r.json().catch(() => ({}));
+    if (!j.ok) {
+      toast.show(j.reason === "too_big" ? "That photo is too large" : "Couldn't save the photo. Try again.");
+      return false;
+    }
+    patch({ config: { ...config, [clientId]: { ...cfg, properties: j.settings } } });
+    await reload();
+    toast.show(dataUrl ? "Photo added" : "Photo removed");
     return true;
   };
 
@@ -176,7 +196,7 @@ export default function PropertiesPage() {
       </main>
 
       {editCard && data?.settings && data.people && (
-        <EditSheet card={editCard} settings={data.settings} people={data.people} onClose={() => setEditing(null)} onSave={async (s) => (await save(s)) && setEditing(null)} />
+        <EditSheet card={editCard} settings={data.settings} people={data.people} onPhoto={(d) => setPhoto(editCard.key, editCard.name, d)} onClose={() => setEditing(null)} onSave={async (s) => (await save(s)) && setEditing(null)} />
       )}
       {editHq && data?.hq && data.settings && <HqSheet hq={data.hq} settings={data.settings} onClose={() => setEditHq(false)} onSave={async (s) => (await save(s)) && setEditHq(false)} />}
       {managing && data?.settings && (
@@ -194,7 +214,13 @@ const Mail = () => (
 function Card({ card, n, onOpen }: { card: PropertyCard; n: string; onOpen: () => void }) {
   const lead = card.slots.find((s) => s.role === "lead")?.person;
   return (
-    <article className="op-card">
+    <article className={`op-card ${card.photo ? "has-photo" : ""}`}>
+      {card.photo && (
+        <button className="op-photo" onClick={onOpen} aria-label={`Open ${card.name}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={card.photo} alt="" loading="lazy" />
+        </button>
+      )}
       <div className="op-card-top">
         <span className="op-num" style={{ background: DOT[card.status] }}>{n}</span>
         <div className="grow" style={{ minWidth: 0 }}>
@@ -211,7 +237,7 @@ function Card({ card, n, onOpen }: { card: PropertyCard; n: string; onOpen: () =
         {lead?.email && <a className="op-mail ring" href={`mailto:${lead.email}`} aria-label={`Email ${lead.name}`}><Mail /></a>}
       </div>
       <ul className="op-rows">
-        {card.slots.filter((s) => s.role !== "lead").map((s) => (
+        {card.slots.filter((s) => s.role !== "lead" && s.person).map((s) => (
           <li key={s.role}>
             <span className="op-rk">{s.role === "backup" ? "Backup" : s.role === "maint" ? "Maint." : s.label}</span>
             <span className={`op-rn ${s.person ? "" : "gap"}`}>{s.person?.name ?? "Not assigned"}</span>
@@ -326,6 +352,10 @@ function Focus({ card, n, canEdit, onBack, onEdit }: { card: PropertyCard; n: st
         {canEdit && <button className="btn sm" onClick={onEdit}>Edit</button>}
       </div>
       <section className="op-focus section">
+        {card.photo && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img className="op-focus-photo" src={card.photo} alt={card.name} />
+        )}
         <div className="row" style={{ gap: 12, alignItems: "center" }}>
           <span className="op-num lg" style={{ background: DOT[card.status] }}>{n}</span>
           <div className="grow">
@@ -341,11 +371,11 @@ function Focus({ card, n, canEdit, onBack, onEdit }: { card: PropertyCard; n: st
         {card.note && <p className="op-note"><b>Note:</b> {card.note}</p>}
         {!lead?.person && <div className="op-warn"><b>No lead yet.</b> Until someone is named, use the contacts under Still stuck.</div>}
         <div className="op-people">
-          {card.slots.map((s) => (
+          {card.slots.filter((s) => s.person || canEdit).map((s) => (
             <div key={s.role} className={`op-pc ${s.role === "lead" ? "lead" : ""} ${s.person ? "" : "gap"}`}>
               <span className="op-k">{s.label}</span>
               <b className="op-pn">{s.person?.name ?? "Not assigned yet"}</b>
-              <span className="tiny muted">{s.person?.title ?? "Use Still stuck below for now"}</span>
+              <span className="tiny muted">{s.person?.title ?? "Only you and admins see this. Tap Edit to assign someone."}</span>
               {s.person?.email && (
                 <span className="row" style={{ gap: 8, marginTop: 6, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-start" }}>
                   <a className="btn primary sm" href={`mailto:${s.person.email}`}>Email</a>
@@ -360,7 +390,49 @@ function Focus({ card, n, canEdit, onBack, onEdit }: { card: PropertyCard; n: st
   );
 }
 
-function EditSheet({ card, settings, people, onClose, onSave }: { card: PropertyCard; settings: PropertySettings; people: Roster[]; onClose: () => void; onSave: (s: PropertySettings) => void }) {
+/** Shrink a photo in the browser to a wide JPEG before it's saved. */
+async function shrink(file: File, maxW: number, quality: number): Promise<string> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((res, rej) => {
+      const i = new Image();
+      i.onload = () => res(i);
+      i.onerror = rej;
+      i.src = url;
+    });
+    // crop to a 2:1 banner from the center
+    const ratio = 2;
+    let sw = img.naturalWidth;
+    let sh = Math.round(sw / ratio);
+    if (sh > img.naturalHeight) {
+      sh = img.naturalHeight;
+      sw = Math.round(sh * ratio);
+    }
+    const sx = Math.round((img.naturalWidth - sw) / 2);
+    const sy = Math.round((img.naturalHeight - sh) / 2);
+    const w = Math.min(maxW, sw);
+    const c = document.createElement("canvas");
+    c.width = w;
+    c.height = Math.round(w / ratio);
+    c.getContext("2d")!.drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", quality);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+function EditSheet({ card, settings, people, onPhoto, onClose, onSave }: { card: PropertyCard; settings: PropertySettings; people: Roster[]; onPhoto: (d: string | null) => Promise<boolean>; onClose: () => void; onSave: (s: PropertySettings) => void }) {
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const pickPhoto = async (f?: File) => {
+    if (!f || !/^image\//.test(f.type)) return;
+    setPhotoBusy(true);
+    try {
+      await onPhoto(await shrink(f, LIVE ? 1200 : 640, LIVE ? 0.82 : 0.7));
+    } catch {
+      /* unreadable image */
+    }
+    setPhotoBusy(false);
+  };
   const cur = settings.items?.find((i) => i.key === card.key);
   const [v, setV] = useState<PropItem>({ key: card.key, name: card.name, status: card.status, city: cur?.city, address: card.address, note: card.note, roles: { ...(cur?.roles ?? {}) }, manual: cur?.manual });
   const [busy, setBusy] = useState(false);
@@ -376,13 +448,29 @@ function EditSheet({ card, settings, people, onClose, onSave }: { card: Property
   const rest = people.filter((p) => !here.includes(p));
   const submit = async () => {
     setBusy(true);
-    const items = [...(settings.items ?? []).filter((i) => i.key !== card.key), { ...v, name: v.name.trim() || card.name }];
+    const latest = (settings.items ?? []).find((i) => i.key === card.key);
+    const items = [...(settings.items ?? []).filter((i) => i.key !== card.key), { ...v, photo: latest?.photo, name: v.name.trim() || card.name }];
     await onSave({ ...settings, items });
     setBusy(false);
   };
   return (
     <Sheet title={`Edit ${card.name}`} onClose={onClose}>
       <div className="op-scroll">
+        <div className="op-photo-edit">
+          {card.photo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={card.photo} alt="" />
+          ) : (
+            <span className="op-photo-empty tiny muted">No photo. The card looks just like it does now.</span>
+          )}
+          <div className="row" style={{ gap: 8, justifyContent: "flex-start", marginTop: 8 }}>
+            <label className="btn sm" style={{ display: "inline-flex", alignItems: "center" }}>
+              {photoBusy ? "Saving…" : card.photo ? "Change photo" : "Add a photo"}
+              <input type="file" accept="image/*" hidden disabled={photoBusy} onChange={(e) => { pickPhoto(e.target.files?.[0]); e.target.value = ""; }} />
+            </label>
+            {card.photo && <button className="btn sm" disabled={photoBusy} onClick={async () => { setPhotoBusy(true); await onPhoto(null); setPhotoBusy(false); }}>Remove</button>}
+          </div>
+        </div>
         <label className="f">Name<input className="f" value={v.name} maxLength={80} onChange={(e) => setV({ ...v, name: e.target.value })} /></label>
         <div className="two">
           <label className="f">Status

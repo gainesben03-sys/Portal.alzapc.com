@@ -28,6 +28,8 @@ export interface PropItem {
   /** person id to force a slot, "" to leave it empty on purpose; missing = filled from the roster */
   roles?: Partial<Record<RoleKey, string>>;
   manual?: boolean; // added by hand rather than found on the roster
+  /** a photo for the card: a stored file path (live), or a small data URL (demo only) */
+  photo?: string;
 }
 export interface Contact {
   name: string;
@@ -66,6 +68,7 @@ export interface PropertyCard {
   slots: CardSlot[];
   headcount: number;
   manual?: boolean;
+  photo?: string; // path or data URL here; the server swaps paths for short-lived links
 }
 
 export const keyOf = (s: string) => s.trim().replace(/\s+/g, " ").toLowerCase();
@@ -133,7 +136,7 @@ export function propertyCards(people: TeamMember[], s: PropertySettings | undefi
         slot.person = person(p);
       }
     }
-    cards.push({ key: k, name: it?.name || names.get(k) || k, status: it?.status ?? "Active", city: it?.city ?? cityIn(it?.address || "") ?? cityIn(names.get(k) || it?.name || ""), address: it?.address, note: it?.note, slots, headcount: here.length, manual: it?.manual });
+    cards.push({ key: k, name: it?.name || names.get(k) || k, status: it?.status ?? "Active", city: it?.city ?? cityIn(it?.address || "") ?? cityIn(names.get(k) || it?.name || ""), address: it?.address, note: it?.note, slots, headcount: here.length, manual: it?.manual, photo: it?.photo });
   }
   const order: Record<PropStatus, number> = { Active: 0, Transition: 1, Acquisition: 2, Inactive: 3 };
   return cards.sort((a, b) => order[a.status] - order[b.status] || a.name.localeCompare(b.name));
@@ -193,7 +196,9 @@ export function rosterLocations(people: TeamMember[], clientId: string) {
   return [...seen.entries()].map(([key, v]) => ({ key, ...v, corporate: CORPORATE.test(v.name) })).sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export function cleanSettings(v: unknown): PropertySettings {
+export const PHOTO_PATH = /^properties\/[A-Za-z0-9_-]+\/[A-Za-z0-9_.-]+\.jpg$/;
+/** allowData: the demo keeps photos in this browser as small data URLs; the live server never accepts them. */
+export function cleanSettings(v: unknown, opts: { allowData?: boolean } = {}): PropertySettings {
   const s = (v ?? {}) as PropertySettings;
   const str = (x: unknown, n: number) => String(x ?? "").replace(/\s+/g, " ").trim().slice(0, n);
   const items: PropItem[] = [];
@@ -217,6 +222,7 @@ export function cleanSettings(v: unknown): PropertySettings {
       note: str(it?.note, 400) || undefined,
       roles: Object.keys(roles).length ? roles : undefined,
       manual: !!it?.manual || undefined,
+      photo: typeof it?.photo === "string" && (PHOTO_PATH.test(it.photo) || (opts.allowData && /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(it.photo) && it.photo.length < 400_000)) ? it.photo : undefined,
     });
   }
   const hidden = [...new Set((Array.isArray(s.hidden) ? s.hidden : []).map((h) => keyOf(str(h, 80))).filter(Boolean))].slice(0, 100);
