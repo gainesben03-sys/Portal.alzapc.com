@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { ClientNav, ClientTopbar, Toast, useGuard, useToast } from "@/components/ui";
+import { AskBox } from "@/components/askbox";
 import { fmt } from "@/lib/data";
 import { FOLDERS } from "@/lib/modules";
 import { useStore } from "@/lib/store";
@@ -46,6 +47,7 @@ export default function Resources() {
       <main className="wrap">
         <h1>Resources</h1>
         <p className="muted" style={{ marginTop: 6 }}>Everything Alza has shared with {client.name}, in one place.</p>
+        <div style={{ marginTop: 14 }}><AskBox clientId={client.id} slim /></div>
 
         <div className="tile-grid section" style={{ marginTop: 16 }}>
           {FOLDERS.map((f) => {

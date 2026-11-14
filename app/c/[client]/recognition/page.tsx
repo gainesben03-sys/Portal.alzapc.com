@@ -180,8 +180,13 @@ export default function Recognition() {
                 <h2 className="tw-label">This week</h2>
                 <div className="tw-week">
                   {week.map((w) => (
-                    <div key={w.key} className="tw-moment">
-                      <span className={`tw-badge ${w.kind}`} aria-hidden="true">{w.badge}</span>
+                    <div key={w.key} className={`tw-moment ${w.today ? "today" : ""} ${w.kind}`}>
+                      {w.today && w.kind === "bday" && <span className="tw-today">Today</span>}
+                      {w.kind === "bday" ? (
+                        <span className="tw-cal" aria-hidden="true"><small>{w.mon}</small><b>{w.badge}</b></span>
+                      ) : (
+                        <span className={`tw-badge ${w.kind}`} aria-hidden="true">{w.badge}</span>
+                      )}
                       <span className="tw-moment-txt"><b>{w.name}</b><span>{w.line}</span></span>
                       <button className="btn sm" onClick={() => setGiving({ preset: { to: asPick(w.person), msg: w.starter } })}>{w.action}</button>
                     </div>
@@ -376,7 +381,7 @@ export default function Recognition() {
   );
 }
 
-type Moment = { key: string; kind: "new" | "bday" | "anniv"; badge: string; name: string; line: string; action: string; starter: string; person: { id: string; name: string; department?: string; location?: string } };
+type Moment = { key: string; kind: "new" | "bday" | "anniv"; badge: string; mon?: string; today?: boolean; name: string; line: string; action: string; starter: string; person: { id: string; name: string; department?: string; location?: string } };
 
 /** New starters, birthdays and work anniversaries in the next 7 days (new starters: the last 7 too). Month and day only. */
 function thisWeek(roster: { id: string; name: string; title?: string; hireDate?: string; birthday?: string; active: boolean; celebrate?: boolean; department?: string; location?: string }[], on: boolean): Moment[] {
@@ -385,6 +390,8 @@ function thisWeek(roster: { id: string; name: string; title?: string; hireDate?:
   now.setHours(0, 0, 0, 0);
   const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const dayName = (n: number, d: Date) => (n === 0 ? "Today" : n === 1 ? "Tomorrow" : d.toLocaleDateString("en-US", { weekday: "long" }));
+  const md = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const when = (n: number, d: Date) => (n === 0 ? `today, ${md(d)}` : `${dayName(n, d)}, ${md(d)}`);
   const out: (Moment & { sort: number })[] = [];
   for (const p of roster) {
     if (!p.active || p.celebrate === false) continue;
@@ -399,11 +406,11 @@ function thisWeek(roster: { id: string; name: string; title?: string; hireDate?:
     }
     for (let n = 0; n < 7; n++) {
       const d = new Date(now.getTime() + n * 864e5);
-      const md = iso(d).slice(5);
-      if (p.birthday === md) out.push({ key: `b${p.id}`, kind: "bday", badge: "", name: p.name, line: `Birthday · ${dayName(n, d)}`, action: "Send wishes", starter: `Happy birthday, ${first}! `, person: p, sort: n });
-      if (p.hireDate && p.hireDate.slice(5) === md) {
+      const mmdd = iso(d).slice(5);
+      if (p.birthday === mmdd) out.push({ key: `b${p.id}`, kind: "bday", badge: String(d.getDate()), mon: d.toLocaleDateString("en-US", { month: "short" }), today: n === 0, name: p.name, line: n === 0 ? "Birthday today!" : `Birthday · ${when(n, d)}`, action: "Send wishes", starter: `Happy birthday, ${first}! `, person: p, sort: n - 50 * Number(n === 0) });
+      if (p.hireDate && p.hireDate.slice(5) === mmdd) {
         const yrs = d.getFullYear() - Number(p.hireDate.slice(0, 4));
-        if (yrs >= 1) out.push({ key: `a${p.id}`, kind: "anniv", badge: String(yrs), name: p.name, line: `${yrs} ${yrs === 1 ? "year" : "years"} · ${dayName(n, d)}`, action: "Congrats", starter: `Congrats on ${yrs} ${yrs === 1 ? "year" : "years"}, ${first}! `, person: p, sort: n });
+        if (yrs >= 1) out.push({ key: `a${p.id}`, kind: "anniv", badge: String(yrs), name: p.name, today: n === 0, line: `${yrs} ${yrs === 1 ? "year" : "years"} · ${when(n, d)}`, action: "Congrats", starter: `Congrats on ${yrs} ${yrs === 1 ? "year" : "years"}, ${first}! `, person: p, sort: n });
       }
     }
   }

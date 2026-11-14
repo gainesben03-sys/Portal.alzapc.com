@@ -1787,3 +1787,13 @@ button.wp-dot { cursor: pointer; }
 .wp-values { margin: 6px 0 10px; padding-left: 18px; font-size: 14px; line-height: 1.6; }
 .wp-foot { text-align: center; font-size: 14px; line-height: 1.6; color: #6b645e; margin: 4px 0 0; }
 .wp-foot a { color: var(--ex, #19283c); font-weight: 600; }
+
+/* Team Wall: birthdays show their date; today's stands out */
+.tw-moment { position: relative; }
+.tw-cal { flex: none; width: 42px; height: 46px; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); text-align: center; }
+.tw-cal small { display: block; background: var(--amber); color: #fff; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; line-height: 16px; }
+.tw-cal b { flex: 1; display: grid; place-items: center; font-size: 18px; line-height: 1; color: var(--ink); }
+.tw-moment.today { border-color: var(--amber); box-shadow: 0 0 0 2px color-mix(in srgb, var(--amber) 30%, transparent); background: linear-gradient(135deg, var(--amber-bg), var(--card) 70%); }
+.tw-moment.today.bday .tw-moment-txt span { color: var(--amber); font-weight: 700; }
+.tw-today { position: absolute; top: -9px; left: 12px; background: var(--amber); color: #fff; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; }
+.tw-moment-txt span { white-space: normal; }
