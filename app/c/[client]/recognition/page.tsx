@@ -11,6 +11,7 @@ import { Baton, Challenge, CHALLENGE_INFO, ChallengeKind, chainStats, challengeL
 import { challengeLine, NUDGE_LINES } from "@/lib/nudge";
 import { useStore } from "@/lib/store";
 import { authHeader, LIVE, sb } from "@/lib/supabase";
+import { Wall, WallMoment, WALLS, WallStyle } from "@/components/wall";
 import { DEFAULT_HEADLINE, THEME_STYLES, ThemeStyle, themeVars, secondColor, ShoutTheme, CELEBRATE_FILL_INS, CelebrateKind, CelebrateTemplate, celebrateSender, DEFAULT_CELEBRATE_TEMPLATES, DEFAULT_VALUES, fillCelebrate, MAX_MESSAGE, newRecognition, randomToken, REACTIONS, RecognitionSettings, scoreboard, Shoutout, STARTERS, templateFor } from "@/lib/recognition";
 import { DEMO_CHALLENGES, DEMO_PEOPLE, DEMO_SHOUTS, demoReactions } from "@/lib/shoutdemo";
 
@@ -135,6 +136,7 @@ export default function Recognition() {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3);
   const week = thisWeek(roster, rec?.celebrate !== false);
+  const wall: WallStyle = (rec?.theme?.wall as WallStyle) || "clean";
   const pastCh = challenges.filter((c) => !challengeLive(c));
   const asPick = (p: { id: string; name: string; department?: string; location?: string }): Pick => ({ id: p.id, name: p.name, team: p.department || p.location || "" });
 
@@ -175,7 +177,7 @@ export default function Recognition() {
           )
         ) : (
           <>
-            {week.length > 0 && (
+            {week.length > 0 && wall === "clean" && (
               <section className="section" aria-label="This week">
                 <h2 className="tw-label">This week</h2>
                 <div className="tw-week">
@@ -208,14 +210,29 @@ export default function Recognition() {
 
             <div className="tw-cols section">
               <div className={`tw-main so-portal so-theme-${rec.theme?.style ?? "classic"}`} style={themeVars(client.accent, rec.theme)}>
-                {activeCh.length > 0 && <ChallengeCards list={activeCh.map((c) => publicChallenge(c, list, roster))} />}
-                {live.length === 0 ? (
-                  <div className="card small muted">No shoutouts yet. Be the first: tap Give a shoutout.</div>
-                ) : (
+                {wall === "clean" ? (
                   <>
-                    <div className="so-wall">{live.slice(0, shown).map((s) => <ShoutCard key={s.id} s={toItem(s)} onReact={(e) => react(s.id, e)} onRemove={exec ? () => remove(s) : undefined} />)}</div>
-                    {live.length > shown && shown < 80 && <button className="btn block" onClick={() => setShown(Math.min(80, shown + 20))}>Show more</button>}
+                    {activeCh.length > 0 && <ChallengeCards list={activeCh.map((c) => publicChallenge(c, list, roster))} />}
+                    {live.length === 0 ? (
+                      <div className="card small muted">No shoutouts yet. Be the first: tap Give a shoutout.</div>
+                    ) : (
+                      <>
+                        <div className="so-wall">{live.slice(0, shown).map((s) => <ShoutCard key={s.id} s={toItem(s)} onReact={(e) => react(s.id, e)} onRemove={exec ? () => remove(s) : undefined} />)}</div>
+                        {live.length > shown && shown < 80 && <button className="btn block" onClick={() => setShown(Math.min(80, shown + 20))}>Show more</button>}
+                      </>
+                    )}
                   </>
+                ) : (
+                  <Wall style={wall}>
+                    {week.length > 0 && <div className="wall-grid">{week.map((w) => <WallMoment key={w.key} m={w} style={wall} onAct={() => setGiving({ preset: { to: asPick(w.person), msg: w.starter } })} />)}</div>}
+                    {activeCh.length > 0 && <div className="wall-ch"><ChallengeCards list={activeCh.map((c) => publicChallenge(c, list, roster))} /></div>}
+                    {live.length === 0 ? (
+                      <div className="wn wall-empty">No shoutouts yet. Be the first: tap Give a shoutout.</div>
+                    ) : (
+                      <div className="so-wall wall-grid">{live.slice(0, shown).map((s) => <ShoutCard key={s.id} s={toItem(s)} onReact={(e) => react(s.id, e)} onRemove={exec ? () => remove(s) : undefined} />)}</div>
+                    )}
+                    {live.length > shown && shown < 80 && <button className="btn wall-more" onClick={() => setShown(Math.min(80, shown + 20))}>Show more</button>}
+                  </Wall>
                 )}
               </div>
 
@@ -761,6 +778,21 @@ function Setup({ advisor, rec, onSave, clientName, accent, onTest }: { advisor?:
           </label>
         )}
         <div className="sheet-actions"><button className="btn primary sm" onClick={() => save()}>{rec ? "Save" : "Turn on the Team Wall"}</button></div>
+      </div>
+
+      <div className="card section">
+        <b className="small">The wall</b>
+        <p className="tiny muted" style={{ margin: "2px 0 10px" }}>What the Team Wall looks like for everyone. How notes hang comes with each wall.</p>
+        <div className="wall-picks">
+          {WALLS.map((w) => (
+            <button key={w.id} className={`wall-pick ${(theme.wall ?? "clean") === w.id ? "on" : ""}`} aria-pressed={(theme.wall ?? "clean") === w.id} onClick={() => setTheme({ ...theme, wall: w.id })}>
+              <span className={`wall-swatch sw-${w.id}`} aria-hidden="true" />
+              <b>{w.name}</b>
+              <span className="tiny muted">{w.blurb}</span>
+            </button>
+          ))}
+        </div>
+        <div className="sheet-actions"><button className="btn primary sm" onClick={() => { save(); try { localStorage.setItem("alza-demo-shout-theme", JSON.stringify(theme)); } catch {} }}>Save the wall</button></div>
       </div>
 
       <div className="card section">

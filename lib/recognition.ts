@@ -195,7 +195,7 @@ export const ago = (iso: string) => {
 
 // ---------- the look ----------
 export type ThemeStyle = "classic" | "confetti" | "spotlight" | "warm";
-export type ShoutTheme = { style?: ThemeStyle; accent2?: string; headline?: string; headlineEs?: string; burst?: boolean };
+export type ShoutTheme = { style?: ThemeStyle; wall?: import("@/components/wall").WallStyle; accent2?: string; headline?: string; headlineEs?: string; burst?: boolean };
 export const THEME_STYLES: { id: ThemeStyle; name: string; blurb: string }[] = [
   { id: "classic", name: "Clean", blurb: "Simple and bright. Your color on white." },
   { id: "confetti", name: "Confetti", blurb: "A light confetti pattern in your colors." },

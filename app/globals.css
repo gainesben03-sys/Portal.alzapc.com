@@ -1797,3 +1797,133 @@ button.wp-dot { cursor: pointer; }
 .tw-moment.today.bday .tw-moment-txt span { color: var(--amber); font-weight: 700; }
 .tw-today { position: absolute; top: -9px; left: 12px; background: var(--amber); color: #fff; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; }
 .tw-moment-txt span { white-space: normal; }
+
+/* ================= Team Wall styles: cork, chalk, brick, graffiti ================= */
+.wall { position: relative; overflow: hidden; border-radius: 10px; min-height: 520px; color: #1f1d1b; }
+.wall-bg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.wall-in { position: relative; padding: 32px 28px 44px; display: flex; flex-direction: column; gap: 28px; }
+.wall-title { margin: 0; font-weight: 400; text-transform: none; letter-spacing: 0; }
+.wall-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 38px 28px; align-items: start; }
+.so-wall.wall-grid { display: grid; }
+.wall-more { align-self: center; }
+.wall-ch { background: rgba(255,255,255,.92); border-radius: 6px; padding: 10px; box-shadow: 0 8px 16px -6px rgba(0,0,0,.4); }
+
+/* notes: paper on every wall but clean */
+.wall .wn, .wall .so-card { position: relative; background: #fffdf7; border: 0; border-radius: 2px; padding: 22px 18px 14px; box-shadow: 0 10px 18px -6px rgba(0,0,0,.4), 0 2px 4px rgba(0,0,0,.18); font-family: Kalam, "Comic Sans MS", cursive; color: #1f1d1b; }
+.wall .wall-grid > :nth-child(6n+1) { transform: rotate(-1.4deg); }
+.wall .wall-grid > :nth-child(6n+2) { transform: rotate(1.8deg); background-color: #fbe8a6; }
+.wall .wall-grid > :nth-child(6n+3) { transform: rotate(-2.2deg); background-color: #cfe3f3; }
+.wall .wall-grid > :nth-child(6n+4) { transform: rotate(1.2deg); background-color: #f8d3d8; }
+.wall .wall-grid > :nth-child(6n+5) { transform: rotate(-.8deg); background-color: #d6ebcf; }
+.wall .wall-grid > :nth-child(6n) { transform: rotate(2.4deg); }
+.wall .so-card .so-av { display: none; }
+.wall .so-card .so-to { font-size: 19px; color: #1f1d1b; }
+.wall .so-card .so-meta { font-family: Inter, sans-serif; font-size: 11.5px; color: #5c5650; }
+.wall .so-card .so-msg { font-size: 17px; line-height: 1.4; color: #1f1d1b; }
+.wall .so-card .so-rx { background: rgba(0,0,0,.06); border-color: transparent; }
+.wall .wall-empty { max-width: 340px; font-size: 17px; }
+
+/* fasteners */
+.wall .wn::before, .wall .so-card::before { content: ""; position: absolute; left: 50%; pointer-events: none; }
+.wall-cork .wn::before, .wall-cork .so-card::before { top: -9px; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.65) 0 3px, transparent 4px), var(--pin, #d9534f); box-shadow: 3px 4px 3px rgba(0,0,0,.35); }
+.wall-cork .wall-grid > :nth-child(4n+2) { --pin: #2f6fb0; }
+.wall-cork .wall-grid > :nth-child(4n+3) { --pin: #e0a400; }
+.wall-cork .wall-grid > :nth-child(4n) { --pin: #3c8a55; }
+.wall-chalk .wn::before, .wall-chalk .so-card::before { top: -11px; width: 24px; height: 24px; margin-left: -12px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.7) 0 3px, transparent 4px), var(--pin, #d9534f); box-shadow: 0 3px 4px rgba(0,0,0,.45), inset 0 -3px 0 rgba(0,0,0,.2); }
+.wall-chalk .wall-grid > :nth-child(3n+2) { --pin: #2f6fb0; }
+.wall-chalk .wall-grid > :nth-child(3n) { --pin: #e0a400; }
+.wall-brick .wn::before, .wall-brick .so-card::before { top: 6px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #e6e7ea 0 2px, #9a9b9e 3px); border: 1px solid #5d5e61; box-shadow: 2px 3px 3px rgba(0,0,0,.35); }
+
+/* titles */
+.wall-cork { border: 18px solid #6e4a2c; box-shadow: inset 0 0 0 2px #4f331d; }
+.wall-cork .wall-title { font-family: "Permanent Marker", cursive; font-size: 40px; color: #3b2a1a; transform: rotate(-1deg); }
+.wall-chalk { border: 18px solid #8a6440; box-shadow: inset 0 0 40px rgba(0,0,0,.5); }
+.wall-chalk .wall-title { font-family: Caveat, cursive; font-weight: 700; font-size: 58px; color: #f3f1e8; text-align: center; transform: rotate(-1.5deg); text-shadow: 0 0 2px rgba(255,255,255,.5); }
+.wall-brick .wall-title { font-family: "Permanent Marker", cursive; font-size: 52px; color: #fdf6e8; transform: rotate(-2deg); }
+.wall-graffiti .wall-title { font-family: "Sedgwick Ave Display", cursive; font-size: 84px; line-height: 1; color: #ff3d8b; transform: rotate(-4deg); text-shadow: 4px 4px 0 #111, -2px -2px 0 #ffd23f, 0 0 18px rgba(255,61,139,.45); }
+.wall-save { position: absolute; top: 18px; right: 26px; z-index: 2; transform: rotate(5deg); padding: 0 10px; border: 3px solid rgba(244,242,234,.78); border-radius: 6px 10px 5px 9px; font-family: Caveat, cursive; font-size: 44px; font-weight: 700; line-height: 1.05; color: rgba(244,242,234,.88); text-shadow: 0 0 2px rgba(255,255,255,.5); letter-spacing: .04em; }
+
+/* chalkboard: every third shoutout is written right on the board */
+.wall-chalk .so-wall > .so-card:nth-child(3n+1) { background: transparent; box-shadow: none; transform: rotate(-1deg); font-family: Caveat, cursive; color: #f4f2ea; text-shadow: 0 0 1.5px rgba(255,255,255,.55); }
+.wall-chalk .so-wall > .so-card:nth-child(3n+1)::before { display: none; }
+.wall-chalk .so-wall > .so-card:nth-child(3n+1) .so-to { color: #f4f2ea; font-size: 28px; font-weight: 700; }
+.wall-chalk .so-wall > .so-card:nth-child(3n+1) .so-meta { color: rgba(244,242,234,.75); }
+.wall-chalk .so-wall > .so-card:nth-child(3n+1) .so-msg { color: #f4f2ea; font-size: 26px; line-height: 1.15; font-weight: 600; }
+.wall-chalk .so-wall > .so-card:nth-child(3n+1) .so-rx { background: rgba(255,255,255,.1); color: #f4f2ea; }
+
+/* graffiti: shoutouts are spray-painted on */
+.wall-graffiti .so-wall > .so-card { background: transparent; box-shadow: none; padding: 4px 2px 0; }
+.wall-graffiti .so-wall > .so-card::before { display: none; }
+.wall-graffiti .so-wall > .so-card { --paint: #ff3d8b; --paint2: #ffd23f; }
+.wall-graffiti .so-wall > .so-card:nth-child(3n+2) { --paint: #19c2b0; --paint2: #ff3d8b; }
+.wall-graffiti .so-wall > .so-card:nth-child(3n) { --paint: #ffd23f; --paint2: #19c2b0; }
+.wall-graffiti .so-card .so-to { font-family: "Sedgwick Ave Display", cursive; font-weight: 400; font-size: 34px; line-height: 1; color: var(--paint); text-shadow: 3px 3px 0 #111, -1px -1px 0 #111; }
+.wall-graffiti .so-card .so-meta { font-family: "Permanent Marker", cursive; font-size: 13px; color: var(--paint2); text-shadow: 1px 1px 0 #111; }
+.wall-graffiti .so-card .so-msg { font-family: "Permanent Marker", cursive; font-size: 21px; line-height: 1.3; color: #fdfbf5; text-shadow: 2px 2px 0 rgba(0,0,0,.65); }
+.wall-graffiti .so-card .so-msg::after { content: ""; display: block; height: 18px; margin-top: 2px; background: linear-gradient(90deg, transparent 8%, var(--paint) 8% 9.5%, transparent 9.5% 40%, rgba(253,251,245,.7) 40% 41%, transparent 41% 66%, var(--paint) 66% 67.5%, transparent 67.5%); -webkit-mask: linear-gradient(#000, transparent); mask: linear-gradient(#000, transparent); }
+.wall-graffiti .so-card .so-rx { background: rgba(0,0,0,.35); color: #fff; }
+.wall-graffiti .wn::before { display: none; }
+
+/* moments */
+.wm-btn { margin-top: 10px; min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1.5px solid currentColor; background: rgba(255,255,255,.6); color: #1f1d1b; font: 700 13px Inter, sans-serif; cursor: pointer; }
+.wm-txt { display: flex; flex-direction: column; min-width: 0; }
+.wm-txt b { font-size: 18px; }
+.wm-txt span { font-size: 15px; color: #4a4540; }
+.wm-txt em { font: normal 800 11px Inter, sans-serif; letter-spacing: .1em; text-transform: uppercase; color: #b23b37; }
+.wm-bday, .wm-anniv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; align-items: center; }
+.wm-bday .wm-btn, .wm-anniv .wm-btn { grid-column: 1 / -1; justify-self: start; }
+.wm-cal { width: 56px; border-radius: 9px; overflow: hidden; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); text-align: center; font-family: Inter, sans-serif; }
+.wm-cal small { display: block; background: #c98a12; color: #fff; font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; padding: 2px 0; }
+.wm-cal b { display: block; font-size: 24px; line-height: 1.3; }
+.wm-bday.today { overflow: hidden; outline: 3px solid #d9534f; }
+.wm-bday.today .wm-cal small { background: #d9534f; }
+.wm-bday.today .wm-txt b { font-size: 22px; }
+.wm-ribbon { position: absolute; top: 14px; right: -36px; width: 140px; transform: rotate(38deg); background: #d9534f; color: #fff; text-align: center; font: 800 11px Inter, sans-serif; letter-spacing: .12em; padding: 4px 0; box-shadow: 0 2px 4px rgba(0,0,0,.25); }
+.wm-years { width: 56px; height: 56px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-content: center; text-align: center; font-family: Inter, sans-serif; line-height: 1; }
+.wm-years b { font-size: 22px; } .wm-years small { font-size: 9px; font-weight: 700; letter-spacing: .08em; }
+.wall .wm-polaroid { background: #fff !important; padding: 12px 12px 16px; text-align: center; display: flex; flex-direction: column; align-items: center; }
+.wm-photo { width: 100%; aspect-ratio: 1; background: #e3ded5; display: grid; place-items: center; font: 600 48px Georgia, serif; color: #8a8378; margin-bottom: 10px; }
+.wm-polaroid b { font-size: 20px; } .wm-polaroid > span { font-size: 15px; color: #4a4540; }
+/* graffiti moments: stickers and flyers, pasted flat */
+.wall-graffiti .wm-sticker, .wall-graffiti .wm-flyer, .wall-graffiti .wm-label { padding: 0; overflow: hidden; box-shadow: 0 2px 3px rgba(0,0,0,.35); font-family: Inter, sans-serif; }
+.wall .wm-sticker { background: #fff !important; border: 3px solid #d6261f; border-radius: 14px; text-align: center; padding-bottom: 14px; }
+.wm-sticker-top { background: #d6261f; color: #fff; padding: 10px 8px 8px; display: flex; flex-direction: column; }
+.wm-sticker-top b { font: 400 30px/1 Anton, Impact, sans-serif; letter-spacing: .06em; }
+.wm-sticker-top span { font-size: 11px; font-weight: 800; letter-spacing: .16em; margin-top: 3px; }
+.wm-sticker-name { font: 400 46px/1.1 "Permanent Marker", cursive; transform: rotate(-3deg); margin-top: 10px; }
+.wm-sticker .wm-btn { background: #ffcf1f; border-color: #141414; border-width: 2px; }
+.wall .wm-flyer { background: #fbfaf5 !important; }
+.wm-flyer-body { padding: 18px 16px 12px; text-align: center; display: flex; flex-direction: column; align-items: center; }
+.wm-flyer-body > b { font: 400 30px/1 Anton, Impact, sans-serif; letter-spacing: .04em; }
+.wm-marker { font-family: "Permanent Marker", cursive; font-size: 19px; }
+.wm-marker.big { font-size: 28px; line-height: 1.1; transform: rotate(-2deg); }
+.wm-flyer-body small { font-size: 14px; font-weight: 700; margin-top: 2px; }
+.wm-tabs { display: flex; height: 88px; border-top: 2px dashed #9b958b; }
+.wm-tabs span { flex: 1; border-right: 1px dashed #9b958b; writing-mode: vertical-rl; transform: rotate(180deg); display: grid; place-items: center; font: 12px "Permanent Marker", cursive; white-space: nowrap; overflow: hidden; }
+.wm-tabs span.gone { visibility: hidden; }
+.wall .wm-label { background: #fff !important; border-radius: 6px; padding-bottom: 12px; }
+.wm-label-top { display: flex; border-bottom: 3px solid #1f4fa0; }
+.wm-label-top b { flex: 1; padding: 8px 10px; font: 400 20px Anton, Impact, sans-serif; letter-spacing: .06em; color: #1f4fa0; }
+.wm-label-top i { width: 54px; background: repeating-linear-gradient(90deg, #1f4fa0 0 3px, #fff 3px 6px); }
+.wm-label small { display: block; padding: 10px 12px 2px; font-size: 10px; font-weight: 800; letter-spacing: .12em; color: #1f4fa0; }
+.wm-label .wm-marker { padding: 0 12px 2px; border-bottom: 1px solid #c9d3e6; }
+.wm-label-foot { padding: 8px 12px 0; font: 15px "Permanent Marker", cursive; color: #444; }
+.wm-label .wm-btn { margin-left: 12px; }
+
+/* setup picker */
+.wall-picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.wall-pick { display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 8px; border-radius: 12px; border: 2px solid var(--line); background: var(--card); color: var(--ink); font: inherit; cursor: pointer; }
+.wall-pick.on { border-color: var(--accent); }
+.wall-swatch { height: 56px; border-radius: 8px; display: block; }
+.sw-clean { background: var(--soft); border: 1px solid var(--line); }
+.sw-cork { background: radial-gradient(circle at 30% 40%, #a7743f 1px, transparent 1.5px) 0 0 / 7px 7px, #c89662; border: 4px solid #6e4a2c; }
+.sw-chalk { background: #2b3933; border: 4px solid #8a6440; position: relative; }
+.sw-chalk::after { content: "SAVE"; position: absolute; top: 4px; right: 6px; font: 700 14px Caveat, cursive; color: #eee; border: 1.5px solid #ddd; padding: 0 3px; border-radius: 3px; }
+.sw-brick { background: linear-gradient(#c9bcab 2px, transparent 2px) 0 0 / 100% 12px, linear-gradient(90deg, #c9bcab 2px, transparent 2px) 0 0 / 24px 24px, #9d4a33; }
+.sw-graffiti { background: radial-gradient(circle at 25% 35%, rgba(255,61,139,.75), transparent 45%), radial-gradient(circle at 75% 60%, rgba(25,194,176,.7), transparent 45%), radial-gradient(circle at 55% 20%, rgba(255,210,63,.7), transparent 40%), #8e8d89; }
+@media (max-width: 640px) {
+  .wall-in { padding: 24px 16px 32px; }
+  .wall-graffiti .wall-title { font-size: 56px; }
+  .wall-cork, .wall-chalk { border-width: 10px; }
+  .wall-save { font-size: 30px; top: 10px; right: 12px; }
+}
