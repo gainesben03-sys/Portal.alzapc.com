@@ -288,7 +288,6 @@ function MapView({ cards, hq, num, canEdit, onOpen }: { cards: PropertyCard[]; h
 
 function Hq({ hq, canEdit, onEdit }: { hq: HqCard; canEdit: boolean; onEdit: () => void }) {
   const [all, setAll] = useState(false);
-  const tiers = [0, 1, 2, 3].map((t) => hq.leaders.filter((p) => p.tier === t)).filter((t) => t.length);
   return (
     <section className="op-hq section" aria-label="Headquarters">
       <div className="op-hq-l">
@@ -300,20 +299,16 @@ function Hq({ hq, canEdit, onEdit }: { hq: HqCard; canEdit: boolean; onEdit: () 
         {canEdit && <button className="btn sm" style={{ marginTop: 12 }} onClick={onEdit}>Edit</button>}
       </div>
       <div className="op-hq-r">
-        {tiers.length ? (
-          <div className="op-org" aria-label="Leadership">
-            {tiers.map((row, i) => (
-              <div key={i} className="op-org-row">
-                {row.map((p) => (
-                  <div key={p.id} className={`op-org-node t${p.tier}`}>
-                    <b>{p.name}</b>
-                    <span>{p.title}</span>
-                    {p.email && <a href={`mailto:${p.email}`} className="op-org-mail">{p.email}</a>}
-                  </div>
-                ))}
-              </div>
+        {hq.leaders.length ? (
+          <ul className="op-lead-row" aria-label="Leadership">
+            {hq.leaders.map((p) => (
+              <li key={p.id}>
+                <b>{p.name}</b>
+                <span>{p.title}</span>
+                {p.email && <a href={`mailto:${p.email}`} aria-label={`Email ${p.name}`}><Mail /> Email</a>}
+              </li>
             ))}
-          </div>
+          </ul>
         ) : (
           <p className="small muted">No leadership titles found at headquarters yet.{canEdit ? " Tap Edit to pick who shows here." : ""}</p>
         )}
@@ -340,6 +335,12 @@ function HqSheet({ hq, settings, people, onClose, onSave }: { hq: HqCard; settin
   const [picked, setPicked] = useState<string[]>(hq.leaders.map((p) => p.id));
   const hqPeople = [...hq.leaders, ...hq.others];
   const extra = people.filter((p) => !hqPeople.some((x) => x.id === p.id));
+  const everyone = [...hqPeople.map((p) => ({ id: p.id, name: p.name, title: p.title })), ...extra.map((p) => ({ id: p.id, name: p.name, title: p.title }))];
+  const move = (i: number, d: number) => {
+    const n = [...picked];
+    [n[i], n[i + d]] = [n[i + d], n[i]];
+    setPicked(n);
+  };
   const [v, setV] = useState<PropItem>({ key: hq.key, name: hq.name, address: hq.address, city: cur?.city, note: hq.note });
   const [busy, setBusy] = useState(false);
   return (
@@ -353,23 +354,34 @@ function HqSheet({ hq, settings, people, onClose, onSave }: { hq: HqCard; settin
         </select>
       </label>
       <label className="f">Note <span className="tiny muted">(optional)</span><textarea className="f" rows={2} maxLength={400} value={v.note ?? ""} onChange={(e) => setV({ ...v, note: e.target.value || undefined })} /></label>
-      <h4 className="op-h">Leadership chart</h4>
-      <label className="check" style={{ marginTop: 0 }}><input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} /> Pick from titles (principals, managing directors, HR and directors)</label>
+      <h4 className="op-h">Leadership</h4>
+      <label className="check" style={{ marginTop: 0 }}><input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} /> Pick and order from titles automatically</label>
       {!auto && (
-        <div className="op-scroll" style={{ maxHeight: "34vh" }}>
-          <ul className="op-manage">
-            {[...hqPeople, ...extra.map((p) => ({ id: p.id, name: p.name, title: p.title }))].map((p) => (
-              <li key={p.id}>
-                <label className="check" style={{ margin: 0 }}>
-                  <input type="checkbox" checked={picked.includes(p.id)} onChange={(e) => setPicked(e.target.checked ? [...picked, p.id] : picked.filter((x) => x !== p.id))} />
-                  <span className="grow">{p.name} <span className="tiny muted">· {p.title}</span></span>
-                </label>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <>
+          <ol className="op-order">
+            {picked.map((id, i) => {
+              const p = everyone.find((x) => x.id === id);
+              if (!p) return null;
+              return (
+                <li key={id}>
+                  <span className="op-order-n">{i + 1}</span>
+                  <span className="grow" style={{ minWidth: 0 }}><b>{p.name}</b> <span className="tiny muted">· {p.title}</span></span>
+                  <button className="btn sm" aria-label={`Move ${p.name} earlier`} disabled={i === 0} onClick={() => move(i, -1)}>↑</button>
+                  <button className="btn sm" aria-label={`Move ${p.name} later`} disabled={i === picked.length - 1} onClick={() => move(i, 1)}>↓</button>
+                  <button className="btn sm" aria-label={`Remove ${p.name}`} onClick={() => setPicked(picked.filter((x) => x !== id))}>×</button>
+                </li>
+              );
+            })}
+          </ol>
+          {picked.length < 12 && (
+            <select className="f" value="" onChange={(e) => e.target.value && setPicked([...picked, e.target.value])} aria-label="Add someone to the leadership row">
+              <option value="">+ Add someone</option>
+              {everyone.filter((p) => !picked.includes(p.id)).map((p) => <option key={p.id} value={p.id}>{p.name}{p.title ? `, ${p.title}` : ""}</option>)}
+            </select>
+          )}
+        </>
       )}
-      <p className="tiny muted">The chart arranges itself by title: managing principal on top, then principals, managing directors, then HR and directors. Everyone else at HQ is listed under it. Choose which locations count as HQ under Manage.</p>
+      <p className="tiny muted">Shown side by side in this order, left to right. Everyone else at HQ is listed under it. Choose which locations count as HQ under Manage.</p>
       <div className="sheet-actions">
         <button className="btn sm" onClick={onClose}>Cancel</button>
         <button className="btn primary sm" disabled={busy} onClick={async () => { setBusy(true); await onSave({ ...settings, leaders: auto ? [] : picked.slice(0, 12), items: [...(settings.items ?? []).filter((i) => i.key !== hq.key), { ...cur, ...v, name: v.name.trim() || hq.name }] }); setBusy(false); }}>{busy ? "Saving…" : "Save"}</button>

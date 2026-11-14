@@ -1639,3 +1639,17 @@ button.nt-dot:hover { border-color: var(--green); transform: scale(1.06); }
 .op-hq-more { margin-top: 14px; text-align: center; }
 .op-hq-more ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 4px 16px; text-align: left; font-size: 13.5px; }
 @media (max-width: 520px) { .op-org-node { min-width: 0; flex: 1 1 140px; } }
+.op-lead-row { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr)); gap: 10px; }
+.op-lead-row li { display: flex; flex-direction: column; gap: 2px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; min-width: 0; }
+.op-lead-row li:first-child { border: 2px solid var(--accent); }
+.op-lead-row b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.op-lead-row span { font-size: 12.5px; color: var(--muted); }
+.op-lead-row a { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 13px; font-weight: 600; color: var(--accent); text-decoration: none; }
+.op-hq-more { text-align: left; }
+.op-order { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 6px; }
+.op-order li { display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 12px; padding: 6px 6px 6px 10px; font-size: 14px; }
+.op-order-n { width: 20px; flex: none; font-size: 12px; font-weight: 700; color: var(--muted); }
+.op-order .btn { min-width: 32px; padding: 0; justify-content: center; }
+.op-order li > .grow { flex: 1; }
+.op-lead-row { grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 1fr)); gap: 8px; }
+.op-lead-row li { padding: 10px 12px; }

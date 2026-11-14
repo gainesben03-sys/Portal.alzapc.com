@@ -190,7 +190,9 @@ export function hqCard(people: TeamMember[], s: PropertySettings | undefined, cl
   const byRank = [...here].sort((a, b) => rankOf(a.title || "") - rankOf(b.title || "") || a.name.localeCompare(b.name));
   const chosen = s?.leaders?.length ? s.leaders.map((id) => team.find((p) => p.id === id)).filter((p): p is TeamMember => !!p) : byRank.filter((p) => rankOf(p.title || "") <= 3).slice(0, 9);
   const ids = new Set(chosen.map((p) => p.id));
-  const leaders = [...chosen].sort((a, b) => rankOf(a.title || "") - rankOf(b.title || "") || a.name.localeCompare(b.name)).map((p) => ({ ...person(p), tier: Math.min(rankOf(p.title || ""), 3) }));
+  // picked by hand: their order; automatic: most senior first
+  const ordered = s?.leaders?.length ? chosen : [...chosen].sort((a, b) => rankOf(a.title || "") - rankOf(b.title || "") || a.name.localeCompare(b.name));
+  const leaders = ordered.map((p) => ({ ...person(p), tier: Math.min(rankOf(p.title || ""), 3) }));
   return {
     key: it?.key ?? keys[0],
     keys,
