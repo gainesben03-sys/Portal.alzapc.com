@@ -13,6 +13,7 @@ import { nudgeTargets, sendNudgeWave } from "@/lib/nudgeserver";
 import { celebrateMail, createShout, localTodayISO, rosterFor, tellThem, ShoutClient } from "@/lib/shoutserver";
 import { pollFor, votePoll } from "@/lib/pollserver";
 import { cleanPolls } from "@/lib/polls";
+import { cleanMonthly } from "@/lib/monthly";
 import { admin, caller, sendEmail, SERVER_LIVE, siteUrl } from "@/lib/server";
 import type { ClientConfig } from "@/lib/modules";
 
@@ -70,6 +71,7 @@ export async function POST(req: Request) {
     if (r.autoEmail && typeof r.autoEmail === "object") allowed.autoEmail = { birthday: !!r.autoEmail.birthday, anniversary: !!r.autoEmail.anniversary };
     if (r.templates && typeof r.templates === "object") allowed.templates = r.templates;
     if (r.polls && typeof r.polls === "object") allowed.polls = cleanPolls(r.polls);
+    if (r.monthly && typeof r.monthly === "object") allowed.monthly = cleanMonthly(r.monthly);
     const recognition = { ...cfg.recognition, ...allowed };
     const { error } = await db.from("clients").update({ config: { ...cfg, recognition } }).eq("id", clientId);
     if (error) return NextResponse.json({ ok: false, reason: "save_failed" }, { status: 500 });
@@ -88,7 +90,7 @@ export async function POST(req: Request) {
       if (!me.advisor && ck.parent.to.personId !== mine?.id) return NextResponse.json({ ok: false, reason: "not_yours" }, { status: 403 });
       chain = { challengeId: ck.challenge.id, parentId: ck.parent.id, depth: ck.depth };
     }
-    const s = await createShout(db, siteUrl(req), c, { to, from: { name: myName, personId: mine?.id, email: me.email, verified: true }, value: b.value ? String(b.value) : undefined, message: String(b.message ?? ""), channel: "portal", ...chain });
+    const s = await createShout(db, siteUrl(req), c, { to, from: { name: myName, personId: mine?.id, email: me.email, verified: true }, value: b.value ? String(b.value) : undefined, message: String(b.message ?? ""), channel: "portal", reason: b.reason ? String(b.reason) : undefined, ...chain });
     return NextResponse.json({ ok: true, status: s.status, shout: s });
   }
 

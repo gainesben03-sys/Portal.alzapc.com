@@ -1,5 +1,6 @@
 // Sample shoutouts for the demo (no server). Made-up people only.
 import { scoreboard, Shoutout } from "./recognition";
+import { themeOf } from "./monthly";
 
 const ago = (h: number) => new Date(Date.now() - h * 3600e3).toISOString();
 export const DEMO_VALUES = ["Teamwork", "Safety first", "Above and beyond", "Customer first", "Ownership"];
@@ -27,15 +28,19 @@ const mk = (id: string, to: number, from: number, value: string, message: string
 
 const link = (id: string, to: number, from: number, msg: string, h: number, depth: number, parentId?: string): Shoutout => ({ ...mk(id, to, from, "Teamwork", msg, h), challengeId: "ch-demo", depth, parentId });
 
+// this month's theme on a few of them, so the demo shows tags and reasons
+const MT = themeOf(undefined, new Date().getMonth() + 1);
+const tagged = (s: Shoutout, r: number): Shoutout => ({ ...s, theme: MT.title, reason: MT.reasons[r] });
+
 export const DEMO_SHOUTS: Shoutout[] = [
   link("c1", 0, 4, "Kicking off the chain: Marcus, you held the warehouse together during inventory week.", 70, 1),
   link("c2", 3, 0, "Lucía caught three mislabeled crates before they shipped. Passing it to you!", 50, 2, "c1"),
   link("c3", 2, 3, "Devon re-did the stage plot at midnight so install could start on time.", 30, 3, "c2"),
   link("c4", 5, 3, "Jordan jumped on the scanner rollout without being asked.", 28, 3, "c2"),
   link("c5", 1, 2, "Ana, your crew made load-in look easy this week.", 9, 4, "c3"),
-  mk("d1", 0, 1, "Above and beyond", "Stayed two hours late to reload the truck when the gala order changed. We made the morning call because of you.", 2),
-  mk("d2", 3, 0, "Safety first", "Stopped the line to re-strap a pallet that was leaning. Nobody else saw it. Thank you!", 6),
-  mk("d3", 2, 4, "Customer first", "The client called out your stage setup by name in their thank-you email. That's all you.", 20),
+  tagged(mk("d1", 0, 1, "Above and beyond", "Stayed two hours late to reload the truck when the gala order changed. We made the morning call because of you.", 2), 1),
+  tagged(mk("d2", 3, 0, "Safety first", "Stopped the line to re-strap a pallet that was leaning. Nobody else saw it. Thank you!", 6), 0),
+  tagged(mk("d3", 2, 4, "Customer first", "The client called out your stage setup by name in their thank-you email. That's all you.", 20), 3),
   mk("d4", 5, 3, "Teamwork", "Gracias por enseñarme el nuevo escáner sin que te lo pidiera. Me ahorraste toda la mañana.", 30),
   mk("d5", 1, 2, "Ownership", "Found the missing cable box at 6am and still got the install done before doors opened.", 52),
   mk("d6", 4, 5, "Teamwork", "Covered my site visit so I could get to my kid's game. Owe you one.", 76),

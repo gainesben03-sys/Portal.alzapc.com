@@ -6,7 +6,8 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
 import { ClientNav, ClientTopbar, Sheet, Toast, useGuard, useToast } from "@/components/ui";
-import { ChallengeCards, Pick, PersonSearch, Scoreboard, ShoutCard, WallItem } from "@/components/shoutui";
+import { ChallengeCards, Pick, PersonSearch, ReasonChips, Scoreboard, ShoutCard, ThemeBanner, WallItem } from "@/components/shoutui";
+import { cleanMonthly, DEFAULT_MONTHLY_WORDING, MonthlySettings, MONTHS, publicTheme, themeOf } from "@/lib/monthly";
 import { Baton, Challenge, CHALLENGE_INFO, ChallengeKind, chainStats, challengeLive, PublicChallenge, publicChallenge } from "@/lib/challenges";
 import { challengeLine, NUDGE_LINES } from "@/lib/nudge";
 import { useStore } from "@/lib/store";
@@ -97,6 +98,8 @@ export default function Recognition() {
     team: s.to.department || s.to.location || "",
     from: s.from.name,
     value: s.value ?? null,
+    tag: s.theme ?? null,
+    reason: s.reason ?? null,
     message: s.message,
     at: s.at,
     reactions: Object.fromEntries(REACTIONS.map((e) => [e, rx.filter((r) => r.shout_id === s.id && r.emoji === e).length])),
@@ -156,6 +159,8 @@ export default function Recognition() {
   const week = thisWeek(roster, rec?.celebrate !== false);
   const wall: WallStyle = (rec?.theme?.wall as WallStyle) || "clean";
   const showPoll = !!poll && rec?.polls?.on !== false;
+  const mt = publicTheme(rec?.monthly);
+  const mtCount = mt ? live.filter((x) => new Date(x.at) >= since).length : 0;
   const pastCh = challenges.filter((c) => !challengeLive(c));
   const asPick = (p: { id: string; name: string; department?: string; location?: string }): Pick => ({ id: p.id, name: p.name, team: p.department || p.location || "" });
 
@@ -226,6 +231,8 @@ export default function Recognition() {
                 </div>
               </div>
             ))}
+
+            {mt && <div className="section"><ThemeBanner t={mt} count={mtCount} onGive={() => setGiving({})} /></div>}
 
             <div className={`tw-cols section ${wall !== "clean" ? "themed" : ""}`}>
               <div className={`tw-main so-portal so-theme-${rec.theme?.style ?? "classic"}`} style={themeVars(client.accent, rec.theme)}>
@@ -363,6 +370,7 @@ export default function Recognition() {
           token={rec.token}
           pass={giving.pass}
           preset={giving.preset}
+          month={giving.pass ? null : mt}
           onClose={() => setGiving(false)}
           onSend={async (body) => {
             const j = await api({ action: "give", ...body, pass: giving.pass?.shoutId });
@@ -706,8 +714,9 @@ function Missing({ list }: { list: Shoutout[] }) {
   );
 }
 
-function GiveSheet({ token, pass, preset, onClose, onSend }: { token: string; pass?: Baton & { title: string }; preset?: { to: Pick; msg?: string }; onClose: () => void; onSend: (b: { to: string; value?: string; message: string }) => Promise<string> }) {
+function GiveSheet({ token, pass, preset, month, onClose, onSend }: { token: string; pass?: Baton & { title: string }; preset?: { to: Pick; msg?: string }; month?: { title: string; prompt: string; reasons: string[] } | null; onClose: () => void; onSend: (b: { to: string; value?: string; message: string; reason?: string }) => Promise<string> }) {
   const [to, setTo] = useState<Pick | null>(preset?.to ?? null);
+  const [reason, setReason] = useState("");
   const [msg, setMsg] = useState(preset?.msg ?? "");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -722,15 +731,22 @@ function GiveSheet({ token, pass, preset, onClose, onSend }: { token: string; pa
   return (
     <Sheet title={pass ? "Pass on the chain" : "Give a shoutout"} onClose={onClose}>
       {pass && <p className="small" style={{ marginTop: 0 }}>You&apos;re link #{pass.link} in the <b>{pass.title}</b>. Recognize someone new to keep it growing.</p>}
+      {month && (
+        <div className="mt-give">
+          <span className="mt-kicker">This month: {month.title}</span>
+          <b>{month.prompt}</b>
+        </div>
+      )}
       <span className="flabel">Who</span>
       <PersonSearch search={search} value={to} onPick={setTo} placeholder="Start typing their name" autoFocus={!preset} />
+      {month && <ReasonChips reasons={month.reasons} value={reason} onPick={setReason} />}
       <span className="flabel" style={{ marginTop: 12 }}>What did they do?</span>
       <div className="so-starters">{STARTERS.en.map((s) => <button key={s} onClick={() => setMsg(s.replace("…", " "))}>{s}</button>)}</div>
       <textarea className="f" style={{ minHeight: 80 }} value={msg} onChange={(e) => setMsg(e.target.value.slice(0, MAX_MESSAGE))} placeholder="Be specific. What happened, and why it mattered." />
       {err && <p className="small" style={{ color: "var(--red)" }}>{err}</p>}
       <div className="sheet-actions">
         <button className="btn ghost sm" onClick={onClose}>Cancel</button>
-        <button className="btn primary sm" disabled={busy || !to || msg.trim().length < 3} onClick={async () => { setBusy(true); setErr(await onSend({ to: to!.id, message: msg })); setBusy(false); }}>{busy ? "Sending…" : "Send"}</button>
+        <button className="btn primary sm" disabled={busy || !to || msg.trim().length < 3} onClick={async () => { setBusy(true); setErr(await onSend({ to: to!.id, message: msg, ...(reason ? { reason } : {}) })); setBusy(false); }}>{busy ? "Sending…" : "Send"}</button>
       </div>
     </Sheet>
   );
@@ -816,6 +832,8 @@ function Setup({ advisor, rec, onSave, clientName, accent, onTest }: { advisor?:
           ))}
         </div>
       </div>
+
+      <MonthlySetup monthly={rec?.monthly} onSave={(monthly) => save({ monthly })} canSave={!!rec} />
 
       <div className="card section">
         <b className="small">This or That</b>
@@ -970,6 +988,106 @@ function Setup({ advisor, rec, onSave, clientName, accent, onTest }: { advisor?:
           {advisor && <button className="linklike tiny" style={{ color: "var(--red)" }} onClick={() => { if (confirm("Get a new link? The current QR code and TV link stop working, so you'll need to reprint the poster.")) onSave({ ...rec, token: randomToken(22) }); }}>Get a new link (old QR codes stop working)</button>}
         </>
       )}
+    </div>
+  );
+}
+
+/** Monthly appreciation themes: one switch, the 12 months, and the email. */
+function MonthlySetup({ monthly, onSave, canSave }: { monthly?: MonthlySettings; onSave: (m: MonthlySettings) => void; canSave: boolean }) {
+  const [m, setM] = useState<MonthlySettings>(() => cleanMonthly(monthly ?? {}) ?? {});
+  const [sel, setSel] = useState(new Date().getMonth() + 1);
+  const [wording, setWording] = useState(false);
+  const t = themeOf(m, sel);
+  const raw = m.themes?.[String(sel)] ?? {};
+  const reasons = raw.reasons ?? t.reasons; // keep blank rows while typing
+  const setTheme = (p: Partial<{ title: string; intro: string; prompt: string; reasons: string[]; off: boolean }>) =>
+    setM({ ...m, themes: { ...(m.themes ?? {}), [String(sel)]: { ...(m.themes?.[String(sel)] ?? {}), ...p } } });
+  const reset = () => {
+    const next = { ...(m.themes ?? {}) };
+    delete next[String(sel)];
+    setM({ ...m, themes: next });
+  };
+  const changed = !!m.themes?.[String(sel)] && Object.keys(m.themes[String(sel)]).some((k) => k !== "off");
+  const w = { ...DEFAULT_MONTHLY_WORDING, ...(m.wording ?? {}) };
+  const setW = (k: keyof typeof DEFAULT_MONTHLY_WORDING, v: string) => setM({ ...m, wording: { ...(m.wording ?? {}), [k]: v } });
+  const save = (next = m) => onSave(cleanMonthly(next) ?? { on: false });
+  return (
+    <div className="card section">
+      <label className="tw-switch">
+        <span className="grow">
+          <b>Monthly appreciation themes</b>
+          <span className="tiny muted" style={{ display: "block", marginTop: 2 }}>A new theme each month, like &ldquo;Got Your Back&rdquo; or &ldquo;Thankful for You.&rdquo; It shows as one banner on the wall and the TV, its question goes on the shoutout page, and people can tap a suggested reason. No rankings or winners.</span>
+        </span>
+        <input type="checkbox" role="switch" checked={!!m.on} aria-label="Monthly appreciation themes" onChange={(e) => { const next = { ...m, on: e.target.checked }; setM(next); if (canSave) save(next); }} />
+      </label>
+      {m.on && (
+        <>
+          <div className="mt-months" role="group" aria-label="Months">
+            {MONTHS.map((name, i) => {
+              const mt = themeOf(m, i + 1);
+              return (
+                <button key={name} className={`mt-month ${sel === i + 1 ? "on" : ""} ${mt.off ? "off" : ""}`} aria-pressed={sel === i + 1} onClick={() => setSel(i + 1)}>
+                  <b>{name.slice(0, 3).toUpperCase()}</b>
+                  <span>{mt.off ? "Skipped" : mt.title}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-edit">
+            <label className="check" style={{ margin: 0 }}><input type="checkbox" checked={!t.off} onChange={(e) => setTheme({ off: !e.target.checked })} /> Use a theme in {t.name}</label>
+            {!t.off && (
+              <>
+                <label className="f">Theme<input className="f" value={raw.title ?? t.title} maxLength={40} onChange={(e) => setTheme({ title: e.target.value })} /></label>
+                <label className="f">A line about it<input className="f" value={raw.intro ?? t.intro} maxLength={200} onChange={(e) => setTheme({ intro: e.target.value })} /></label>
+                <label className="f">The question on the shoutout page<input className="f" value={raw.prompt ?? t.prompt} maxLength={90} onChange={(e) => setTheme({ prompt: e.target.value })} /></label>
+                <span className="flabel">Suggested reasons <span className="tiny muted">(up to 6)</span></span>
+                {reasons.map((r, k) => (
+                  <div key={k} className="mt-reason-row">
+                    <input className="f" value={r} maxLength={40} aria-label={`Reason ${k + 1}`} onChange={(e) => setTheme({ reasons: reasons.map((x, j) => (j === k ? e.target.value : x)) })} />
+                    <button className="btn ghost sm" aria-label={`Remove reason ${k + 1}`} onClick={() => setTheme({ reasons: reasons.filter((_, j) => j !== k) })}>×</button>
+                  </div>
+                ))}
+                {reasons.length < 6 && <button className="btn sm" style={{ alignSelf: "flex-start" }} onClick={() => setTheme({ reasons: [...reasons, ""] })}>+ Add a reason</button>}
+                {changed && <button className="linklike small" style={{ alignSelf: "flex-start" }} onClick={reset}>Go back to our wording for {t.name}</button>}
+              </>
+            )}
+          </div>
+
+          <div style={{ marginTop: 14 }}>
+            <label className="check"><input type="checkbox" checked={m.tag !== false} onChange={(e) => setM({ ...m, tag: e.target.checked })} /> Tag shoutouts with the month&apos;s theme</label>
+            <label className="check"><input type="checkbox" checked={m.tv !== false} onChange={(e) => setM({ ...m, tv: e.target.checked })} /> Show the theme on the break room TV</label>
+            <label className="check"><input type="checkbox" checked={m.managers !== false} onChange={(e) => setM({ ...m, managers: e.target.checked })} /> Add a line about it to managers&apos; Monday email</label>
+            <label className="check"><input type="checkbox" checked={m.email !== false} onChange={(e) => setM({ ...m, email: e.target.checked })} /> Monthly email to the team: the new theme, last month&apos;s recap, and This or That</label>
+            {m.email !== false && (
+              <label className="f" style={{ marginLeft: 26, maxWidth: 260 }}>Day it goes out
+                <select className="f" value={m.emailDay ?? 1} onChange={(e) => setM({ ...m, emailDay: Number(e.target.value) })}>
+                  {Array.from({ length: 28 }, (_, i) => <option key={i} value={i + 1}>{i === 0 ? "The 1st" : `The ${i + 1}${[2, 22].includes(i + 1) ? "nd" : [3, 23].includes(i + 1) ? "rd" : i + 1 === 21 ? "st" : "th"}`}</option>)}
+                </select>
+              </label>
+            )}
+            <label className="check"><input type="checkbox" checked={!!m.nudge} onChange={(e) => setM({ ...m, nudge: e.target.checked })} /> A short mid-month nudge</label>
+            {m.nudge && (
+              <label className="f" style={{ marginLeft: 26, maxWidth: 260 }}>Day it goes out
+                <select className="f" value={m.nudgeDay ?? 15} onChange={(e) => setM({ ...m, nudgeDay: Number(e.target.value) })}>
+                  {Array.from({ length: 28 }, (_, i) => <option key={i} value={i + 1}>{`The ${i + 1}${[1, 21].includes(i + 1) ? "st" : [2, 22].includes(i + 1) ? "nd" : [3, 23].includes(i + 1) ? "rd" : "th"}`}</option>)}
+                </select>
+              </label>
+            )}
+            <p className="tiny muted" style={{ margin: "6px 0 0" }}>Emails go to everyone on the roster with an email, around 7am.</p>
+            <button className="linklike small" style={{ marginTop: 6 }} onClick={() => setWording(!wording)}>{wording ? "Hide the email wording" : "Change the email wording"}</button>
+            {wording && (
+              <div className="mt-edit" style={{ marginTop: 8 }}>
+                <span className="tiny muted">Fill-ins: {"{month}"}, {"{theme}"}, {"{company}"}</span>
+                <label className="f">Subject<input className="f" value={w.subject} maxLength={120} onChange={(e) => setW("subject", e.target.value)} /></label>
+                <label className="f">Opening<textarea className="f" rows={2} value={w.opening} maxLength={400} onChange={(e) => setW("opening", e.target.value)} /></label>
+                <label className="f">Closing<input className="f" value={w.closing} maxLength={200} onChange={(e) => setW("closing", e.target.value)} /></label>
+                <label className="f">Mid-month nudge<input className="f" value={w.nudge} maxLength={300} onChange={(e) => setW("nudge", e.target.value)} /></label>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+      <div className="sheet-actions"><button className="btn primary sm" disabled={!canSave} onClick={() => save()}>Save monthly themes</button></div>
     </div>
   );
 }

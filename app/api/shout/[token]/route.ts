@@ -12,6 +12,7 @@ import { clientByToken, createShout, localToday, localTodayISO, matchPeople, ros
 import { pollFor, votePoll } from "@/lib/pollserver";
 import { challengesFor, checkChainPass, shoutsSince } from "@/lib/challengeserver";
 import { publicChallenge } from "@/lib/challenges";
+import { publicTheme } from "@/lib/monthly";
 import { admin, SERVER_LIVE, siteUrl } from "@/lib/server";
 
 type D = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -73,6 +74,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ token: s
     company: c.name,
     accent: c.config.accent || "#19283c",
     theme: c.rec.theme ?? null,
+    month: publicTheme(c.rec.monthly, localTodayISO()),
     logo: c.config.logoEmail || c.config.logo || null,
     values: c.rec.values,
     sms: c.rec.smsNumber ?? null,
@@ -84,6 +86,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ token: s
       team: s.to.department || s.to.location || "",
       from: shortName(s.from.name),
       value: s.value ?? null,
+      tag: s.theme ?? null,
+      reason: s.reason ?? null,
       message: s.message,
       at: s.at,
       reactions: Object.fromEntries(REACTIONS.map((e) => [e, (rx ?? []).filter((r) => r.shout_id === s.id && r.emoji === e).length])),
@@ -145,6 +149,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
       message,
       channel: "qr",
       lang: b.lang === "es" ? "es" : "en",
+      reason: b.reason ? String(b.reason) : undefined,
       ...chain,
     });
     // who sent it (hashed) for the daily limit; never shown

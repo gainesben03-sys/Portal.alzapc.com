@@ -4,13 +4,14 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { ChallengeCards, Scoreboard, ShoutCard, WallItem } from "@/components/shoutui";
+import { ChallengeCards, Scoreboard, ShoutCard, ThemeBanner, WallItem } from "@/components/shoutui";
 import { PublicChallenge, publicChallenge } from "@/lib/challenges";
 import { Board, Celebration, shortName, ShoutTheme, themeVars } from "@/lib/recognition";
 import { DEMO_CELEBRATE, DEMO_CHALLENGES, DEMO_ROSTER, DEMO_SHOUTS, demoBoard, demoReactions } from "@/lib/shoutdemo";
 import { DEMO_COMPANY, DEMO_ACCENT } from "@/lib/state";
+import { publicTheme, type PublicTheme } from "@/lib/monthly";
 
-type Info = { company: string; accent: string; theme?: ShoutTheme | null; logo: string | null; board: Board | null; wall: WallItem[]; celebrate?: Celebration[]; challenges?: PublicChallenge[] };
+type Info = { company: string; accent: string; theme?: ShoutTheme | null; month?: PublicTheme | null; logo: string | null; board: Board | null; wall: WallItem[]; celebrate?: Celebration[]; challenges?: PublicChallenge[] };
 
 export default function ShoutTv() {
   const { token } = useParams<{ token: string }>();
@@ -25,7 +26,7 @@ export default function ShoutTv() {
         .then((j) => {
           if (j.ok) setInfo(j);
           else if (j.reason === "demo")
-            setInfo({ company: DEMO_COMPANY, accent: DEMO_ACCENT, theme: (() => { try { return JSON.parse(localStorage.getItem("alza-demo-shout-theme") || "null"); } catch { return null; } })(), logo: null, celebrate: DEMO_CELEBRATE, challenges: DEMO_CHALLENGES.map((c) => publicChallenge(c, DEMO_SHOUTS, DEMO_ROSTER)), board: demoBoard(), wall: DEMO_SHOUTS.filter((s) => s.status === "live").map((s) => ({ id: s.id, to: shortName(s.to.name), team: s.to.department ?? "", from: shortName(s.from.name), value: s.value ?? null, message: s.message, at: s.at, reactions: demoReactions[s.id] ?? {}, mine: [] })) });
+            setInfo({ company: DEMO_COMPANY, accent: DEMO_ACCENT, month: publicTheme({ on: true }), theme: (() => { try { return JSON.parse(localStorage.getItem("alza-demo-shout-theme") || "null"); } catch { return null; } })(), logo: null, celebrate: DEMO_CELEBRATE, challenges: DEMO_CHALLENGES.map((c) => publicChallenge(c, DEMO_SHOUTS, DEMO_ROSTER)), board: demoBoard(), wall: DEMO_SHOUTS.filter((s) => s.status === "live").map((s) => ({ id: s.id, to: shortName(s.to.name), team: s.to.department ?? "", from: shortName(s.from.name), value: s.value ?? null, tag: s.theme ?? null, reason: s.reason ?? null, message: s.message, at: s.at, reactions: demoReactions[s.id] ?? {}, mine: [] })) });
         })
         .catch(() => undefined);
     load();
@@ -56,6 +57,7 @@ export default function ShoutTv() {
           ))}
         </div>
       )}
+      {info.month?.tv && <div className="so-tv-mt"><ThemeBanner t={info.month} tv /></div>}
       <main>
         <section className="so-tv-main">
           {cur ? <ShoutCard key={cur.id + i} s={cur} big /> : <h2>Be the first to give a shoutout this month.</h2>}

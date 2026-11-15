@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { ago, Board, REACTIONS } from "@/lib/recognition";
 import type { PublicChallenge } from "@/lib/challenges";
 
-export type WallItem = { id: string; to: string; team: string; from: string; value: string | null; message: string; at: string; reactions: Record<string, number>; mine: string[]; status?: string; heldReason?: string };
+export type WallItem = { id: string; to: string; team: string; from: string; value: string | null; tag?: string | null; reason?: string | null; message: string; at: string; reactions: Record<string, number>; mine: string[]; status?: string; heldReason?: string };
 export type Pick = { id: string; name: string; team: string };
 
 export function ShoutCard({ s, onReact, onReport, onRemove, big, highlight }: { s: WallItem; onReact?: (emoji: string) => void; onReport?: () => void; onRemove?: () => void; big?: boolean; highlight?: boolean }) {
@@ -20,6 +20,12 @@ export function ShoutCard({ s, onReact, onReport, onRemove, big, highlight }: { 
           <span className="so-meta">{[s.team, `from ${s.from}`, ago(s.at)].filter(Boolean).join(" · ")}</span>
         </div>
       </div>
+      {(s.tag || s.reason) && (
+        <div className="so-tags">
+          {s.tag && <span className="so-tag">{s.tag}</span>}
+          {s.reason && <span className="so-reason">{s.reason}</span>}
+        </div>
+      )}
       <p className="so-msg">{s.message}</p>
       {(onReact || onReport || onRemove) && (
         <div className="so-foot">
@@ -188,6 +194,44 @@ export function Burst() {
       {bits.map((b, i) => (
         <i key={i} className={`c${b.c}`} style={{ left: `${b.left}%`, animationDelay: `${b.delay}ms`, animationDuration: `${b.dur}ms`, transform: `rotate(${b.rot}deg)`, width: b.w, height: b.w * 0.45 }} />
       ))}
+    </div>
+  );
+}
+
+/** This month's appreciation theme: one banner on the wall, the QR page and the TV. */
+export function ThemeBanner({ t, count, onGive, compact, tv }: { t: { name: string; title: string; prompt: string; intro?: string }; count?: number; onGive?: () => void; compact?: boolean; tv?: boolean }) {
+  return (
+    <section className={`mt-banner ${compact ? "compact" : ""} ${tv ? "tv" : ""}`} aria-label="This month's theme">
+      <span className="mt-cal" aria-hidden="true">
+        <small>{t.name.slice(0, 3).toUpperCase()}</small>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z" /></svg>
+      </span>
+      <span className="mt-txt">
+        <span className="mt-kicker">This month&apos;s theme</span>
+        <b className="mt-title">{t.title}</b>
+        <span className="mt-prompt">{t.prompt}</span>
+      </span>
+      {(onGive || typeof count === "number") && (
+        <span className="mt-act">
+          {onGive && <button className="btn sm mt-btn" onClick={onGive}>Give a shoutout</button>}
+          {typeof count === "number" && count > 0 && <span className="tiny muted">{count} so far this month</span>}
+        </span>
+      )}
+    </section>
+  );
+}
+
+/** Tap-to-pick reasons from this month's theme. Optional: tapping again clears it. */
+export function ReasonChips({ reasons, value, onPick, label = "Pick a reason (optional)" }: { reasons: string[]; value: string; onPick: (r: string) => void; label?: string }) {
+  if (!reasons.length) return null;
+  return (
+    <div className="mt-reasons">
+      <span className="flabel">{label}</span>
+      <div className="mt-chips" role="group" aria-label={label}>
+        {reasons.map((r) => (
+          <button key={r} type="button" className={`mt-chip ${value === r ? "on" : ""}`} aria-pressed={value === r} onClick={() => onPick(value === r ? "" : r)}>{r}</button>
+        ))}
+      </div>
     </div>
   );
 }

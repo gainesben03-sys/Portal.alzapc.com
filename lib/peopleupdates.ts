@@ -229,6 +229,8 @@ export interface ManagerWeekInput {
   today: string;
   /** Employee experience: when the manager playbook is on, each hire shows where the plan is. */
   experience?: ExperienceSettings;
+  /** This month's appreciation theme, when the client has them on and wants the line in this email. */
+  monthTheme?: { title: string; prompt: string } | null;
 }
 
 /** Null when there's nothing for this manager at all (no team, no hires). */
@@ -263,7 +265,8 @@ export function buildManagerWeek(i: ManagerWeekInput) {
   const top = weekItems(i.team, i.logs.filter((l) => l.clientId === client.id), d).slice(0, 3);
   const topRows = top.map((x) => row(x.title, x.why)).join("");
   const rec = top.find((x) => x.kind === "recognize") ?? weekItems(i.team, i.logs, d).find((x) => x.kind === "recognize");
-  const recogHtml = `<p style="margin:6px 0 0;font:15px/1.5 Arial,sans-serif;color:#16213a">${rec ? `${esc(rec.title)}? ` : ""}Who on your team made the week better? A two-line shoutout takes a minute and people remember it.</p>${i.recognitionOn ? `<p style="margin:10px 0 0"><a href="${base}/recognition" style="font:700 14px Arial,sans-serif;color:${i.client.accent}">Give a shoutout</a></p>` : ""}`;
+  const mtHtml = i.monthTheme ? `<p style="margin:6px 0 0;font:15px/1.5 Arial,sans-serif;color:#16213a"><b>This month: ${esc(i.monthTheme.title)}.</b> ${esc(i.monthTheme.prompt)}</p>` : "";
+  const recogHtml = mtHtml + `<p style="margin:6px 0 0;font:15px/1.5 Arial,sans-serif;color:#16213a">${rec ? `${esc(rec.title)}? ` : ""}Who on your team made the week better? A two-line shoutout takes a minute and people remember it.</p>${i.recognitionOn ? `<p style="margin:10px 0 0"><a href="${base}/recognition" style="font:700 14px Arial,sans-serif;color:${i.client.accent}">Give a shoutout</a></p>` : ""}`;
   const tip = tipFor(d);
   const tipHtml = `<div style="background:#f5f7fb;border-radius:10px;padding:14px 16px;margin-top:6px"><div style="font:700 16px Georgia,serif;color:#16213a">${esc(tip.title)}</div><p style="margin:6px 0 0;font:15px/1.5 Arial,sans-serif;color:#16213a">${esc(tip.body)}</p><p style="margin:8px 0 0;font:14px/1.5 Arial,sans-serif;color:#5b6b85"><b style="color:#16213a">Try this:</b> ${esc(tip.tryThis)}</p>${i.trainingOn ? `<p style="margin:10px 0 0"><a href="${base}/training" style="font:13px Arial,sans-serif;color:#5b6b85">Want a refresher? Your trainings are in the portal.</a></p>` : ""}</div>`;
   const body = section("Your new hires", hireRows) + section("Your team this week", topRows) + section("Recognize someone", recogHtml) + section("A thought for the week", tipHtml);
@@ -283,7 +286,7 @@ export function buildManagerWeek(i: ManagerWeekInput) {
     `Good morning, ${fn}\n` +
     (mine.length ? `\nYOUR NEW HIRES\n${mine.map((h) => `- ${h.name}, starts ${short(h.startDate)}`).join("\n")}\n` : "") +
     (top.length ? `\nYOUR TEAM THIS WEEK\n${top.map((x) => `- ${x.title}: ${x.why}`).join("\n")}\n` : "") +
-    `\nRECOGNIZE SOMEONE\nWho on your team made the week better? A two-line shoutout takes a minute.${i.recognitionOn ? `\n${base}/recognition` : ""}\n` +
+    `\nRECOGNIZE SOMEONE\n${i.monthTheme ? `This month: ${i.monthTheme.title}. ${i.monthTheme.prompt}\n` : ""}Who on your team made the week better? A two-line shoutout takes a minute.${i.recognitionOn ? `\n${base}/recognition` : ""}\n` +
     `\nA THOUGHT FOR THE WEEK\n${tip.title}. ${tip.body}\nTry this: ${tip.tryThis}\n` +
     `\nOpen your Team Hub: ${base}/hub\n`;
   return { subject, html, text };

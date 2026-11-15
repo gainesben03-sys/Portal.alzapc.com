@@ -12,6 +12,7 @@ import { checkGoals } from "./challengeserver";
 import { Brand, celebrationEmail, festiveEmail } from "./hires";
 import { sendEmail } from "./server";
 import type { TeamMember } from "./team";
+import { currentTheme } from "./monthly";
 
 type D = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 export type ShoutClient = { id: string; name: string; config: ClientConfig; rec: RecognitionSettings };
@@ -82,10 +83,14 @@ export async function createShout(
   db: SupabaseClient,
   site: string,
   c: ShoutClient,
-  input: { to: TeamMember; from: Shoutout["from"]; value?: string; message: string; channel: ShoutChannel; lang?: "en" | "es"; challengeId?: string; parentId?: string; depth?: number }
+  input: { to: TeamMember; from: Shoutout["from"]; value?: string; message: string; channel: ShoutChannel; lang?: "en" | "es"; challengeId?: string; parentId?: string; depth?: number; reason?: string }
 ): Promise<Shoutout> {
   const message = input.message.replace(/\s+/g, " ").trim().slice(0, 280);
   const value = input.value && c.rec.values.includes(input.value) ? input.value : undefined;
+  // this month's theme (if on): the shoutout carries its name, and a reason only counts if it's one of the theme's
+  const mt = currentTheme(c.rec.monthly, localTodayISO());
+  const reason = mt && input.reason && mt.reasons.includes(input.reason) ? input.reason : undefined;
+  const theme = mt && c.rec.monthly?.tag !== false ? mt.title : undefined;
   const check = await screen(message, input.to.name);
   // a typed-in name (not picked from the list or texted from a known number) always gets a quick look
   const unknown = !input.from.verified && !input.from.personId;
@@ -105,6 +110,8 @@ export async function createShout(
     challengeId: input.challengeId,
     parentId: input.parentId,
     depth: input.depth,
+    ...(theme ? { theme } : {}),
+    ...(reason ? { reason } : {}),
   };
   const { error } = await db.from("shoutouts").insert({ id: s.id, client_id: c.id, data: s });
   if (error) throw new Error(error.message);

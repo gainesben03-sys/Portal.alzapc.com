@@ -21,11 +21,14 @@ export interface Shoutout {
   challengeId?: string; // part of a challenge (Appreciation Chain, Team Goal)
   parentId?: string; // chain: the shoutout this one passes on from
   depth?: number; // chain: link number along this branch (1 = the first)
+  theme?: string; // the monthly theme it was given under, e.g. "Thankful for You"
+  reason?: string; // the suggested reason they picked, if any
 }
 
 export interface RecognitionSettings {
   token: string; // the QR code / wall link: /shout/<token>
-  polls?: import("./polls").PollSettings; // This or That on the wall, a new one every two weeks
+  polls?: import("./polls").PollSettings;
+  monthly?: import("./monthly").MonthlySettings; // monthly appreciation themes (off until turned on) // This or That on the wall, a new one every two weeks
   values: string[]; // the company's values; every shoutout can be tied to one
   smsNumber?: string; // the company's texting number (+1...), once the texting provider is set up
   notifyManagers?: boolean; // email the person's manager when they get one (default on)

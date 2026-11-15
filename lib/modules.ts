@@ -315,7 +315,7 @@ export function seedModules() {
   const config: Record<string, ClientConfig> = {
     blueprint: {
       huddle: { cadence: "weekly", day: 1, recipients: ["alex@example.com", "priya@example.com"], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
-      recognition: { token: "DemoShoutoutLink000000", values: ["Teamwork", "Safety first", "Above and beyond", "Customer first", "Ownership"], smsNumber: "+14155550123", notifyManagers: true, showWall: true },
+      recognition: { token: "DemoShoutoutLink000000", values: ["Teamwork", "Safety first", "Above and beyond", "Customer first", "Ownership"], smsNumber: "+14155550123", notifyManagers: true, showWall: true, monthly: { on: true } },
       modules: { recruiting: true, resources: true, wellness: true, board: true, hires: true, training: true, recognition: true, leave: true, offboarding: true, properties: false },
       videoScreening: true,
       accent: "#2b3ff5",

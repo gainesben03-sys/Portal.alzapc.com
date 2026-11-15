@@ -2,12 +2,14 @@
 //   1. Task reminders, overdue notices and escalations, following Ben's reminder rules.
 //   2. HR Huddle recap emails for clients whose Huddle day is today.
 // Each email is logged in email_log so a re-run never double-sends.
-import { celebrateSender, celebrations } from "@/lib/recognition";
+import { celebrateSender, celebrations, shortName } from "@/lib/recognition";
 import { Challenge, chainStats, challengeLive } from "@/lib/challenges";
 import { shoutsSince } from "@/lib/challengeserver";
 import type { Nudge } from "@/lib/nudge";
 import { sendNudgeWave } from "@/lib/nudgeserver";
-import { celebrateMail, localToday } from "@/lib/shoutserver";
+import { celebrateMail, localToday, localTodayISO } from "@/lib/shoutserver";
+import { currentTheme, MONTHS, monthlyEmail, monthlyNudgeEmail, pickFavorites, themeOf } from "@/lib/monthly";
+import { pollFor } from "@/lib/pollserver";
 import { NextResponse } from "next/server";
 import { Action, Client, DEFAULT_RULES, fmt, Project, reminderPlan, Rules, toISO, today } from "@/lib/data";
 import { buildHuddle } from "@/lib/huddle";
@@ -542,7 +544,7 @@ export async function GET(req: Request) {
         }
         // Monday: the managers' weekly email (their new hires, their week, recognize someone, a thought)
         if (monday && cfg.huddle?.managerWeekly !== false) {
-          const mw = buildManagerWeek({ client: { id: c.id, name: c.name, accent: cfg.accent || "#19283c", logo: cfg.logo && !cfg.logo.startsWith("data:") ? cfg.logo : undefined }, manager: { name: m.name, email: mgr }, team, logs, hires: prow<Hire>(pHires), steps: stepsFor(s), recognitionOn: !!cfg.modules?.recognition, trainingOn: !!cfg.modules?.training, today: day, experience: s.experience });
+          const mw = buildManagerWeek({ client: { id: c.id, name: c.name, accent: cfg.accent || "#19283c", logo: cfg.logo && !cfg.logo.startsWith("data:") ? cfg.logo : undefined }, manager: { name: m.name, email: mgr }, team, logs, hires: prow<Hire>(pHires), steps: stepsFor(s), recognitionOn: !!cfg.modules?.recognition, trainingOn: !!cfg.modules?.training, today: day, experience: s.experience, monthTheme: cfg.modules?.recognition && cfg.recognition?.monthly?.managers !== false ? currentTheme(cfg.recognition?.monthly, day) : null });
           if (mw) {
             await once(`team-week:${c.id}:${mgr}:${day}`, () => sendEmail({ to: [mgr], subject: mw.subject, html: mw.html, text: mw.text, ...senderFor(s, c.name) }));
             await once(`team-week-push:${c.id}:${mgr}:${day}`, async () => {
@@ -572,6 +574,55 @@ export async function GET(req: Request) {
         const m = await celebrateMail(sc, PORTAL_URL, p, cel.kind, cel.years);
         await once(`cel:${cel.kind}:${c.id}:${p.id}:${day}`, () => sendEmail({ to: [p.email!], subject: m.subject, text: m.text, html: m.html, fromName: m.fromName, fromBox: m.fromBox }));
       }
+    }
+  }
+
+  // ---------- 6b. Monthly appreciation theme: the email on the chosen day (new theme, last month's recap, This or That), and the optional nudge
+  if (!peopleR.error) {
+    const people = rows(peopleR) as unknown as TeamMember[];
+    const dISO = localTodayISO();
+    const [yy, mm, dd] = dISO.split("-").map(Number);
+    for (const c of clientsR.data ?? []) {
+      const cfg = (c.config ?? {}) as ClientConfig;
+      const rec = cfg.recognition;
+      const m = rec?.monthly;
+      if (!(cfg.modules as Record<string, boolean> | undefined)?.recognition || !rec?.token || !m?.on) continue;
+      const theme = currentTheme(m, dISO);
+      if (!theme) continue;
+      const isEmailDay = m.email !== false && dd === (m.emailDay ?? 1);
+      const isNudgeDay = !!m.nudge && dd === (m.nudgeDay ?? 15) && !isEmailDay;
+      if (!isEmailDay && !isNudgeDay) continue;
+      const to = [...new Set(people.filter((p) => p.clientId === c.id && p.active !== false && p.email && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(p.email.trim())).map((p) => p.email!.trim().toLowerCase()))];
+      if (!to.length) continue;
+      const brand: Brand = { company: c.name, accent: cfg.accent || "#19283c", logoUrl: emailLogoUrl(c.id, cfg.logo, cfg.logoEmail, PORTAL_URL) };
+      const giveUrl = `${PORTAL_URL}/shout/${rec.token}`;
+      const ym = dISO.slice(0, 7);
+      let mail: { subject: string; html: string; text: string };
+      let key: string;
+      if (isEmailDay) {
+        // last month's recap: live shoutouts given last month, favorites by reactions
+        const lmY = mm === 1 ? yy - 1 : yy;
+        const lm = mm === 1 ? 12 : mm - 1;
+        const from = `${lmY}-${String(lm).padStart(2, "0")}-01T08:00:00.000Z`;
+        const until = `${ym}-01T08:00:00.000Z`;
+        const list = (await shoutsSince(db, c.id, from)).filter((x) => x.status === "live" && x.at < until && (x as { kind?: string }).kind !== "poll");
+        let rx: Record<string, number> = {};
+        if (list.length) {
+          const { data: r } = await db.from("shout_reactions").select("shout_id").in("shout_id", list.slice(0, 300).map((x) => x.id));
+          rx = (r ?? []).reduce((a, x) => ({ ...a, [x.shout_id as string]: (a[x.shout_id as string] ?? 0) + 1 }), {} as Record<string, number>);
+        }
+        const lt = themeOf(m, lm);
+        const last = list.length ? { title: lt.off ? MONTHS[lm - 1] : lt.title, count: list.length, favorites: pickFavorites(list.map((x) => ({ id: x.id, from: shortName(x.from.name), to: shortName(x.to.name), message: x.message, at: x.at })), rx) } : null;
+        const poll = rec.polls?.on !== false && rec.showWall !== false ? await pollFor(db, c.id, rec.polls, dISO).catch(() => null) : null;
+        mail = monthlyEmail({ m, theme, brand, giveUrl, wallUrl: giveUrl, last, poll });
+        key = `monthly:${c.id}:${ym}`;
+      } else {
+        mail = monthlyNudgeEmail({ m, theme, brand, giveUrl });
+        key = `monthly-nudge:${c.id}:${ym}`;
+      }
+      const sender = celebrateSender(rec, c.name);
+      for (let k = 0; k < to.length; k += 8)
+        await Promise.all(to.slice(k, k + 8).map((e) => once(`${key}:${e}`, () => sendEmail({ to: [e], subject: mail.subject, html: mail.html, text: mail.text, ...sender }))));
     }
   }
 

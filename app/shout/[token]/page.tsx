@@ -3,7 +3,7 @@
 // The page behind the QR code. No login: give a shoutout in about 20 seconds, see the wall, react.
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { ChallengeCards, Pick, PersonSearch, Scoreboard, ShoutCard, WallItem } from "@/components/shoutui";
+import { ChallengeCards, Pick, PersonSearch, Scoreboard, ShoutCard, WallItem, ReasonChips } from "@/components/shoutui";
 import { demoPoll, demoVote, PollCard } from "@/components/poll";
 import { Wall, WallStyle } from "@/components/wall";
 import type { PollView } from "@/lib/polls";
@@ -12,8 +12,9 @@ import { Board, Celebration, celebrateLine, DEFAULT_HEADLINE, MAX_MESSAGE, short
 import { Burst } from "@/components/shoutui";
 import { DEMO_CELEBRATE, DEMO_CHALLENGES, DEMO_PEOPLE, DEMO_ROSTER, DEMO_SHOUTS, DEMO_VALUES, demoBoard, demoReactions } from "@/lib/shoutdemo";
 import { DEMO_COMPANY, DEMO_ACCENT } from "@/lib/state";
+import { publicTheme, type PublicTheme } from "@/lib/monthly";
 
-type Info = { company: string; accent: string; theme?: ShoutTheme | null; logo: string | null; values: string[]; sms: string | null; showWall: boolean; board: Board | null; wall: WallItem[]; celebrate: Celebration[]; challenges: PublicChallenge[]; pass: Pass | null; poll?: PollView | null };
+type Info = { company: string; accent: string; theme?: ShoutTheme | null; month?: PublicTheme | null; logo: string | null; values: string[]; sms: string | null; showWall: boolean; board: Board | null; wall: WallItem[]; celebrate: Celebration[]; challenges: PublicChallenge[]; pass: Pass | null; poll?: PollView | null };
 type Pass = { id: string; title: string; link: number; holder: { id: string; name: string; team: string }; daysLeft: number; error?: string };
 type Lang = "en" | "es";
 
@@ -46,6 +47,7 @@ export default function ShoutPage() {
   const [from, setFrom] = useState<Pick | null>(null);
   const [typed, setTyped] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
+  const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<null | "live" | "held">(null);
   const [toast, setToast] = useState("");
@@ -66,6 +68,7 @@ export default function ShoutPage() {
         theme: (() => { try { return JSON.parse(localStorage.getItem("alza-demo-shout-theme") || "null"); } catch { return null; } })(),
         logo: null,
         values: DEMO_VALUES,
+        month: publicTheme({ on: true }),
         sms: "+14155550123",
         showWall: true,
         celebrate: DEMO_CELEBRATE,
@@ -73,7 +76,7 @@ export default function ShoutPage() {
         challenges: DEMO_CHALLENGES.map((c) => publicChallenge(c, DEMO_SHOUTS, DEMO_ROSTER)),
         pass: passQ ? { id: passQ, title: "November Appreciation Chain", link: 5, holder: { id: "pp2", name: "Ana R.", team: "Install crew" }, daysLeft: 2 } : null,
         board: demoBoard(),
-        wall: DEMO_SHOUTS.filter((s) => s.status === "live").map((s) => ({ id: s.id, to: shortName(s.to.name), team: s.to.department ?? "", from: shortName(s.from.name), value: s.value ?? null, message: s.message, at: s.at, reactions: demoReactions[s.id] ?? {}, mine: [] })),
+        wall: DEMO_SHOUTS.filter((s) => s.status === "live").map((s) => ({ id: s.id, to: shortName(s.to.name), team: s.to.department ?? "", from: shortName(s.from.name), value: s.value ?? null, tag: s.theme ?? null, reason: s.reason ?? null, message: s.message, at: s.at, reactions: demoReactions[s.id] ?? {}, mine: [] })),
       });
       setState("ok");
     } else setState("gone");
@@ -116,11 +119,12 @@ export default function ShoutPage() {
     setTimeout(() => setToast(""), 2400);
   };
 
+  const mt = info?.month ?? null;
   const passing = info?.pass && !info.pass.error ? info.pass : null;
   const send = async () => {
     if (!to || msg.trim().length < 3 || (!passing && !from && !typed?.trim())) return;
     setBusy(true);
-    const r = await post({ action: "give", to: to.id, fromId: passing ? passing.holder.id : from?.id, fromName: from || passing ? undefined : typed, message: msg, lang, pass: passing?.id });
+    const r = await post({ action: "give", to: to.id, fromId: passing ? passing.holder.id : from?.id, fromName: from || passing ? undefined : typed, message: msg, lang, pass: passing?.id, ...(reason && mt ? { reason } : {}) });
     setBusy(false);
     if (!r.ok) return flash(r.reason === "limit" ? t.limit : r.reason === "self" ? "😄" : r.reason === "already_in_chain" ? t.inChain : r.reason?.startsWith("chain") ? t.chainOver : t.err);
     try {
@@ -146,6 +150,7 @@ export default function ShoutPage() {
   const reset = () => {
     setTo(null);
     setMsg("");
+    setReason("");
     setDone(null);
   };
   const setL = (l: Lang) => {
@@ -179,8 +184,9 @@ export default function ShoutPage() {
         </div>
       </header>
       <div className="so-hero">
-        <span className="so-kicker">{lang === "es" ? "Reconocimientos" : "Shoutouts"}</span>
-        <h1 className="so-h1">{lang === "es" ? info.theme?.headlineEs || DEFAULT_HEADLINE.es : info.theme?.headline || DEFAULT_HEADLINE.en}</h1>
+        <span className="so-kicker">{mt ? `${mt.name} · ${mt.title}` : lang === "es" ? "Reconocimientos" : "Shoutouts"}</span>
+        <h1 className="so-h1">{lang === "es" ? info.theme?.headlineEs || DEFAULT_HEADLINE.es : mt?.prompt || info.theme?.headline || DEFAULT_HEADLINE.en}</h1>
+        {mt && lang === "en" && <p className="so-mt-intro">{mt.intro}</p>}
       </div>
       {demo && <p className="so-demo">Demo preview with sample people.</p>}
       {(info.showWall || info.celebrate.length > 0) && (
@@ -214,6 +220,7 @@ export default function ShoutPage() {
             <label className="so-label">{t.who}</label>
             <PersonSearch search={search} value={to} onPick={setTo} placeholder={t.whoPh} exclude={from?.id} />
 
+            {mt && lang === "en" && <ReasonChips reasons={mt.reasons} value={reason} onPick={setReason} label="Pick a reason (optional)" />}
             <label className="so-label">{t.what}</label>
             <div className="so-starters">
               {STARTERS[lang].map((s) => <button key={s} onClick={() => setMsg(s.replace("…", " "))}>{s}</button>)}
