@@ -71,6 +71,7 @@ export default function Recognition() {
     const sp = new URLSearchParams(window.location.search);
     if (sp.get("review")) setSheet("review");
     if (sp.get("tab") === "challenges") setSheet("challenges");
+    if (sp.get("settings")) setSheet("settings");
   }, [ok, rec?.token, load]);
 
   const since = useMemo(() => {
