@@ -228,6 +228,7 @@ function Ratings({ r, lang, onPatch }: { r: Review; lang: Lang; onPatch: (p: Par
     <>
       <h2 className="pf-h">{t.rateH(first(r.name))}</h2>
       <p className="muted pf-p">{t.rateP}</p>
+      <ol className="pf-scale-key" aria-hidden="true">{scale.map((x, i) => <li key={i}><b>{i + 1}</b>{x[lang]}</li>)}</ol>
       <section className="card pf-rates-card">
         {r.template.rate.map((p) => {
           const v = r.ratings[p.id];
