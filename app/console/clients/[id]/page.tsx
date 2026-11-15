@@ -87,6 +87,7 @@ const ICON: Record<string, string> = {
   board: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
   askHr: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01",
   softAsks: "M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4",
+  perform: "M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 14l2 2 4-4",
   tracker: "M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11",
 };
 const Icon = ({ k }: { k: string }) => (
@@ -208,6 +209,9 @@ export default function ClientSetup() {
               <FeatureCard k="recognition" title="Team Wall" blurb="Shoutouts by QR code, text or the portal, birthdays, anniversaries and new starters on one wall. Every shoutout is screened first." on={mod("recognition")} onToggle={toggle("recognition")}
                 status={[`${WALLS.find((w) => w.id === (rec?.theme?.wall ?? "clean"))?.name ?? "Clean"} wall`, rec?.polls?.on === false ? "This or That off" : "This or That every two weeks", rec?.monthly?.on ? "Monthly themes on" : "Monthly themes off"]}
                 actions={[{ label: "Wall settings", href: `/c/${id}/recognition?settings=1` }]} />
+              <FeatureCard k="perform" title="Reviews" blurb="Performance reviews on a schedule. Managers finish a guided review in about 10 minutes on a phone or computer, in English or Spanish. Self-assessments, sign-off, goals and improvement plans." on={mod("perform")} onToggle={toggle("perform")}
+                status={[`${{ year: "Once a year", half: "Twice a year", quarter: "Every quarter", custom: "Custom schedule" }[cfg.perform?.cadence ?? "year"]}${(cfg.perform?.basis ?? "company") === "anniversary" ? ", on work anniversaries" : ""}`, cfg.perform?.intro?.on === false ? "No new hire review" : `New hire review at ${cfg.perform?.intro?.days ?? 90} days`, cfg.perform?.selfAssess === false ? "Self-assessment off" : "Self-assessment on"]}
+                actions={[{ label: "Templates", href: `/c/${id}/reviews?tab=templates` }, { label: "Settings", href: `/c/${id}/reviews?tab=settings` }, { label: "Open reviews", href: `/c/${id}/reviews` }]} />
               <FeatureCard k="askHr" title="Ask HR" blurb="Managers and executives ask in plain words. Answers come only from this client's handbook and policies, and anything about firing, leave, harassment or discrimination comes to you." on={cfg.askHr !== false} onToggle={(v) => { set({ askHr: v }); toast.show(`Ask HR ${v ? "on" : "off"}`); }}
                 actions={[{ label: "Handbook and policies", onClick: () => setTab("docs") }]} />
               <FeatureCard k="training" title="Training" blurb={blurb("training")} on={mod("training")} onToggle={toggle("training")}

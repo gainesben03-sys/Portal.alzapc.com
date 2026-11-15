@@ -2,6 +2,8 @@
 //   1. Task reminders, overdue notices and escalations, following Ben's reminder rules.
 //   2. HR Huddle recap emails for clients whose Huddle day is today.
 // Each email is logged in email_log so a re-run never double-sends.
+import { allReviews, loadCtx, managerEmail as performManagerEmail, roster as performRoster, send, sendSelf, sync } from "@/lib/performserver";
+import { daysUntil } from "@/lib/perform";
 import { celebrateSender, celebrations, shortName } from "@/lib/recognition";
 import { Challenge, chainStats, challengeLive } from "@/lib/challenges";
 import { shoutsSince } from "@/lib/challengeserver";
@@ -747,6 +749,47 @@ export async function GET(req: Request) {
           await db.from("departures").update({ data: d }).eq("id", d.id);
         }
       }
+    }
+  }
+
+  // ---------- 10b. Reviews (Alza Perform): open what's coming due, then remind managers, send self-assessments and plan check-ins
+  for (const c of clientsR.data ?? []) {
+    if (!(c.config as ClientConfig | null)?.modules?.perform) continue;
+    const x = await loadCtx(db, c.id);
+    if (!x) continue;
+    try {
+      const sy = await sync(x);
+      if (sy.opened || sy.cancelled || sy.moved) log.push(`perform ${c.id}: opened ${sy.opened}, cancelled ${sy.cancelled}, moved ${sy.moved}`);
+      const [people, reviews] = await Promise.all([performRoster(db, c.id), allReviews(db, c.id)]);
+      const pd = localTodayISO();
+      for (const r of reviews) {
+        if (r.status === "open") {
+          const d = daysUntil(r.due, pd);
+          // the employee's self-assessment, ahead of the manager's review
+          if (x.s.selfAssess && r.kind !== "pip" && !r.self?.sentAt && d <= x.s.selfDaysBefore && d >= 0) {
+            const p = people.find((q) => q.id === r.personId);
+            if (p?.email) await once(`perform-self:${r.id}`, async () => { const o = await sendSelf(x, r, "AlzaHR", p.email); return { ok: o.ok, reason: o.ok ? undefined : o.reason }; });
+          }
+          const due = x.s.remind.includes(d) || (d < 0 && x.s.overdueWeekly && -d % 7 === 0);
+          if (due && r.managerEmail) {
+            await once(`perform-remind:${r.id}:${r.due}:${d}`, () => send(x, r.managerEmail, performManagerEmail(x, r, d)));
+            if (d < 0) for (const a of x.s.admins) await once(`perform-overdue:${r.id}:${d}:${a}`, () => send(x, a, performManagerEmail(x, r, d)));
+          }
+        }
+        // improvement plan check-ins: a heads-up to the manager on the day
+        if (r.kind === "pip" && (r.status === "shared" || r.status === "done") && r.managerEmail) {
+          for (const ck of r.pip?.checkins ?? []) {
+            if (ck.date !== pd) continue;
+            await once(`perform-pip:${r.id}:${ck.date}`, () => send(x, r.managerEmail, {
+              subject: `Check-in today: ${r.name}'s improvement plan`,
+              html: `<p style="font-family:Arial,sans-serif;font-size:15px;line-height:24px">Today is a check-in on ${r.name}'s improvement plan. Go over each expectation together and note how it's going.</p><p style="font-family:Arial,sans-serif;font-size:15px"><a href="${PORTAL_URL}/c/${c.id}/reviews/${r.id}">Open the plan</a></p>`,
+              text: `Today is a check-in on ${r.name}'s improvement plan. Go over each expectation together and note how it's going.\n\n${PORTAL_URL}/c/${c.id}/reviews/${r.id}`,
+            }));
+          }
+        }
+      }
+    } catch (e) {
+      log.push(`perform ${c.id} failed: ${(e as Error).message}`);
     }
   }
 

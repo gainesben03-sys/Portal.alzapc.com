@@ -1,0 +1,201 @@
+"use client";
+
+// Shared pieces of Alza Perform: the finished review document, status chips, the language switch,
+// and "Talk it through" (the phone's own speech-to-text: no recording is kept).
+import { useEffect, useRef, useState } from "react";
+import { Doc, fmtDay, GOAL_STATUS, Lang, Stage, STAGE_LABEL } from "@/lib/perform";
+import { useStore } from "@/lib/store";
+import { performFor, type PerformSettings } from "@/lib/perform";
+
+/** The finished review, laid out cleanly for the screen, print/PDF and the employee's page. */
+export function ReviewDoc({ d, accent }: { d: Doc; accent: string }) {
+  const es = d.lang === "es";
+  const L2 = (en: string, s: string) => (es ? s : en);
+  return (
+    <article className="pf-doc" style={{ ["--pf" as string]: accent }}>
+      <header className="pf-doc-head">
+        <div>
+          <h1>{d.title}</h1>
+          <p>{d.company}</p>
+        </div>
+        <dl>
+          <div><dt>{L2("Employee", "Empleado/a")}</dt><dd>{d.name}</dd></div>
+          {d.jobTitle && <div><dt>{L2("Position", "Puesto")}</dt><dd>{d.jobTitle}</dd></div>}
+          {d.department && <div><dt>{L2("Department", "Departamento")}</dt><dd>{d.department}</dd></div>}
+          <div><dt>{L2("Manager", "Gerente")}</dt><dd>{d.manager}</dd></div>
+          {d.hireDate && <div><dt>{L2("Hire date", "Ingreso")}</dt><dd>{fmtDay(d.hireDate, d.lang)}</dd></div>}
+          <div><dt>{L2("Period", "Periodo")}</dt><dd>{d.period}</dd></div>
+          <div><dt>{L2("Date", "Fecha")}</dt><dd>{d.date}</dd></div>
+        </dl>
+      </header>
+
+      {d.rated.length > 0 && (
+        <section>
+          <h2>{L2("Ratings", "Calificaciones")}</h2>
+          <table className="pf-rates">
+            <tbody>
+              {d.rated.map((x) => (
+                <tr key={x.name}>
+                  <th scope="row">{x.name}{x.note && <span>{x.note}</span>}</th>
+                  <td><b>{x.value}</b> {x.label}</td>
+                </tr>
+              ))}
+              {d.overall && (
+                <tr className="pf-overall">
+                  <th scope="row">{L2("Overall", "General")}</th>
+                  <td><b>{d.overall.value}</b> {d.overall.label}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </section>
+      )}
+      {!d.rated.length && d.overall && <p className="pf-overall-line"><b>{L2("Overall", "General")}:</b> {d.overall.value} · {d.overall.label}</p>}
+
+      {d.written.map((w) => (
+        <section key={w.q}>
+          <h2>{w.q}</h2>
+          <p className="pf-prose">{w.a}</p>
+        </section>
+      ))}
+
+      {d.pip && (
+        <>
+          <section>
+            <h2>{L2("What needs to change", "Qué necesita cambiar")}</h2>
+            <ol className="pf-issues">
+              {d.pip.issues.filter((i) => i.what).map((i) => (
+                <li key={i.id}>
+                  <p className="pf-prose"><b>{i.what}</b></p>
+                  {i.expected && <p><span>{L2("Expected", "Se espera")}</span>{i.expected}</p>}
+                  {i.support && <p><span>{L2("Support", "Apoyo")}</span>{i.support}</p>}
+                </li>
+              ))}
+            </ol>
+          </section>
+          <section>
+            <h2>{L2("Timeline", "Plazos")}</h2>
+            <p>{L2("Starts", "Empieza")} {fmtDay(d.pip.start, d.lang)} · {d.pip.length} {L2("days", "días")}</p>
+            <ul className="pf-dates">{d.pip.checkins.map((c) => <li key={c.date}>{L2("Check-in", "Seguimiento")} · {fmtDay(c.date, d.lang)}</li>)}</ul>
+          </section>
+          <section>
+            <h2>{L2("At the end of the plan", "Al final del plan")}</h2>
+            <p className="pf-prose">{d.pip.outcome}</p>
+          </section>
+        </>
+      )}
+
+      {d.goals.length > 0 && (
+        <section>
+          <h2>{L2("Goals for the next review", "Metas para la próxima evaluación")}</h2>
+          <ul className="pf-goals">
+            {d.goals.map((g) => (
+              <li key={g.text}><b>{g.text}</b>{(g.measure || g.by) && <span>{[g.measure, g.by && `${L2("by", "para")} ${g.by}`].filter(Boolean).join(" · ")}</span>}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {d.comment && (
+        <section>
+          <h2>{L2("Employee comments", "Comentarios del empleado/a")}</h2>
+          <p className="pf-prose">{d.comment}</p>
+        </section>
+      )}
+
+      <footer className="pf-ack">
+        <p>{d.ackText}</p>
+        <div className="pf-sign">
+          <div><span>{L2("Manager completed", "Gerente completó")}</span><b>{d.managerDone || " "}</b></div>
+          <div><span>{d.ackHow === "person" ? L2("Delivered in person", "Entregada en persona") : L2("Employee acknowledged", "Empleado/a confirmó")}</span><b>{d.ack || " "}</b></div>
+        </div>
+      </footer>
+    </article>
+  );
+}
+
+const STAGE_TONE: Record<Stage, string> = { upcoming: "", not_started: "", in_progress: "blue", ready: "gold", waiting: "gold", done: "green", overdue: "red", cancelled: "" };
+export const StageChip = ({ st, lang }: { st: Stage; lang: Lang }) => <span className={`pf-chip ${STAGE_TONE[st]}`}>{STAGE_LABEL[st][lang]}</span>;
+export const GoalChip = ({ s, lang }: { s: keyof typeof GOAL_STATUS; lang: Lang }) => <span className="pf-chip">{GOAL_STATUS[s][lang]}</span>;
+
+/** The manager's language for the review screens. Remembered on this device. */
+export function useLang(): [Lang, (l: Lang) => void] {
+  const [lang, setLang] = useState<Lang>("en");
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem("alza-perform-lang");
+      if (v === "es" || v === "en") setLang(v);
+      else if (navigator.language?.toLowerCase().startsWith("es")) setLang("es");
+    } catch {}
+  }, []);
+  return [lang, (l: Lang) => { setLang(l); try { localStorage.setItem("alza-perform-lang", l); } catch {} }];
+}
+export function LangSwitch({ lang, onChange }: { lang: Lang; onChange: (l: Lang) => void }) {
+  return (
+    <div className="pf-lang" role="group" aria-label="Language">
+      <button className={lang === "en" ? "on" : ""} aria-pressed={lang === "en"} onClick={() => onChange("en")}>English</button>
+      <button className={lang === "es" ? "on" : ""} aria-pressed={lang === "es"} onClick={() => onChange("es")}>Español</button>
+    </div>
+  );
+}
+
+/** For the public demo: the pieces the in-browser Perform needs from the store. */
+export function useDemo(clientId: string) {
+  const { people, checkins, config, patch, viewer, me, getClient } = useStore();
+  const cfg = config[clientId];
+  return {
+    people,
+    checkins,
+    settings: cfg?.perform,
+    company: getClient(clientId)?.name ?? "",
+    me: { email: viewer?.kind === "client" ? (me?.email ?? "").toLowerCase() : "ben@alzapc.com", name: viewer?.kind === "client" ? viewer.person.name : "Ben Gaines", advisor: viewer?.kind === "advisor", exec: me?.access === "exec" },
+    saveSettings: (s: PerformSettings) => cfg && patch({ config: { ...config, [clientId]: { ...cfg, perform: s } } }),
+  };
+}
+export const settingsOf = (x?: Partial<PerformSettings>) => performFor(x);
+
+// ---------- Talk it through ----------
+type Rec = { start: () => void; stop: () => void; abort: () => void; lang: string; continuous: boolean; interimResults: boolean; onresult: ((e: { resultIndex: number; results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }> }) => void) | null; onend: (() => void) | null; onerror: ((e: { error: string }) => void) | null };
+const recognizer = (): (new () => Rec) | null => (typeof window === "undefined" ? null : ((window as unknown as { SpeechRecognition?: new () => Rec; webkitSpeechRecognition?: new () => Rec }).SpeechRecognition ?? (window as unknown as { webkitSpeechRecognition?: new () => Rec }).webkitSpeechRecognition ?? null));
+
+/** Live speech-to-text. Returns the running transcript; nothing is recorded or stored. */
+export function useTalk(lang: Lang) {
+  const [on, setOn] = useState(false);
+  const [text, setText] = useState("");
+  const [err, setErr] = useState("");
+  const rec = useRef<Rec | null>(null);
+  const base = useRef("");
+  const supported = !!recognizer();
+  const start = (keep = true) => {
+    const R = recognizer();
+    if (!R) return setErr("unsupported");
+    setErr("");
+    base.current = keep ? text.trim() : "";
+    if (!keep) setText("");
+    const r = new R();
+    r.lang = lang === "es" ? "es-US" : "en-US";
+    r.continuous = true;
+    r.interimResults = true;
+    r.onresult = (e) => {
+      let finalT = "", interim = "";
+      for (let i = 0; i < e.results.length; i++) {
+        const res = e.results[i];
+        if (res.isFinal) finalT += res[0].transcript + " ";
+        else interim += res[0].transcript;
+      }
+      setText(`${base.current ? base.current + " " : ""}${finalT}${interim}`.replace(/\s+/g, " ").trim());
+    };
+    r.onerror = (e) => setErr(e.error === "not-allowed" ? "denied" : e.error);
+    r.onend = () => setOn(false);
+    rec.current = r;
+    try {
+      r.start();
+      setOn(true);
+    } catch {
+      setErr("start");
+    }
+  };
+  const stop = () => { rec.current?.stop(); setOn(false); };
+  useEffect(() => () => rec.current?.abort(), []);
+  return { on, text, setText, err, supported, start, stop };
+}

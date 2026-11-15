@@ -1,0 +1,217 @@
+// Alza Perform on the server: who can see which reviews, the writing help, emails and the schedule.
+import { claude, parseJson } from "./ai";
+import { emailLogoUrl, readableInk } from "./brand";
+import { esc, frameEmail, onboardingFor, senderFor, type Brand } from "./hires";
+import type { ClientConfig } from "./modules";
+import {
+  daysUntil, first, iso, KIND_LABEL, Lang, newReview, newToken, nextDue, PerformSettings, performFor, Review, stageOf, templateById,
+} from "./perform";
+import { admin, PORTAL_URL, sendEmail, type Caller } from "./server";
+import type { TeamMember } from "./team";
+
+export type DB = ReturnType<typeof admin>;
+export type Ctx = { db: DB; clientId: string; company: string; cfg: ClientConfig; s: PerformSettings; brand: Brand; sender: ReturnType<typeof senderFor> };
+
+export async function loadCtx(db: DB, clientId: string): Promise<Ctx | null> {
+  const { data: cl } = await db.from("clients").select("name, config").eq("id", clientId).maybeSingle();
+  if (!cl) return null;
+  const cfg = (cl.config ?? {}) as ClientConfig;
+  return {
+    db, clientId, company: cl.name, cfg, s: performFor(cfg.perform),
+    brand: { company: cl.name, accent: cfg.accent || "#19283c", logoUrl: emailLogoUrl(clientId, cfg.logo, cfg.logoEmail, PORTAL_URL) },
+    sender: senderFor(onboardingFor(cfg.onboarding), cl.name),
+  };
+}
+
+/** What this person can do with reviews at this client. */
+export function roleOf(who: Caller, x: Ctx) {
+  const email = who.email.toLowerCase();
+  const adminRole = who.advisor || x.s.admins.includes(email);
+  const exec = who.execOf.includes(x.clientId);
+  return { email, admin: adminRole, exec, member: who.memberOf.includes(x.clientId) || who.advisor, ben: who.advisor };
+}
+export type Role = ReturnType<typeof roleOf>;
+export const canOpen = (r: Review, role: Role, s: PerformSettings) => role.admin || r.managerEmail === role.email || (role.exec && s.execRead);
+export const canEdit = (r: Review, role: Role) => role.admin || r.managerEmail === role.email;
+
+export async function roster(db: DB, clientId: string): Promise<TeamMember[]> {
+  const { data } = await db.from("people").select("id, data").eq("client_id", clientId);
+  return (data ?? []).map((r) => ({ ...(r.data as TeamMember), id: r.id as string, clientId }));
+}
+export async function allReviews(db: DB, clientId: string): Promise<Review[]> {
+  const { data } = await db.from("perform_reviews").select("id, data").eq("client_id", clientId).order("created_at", { ascending: false });
+  return (data ?? []).map((r) => ({ ...(r.data as Review), id: r.id as string }));
+}
+export async function getReview(db: DB, id: string, clientId?: string): Promise<Review | null> {
+  let q = db.from("perform_reviews").select("id, client_id, data").eq("id", id);
+  if (clientId) q = q.eq("client_id", clientId);
+  const { data } = await q.maybeSingle();
+  return data ? { ...(data.data as Review), id: data.id as string, clientId: data.client_id as string } : null;
+}
+export async function putReview(db: DB, r: Review) {
+  const { id, ...data } = r;
+  const { error } = await db.from("perform_reviews").upsert({ id, client_id: r.clientId, data: { ...data, id } });
+  return !error;
+}
+export const log = (r: Review, by: string, text: string): Review => ({ ...r, history: [...r.history, { at: new Date().toISOString(), by, text }].slice(-80) });
+
+/**
+ * Keep reviews in step with the roster and settings: open reviews that are coming due, cancel ones for
+ * people who left, and move open reviews to a new manager. Safe to run any number of times.
+ */
+export async function sync(x: Ctx, today = iso(new Date())) {
+  if (!x.cfg.modules?.perform) return { opened: 0, cancelled: 0, moved: 0 };
+  const [people, reviews] = await Promise.all([roster(x.db, x.clientId), allReviews(x.db, x.clientId)]);
+  let opened = 0, cancelled = 0, moved = 0;
+  const byId = new Map(people.map((p) => [p.id, p]));
+  for (const r of reviews) {
+    if (r.status !== "open") continue;
+    const p = byId.get(r.personId);
+    if (!p || p.active === false) {
+      await putReview(x.db, log({ ...r, status: "cancelled" }, "Alza", "Cancelled: no longer on the roster"));
+      cancelled++;
+    } else if ((p.managerEmail || "").toLowerCase() !== r.managerEmail && p.managerEmail) {
+      await putReview(x.db, log({ ...r, managerEmail: p.managerEmail.toLowerCase(), managerName: p.managerName }, "Alza", `Moved to ${p.managerName}, the new manager`));
+      moved++;
+    }
+  }
+  for (const p of people) {
+    if (p.active === false || !p.managerEmail) continue;
+    for (const d of nextDue({ ...p, active: true }, x.s, today, 1)) {
+      if (daysUntil(d.due, today) > x.s.openDays) continue;
+      // one review per person per due date and kind; an intro review never replaces the regular one
+      if (reviews.some((r) => r.personId === p.id && r.kind === d.kind && Math.abs(daysUntil(r.due, d.due)) < 45)) continue;
+      const r = newReview({ ...p, active: true }, x.clientId, d, templateById(x.s, d.template), "Alza");
+      await putReview(x.db, r);
+      reviews.push(r);
+      opened++;
+    }
+  }
+  return { opened, cancelled, moved };
+}
+
+// ---------- writing help ----------
+const RULES = `You help a manager write a performance review in their own voice. Hard rules:
+- Use ONLY what the manager wrote or said. Never add accomplishments, problems, numbers, dates, examples or opinions they didn't give.
+- Never give or suggest a rating. Never recommend pay, promotion, discipline, termination or any employment decision.
+- Never guess at anyone's gender, age, health, family, religion, national origin or other personal traits. Use the employee's first name instead of he or she unless the manager used a pronoun.
+- Keep the manager's meaning. If something is vague, keep it vague and list it under "vague" so the manager can add an example.
+- Plain, professional, warm. No em dashes, no corporate filler, no exaggeration.
+Reply with JSON only.`;
+
+const clip = (s: string, n: number) => s.replace(/\r/g, "").trim().slice(0, n);
+const LANG_NAME: Record<Lang, string> = { en: "English", es: "Spanish (neutral Latin American)" };
+
+/** Notes to clear, professional feedback. tone: "" | "shorter" | "warmer" | "specific". */
+export async function polish(o: { firstName: string; asks: { id: string; q: string }[]; answers: Record<string, string>; tone?: string; lang: Lang }) {
+  const items = o.asks.map((a) => ({ id: a.id, question: a.q, notes: clip(o.answers[a.id] ?? "", 2000) })).filter((a) => a.notes);
+  if (!items.length) return { ok: false as const, reason: "empty" };
+  const tone = o.tone === "shorter" ? "Make it shorter and tighter." : o.tone === "warmer" ? "Make it warmer and more encouraging, written to the employee directly (you)." : o.tone === "specific" ? "Make it more specific and organized using only the details given." : "";
+  const r = await claude({
+    system: RULES,
+    maxTokens: 1500,
+    messages: [{ role: "user", content: `Employee first name: ${o.firstName}\nWrite in ${LANG_NAME[o.lang]}. ${tone}\nFor each item, turn the manager's notes into 1 to 4 clear sentences answering the question.\nItems:\n${JSON.stringify(items)}\nReturn {"written": {"<id>": "<text>"}, "vague": ["<short phrase from the notes that needs an example>"]}` }],
+  });
+  if (!r.ok) return { ok: false as const, reason: r.reason };
+  const j = parseJson<{ written?: Record<string, string>; vague?: string[] }>(r.text);
+  if (!j?.written) return { ok: false as const, reason: "parse" };
+  const written: Record<string, string> = {};
+  for (const a of items) if (typeof j.written[a.id] === "string") written[a.id] = clip(j.written[a.id], 2500).replace(/—/g, ", ");
+  return { ok: true as const, written, vague: (j.vague ?? []).filter((v) => typeof v === "string").slice(0, 3).map((v) => clip(v, 120)) };
+}
+
+/** A talked-through ramble, sorted into the template's questions. Their words, lightly cleaned. */
+export async function sortTalk(o: { firstName: string; asks: { id: string; q: string }[]; transcript: string; lang: Lang }) {
+  const t = clip(o.transcript, 6000);
+  if (!t) return { ok: false as const, reason: "empty" };
+  const r = await claude({
+    system: RULES,
+    maxTokens: 1500,
+    messages: [{ role: "user", content: `Employee first name: ${o.firstName}\nThe manager talked through their review. Sort what they said into these questions, written in ${LANG_NAME[o.lang]} as clear sentences. Leave a question empty if they didn't speak to it.\nQuestions: ${JSON.stringify(o.asks)}\nWhat they said: """${t}"""\nReturn {"answers": {"<id>": "<text or empty>"}, "vague": ["<short phrase that needs an example>"]}` }],
+  });
+  if (!r.ok) return { ok: false as const, reason: r.reason };
+  const j = parseJson<{ answers?: Record<string, string>; vague?: string[] }>(r.text);
+  if (!j?.answers) return { ok: false as const, reason: "parse" };
+  const answers: Record<string, string> = {};
+  for (const a of o.asks) answers[a.id] = typeof j.answers[a.id] === "string" ? clip(j.answers[a.id], 2500).replace(/—/g, ", ") : "";
+  return { ok: true as const, answers, vague: (j.vague ?? []).filter((v) => typeof v === "string").slice(0, 3).map((v) => clip(v, 120)) };
+}
+
+/** Straight translation, nothing added or softened. */
+export async function translate(fields: Record<string, string>, to: Lang) {
+  const items = Object.fromEntries(Object.entries(fields).filter(([, v]) => v && v.trim()).map(([k, v]) => [k, clip(v, 3000)]));
+  if (!Object.keys(items).length) return { ok: true as const, fields: {} as Record<string, string> };
+  const r = await claude({
+    system: `You translate workplace documents into ${LANG_NAME[to]}. Translate faithfully: same meaning, same strength, nothing added, removed or softened. Keep names as they are. Plain, respectful, professional. No em dashes. Reply with JSON only.`,
+    maxTokens: 3000,
+    messages: [{ role: "user", content: `Translate every value. Keep the keys.\n${JSON.stringify(items)}\nReturn {"fields": {"<key>": "<translation>"}}` }],
+  });
+  if (!r.ok) return { ok: false as const, reason: r.reason };
+  const j = parseJson<{ fields?: Record<string, string> }>(r.text);
+  if (!j?.fields) return { ok: false as const, reason: "parse" };
+  const out: Record<string, string> = {};
+  for (const k of Object.keys(items)) if (typeof j.fields[k] === "string") out[k] = clip(j.fields[k], 3500).replace(/—/g, ", ");
+  return { ok: true as const, fields: out };
+}
+
+// ---------- emails ----------
+const P = (t: string, extra = "") => `<p style="margin:0 0 14px 0;font-family:Arial,sans-serif;font-size:15px;line-height:24px;color:#1C1A19;${extra}">${t}</p>`;
+const button = (t: string, url: string, color: string) => `<a href="${esc(url)}" style="display:inline-block;margin:6px 0 4px;padding:13px 24px;border-radius:6px;background:${color};color:#ffffff;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;text-decoration:none">${esc(t)}</a>`;
+function mail(b: Brand, heading: string, paras: string[], cta?: { label: string; url: string }) {
+  const ink = readableInk(b.accent);
+  const inner = `<p style="margin:30px 0 14px 0;font-family:Georgia,serif;font-size:26px;line-height:32px;color:#1C1A19">${esc(heading)}</p>${paras.map((p) => P(esc(p))).join("")}${cta ? button(cta.label, cta.url, ink) : ""}<!--HERO_END-->`;
+  return { html: frameEmail({ ...b, bar: b.bar ?? b.accent, accent: ink }, inner), text: [heading, ...paras, cta ? `${cta.label}: ${cta.url}` : ""].filter(Boolean).join("\n\n") };
+}
+
+/** Reminder to the manager. days < 0 = overdue. */
+export function managerEmail(x: Ctx, r: Review, days: number, lang: Lang = "en") {
+  const f = first(r.name);
+  const what = KIND_LABEL[r.kind][lang].toLowerCase();
+  const url = `${PORTAL_URL}/c/${x.clientId}/reviews/${r.id}`;
+  const es = lang === "es";
+  const subject = days < 0 ? (es ? `La ${what} de ${f} está atrasada` : `${f}'s ${what} is overdue`) : days === 0 ? (es ? `La ${what} de ${f} vence hoy` : `${f}'s ${what} is due today`) : es ? `La ${what} de ${f} vence en ${days} días` : `${f}'s ${what} is due in ${days} days`;
+  const body = days < 0
+    ? es ? [`La ${what} de ${r.name} está atrasada. Termínela o avise a RR. HH. si hay que reasignarla.`] : [`${r.name}'s ${what} is overdue. Please finish it, or let HR know if it needs to go to someone else.`]
+    : es ? [`Puede empezar a prepararla ahora. Toma unos ${r.template.minutes} minutos, en el teléfono o la computadora, y se guarda sola.`] : [`You can start it now. It takes about ${r.template.minutes} minutes, on your phone or computer, and saves as you go.`];
+  return { subject, ...mail(x.brand, subject, body, { label: es ? "Abrir la evaluación" : "Open the review", url }) };
+}
+
+export function selfEmail(x: Ctx, r: Review, token: string, lang: Lang) {
+  const es = lang === "es";
+  const f = first(r.name);
+  const subject = es ? `${f}, unas preguntas antes de su evaluación` : `${f}, a few questions before your review`;
+  const body = es
+    ? [`${first(r.managerName)} hablará con usted pronto sobre su desempeño. Cuatro preguntas cortas ayudan a que la conversación sea útil. Toma unos 5 minutos y solo lo ven su gerente y RR. HH.`]
+    : [`${first(r.managerName)} will meet with you soon about your work. Four short questions help make the conversation useful. It takes about 5 minutes, and only your manager and HR see it.`];
+  return { subject, ...mail(x.brand, subject, body, { label: es ? "Empezar" : "Start", url: `${PORTAL_URL}/my-review/${token}` }) };
+}
+
+export function shareEmail(x: Ctx, r: Review, token: string) {
+  const es = r.lang === "es";
+  const pip = r.kind === "pip";
+  const subject = pip ? (es ? "Su plan de mejora está listo" : "Your improvement plan is ready") : es ? "Su evaluación está lista" : "Your performance review is ready";
+  const body = pip
+    ? es ? ["Revise el plan y confirme que lo recibió. Puede agregar un comentario."] : ["Please read the plan and confirm you received it. You can add a comment."]
+    : es ? ["Revise los comentarios y confirme que la recibió. Puede agregar un comentario."] : ["Please review the feedback and confirm you received it. You can add a comment."];
+  return { subject, ...mail(x.brand, subject, body, { label: es ? "Ver" : "View", url: `${PORTAL_URL}/my-review/${token}` }) };
+}
+
+export async function send(x: Ctx, to: string, m: { subject: string; html: string; text: string }) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return { ok: false, reason: "no_email" };
+  return sendEmail({ to: [to], subject: m.subject, html: m.html, text: m.text, ...x.sender });
+}
+
+/** Send the self-assessment link and record it. */
+export async function sendSelf(x: Ctx, r: Review, by: string, personEmail?: string) {
+  const to = (personEmail || "").trim().toLowerCase();
+  if (!to) return { ok: false as const, reason: "no_email", review: r };
+  const token = r.self?.token ?? newToken();
+  const lang = r.self?.lang ?? r.lang;
+  const m = await send(x, to, selfEmail(x, r, token, lang));
+  if (!m.ok) return { ok: false as const, reason: m.reason ?? "send", review: r };
+  const next = log({ ...r, self: { ...(r.self ?? {}), token, sentAt: new Date().toISOString(), lang } }, by, `Self-assessment sent to ${to}`);
+  await putReview(x.db, next);
+  return { ok: true as const, review: next };
+}
+
+export const stage = (x: Ctx, r: Review) => stageOf(r, x.s);
