@@ -91,26 +91,38 @@ export async function sync(x: Ctx, today = iso(new Date())) {
 }
 
 // ---------- writing help ----------
-const RULES = `You help a manager write a performance review in their own voice. Hard rules:
+const RULES = `You help a manager turn their notes into a polished, professional performance review. Hard rules:
 - Use ONLY what the manager wrote or said. Never add accomplishments, problems, numbers, dates, examples or opinions they didn't give.
 - Never give or suggest a rating. Never recommend pay, promotion, discipline, termination or any employment decision.
-- Never guess at anyone's gender, age, health, family, religion, national origin or other personal traits. Use the employee's first name instead of he or she unless the manager used a pronoun.
-- Keep the manager's meaning. If something is vague, keep it vague and list it under "vague" so the manager can add an example.
+- Never guess at anyone's gender, age, health, family, religion, national origin or other personal traits. Use the employee's first name or "you" instead of he or she.
+- Keep the manager's meaning and strength. Don't soften a concern into praise or inflate praise. If something is vague, keep it vague and list it under "vague" so the manager can add an example.
 - Plain, professional, warm. No em dashes, no corporate filler, no exaggeration.
 Reply with JSON only.`;
+
+// How the drafts should read. The facts stay the manager's; the writing is ours.
+const CRAFT = `How to write it:
+- Don't just tidy their notes. Rewrite them as a real review: complete sentences that flow, organized so the strongest or most important point comes first.
+- Reframe casual or shorthand phrasing into professional language. "good w/ customers, never late" becomes "You handle customers with patience and care, and you're someone the team can count on to be here on time." Only keep details they gave; "patience and care" is fine only if their notes point to it.
+- For strengths, name the behavior and, when the manager mentioned it, the effect it has on the team, customers or work.
+- For areas to improve, be clear and constructive: name what needs to change and what good looks like, using the manager's own point. No hedging, no harshness.
+- For how the manager will help, write it as the manager's commitment.
+- 2 to 5 sentences per item.`;
 
 const clip = (s: string, n: number) => s.replace(/\r/g, "").trim().slice(0, n);
 const LANG_NAME: Record<Lang, string> = { en: "English", es: "Spanish (neutral Latin American)" };
 
 /** Notes to clear, professional feedback. tone: "" | "shorter" | "warmer" | "specific". */
-export async function polish(o: { firstName: string; asks: { id: string; q: string }[]; answers: Record<string, string>; tone?: string; lang: Lang }) {
+export async function polish(o: { firstName: string; asks: { id: string; q: string }[]; answers: Record<string, string>; tone?: string; voice?: string; lang: Lang }) {
   const items = o.asks.map((a) => ({ id: a.id, question: a.q, notes: clip(o.answers[a.id] ?? "", 2000) })).filter((a) => a.notes);
   if (!items.length) return { ok: false as const, reason: "empty" };
-  const tone = o.tone === "shorter" ? "Make it shorter and tighter." : o.tone === "warmer" ? "Make it warmer and more encouraging, written to the employee directly (you)." : o.tone === "specific" ? "Make it more specific and organized using only the details given." : "";
+  const tone = o.tone === "shorter" ? "Make it shorter and tighter." : o.tone === "warmer" ? "Make it warmer and more encouraging." : o.tone === "specific" ? "Make it more specific and organized using only the details given." : "";
+  const voice = o.voice === "about"
+    ? `Write about the employee in third person, using ${o.firstName}'s name (not he or she). Write the manager's commitments in first person ("I will").`
+    : `Write directly to the employee in second person ("you", "your"), as the manager speaking to ${o.firstName}. Write the manager's commitments in first person ("I will").`;
   const r = await claude({
     system: RULES,
-    maxTokens: 1500,
-    messages: [{ role: "user", content: `Employee first name: ${o.firstName}\nWrite in ${LANG_NAME[o.lang]}. ${tone}\nFor each item, turn the manager's notes into 1 to 4 clear sentences answering the question.\nItems:\n${JSON.stringify(items)}\nReturn {"written": {"<id>": "<text>"}, "vague": ["<short phrase from the notes that needs an example>"]}` }],
+    maxTokens: 2000,
+    messages: [{ role: "user", content: `Employee first name: ${o.firstName}\nWrite in ${LANG_NAME[o.lang]}.\n${voice}\n${CRAFT}\n${tone}\nFor each item, write the review text that answers the question from the manager's notes.\nItems:\n${JSON.stringify(items)}\nReturn {"written": {"<id>": "<text>"}, "vague": ["<short phrase from the notes that needs an example>"]}` }],
   });
   if (!r.ok) return { ok: false as const, reason: r.reason };
   const j = parseJson<{ written?: Record<string, string>; vague?: string[] }>(r.text);

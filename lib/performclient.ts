@@ -64,6 +64,53 @@ function putAll(l: Review[]) {
 
 // a light cleanup for the demo, since the writing help needs the live portal
 const tidy = (t: string) => t.trim().replace(/\s+/g, " ").replace(/(^|[.!?]\s+)([a-z])/g, (_, a, b) => a + b.toUpperCase()).replace(/\bi\b/g, "I").replace(/([^.!?])$/, "$1.");
+// The demo can't call the writing model, so it shapes notes into a review with simple rules.
+// The live portal writes a real narrative from the same notes.
+const BE: Record<string, string> = { is: "are", has: "have", was: "were", does: "do", "doesn't": "don't", "isn't": "aren't", "hasn't": "haven't", "wasn't": "weren't" };
+function toYou(pt: string, name: string, voice: string) {
+  let x = pt.trim().replace(/[.!?]+$/, "");
+  if (!x) return "";
+  const nm = new RegExp(`\\b${name}\\b`, "gi");
+  if (voice === "about") {
+    x = x.replace(/\b(he|she)\b/gi, name).replace(/\b(him|her)\b/gi, name).replace(/\b(his|hers)\b/gi, `${name}'s`);
+    const w = x.split(" ")[0].toLowerCase();
+    if (/^[a-z]+s$/.test(w) && !/(ss|us)$/.test(w) && !["is", "has", "was"].includes(w) || ["is", "has", "was"].includes(w)) x = `${name} ${x[0].toLowerCase()}${x.slice(1)}`;
+    return x;
+  }
+  x = x.replace(nm, "you").replace(/\b(he|she)\s+(\w+)/gi, (_m, _p, v: string) => `you ${BE[v.toLowerCase()] ?? v.replace(/([^s])s$/, "$1").replace(/ie$/, "y")}`).replace(/\b(him|her)\b/gi, "you").replace(/\b(his)\b/gi, "your");
+  const w = x.split(" ")[0].toLowerCase();
+  if (BE[w]) x = `you ${BE[w]}${x.slice(w.length)}`;
+  else if (/^[a-z]+s$/.test(w) && !/(ss|us)$/.test(w)) x = `you ${w.replace(/ies$/, "y").replace(/([^s])s$/, "$1")}${x.slice(w.length)}`;
+  return x;
+}
+const joinPts = (pts: string[]) => (pts.length <= 1 ? pts.join("") : `${pts.slice(0, -1).join(", ")} and ${pts[pts.length - 1]}`);
+function demoNarrative(id: string, notes: string, fullName: string, voice: string, tone: string) {
+  const name = fullName.split(" ")[0] || "they";
+  const pts = notes.split(/(?<=[.!?])\s+|,\s*|;\s*|\s+and\s+|\n+/i).map((p) => toYou(p, name, voice)).filter(Boolean);
+  if (!pts.length) return "";
+  const you = voice !== "about";
+  const lead = (p: string) => p.replace(/^(crew|team|staff|office|warehouse)\b/i, "the $1").replace(/^you\b/, "You").replace(/^./, (c) => c.toUpperCase());
+  const body = joinPts(pts);
+  const strengths = ["well", "strengths", "wins", "continue", "standout"];
+  const grow = ["work", "improve", "skills", "start", "stop"];
+  const help = ["help", "support"];
+  let out: string;
+  if (strengths.includes(id)) {
+    out = you ? `You've had a strong period, ${name}. ${lead(body)}.` : `${name} has had a strong period. ${lead(body)}.`;
+    if (tone !== "shorter") out += you ? " Keep doing this. It makes a real difference." : ` ${name} should keep doing this. It makes a real difference.`;
+    if (tone === "warmer") out += you ? " I appreciate the work you put in." : ` The work ${name} puts in is appreciated.`;
+  } else if (grow.includes(id)) {
+    out = you ? `The main area to focus on next is this: ${body}.` : `The main area for ${name} to focus on next: ${body}.`;
+    if (tone !== "shorter") out += you ? " Let's make this the focus between now and your next review, and we'll check progress along the way." : " This will be the focus before the next review, with progress checked along the way.";
+  } else if (help.includes(id)) {
+    const VERB = /^(pair|walk|train|meet|check|give|set|schedule|cover|show|send|help|coach|review|provide|make|get|find|sign|teach|shadow|introduce|share|talk|sit|book|add|take|buy|order)\b/i;
+    const acts = pts.map((p) => (p.startsWith("you ") ? p.replace(/^you/, you ? "you" : name) : VERB.test(p) ? `I'll ${p}` : `we'll set up ${p}`));
+    out = `Here's how I'll support ${you ? "you" : name}: ${joinPts(acts)}.`;
+    if (tone !== "shorter") out += you ? " If something isn't working, tell me and we'll adjust." : ` If something isn't working, ${name} can raise it and we'll adjust.`;
+  } else out = `${lead(body)}.`;
+  return out.replace(/\.\./g, ".").replace(/\s+/g, " ").trim();
+}
+
 function demoSort(transcript: string, asks: { id: string }[]) {
   const parts = transcript.split(/(?<=[.!?])\s+|,\s+(?:but|though|and also)\s+/i).map((x) => x.trim()).filter(Boolean);
   const out: Record<string, string[]> = Object.fromEntries(asks.map((a) => [a.id, []]));
@@ -135,7 +182,7 @@ export async function performApi(clientId: string, body: Res, demo?: Demo): Prom
   if (a === "ai") {
     if (body.op === "polish") {
       const written: Record<string, string> = {};
-      for (const [k, v] of Object.entries((body.answers ?? r.answers) as Record<string, string>)) if (v?.trim()) written[k] = tidy(body.tone === "shorter" ? v.split(/[.!?]/)[0] : v);
+      for (const [k, v] of Object.entries((body.answers ?? r.answers) as Record<string, string>)) if (v?.trim()) written[k] = demoNarrative(k, v, r.name, String(body.voice ?? "you"), String(body.tone ?? ""));
       return { ok: true, written, vague: [], demo: true };
     }
     if (body.op === "sort") return { ok: true, answers: demoSort(String(body.transcript ?? ""), r.template.ask), vague: [], demo: true };

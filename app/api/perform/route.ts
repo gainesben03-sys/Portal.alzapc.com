@@ -178,7 +178,7 @@ export async function POST(req: Request) {
     const lang: Lang = b.lang === "es" ? "es" : b.lang === "en" ? "en" : r.lang;
     const asks = r.template.ask.map((q) => ({ id: q.id, q: q.name.en }));
     let out: object;
-    if (op === "polish") out = await polish({ firstName: first(r.name), asks, answers: (b.answers as Record<string, string>) ?? r.answers, tone: String(b.tone ?? ""), lang });
+    if (op === "polish") out = await polish({ firstName: first(r.name), asks, answers: (b.answers as Record<string, string>) ?? r.answers, tone: String(b.tone ?? ""), voice: String(b.voice ?? ""), lang });
     else if (op === "sort") out = await sortTalk({ firstName: first(r.name), asks, transcript: s(b.transcript, 8000), lang });
     else if (op === "translate") out = await translate(Object.fromEntries(Object.entries((b.fields as Record<string, string>) ?? {}).slice(0, 40).map(([k, v]) => [k, s(v, 3000)])), b.to === "es" ? "es" : "en");
     else return json({ ok: false, reason: "bad_request" }, 400);

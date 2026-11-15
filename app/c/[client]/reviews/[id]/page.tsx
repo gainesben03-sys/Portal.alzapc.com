@@ -260,11 +260,14 @@ function Words({ r, s, lang, onPatch, call, toast }: { r: Review; s: PerformSett
   const [sugg, setSugg] = useState<Record<string, string> | null>(null);
   const [vague, setVague] = useState<string[]>([]);
   const [tone, setTone] = useState("");
+  const [voice, setVoice] = useState<"you" | "about">("you");
   const [talking, setTalking] = useState(false);
-  const help = async (tn = "") => {
+  const f = first(r.name);
+  const help = async (tn = tone, vc = voice) => {
     setBusy("polish");
     setTone(tn);
-    const x = await call({ action: "ai", id: r.id, op: "polish", answers: r.answers, tone: tn, lang: r.lang === lang ? lang : lang });
+    setVoice(vc);
+    const x = await call({ action: "ai", id: r.id, op: "polish", answers: r.answers, tone: tn, voice: vc, lang });
     setBusy("");
     if (!x.ok) return toast(x.reason === "empty" ? (lang === "es" ? "Escriba algunas notas primero" : "Write a few notes first") : x.reason === "limit" ? (lang === "es" ? "Llegó al límite de hoy" : "That's the limit for today") : (lang === "es" ? "No se pudo. Intente otra vez." : "Couldn't do that right now. Try again."));
     setSugg(x.written);
@@ -303,10 +306,13 @@ function Words({ r, s, lang, onPatch, call, toast }: { r: Review; s: PerformSett
       )}
       {!talking && s.ai && (
         <div className="pf-help">
-          <button className="btn" disabled={!!busy} onClick={() => help(tone)}>{busy ? t.polishing : t.polish}</button>
+          <button className="btn" disabled={!!busy} onClick={() => help()}>{busy ? t.polishing : t.polish}</button>
+          <div className="pf-filters" role="group" aria-label={lang === "es" ? "Cómo se escribe" : "How it reads"}>
+            {([["you", lang === "es" ? `Para ${f}` : `Speak to ${f}`], ["about", lang === "es" ? `Sobre ${f}` : `Write about ${f}`]] as const).map(([k, lb]) => <button key={k} className={voice === k ? "on" : ""} aria-pressed={voice === k} disabled={!!busy} onClick={() => (sugg ? help(tone, k) : setVoice(k))}>{lb}</button>)}
+          </div>
           {sugg && (
             <div className="pf-filters" role="group" aria-label="Tone">
-              {[["shorter", t.shorter], ["warmer", t.warmer], ["specific", t.specific]].map(([k, lb]) => <button key={k} className={tone === k ? "on" : ""} disabled={!!busy} onClick={() => help(k)}>{lb}</button>)}
+              {[["shorter", t.shorter], ["warmer", t.warmer], ["specific", t.specific]].map(([k, lb]) => <button key={k} className={tone === k ? "on" : ""} disabled={!!busy} onClick={() => help(tone === k ? "" : k)}>{lb}</button>)}
             </div>
           )}
           {sugg && <span className="tiny muted">{t.draftSub}</span>}
