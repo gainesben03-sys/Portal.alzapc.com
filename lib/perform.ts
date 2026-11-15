@@ -243,7 +243,7 @@ export interface Review {
   goals: Goal[];
   goalUpdates: Record<string, { status: GoalStatus; note?: string }>; // progress on last review's goals
   lang: Lang; // the language the employee reads it in
-  translated?: { lang: Lang; written: Record<string, string>; goals: { id: string; text: string; measure?: string }[]; pip?: { issues: PipIssue[]; outcome: string } };
+  translated?: { lang: Lang; src?: string; written: Record<string, string>; goals: { id: string; text: string; measure?: string }[]; pip?: { issues: PipIssue[]; outcome: string } };
   self?: { token: string; sentAt?: string; doneAt?: string; answers?: { q: string; a: string }[]; lang?: Lang };
   share?: { token?: string; how: "link" | "person"; at: string; viewedAt?: string; ackAt?: string; comment?: string; deliveredAt?: string };
   pip?: Pip;
@@ -453,9 +453,27 @@ export const ACK_TEXT_PIP: L = l(
 export const fmtDay = (day: string, lang: Lang = "en") => (day ? new Date(`${day}T12:00:00`).toLocaleDateString(lang === "es" ? "es-US" : "en-US", { month: "short", day: "numeric", year: "numeric" }) : "");
 export const first = (name: string) => name.trim().split(/\s+/)[0] || name;
 
+/** Everything the manager wrote, keyed for translation. */
+export function trFields(r: Review): Record<string, string> {
+  const f: Record<string, string> = {};
+  for (const p of r.template.ask) { const v = (r.written[p.id] ?? r.answers[p.id] ?? "").trim(); if (v) f[`a.${p.id}`] = v; }
+  for (const p of r.template.rate) if (r.rateNotes[p.id]?.trim()) f[`n.${p.id}`] = r.rateNotes[p.id];
+  r.goals.forEach((x) => { if (x.text) f[`g.${x.id}`] = x.text; if (x.measure) f[`m.${x.id}`] = x.measure; });
+  r.pip?.issues.forEach((x) => { if (x.what) f[`pw.${x.id}`] = x.what; if (x.expected) f[`pe.${x.id}`] = x.expected; if (x.support) f[`ps.${x.id}`] = x.support; });
+  if (r.pip?.outcome) f.outcome = r.pip.outcome;
+  return f;
+}
+/** A short fingerprint of that text, so a translation can tell when it's out of date. */
+export function trSrc(r: Review) {
+  const s = JSON.stringify(trFields(r));
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  return `${s.length}.${(h >>> 0).toString(36)}`;
+}
+
 /** The finished review as plain sections, in the employee's language. Used by the page, the PDF view and the Word file. */
 export function docOf(r: Review, company: string, lang: Lang = r.lang) {
-  const tr = r.translated && r.translated.lang === lang ? r.translated : null;
+  const tr = r.translated && r.translated.lang === lang && (!r.translated.src || r.translated.src === trSrc(r)) ? r.translated : null;
   const t = r.template;
   const scale = SCALE[t.scale];
   const rated = t.rate.filter((p) => r.ratings[p.id]).map((p) => ({ name: p.name[lang], value: r.ratings[p.id], label: scale[r.ratings[p.id] - 1]?.[lang] ?? "", note: tr?.written[`n.${p.id}`] ?? r.rateNotes[p.id] ?? "" }));

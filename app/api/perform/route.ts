@@ -19,6 +19,7 @@ import {
   addDays, cleanPerform, daysUntil, docOf, Goal, GoalStatus, iso, Lang, negativeReviews, newId, newReview, newToken, nextDue,
   PIP_TEMPLATE, PipIssue, Review, stageOf, templateById, first,
 } from "@/lib/perform";
+import { trSrc } from "@/lib/perform";
 import { allReviews, canEdit, canOpen, getReview, loadCtx, log, managerEmail, polish, putReview, roleOf, roster, send, sendSelf, shareEmail, sortTalk, sync, translate } from "@/lib/performserver";
 import { admin, caller, SERVER_LIVE } from "@/lib/server";
 import type { TeamLog } from "@/lib/team";
@@ -155,7 +156,7 @@ export async function POST(req: Request) {
     if (Array.isArray(p.goals)) next.goals = p.goals.slice(0, 8).map((g) => ({ id: ID.test(String(g.id)) ? g.id : newId(), text: s(g.text, 300), measure: s(g.measure, 300), by: s(g.by, 40), status: (["not_started", "in_progress", "done", "deferred", "na"].includes(g.status) ? g.status : "not_started") as GoalStatus })) as Goal[];
     if (p.goalUpdates) next.goalUpdates = Object.fromEntries(Object.entries(p.goalUpdates).slice(0, 12).map(([k, v]) => [k, { status: (["not_started", "in_progress", "done", "deferred", "na"].includes(v?.status) ? v.status : "in_progress") as GoalStatus, note: s(v?.note, 500) }]));
     if (p.lang) next.lang = p.lang === "es" ? "es" : "en";
-    if (p.translated !== undefined) next.translated = p.translated && (p.translated.lang === "es" || p.translated.lang === "en") ? { lang: p.translated.lang, written: Object.fromEntries(Object.entries(p.translated.written ?? {}).map(([k, v]) => [k, s(v, 4000)])), goals: (p.translated.goals ?? []).slice(0, 8).map((g) => ({ id: String(g.id), text: s(g.text, 400), measure: s(g.measure, 400) })), ...(p.translated.pip ? { pip: { issues: (p.translated.pip.issues ?? []).slice(0, 8).map((i) => ({ id: String(i.id), what: s(i.what, 2000), expected: s(i.expected, 2000), support: s(i.support, 2000) })), outcome: s(p.translated.pip.outcome, 1000) } } : {}) } : undefined;
+    if (p.translated !== undefined) next.translated = p.translated && (p.translated.lang === "es" || p.translated.lang === "en") ? { lang: p.translated.lang, src: s(p.translated.src, 40), written: Object.fromEntries(Object.entries(p.translated.written ?? {}).map(([k, v]) => [k, s(v, 4000)])), goals: (p.translated.goals ?? []).slice(0, 8).map((g) => ({ id: String(g.id), text: s(g.text, 400), measure: s(g.measure, 400) })), ...(p.translated.pip ? { pip: { issues: (p.translated.pip.issues ?? []).slice(0, 8).map((i) => ({ id: String(i.id), what: s(i.what, 2000), expected: s(i.expected, 2000), support: s(i.support, 2000) })), outcome: s(p.translated.pip.outcome, 1000) } } : {}) } : undefined;
     if (p.pip && r.kind === "pip") {
       next.pip = {
         issues: (p.pip.issues ?? []).slice(0, 8).map((i: PipIssue) => ({ id: ID.test(String(i.id)) ? i.id : newId(), what: s(i.what, 2000), expected: s(i.expected, 2000), support: s(i.support, 2000) })),
@@ -189,6 +190,7 @@ export async function POST(req: Request) {
   if (action === "finalize") {
     if (r.status !== "open") return json({ ok: false, reason: "locked" }, 409);
     if (r.kind === "pip" && !r.pip?.hrReviewed) return json({ ok: false, reason: "hr_review" }, 409);
+    if (r.translated?.src && r.translated.lang === r.lang && r.translated.src !== trSrc(r)) return json({ ok: false, reason: "tr_stale" }, 409);
     const how = b.how === "person" ? "person" : "link";
     const at = new Date().toISOString();
     let next: Review = { ...r, status: "shared", finalAt: at, finalBy: by, share: { how, at, ...(how === "link" ? { token: newToken() } : {}) } };

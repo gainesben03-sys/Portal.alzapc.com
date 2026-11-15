@@ -11,7 +11,7 @@ import { LangSwitch, ReviewDoc, StageChip, useDemo, useLang, useTalk } from "@/c
 import { useStore } from "@/lib/store";
 import { downloadDocx } from "@/lib/docx";
 import {
-  addDays, average, docOf, docText, first, fmtDay, Goal, GOAL_STATUS, GoalStatus, KIND_LABEL, Lang, newId, PerformSettings, pipCheckins, Review, SCALE, stageOf, StepId, stepsFor, T,
+  addDays, average, docOf, docText, first, trFields, trSrc, fmtDay, Goal, GOAL_STATUS, GoalStatus, KIND_LABEL, Lang, newId, PerformSettings, pipCheckins, Review, SCALE, stageOf, StepId, stepsFor, T,
 } from "@/lib/perform";
 import { GetData, performApi } from "@/lib/performclient";
 
@@ -461,16 +461,15 @@ function Share({ r, g, s, lang, accent, company, onPatch, call, toast, flush, on
   const f = first(r.name);
   const [how, setHow] = useState<"link" | "person">(g.hasEmail ? "link" : "person");
   const [busy, setBusy] = useState("");
-  const tr = r.translated && r.translated.lang === r.lang ? r.translated : null;
-  const needsTr = r.lang !== lang && !tr;
+  const trAny = r.translated && r.translated.lang === r.lang ? r.translated : null;
+  const fields = trFields(r);
+  const hasText = Object.keys(fields).length > 0;
+  const stale = !!trAny && !!trAny.src && trAny.src !== trSrc(r);
+  const tr = trAny && !stale ? trAny : null;
+  // Spanish and English readers both get a translate option; we don't guess which language the manager wrote in.
+  const needsTr = s.ai && hasText && r.lang !== lang && !tr;
   const translate = async () => {
     setBusy("tr");
-    const fields: Record<string, string> = {};
-    for (const p of r.template.ask) if (r.answers[p.id]) fields[`a.${p.id}`] = r.answers[p.id];
-    for (const p of r.template.rate) if (r.rateNotes[p.id]) fields[`n.${p.id}`] = r.rateNotes[p.id];
-    r.goals.forEach((x) => { if (x.text) fields[`g.${x.id}`] = x.text; if (x.measure) fields[`m.${x.id}`] = x.measure; });
-    r.pip?.issues.forEach((x) => { if (x.what) fields[`pw.${x.id}`] = x.what; if (x.expected) fields[`pe.${x.id}`] = x.expected; if (x.support) fields[`ps.${x.id}`] = x.support; });
-    if (r.pip?.outcome) fields.outcome = r.pip.outcome;
     const x = await call({ action: "ai", id: r.id, op: "translate", fields, to: r.lang });
     setBusy("");
     if (!x.ok) return toast(lang === "es" ? "No se pudo traducir. Intente otra vez." : "Couldn't translate right now. Try again.");
@@ -478,6 +477,7 @@ function Share({ r, g, s, lang, accent, company, onPatch, call, toast, flush, on
     onPatch({
       translated: {
         lang: r.lang,
+        src: trSrc(r),
         written: { ...Object.fromEntries(r.template.ask.filter((p) => F[`a.${p.id}`]).map((p) => [p.id, F[`a.${p.id}`]])), ...Object.fromEntries(r.template.rate.filter((p) => F[`n.${p.id}`]).map((p) => [`n.${p.id}`, F[`n.${p.id}`]])) },
         goals: r.goals.map((x) => ({ id: x.id, text: F[`g.${x.id}`] ?? x.text, measure: F[`m.${x.id}`] ?? x.measure })),
         ...(r.pip ? { pip: { issues: r.pip.issues.map((x) => ({ id: x.id, what: F[`pw.${x.id}`] ?? x.what, expected: F[`pe.${x.id}`] ?? x.expected, support: F[`ps.${x.id}`] ?? x.support })), outcome: F.outcome ?? r.pip.outcome } } : {}),
@@ -490,7 +490,7 @@ function Share({ r, g, s, lang, accent, company, onPatch, call, toast, flush, on
     await flush();
     const x = await call({ action: "finalize", id: r.id, how });
     setBusy("");
-    if (!x.ok) return toast(x.reason === "hr_review" ? t.hrNeeded : x.reason === "no_email" ? (lang === "es" ? "No tiene correo. Elija en persona." : "No email on the roster. Choose in person.") : (lang === "es" ? "No se pudo. Intente otra vez." : "Couldn't finish it. Try again."));
+    if (!x.ok) return toast(x.reason === "hr_review" ? t.hrNeeded : x.reason === "tr_stale" ? (lang === "es" ? "Traduzca de nuevo antes de finalizar." : "Translate again before finalizing.") : x.reason === "no_email" ? (lang === "es" ? "No tiene correo. Elija en persona." : "No email on the roster. Choose in person.") : (lang === "es" ? "No se pudo. Intente otra vez." : "Couldn't finish it. Try again."));
     onDone(x.review);
     toast(t.doneH);
   };
@@ -510,10 +510,12 @@ function Share({ r, g, s, lang, accent, company, onPatch, call, toast, flush, on
               <button className={r.lang === "en" ? "on" : ""} aria-pressed={r.lang === "en"} onClick={() => onPatch({ lang: "en" })}>English</button>
               <button className={r.lang === "es" ? "on" : ""} aria-pressed={r.lang === "es"} onClick={() => onPatch({ lang: "es" })}>Español</button>
             </div>
-            {s.ai && r.lang !== lang && (
+            {s.ai && hasText && (
               <div style={{ marginTop: 10 }}>
-                <button className="btn sm" disabled={!!busy} onClick={translate}>{busy === "tr" ? t.translating : tr ? (lang === "es" ? "Traducir de nuevo" : "Translate again") : t.translate}</button>
+                <button className={`btn sm ${needsTr || stale ? "primary" : ""}`} disabled={!!busy} onClick={translate}>{busy === "tr" ? t.translating : tr || stale ? (lang === "es" ? "Traducir de nuevo" : "Translate again") : r.lang === "es" ? (lang === "es" ? "Traducir al español" : "Translate to Spanish") : lang === "es" ? "Traducir al inglés" : "Translate to English"}</button>
+                {stale && <p className="small" style={{ margin: "6px 0 0", color: "var(--red)" }}>{lang === "es" ? "Cambió la evaluación después de traducirla. Tradúzcala de nuevo." : "You changed the review after translating it. Translate it again."}</p>}
                 {tr && <p className="tiny muted" style={{ margin: "6px 0 0" }}>{t.checkTr}</p>}
+                {tr && <button className="btn sm ghost" style={{ marginTop: 6 }} onClick={() => onPatch({ translated: null as unknown as undefined })}>{lang === "es" ? "Quitar la traducción" : "Remove translation"}</button>}
               </div>
             )}
             {tr && (
@@ -530,9 +532,9 @@ function Share({ r, g, s, lang, accent, company, onPatch, call, toast, flush, on
             <button className={`pf-opt ${how === "person" ? "on" : ""}`} aria-pressed={how === "person"} onClick={() => setHow("person")}><b>{t.inPerson}</b><span>{t.inPersonSub}</span></button>
           </section>
           {missing && <p className="small" style={{ color: "var(--red)", margin: 0 }}>{lang === "es" ? "Falta la calificación general." : "Add the overall rating first."}</p>}
-          {needsTr && s.ai && <p className="tiny muted" style={{ margin: 0 }}>{lang === "es" ? `Escribió en español y ${f} la lee en inglés. Traduzca primero para revisarla.` : `${f} reads it in ${r.lang === "es" ? "Spanish" : "English"}. Translate it first so you can check it.`}</p>}
+          {needsTr && <p className="tiny muted" style={{ margin: 0 }}>{lang === "es" ? `Escribió en español y ${f} la lee en inglés. Traduzca primero para revisarla.` : `${f} reads it in ${r.lang === "es" ? "Spanish" : "English"}. Translate it first so you can check it.`}</p>}
           {r.kind === "pip" && !r.pip?.hrReviewed && <p className="small" style={{ color: "var(--red)", margin: 0 }}>{t.hrNeeded}</p>}
-          <button className="btn primary block" disabled={!!busy || missing || (r.kind === "pip" && !r.pip?.hrReviewed)} onClick={finish}>{busy === "fin" ? "…" : t.finalize}</button>
+          <button className="btn primary block" disabled={!!busy || missing || stale || (r.kind === "pip" && !r.pip?.hrReviewed)} onClick={finish}>{busy === "fin" ? "…" : t.finalize}</button>
           <p className="tiny muted" style={{ margin: 0 }}>{t.finalNote}</p>
         </aside>
       </div>
