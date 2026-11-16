@@ -2522,3 +2522,45 @@ h2.pf-h, .pf-h { text-transform: none; letter-spacing: 0; color: var(--ink, #192
 .tr-me .tr-step .btn { width: 100%; justify-content: center; }
 .tr-me .tr-langs .btn { width: auto; }
 .tr-me .my-rv-center { text-align: center; align-items: center; }
+/* Wider, fluid desktop layout: grows with the screen, up to 1600px */
+@media (min-width: 1000px) {
+  .wrap.wide, .subnav-inner, .subnav-sub-inner, .subnav-inner.wide, .subnav ~ .wrap:not(.wide) { max-width: min(1600px, 94vw); }
+  .wrap.wide.pf-review { max-width: 1040px; }
+}
+
+/* Dark mode for reviews, ratings and required training (these used white tiles) */
+:root[data-theme="dark"] .pf-filters button,
+:root[data-theme="dark"] .pf-lang,
+:root[data-theme="dark"] .pf-rate button,
+:root[data-theme="dark"] .pf-rlist button,
+:root[data-theme="dark"] .pf-idea,
+:root[data-theme="dark"] .tr-q,
+:root[data-theme="dark"] .tr-me-card,
+:root[data-theme="dark"] .tr-step,
+:root[data-theme="dark"] .pf-launch { background: var(--card); border-color: var(--line); color: var(--ink); }
+:root[data-theme="dark"] .pf-filters button.on { background: color-mix(in srgb, var(--accent) 22%, var(--card)); border-color: var(--accent); color: var(--ink); }
+:root[data-theme="dark"] .pf-rate button b, :root[data-theme="dark"] .pf-rlist button b { background: var(--soft); border-color: var(--line); color: var(--ink); }
+:root[data-theme="dark"] .pf-rate button span { color: var(--muted); }
+:root[data-theme="dark"] .pf-rate button.on, :root[data-theme="dark"] .pf-rlist button.on { background: color-mix(in srgb, var(--accent) 18%, var(--card)); border-color: var(--accent); }
+:root[data-theme="dark"] .pf-rate button.on span, :root[data-theme="dark"] .pf-rlist button.on span { color: var(--ink); }
+:root[data-theme="dark"] .pf-bubbles button { background: var(--card); border-color: var(--line); }
+:root[data-theme="dark"] .pf-bubbles button.done { background: var(--accent); border-color: var(--accent); }
+:root[data-theme="dark"] .pf-dots button { background: var(--line); }
+:root[data-theme="dark"] .tr-file { background: var(--soft); }
+:root[data-theme="dark"] .tr-checkrow.ok { background: var(--green-bg); }
+:root[data-theme="dark"] .tr-checkrow.flag, :root[data-theme="dark"] .tr-note { background: var(--amber-bg); }
+:root[data-theme="dark"] .tr-switch { background: var(--track); }
+:root[data-theme="dark"] .tr-switch.on { background: var(--accent); }
+:root[data-theme="dark"] .tr-add { border-color: var(--line); color: var(--ink); }
+:root[data-theme="dark"] .tr-counts b { color: var(--ink); }
+:root[data-theme="dark"] .tr-counts b.gold { color: var(--amber); }
+:root[data-theme="dark"] .tr-counts b.red { color: var(--red); }
+:root[data-theme="dark"] .pf-tr, :root[data-theme="dark"] .pf-ideas { background: var(--soft); }
+:root[data-theme="dark"] .tr-upload, :root[data-theme="dark"] .tr-qa { background: var(--soft); border-color: var(--line); }
+:root[data-theme="dark"] .tr-file-ok { background: var(--green-bg); }
+:root[data-theme="dark"] .pf-chip { background: var(--soft2); color: var(--ink); }
+:root[data-theme="dark"] .pf-chip.green { background: var(--green-bg); color: var(--green); }
+:root[data-theme="dark"] .pf-chip.blue { background: hsl(215 35% 20%); color: hsl(210 70% 80%); }
+:root[data-theme="dark"] .pf-chip.gold { background: var(--amber-bg); color: var(--amber); }
+:root[data-theme="dark"] .pf-chip.red { background: var(--red-bg); color: var(--red); }
+:root[data-theme="dark"] .pf-bar { background: var(--track); }

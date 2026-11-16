@@ -14,7 +14,7 @@
 import { NextResponse } from "next/server";
 import { cleanCompliance, complianceFor, Course, logRec, newRecord, supervisorIds, TrainingRecord, Variant } from "@/lib/compliance";
 import {
-  allRecords, answerEmail, getRecord, linkFor, loadCtx, putRecord, reminderEmail, roleOf, saveSettings, send, sendAssignments, sentBackEmail, sync,
+  allRecords, answerEmail, tableReady, getRecord, linkFor, loadCtx, putRecord, reminderEmail, roleOf, saveSettings, send, sendAssignments, sentBackEmail, sync,
 } from "@/lib/complianceserver";
 import { daysBetween } from "@/lib/compliance";
 import { iso, newToken } from "@/lib/perform";
@@ -42,6 +42,7 @@ export async function POST(req: Request) {
   if (!x.cfg.modules?.compliance) return json({ ok: false, reason: "off" }, 403);
   const role = roleOf(who, x);
   const by = who.name || who.email;
+  if (!(await tableReady(db))) return json({ ok: false, reason: "setup" }, 503);
   const action = String(b.action ?? "");
   const mine = async (id: unknown) => {
     const r = await getRecord(db, String(id ?? ""), clientId);

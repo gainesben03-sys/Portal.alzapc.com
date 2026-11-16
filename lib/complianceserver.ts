@@ -45,6 +45,11 @@ export async function roster(db: DB, clientId: string): Promise<TeamMember[]> {
   const { data } = await db.from("people").select("id, data").eq("client_id", clientId);
   return (data ?? []).map((r) => ({ ...(r.data as TeamMember), id: r.id as string, clientId }));
 }
+/** Is the training table there? (The 021 update has to be run once in Supabase.) */
+export async function tableReady(db: DB) {
+  const { error } = await db.from("training_records").select("id").limit(1);
+  return !error;
+}
 export async function allRecords(db: DB, clientId: string): Promise<TrainingRecord[]> {
   const { data } = await db.from("training_records").select("id, data").eq("client_id", clientId).order("created_at", { ascending: false }).limit(5000);
   return (data ?? []).map((r) => ({ ...(r.data as TrainingRecord), id: r.id as string, clientId }));
@@ -108,7 +113,7 @@ export async function sync(x: Ctx): Promise<{ records: TrainingRecord[]; people:
     }
   }
   for (const r of changed) {
-    await putRecord(x.db, r);
+    if (!(await putRecord(x.db, r))) throw new Error("save_failed");
     const i = out.findIndex((y) => y.id === r.id);
     if (i >= 0) out[i] = r;
   }
@@ -186,11 +191,15 @@ export async function sendAssignments(x: Ctx, recs: TrainingRecord[]) {
   let n = 0;
   for (const rs of byP.values()) {
     if (!rs[0].email) continue;
-    const m = await send(x, rs[0].email, assignEmail(x, rs));
+    // only email links that were actually saved, so every link works
+    const saved = await byToken(x.db, rs[0].token);
+    const ready = rs.filter((r) => saved.some((y) => y.id === r.id));
+    if (!ready.length) continue;
+    const m = await send(x, rs[0].email, assignEmail(x, ready));
     if (!m.ok) continue;
     n++;
     const at = new Date().toISOString();
-    for (const r of rs) await putRecord(x.db, logRec({ ...r, sentAt: at }, "Portal", `Emailed ${r.email}`));
+    for (const r of ready) await putRecord(x.db, logRec({ ...r, sentAt: at }, "Portal", `Emailed ${r.email}`));
   }
   return n;
 }

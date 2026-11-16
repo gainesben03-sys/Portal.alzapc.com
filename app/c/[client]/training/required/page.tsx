@@ -30,7 +30,7 @@ export default function RequiredTraining() {
   const load = useCallback(async () => {
     const r = await call({ action: "list" });
     if (r.ok) setData(r as ListData);
-    else setErr(r.reason === "off" ? "off" : "load");
+    else setErr(r.reason === "off" ? "off" : r.reason === "setup" ? "setup" : "load");
   }, [call]);
   useEffect(() => {
     if (!ok) return;
@@ -49,7 +49,7 @@ export default function RequiredTraining() {
     </div>
   );
   if (!cfg?.modules.compliance) return shell(<div className="card section small muted">Required training isn&apos;t turned on for {client.name}.</div>);
-  if (err) return shell(<div className="card section small muted">{err === "off" ? "Required training isn't turned on." : "Couldn't load required training. Try again in a moment."}</div>);
+  if (err) return shell(<div className="card section small muted">{err === "off" ? "Required training isn't turned on." : err === "setup" ? "Almost ready. The database update for required training (supabase/021_compliance.sql) hasn't been run yet. Run it once in Supabase, then refresh." : "Couldn't load required training. Try again in a moment."}</div>);
   if (!data) return shell(<p className="small muted">Loading…</p>);
 
   if (!data.role.admin) return shell(<ManagerView data={data} call={call} toast={toast.show} />);
