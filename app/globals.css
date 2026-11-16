@@ -2564,3 +2564,15 @@ h2.pf-h, .pf-h { text-transform: none; letter-spacing: 0; color: var(--ink, #192
 :root[data-theme="dark"] .pf-chip.gold { background: var(--amber-bg); color: var(--amber); }
 :root[data-theme="dark"] .pf-chip.red { background: var(--red-bg); color: var(--red); }
 :root[data-theme="dark"] .pf-bar { background: var(--track); }
+/* Team Hub: two columns on wide screens (the week on the left, team and extras on the right) */
+.hub-cols { display: block; }
+@media (min-width: 1100px) {
+  .hub-cols { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(300px, 1fr); gap: 0 22px; align-items: start; }
+  .hub-side > .section:first-child, .hub-side > .section-head:first-child { margin-top: 18px; }
+  .hub-side .hub-tools { margin-top: 18px; }
+}
+/* Dashboard tiles pack by height on two and three columns (see Dash in the dashboard page) */
+@media (min-width: 720px) {
+  .dash.packed { --packed: 1; grid-auto-rows: 4px; row-gap: 0; align-items: start; grid-auto-flow: row dense; }
+  .dash.packed > div { display: block; padding-bottom: 12px; }
+}

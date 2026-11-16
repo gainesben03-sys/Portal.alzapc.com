@@ -84,6 +84,8 @@ export default function HubHome() {
               <button className="btn" onClick={() => setLog({ kind: "recognition" })}>⭐ Recognize someone</button>
             </div>
 
+            <div className="hub-cols">
+            <div className="hub-main">
             <div className="card section hub-week" data-tour="hub-week">
               {reviewItems.map(({ r, st }) => {
                 const f = r.name.split(" ")[0];
@@ -161,6 +163,8 @@ export default function HubHome() {
                 </div>
               );
             })()}
+            </div>
+            <aside className="hub-side">
             <div className="hub-tools section">
               {training && (
                 <Link href={`/c/${clientId}/hub/learn/${training.id}`} className="card hub-tool">
@@ -205,6 +209,8 @@ export default function HubHome() {
                   <span className="tiny ellipsis">{p.name.split(" ")[0]}</span>
                 </Link>
               ))}
+            </div>
+            </aside>
             </div>
           </>
         )}

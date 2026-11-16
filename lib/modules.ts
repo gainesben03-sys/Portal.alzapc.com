@@ -124,17 +124,18 @@ export const TILES: { id: string; label: string; blurb: string; module?: ModuleK
   { id: "share", label: "Send files", blurb: "Upload documents securely" },
   { id: "recruiting", label: "Hiring", blurb: "Open roles and candidates waiting on you", module: "recruiting" },
   { id: "hires", label: "New hires", blurb: "Where each new hire is, start to day one", module: "hires", wide: true },
+  { id: "compliance", label: "Required training", blurb: "Who's current on required training, who's late, and certificates waiting for HR", module: "compliance" },
   { id: "celebrate", label: "Celebrations", blurb: "Birthdays, work anniversaries and new starters in the next 30 days. Managers see their team, executives the whole company" },
   { id: "reviews", label: "Reviews", blurb: "Reviews due, late or waiting on sign-off, and anyone flagged for an improvement plan", module: "perform" },
   { id: "upcoming", label: "Coming up", blurb: "Next items on your HR roadmap" },
   { id: "wins", label: "Recent wins", blurb: "What got done lately" },
   { id: "resources", label: "Resources", blurb: "Recently shared templates and guides", module: "resources" },
   { id: "wellness", label: "Wellness", blurb: "Latest benefits news", module: "wellness" },
-  { id: "leave", label: "Leave of absence", blurb: "Who's out, who's coming back, and what's due (HR admins only)", module: "leave", wide: true },
+  { id: "leave", label: "Leave of absence", blurb: "Who's out, who's coming back, and what's due (HR admins only)", module: "leave" },
   { id: "huddle", label: "HR Huddle email", blurb: "Turn your recap email on or off" },
 ];
 /** A busy executive's Home: what needs me, people in motion, what Ben is on, and one way to reach him. The rest is opt-in under Customize. */
-export const DEFAULT_TILES = ["projects", "mylist", "celebrate", "hires", "recruiting", "reviews"];
+export const DEFAULT_TILES = ["projects", "mylist", "hires", "celebrate", "recruiting", "reviews", "compliance"];
 
 export interface ClientConfig {
   onboarding?: Partial<import("./hires").OnboardingSettings>;

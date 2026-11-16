@@ -1,5 +1,7 @@
 "use client";
 
+import { trainingApi, type ListData as TrainingList } from "@/lib/complianceclient";
+import { stageOf as trainingStage } from "@/lib/compliance";
 import { useDemo } from "@/components/perform";
 import { performApi, type ListData } from "@/lib/performclient";
 import { LeaveTile } from "@/components/leaveui";
@@ -10,7 +12,7 @@ import { useLeaveAccess } from "@/lib/leaveclient";
 import { AskBox } from "@/components/askbox";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { ClientNav, ClientTopbar, Sheet, Toast, UrgencyPill, useGuard, useToast } from "@/components/ui";
 import { ADVISOR, fmt, fmtTime, parseDay, projectProgress, today, urgency } from "@/lib/data";
 import { canSee, daysSince, DEFAULT_TILES, Note, TILES } from "@/lib/modules";
@@ -75,7 +77,7 @@ export default function Home() {
   const isAdvisor = viewer?.kind === "advisor";
   const meName = viewer?.kind === "client" ? viewer.person.name : null;
   const layoutKey = me ? `${client.id}:${me.email}` : "";
-  const available = TILES.filter((t) => (!t.module || cfg?.modules[t.module]) && (t.id !== "huddle" || !!me) && (t.id !== "leave" || leaveAcc.admin) && (t.id !== "reviews" || isAdvisor || me?.access === "exec") && (t.module ? canSee(me?.access, t.module) : true));
+  const available = TILES.filter((t) => (!t.module || cfg?.modules[t.module]) && (t.id !== "huddle" || !!me) && (t.id !== "leave" || leaveAcc.admin) && (t.id !== "reviews" || isAdvisor || me?.access === "exec") && (t.id !== "compliance" || isAdvisor || me?.access === "exec") && (t.module ? canSee(me?.access, t.module) : true));
   const defaults = withNewTiles(cfg?.tiles ?? DEFAULT_TILES).filter((id) => available.some((t) => t.id === id));
   const order = (layoutKey && layouts[layoutKey] && withNewTiles(layouts[layoutKey])) || defaults;
   const shown = order.filter((id) => available.some((t) => t.id === id));
@@ -369,6 +371,7 @@ export default function Home() {
     },
     leave: () => <LeaveTile clientId={client.id} Tile={Tile} />,
     reviews: () => <ReviewsTile clientId={client.id} />,
+    compliance: () => <TrainingTile clientId={client.id} />,
     mylist: () => <MyListTile clientId={client.id} Tile={Tile} />,
     huddle: () =>
       me && cfg ? (
@@ -406,9 +409,9 @@ export default function Home() {
         {/* Ask HR lives in Resources; here only when Resources is off */}
         {!cfg.modules?.resources && <AskBox clientId={client.id} slim />}
 
-        <div className="dash section" style={{ marginTop: 16 }}>
+        <Dash>
           {shown.map((id) => <div key={id} className={TILES.find((t) => t.id === id)?.wide ? "span2" : ""}>{tiles[id]?.()}</div>)}
-        </div>
+        </Dash>
         {cfg?.softAsks !== false && <QuietAsks clientName={client.name} recruitingOn={!!cfg?.modules.recruiting} onSend={async (kind, text) => {
           const author = viewer?.kind === "client" ? viewer.person : ADVISOR;
           const n: Note = { id: `n${Date.now()}`, clientId: client.id, author, kind: "Message", text, urgent: false, at: new Date().toISOString(), status: "new", replies: [] };
@@ -462,8 +465,33 @@ export default function Home() {
   );
 }
 
+/** The tile grid packs tiles by their real height, so a short tile never leaves a tall empty card beside a long one. */
+function Dash({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const grid = ref.current;
+    if (!grid) return;
+    const fit = () => {
+      const packed = getComputedStyle(grid).getPropertyValue("--packed").trim() === "1";
+      for (const el of Array.from(grid.children) as HTMLElement[]) {
+        const inner = el.firstElementChild as HTMLElement | null;
+        if (!packed || !inner) { el.style.gridRowEnd = ""; continue; }
+        el.style.gridRowEnd = `span ${Math.ceil((inner.getBoundingClientRect().height + 12) / 4)}`;
+      }
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    const watch = () => { ro.disconnect(); ro.observe(grid); for (const el of Array.from(grid.children)) if (el.firstElementChild) ro.observe(el.firstElementChild); };
+    watch();
+    const mo = new MutationObserver(() => { watch(); fit(); });
+    mo.observe(grid, { childList: true });
+    return () => { ro.disconnect(); mo.disconnect(); };
+  }, []);
+  return <div ref={ref} className="dash packed section" style={{ marginTop: 16 }}>{children}</div>;
+}
+
 /** Tiles added after people may have saved a layout. They appear on saved layouts too, unless someone turned them off. */
-const NEW_TILES: [string, string][] = [["mylist", "projects"], ["leave", "hires"], ["reviews", "recruiting"], ["celebrate", "mylist"]]; // [tile, show it after]
+const NEW_TILES: [string, string][] = [["mylist", "projects"], ["leave", "hires"], ["reviews", "recruiting"], ["celebrate", "mylist"], ["compliance", "reviews"]]; // [tile, show it after]
 function withNewTiles(saved: string[]): string[] {
   const out = saved.filter((id) => !id.startsWith("!"));
   for (const [id, after] of NEW_TILES) {
@@ -615,9 +643,41 @@ function ReviewsTile({ clientId }: { clientId: string }) {
       {lines.filter(([, n]) => n > 0).map(([label, n, href, bad]) => (
         <Link key={label} href={href} className="lv-line">
           <span className="grow"><b>{n}</b> <span className="muted">{label}</span></span>
-          {bad && <span className="pill overdue">{label.startsWith("past") ? "Late" : "Look"}</span>}
+          {bad && <span className="pill overdue">{label.startsWith("past") ? "Late" : "Act"}</span>}
         </Link>
       ))}
+    </Tile>
+  );
+}
+
+/** Required training at a glance: how many are current, late, or waiting on HR. */
+function TrainingTile({ clientId }: { clientId: string }) {
+  const { people, viewer, me } = useStore();
+  const demo = { people, me: { email: viewer?.kind === "client" ? (me?.email ?? "") : "ben@alzapc.com", admin: true } };
+  const [d, setD] = useState<TrainingList | null>(null);
+  useEffect(() => {
+    trainingApi(clientId, { action: "list" }, demo).then((r) => r.ok && setD(r as TrainingList)).catch(() => undefined);
+  }, [clientId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const base = `/c/${clientId}/training/required`;
+  if (!d) return <Tile title="Required training" href={base}><p className="small muted">Loading…</p></Tile>;
+  const open = d.records.filter((r) => r.status !== "cancelled");
+  const latest = new Map<string, (typeof open)[number]>();
+  for (const r of open) { const k = `${r.personId}|${r.courseId}`; const c = latest.get(k); if (!c || ["assigned", "sentback", "submitted"].includes(r.status) || (r.completedAt ?? "") > (c.completedAt ?? "")) latest.set(k, r); }
+  const all = [...latest.values()];
+  const st = all.map((r) => trainingStage(r, d.today));
+  const pct = all.length ? Math.round((st.filter((x) => x === "current").length / all.length) * 100) : 0;
+  const late = st.filter((x) => x === "late").length;
+  const checking = st.filter((x) => x === "checking").length;
+  const soon = st.filter((x) => x === "due_soon").length;
+  return (
+    <Tile title="Required training" count={late || undefined} href={base} linkLabel="Open">
+      <div className="row" style={{ alignItems: "baseline", gap: 8 }}><span className="tr-pct">{pct}%</span><span className="small muted">current</span></div>
+      <span className="pf-bar" style={{ width: "100%", margin: "8px 0 4px" }}><span style={{ width: `${pct}%` }} /></span>
+      {late > 0 && <Link href={base} className="lv-line"><span className="grow"><b>{late}</b> <span className="muted">late</span></span><span className="pill overdue">Late</span></Link>}
+      {checking > 0 && <Link href={`${base}?tab=certificates`} className="lv-line"><span className="grow"><b>{checking}</b> <span className="muted">certificate{checking === 1 ? "" : "s"} to check</span></span><span className="pill overdue">Act</span></Link>}
+      {soon > 0 && <Link href={base} className="lv-line"><span className="grow"><b>{soon}</b> <span className="muted">due in the next 60 days</span></span></Link>}
+      {!late && !checking && !soon && <p className="small muted" style={{ margin: "6px 0 0" }}>Everyone is current. Nothing due soon.</p>}
+      {!d.settings.live && <p className="tiny muted" style={{ margin: "6px 0 0" }}>Not launched yet. Nothing has been emailed.</p>}
     </Tile>
   );
 }

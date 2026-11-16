@@ -52,6 +52,7 @@ export default function Resources() {
         <div className="tile-grid section" style={{ marginTop: 16 }}>
           {FOLDERS.map((f) => {
             const n = shared.filter((x) => x.s.folder === f).length;
+            if (!n && folder !== f) return null; // empty folders just add noise
             return (
               <button key={f} className={`tile ${folder === f ? "on" : ""}`} onClick={() => setFolder(folder === f ? null : f)}>
                 <b>{f}</b>
@@ -72,7 +73,7 @@ export default function Resources() {
           {filtered.map(({ r, s }) => (
             <div className="row" key={r.id + s.folder}>
               <div className="file" style={{ border: 0, padding: 0 }}>
-                <div className="ic">{r.type.slice(0, 4).toUpperCase()}</div>
+                <div className="ic" aria-hidden="true">{typeIcon(r.type)}</div>
               </div>
               <div className="grow">
                 <div className="title">{r.title}</div>
@@ -102,4 +103,17 @@ export default function Resources() {
       <Toast msg={toast.msg} onDone={toast.clear} />
     </div>
   );
+}
+
+/** A small icon per resource type, so the list reads at a glance. */
+function typeIcon(type: string) {
+  const t = type.toLowerCase();
+  const p = t.startsWith("train") ? "M22 10 12 5 2 10l10 5 10-5zM6 12v5c3 2 9 2 12 0v-5"
+    : t.startsWith("templ") ? "M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h4"
+    : t.startsWith("check") ? "M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"
+    : t.startsWith("guide") ? "M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5zM20 17v4H6.5A2.5 2.5 0 0 1 4 19.5"
+    : t.startsWith("video") ? "M15 10l5-3v10l-5-3zM3 6h12v12H3z"
+    : t.startsWith("polic") ? "M12 3l8 4v5c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V7z"
+    : "M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5";
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={p} /></svg>;
 }
