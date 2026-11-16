@@ -10,7 +10,7 @@ import { ACK_TEXT, ACK_TEXT_PIP, Doc, Lang, SELF_Q } from "@/lib/perform";
 
 type Info =
   | { mode: "self"; company: string; accent: string; logo: string | null; first: string; manager: string; lang: Lang; closed: boolean; done: boolean; answers: { q: string; a: string }[] }
-  | { mode: "review"; company: string; accent: string; logo: string | null; first: string; manager: string; lang: Lang; doc: Doc; docOther: Doc | null; acked: boolean; signOff: boolean };
+  | { mode: "review"; company: string; accent: string; logo: string | null; first: string; manager: string; lang: Lang; doc: Doc; docOther: Doc | null; otherReady?: boolean; otherOriginal?: boolean; canTranslate?: boolean; fileName?: string; letterhead?: string | null; acked: boolean; signOff: boolean };
 
 const SAMPLE_DOC: Doc = {
   title: "Performance Review", company: "Harborlight Events", name: "Sam Patel", jobTitle: "Inventory Coordinator", department: "Warehouse", manager: "Dana Ortiz", hireDate: "", period: "Nov 2025 – Nov 2026", date: "Nov 24, 2026", format: "Quick scorecard",
@@ -18,6 +18,14 @@ const SAMPLE_DOC: Doc = {
   overall: { value: 4, label: "Exceeds expectations" },
   written: [{ q: "What's going well?", a: "Sam cut inventory counts from three days to one and stays calm when event orders change at the last minute." }, { q: "What should they work on?", a: "Planning ahead for busy season, including learning the forecasting sheet." }, { q: "How will you help?", a: "Dana will walk Sam through the forecasting sheet in January." }],
   goals: [{ text: "Own the busy-season forecast", measure: "Forecast ready to share", by: "Mar 1" }], pip: null, comment: "", ack: "", ackHow: "link", managerDone: "Nov 24, 2026", ackText: ACK_TEXT.en, lang: "en",
+};
+
+const SAMPLE_DOC_ES: Doc = {
+  ...SAMPLE_DOC, title: "Evaluación de desempeño", period: "nov 2025 – nov 2026", date: "24 nov 2026", format: "Evaluación rápida", lang: "es", ackText: ACK_TEXT.es,
+  rated: [{ name: "Calidad del trabajo", value: 4, label: "Supera expectativas", note: "" }, { name: "Comunicación", value: 3, label: "Cumple expectativas", note: "" }, { name: "Trabajo en equipo", value: 4, label: "Supera expectativas", note: "" }, { name: "Confiabilidad", value: 4, label: "Supera expectativas", note: "" }],
+  overall: { value: 4, label: "Supera expectativas" },
+  written: [{ q: "¿Qué va bien?", a: "Sam redujo los conteos de inventario de tres días a uno y mantiene la calma cuando los pedidos cambian a última hora." }, { q: "¿En qué debe mejorar?", a: "Planificar con anticipación para la temporada alta, incluido aprender la hoja de pronósticos." }, { q: "¿Cómo le ayudará?", a: "Dana le enseñará a Sam la hoja de pronósticos en enero." }],
+  goals: [{ text: "Hacerse cargo del pronóstico de temporada alta", measure: "Pronóstico listo para compartir", by: "1 mar" }],
 };
 
 export default function MyReview() {
@@ -29,7 +37,7 @@ export default function MyReview() {
 
   useEffect(() => {
     const sample = (): Info => (token === "demo-review"
-      ? { mode: "review", company: "Harborlight Events", accent: "#0f766e", logo: null, first: "Sam", manager: "Dana", lang: "en", doc: SAMPLE_DOC, docOther: null, acked: false, signOff: true }
+      ? { mode: "review", company: "Harborlight Events", accent: "#0f766e", logo: null, first: "Sam", manager: "Dana", lang: "en", doc: SAMPLE_DOC, docOther: SAMPLE_DOC_ES, otherReady: true, canTranslate: true, fileName: "Sam.Patel.2026 Performance Review", acked: false, signOff: true }
       : { mode: "self", company: "Harborlight Events", accent: "#0f766e", logo: null, first: "Sam", manager: "Dana", lang: "en", closed: false, done: false, answers: [] });
     fetch(`/api/my-review/${encodeURIComponent(token)}`, { cache: "no-store" })
       .then((r) => r.json())
@@ -48,7 +56,7 @@ export default function MyReview() {
 
   return (
     <div className="ex-page my-rv" style={{ ["--ex" as string]: info.accent }}>
-      <div className="my-rv-top">
+      <div className="my-rv-top no-print">
         {info.logo ? <img src={info.logo} alt={info.company} /> : <b>{info.company}</b>}
         <div className="pf-lang" role="group" aria-label="Language">
           <button className={lang === "en" ? "on" : ""} aria-pressed={lang === "en"} onClick={() => setLang("en")}>English</button>
@@ -119,15 +127,39 @@ function Read({ info, lang, token, demo }: { info: Extract<Info, { mode: "review
   const [comment, setComment] = useState("");
   const [acked, setAcked] = useState(info.acked);
   const [busy, setBusy] = useState(false);
-  const doc = info.doc.lang === lang || !info.docOther ? info.doc : info.docOther;
+  const [other, setOther] = useState<Doc | null>(info.otherReady ? info.docOther : null);
+  const [trBusy, setTrBusy] = useState(false);
+  const [trFail, setTrFail] = useState(false);
+  const wantsOther = lang !== info.doc.lang;
+  useEffect(() => {
+    if (!wantsOther || other || trBusy || demo || !info.canTranslate) return;
+    setTrBusy(true);
+    setTrFail(false);
+    fetch(`/api/my-review/${encodeURIComponent(token)}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "translate", to: lang }) })
+      .then((x) => x.json()).then((j) => (j.ok ? setOther(j.doc) : setTrFail(true))).catch(() => setTrFail(true)).finally(() => setTrBusy(false));
+  }, [wantsOther]); // eslint-disable-line react-hooks/exhaustive-deps
+  // headings follow the language right away; the manager's words follow once translated
+  const doc = !wantsOther ? info.doc : other ?? info.docOther ?? info.doc;
   const pip = !!doc.pip;
+  useEffect(() => {
+    if (!info.fileName) return;
+    const set = () => { document.title = info.fileName!; };
+    set();
+    window.addEventListener("beforeprint", set);
+    return () => window.removeEventListener("beforeprint", set);
+  }, [info.fileName]);
   return (
     <div className="my-rv-body wide">
+      <div className="my-rv-tools no-print">
+        {wantsOther && (trBusy ? <span className="tiny muted">{es ? "Traduciendo…" : "Translating…"}</span> : other && info.otherOriginal ? <span className="tiny muted">{es ? "Así lo escribió su gerente." : "This is how your manager wrote it."}</span> : other ? <span className="tiny muted">{es ? "Traducción automática. La versión que escribió su gerente es la oficial." : "Translated automatically. The version your manager wrote is the official one."}</span> : <span className="tiny muted">{trFail ? (es ? "No se pudo traducir el texto ahora." : "Couldn't translate the text right now.") : es ? "El texto de su gerente está en inglés." : "Your manager's text is in Spanish."}</span>)}
+        <button className="btn sm" style={{ marginLeft: "auto" }} onClick={() => window.print()}>{es ? "Imprimir o guardar PDF" : "Print or save as PDF"}</button>
+      </div>
+      {info.letterhead ? <img src={info.letterhead} alt={info.company} className="my-rv-printlogo lh" /> : info.logo ? <img src={info.logo} alt={info.company} className="my-rv-printlogo" /> : null}
       <ReviewDoc d={doc} accent={info.accent} />
       {info.signOff && (acked ? (
-        <div className="my-rv-ok"><b>{es ? "Listo" : "All set"}</b> {es ? `${info.manager} puede ver que la recibió. Este enlace sigue funcionando si quiere volver a verla.` : `${info.manager} can see you received it. This link keeps working if you want to look back at it.`}</div>
+        <div className="my-rv-ok no-print"><b>{es ? "Listo" : "All set"}</b> {es ? `${info.manager} puede ver que la recibió. Este enlace sigue funcionando si quiere volver a verla.` : `${info.manager} can see you received it. This link keeps working if you want to look back at it.`}</div>
       ) : (
-        <section className="my-rv-ack">
+        <section className="my-rv-ack no-print">
           <label className="my-rv-q" htmlFor="c" style={{ fontSize: 17 }}>{es ? "Agregar un comentario (opcional)" : "Add a comment (optional)"}</label>
           <textarea id="c" className="my-rv-in" rows={3} value={comment} onChange={(e) => setComment(e.target.value)} placeholder={es ? "Lo que quiera que quede registrado" : "Anything you want on the record"} />
           <p className="my-rv-ack-text">{(pip ? ACK_TEXT_PIP : ACK_TEXT)[lang]}</p>
@@ -139,7 +171,7 @@ function Read({ info, lang, token, demo }: { info: Extract<Info, { mode: "review
           }}>{es ? "La recibí" : "I've received it"}</button>
         </section>
       ))}
-      {!info.docOther && info.doc.lang !== lang && <p className="tiny muted" style={{ textAlign: "center" }}>{es ? "Esta evaluación se escribió en inglés." : "This review was written in Spanish."}</p>}
+
     </div>
   );
 }

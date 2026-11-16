@@ -11,7 +11,7 @@ import { LangSwitch, ReviewDoc, StageChip, useDemo, useLang, useTalk } from "@/c
 import { useStore } from "@/lib/store";
 import { downloadDocx } from "@/lib/docx";
 import {
-  addDays, average, docOf, docText, first, reviewFileName, trFields, trSrc, fmtDay, Goal, GOAL_STATUS, GoalStatus, KIND_LABEL, Lang, newId, PerformSettings, pipCheckins, Review, SCALE, stageOf, StepId, stepsFor, T,
+  addDays, average, docOf, docText, first, reviewFileName, translatedFrom, trFields, trSrc, fmtDay, Goal, GOAL_STATUS, GoalStatus, KIND_LABEL, Lang, newId, PerformSettings, pipCheckins, Review, SCALE, stageOf, StepId, stepsFor, T,
 } from "@/lib/perform";
 import { GetData, performApi } from "@/lib/performclient";
 
@@ -544,13 +544,7 @@ function Share({ r, g, s, lang, accent, company, onPatch, call, toast, flush, on
     if (!x.ok) return toast(lang === "es" ? "No se pudo traducir. Intente otra vez." : "Couldn't translate right now. Try again.");
     const F = x.fields as Record<string, string>;
     onPatch({
-      translated: {
-        lang: r.lang,
-        src: trSrc(r),
-        written: { ...Object.fromEntries(r.template.ask.filter((p) => F[`a.${p.id}`]).map((p) => [p.id, F[`a.${p.id}`]])), ...Object.fromEntries(r.template.rate.filter((p) => F[`n.${p.id}`]).map((p) => [`n.${p.id}`, F[`n.${p.id}`]])) },
-        goals: r.goals.map((x) => ({ id: x.id, text: F[`g.${x.id}`] ?? x.text, measure: F[`m.${x.id}`] ?? x.measure })),
-        ...(r.pip ? { pip: { issues: r.pip.issues.map((x) => ({ id: x.id, what: F[`pw.${x.id}`] ?? x.what, expected: F[`pe.${x.id}`] ?? x.expected, support: F[`ps.${x.id}`] ?? x.support })), outcome: F.outcome ?? r.pip.outcome } } : {}),
-      },
+      translated: translatedFrom(r, r.lang, F),
     });
     if (x.demo) toast(lang === "es" ? "En la demo la traducción no está conectada" : "Translation isn't connected in the demo");
   };

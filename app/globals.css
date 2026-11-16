@@ -2390,3 +2390,12 @@ h2.pf-h, .pf-h { text-transform: none; letter-spacing: 0; color: var(--ink, #192
   .pf-print-lh { margin-bottom: 14px; }
 }
 @media print { .demo-bar, .advisor-strip, .topbar, .subnav { display: none !important; } }
+.my-rv-tools { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 0 0 12px; }
+.my-rv-printlogo { display: none; }
+@media print {
+  .my-rv { padding: 0 !important; background: #fff !important; }
+  .my-rv-body { padding: 0 !important; max-width: none !important; }
+  .my-rv-printlogo { display: block; max-height: 48px; max-width: 220px; margin: 0 0 16px; }
+  .pf-doc { box-shadow: none !important; border: 0 !important; }
+}
+@media print { .my-rv-printlogo.lh { max-height: 1.4in; max-width: 100%; width: 100%; object-fit: contain; object-position: left top; } }

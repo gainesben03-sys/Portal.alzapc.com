@@ -243,7 +243,9 @@ export interface Review {
   goals: Goal[];
   goalUpdates: Record<string, { status: GoalStatus; note?: string }>; // progress on last review's goals
   lang: Lang; // the language the employee reads it in
-  translated?: { lang: Lang; src?: string; written: Record<string, string>; goals: { id: string; text: string; measure?: string }[]; pip?: { issues: PipIssue[]; outcome: string } };
+  translated?: Translated;
+  /** A translation the employee asked for on their page (into the language the manager didn't share in). Machine-made, marked as such. */
+  translatedAlt?: Translated;
   /** HR chose to skip the employee's self-assessment for this one */
   noSelf?: boolean;
   self?: { token: string; sentAt?: string; doneAt?: string; answers?: { q: string; a: string }[]; lang?: Lang };
@@ -473,9 +475,25 @@ export function trSrc(r: Review) {
   return `${s.length}.${(h >>> 0).toString(36)}`;
 }
 
+export type Translated = { lang: Lang; src?: string; written: Record<string, string>; goals: { id: string; text: string; measure?: string }[]; pip?: { issues: PipIssue[]; outcome: string } };
+
+/** Build a stored translation from translated fields (keys from trFields). */
+export function translatedFrom(r: Review, lang: Lang, F: Record<string, string>): Translated {
+  return {
+    lang,
+    src: trSrc(r),
+    written: { ...Object.fromEntries(r.template.ask.filter((p) => F[`a.${p.id}`]).map((p) => [p.id, F[`a.${p.id}`]])), ...Object.fromEntries(r.template.rate.filter((p) => F[`n.${p.id}`]).map((p) => [`n.${p.id}`, F[`n.${p.id}`]])) },
+    goals: r.goals.map((x) => ({ id: x.id, text: F[`g.${x.id}`] ?? x.text, measure: F[`m.${x.id}`] ?? x.measure })),
+    ...(r.pip ? { pip: { issues: r.pip.issues.map((x) => ({ id: x.id, what: F[`pw.${x.id}`] ?? x.what, expected: F[`pe.${x.id}`] ?? x.expected, support: F[`ps.${x.id}`] ?? x.support })), outcome: F.outcome ?? r.pip.outcome } } : {}),
+  };
+}
+const freshTr = (r: Review, t: Translated | undefined, lang: Lang) => (t && t.lang === lang && (!t.src || t.src === trSrc(r)) ? t : null);
+/** Is there a translation of the review text into this language? */
+export const hasTranslation = (r: Review, lang: Lang) => !!(freshTr(r, r.translated, lang) || freshTr(r, r.translatedAlt, lang));
+
 /** The finished review as plain sections, in the employee's language. Used by the page, the PDF view and the Word file. */
 export function docOf(r: Review, company: string, lang: Lang = r.lang) {
-  const tr = r.translated && r.translated.lang === lang && (!r.translated.src || r.translated.src === trSrc(r)) ? r.translated : null;
+  const tr = freshTr(r, r.translated, lang) ?? freshTr(r, r.translatedAlt, lang);
   const t = r.template;
   const scale = SCALE[t.scale];
   const rated = t.rate.filter((p) => r.ratings[p.id]).map((p) => ({ name: p.name[lang], value: r.ratings[p.id], label: scale[r.ratings[p.id] - 1]?.[lang] ?? "", note: tr?.written[`n.${p.id}`] ?? r.rateNotes[p.id] ?? "" }));

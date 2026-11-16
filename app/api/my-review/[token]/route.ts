@@ -1,8 +1,8 @@
 // The employee's side of a review: the self-assessment, or reading and signing off. No login: the link is the key.
 // Nothing here acts on a plain page load except noting that the review was viewed.
 import { NextResponse } from "next/server";
-import { docOf, first, Lang, Review, SELF_Q } from "@/lib/perform";
-import { loadCtx, log, putReview } from "@/lib/performserver";
+import { docOf, first, hasTranslation, Lang, Review, reviewFileName, SELF_Q, translatedFrom, trFields } from "@/lib/perform";
+import { loadCtx, log, putReview, translate } from "@/lib/performserver";
 import { admin, SERVER_LIVE } from "@/lib/server";
 
 const H = { "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow" };
@@ -36,14 +36,26 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
   }
   if (r.status !== "shared" && r.status !== "done") return json({ ok: false, reason: "not_found" }, 404);
   if (!r.share?.viewedAt) await putReview(f.db, { ...r, share: { ...r.share!, viewedAt: new Date().toISOString() } });
-  return json({ ...base, lang: r.lang, doc: docOf(r, x.company, r.lang), docOther: r.translated ? docOf(r, x.company, r.lang === "es" ? "en" : "es") : null, acked: !!r.share?.ackAt, signOff: x.s.signOff });
+  const other: Lang = r.lang === "es" ? "en" : "es";
+  // letterhead for their printed copy
+  const { data: lhRow } = await f.db.from("knowledge").select("path").eq("client_id", r.clientId).eq("kind", "letterhead").order("created_at", { ascending: false }).limit(1);
+  const lhPath = lhRow?.[0]?.path as string | undefined;
+  const letterhead = lhPath ? (await f.db.storage.from("client-files").createSignedUrl(lhPath, 3600)).data?.signedUrl ?? null : null;
+  return json({
+    ...base, lang: r.lang, fileName: reviewFileName(r), letterhead,
+    doc: docOf(r, x.company, r.lang),
+    // the other language: headings always, the manager's text once it's been translated
+    // if the manager shared a translation, the other language is their original wording
+    docOther: docOf(r, x.company, other), otherReady: hasTranslation(r, other) || hasTranslation(r, r.lang), otherOriginal: hasTranslation(r, r.lang) && !hasTranslation(r, other), canTranslate: x.s.ai,
+    acked: !!r.share?.ackAt, signOff: x.s.signOff,
+  });
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ token: string }> }) {
   if (!SERVER_LIVE) return json({ ok: false, reason: "demo" }, 404);
   const f = await find((await params).token);
   if (!f) return json({ ok: false, reason: "not_found" }, 404);
-  let b: { action?: string; answers?: string[]; lang?: string; submit?: boolean; comment?: string };
+  let b: { action?: string; answers?: string[]; lang?: string; submit?: boolean; comment?: string; to?: string };
   try {
     b = await req.json();
   } catch {
@@ -59,6 +71,18 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
     if (b.submit && !r.self?.doneAt) next = log(next, r.name, "Finished the self-assessment");
     await putReview(f.db, next);
     return json({ ok: true });
+  }
+  // the employee wants to read it in the other language: translate once, keep it on the review
+  if (mode === "review" && b.action === "translate") {
+    if (r.status !== "shared" && r.status !== "done") return json({ ok: false, reason: "not_found" }, 404);
+    const to: Lang = b.to === "es" ? "es" : "en";
+    if (hasTranslation(r, to) || (to !== r.lang && hasTranslation(r, r.lang))) return json({ ok: true, doc: docOf(r, f.x.company, to) });
+    if (!f.x.s.ai) return json({ ok: false, reason: "off" }, 403);
+    const out = await translate(trFields(r), to);
+    if (!out.ok) return json({ ok: false, reason: out.reason }, 502);
+    const next = { ...r, translatedAlt: translatedFrom(r, to, out.fields) };
+    await putReview(f.db, next);
+    return json({ ok: true, doc: docOf(next, f.x.company, to) });
   }
   if (mode === "review" && b.action === "ack") {
     if (r.share?.ackAt) return json({ ok: true, already: true });
