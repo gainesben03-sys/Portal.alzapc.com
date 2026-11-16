@@ -2399,3 +2399,20 @@ h2.pf-h, .pf-h { text-transform: none; letter-spacing: 0; color: var(--ink, #192
   .pf-doc { box-shadow: none !important; border: 0 !important; }
 }
 @media print { .my-rv-printlogo.lh { max-height: 1.4in; max-width: 100%; width: 100%; object-fit: contain; object-position: left top; } }
+/* Rating scale: cleaner tiles with a number badge */
+.pf-rate { gap: 8px; }
+.pf-rate button { min-height: 76px; border-radius: 12px; border: 1px solid #e2dcd2; background: #fff; box-shadow: 0 1px 2px rgba(25, 40, 60, .06); gap: 6px; padding: 10px 6px; transition: border-color .15s, background .15s, box-shadow .15s; }
+.pf-rate button b { width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; border: 1.5px solid #d6cfc3; color: var(--ink, #19283c); background: #faf8f4; }
+.pf-rate button span { font-size: 12.5px; line-height: 1.25; color: #5f5952; hyphens: none; overflow-wrap: normal; font-weight: 500; }
+.pf-rate button:hover { border-color: color-mix(in srgb, var(--accent) 55%, #e2dcd2); background: color-mix(in srgb, var(--accent) 4%, #fff); }
+.pf-rate button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pf-rate button.on { background: color-mix(in srgb, var(--accent) 9%, #fff); border: 2px solid var(--accent); box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 22%, transparent); padding: 9px 5px; }
+.pf-rate button.on b { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pf-rate button.on span { color: var(--ink, #19283c); font-weight: 650; }
+@media (max-width: 600px) {
+  .pf-rate button { min-height: 52px; padding: 8px 2px; }
+  .pf-rate button.on { padding: 7px 1px; }
+}
+.pf-rate button { justify-content: flex-start; padding-top: 12px; }
+.pf-rate button.on { padding-top: 11px; }
+@media (max-width: 600px) { .pf-rate button { justify-content: center; padding-top: 8px; } .pf-rate button.on { padding-top: 7px; } }
