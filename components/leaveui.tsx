@@ -47,12 +47,12 @@ export function LeaveTile({ clientId, Tile }: { clientId: string; Tile: (p: { ti
         <p className="small muted">Loading…</p>
       ) : (
         <>
-          <div className="lv-mini">
+          {(d.active || d.pending || d.overdue.length) ? <div className="lv-mini">
             <span><b>{d.active}</b> on leave</span>
             <span><b>{d.pending}</b> new requests</span>
             <span className={d.overdue.length ? "bad" : ""}><b>{d.overdue.length}</b> overdue</span>
-          </div>
-          {out.length === 0 && soon.length === 0 && d.overdue.length === 0 && <p className="small muted">Nobody is out right now.</p>}
+          </div> : null}
+          {out.length === 0 && soon.length === 0 && d.overdue.length === 0 && <p className="small muted" style={{ margin: 0 }}>Nobody is out, nothing due. You&apos;re all set.</p>}
           {d.overdue.slice(0, 2).map((x) => (
             <Link key={x.caseId + x.title + x.due} href={`${base}/${x.caseId}`} className="lv-line">
               <span className="grow"><b>{x.who}</b> <span className="muted">· {x.title}</span></span>

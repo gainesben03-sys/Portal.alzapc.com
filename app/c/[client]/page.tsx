@@ -1,5 +1,7 @@
 "use client";
 
+import { useDemo } from "@/components/perform";
+import { performApi, type ListData } from "@/lib/performclient";
 import { LeaveTile } from "@/components/leaveui";
 import { Greeting } from "@/components/greeting";
 import { MyListTile } from "@/components/mylist";
@@ -72,7 +74,7 @@ export default function Home() {
   const isAdvisor = viewer?.kind === "advisor";
   const meName = viewer?.kind === "client" ? viewer.person.name : null;
   const layoutKey = me ? `${client.id}:${me.email}` : "";
-  const available = TILES.filter((t) => (!t.module || cfg?.modules[t.module]) && (t.id !== "huddle" || !!me) && (t.id !== "leave" || leaveAcc.admin) && (t.module ? canSee(me?.access, t.module) : true));
+  const available = TILES.filter((t) => (!t.module || cfg?.modules[t.module]) && (t.id !== "huddle" || !!me) && (t.id !== "leave" || leaveAcc.admin) && (t.id !== "reviews" || isAdvisor || me?.access === "exec") && (t.module ? canSee(me?.access, t.module) : true));
   const defaults = withNewTiles(cfg?.tiles ?? DEFAULT_TILES).filter((id) => available.some((t) => t.id === id));
   const order = (layoutKey && layouts[layoutKey] && withNewTiles(layouts[layoutKey])) || defaults;
   const shown = order.filter((id) => available.some((t) => t.id === id));
@@ -327,6 +329,7 @@ export default function Home() {
       );
     },
     leave: () => <LeaveTile clientId={client.id} Tile={Tile} />,
+    reviews: () => <ReviewsTile clientId={client.id} />,
     mylist: () => <MyListTile clientId={client.id} Tile={Tile} />,
     huddle: () =>
       me && cfg ? (
@@ -421,7 +424,7 @@ export default function Home() {
 }
 
 /** Tiles added after people may have saved a layout. They appear on saved layouts too, unless someone turned them off. */
-const NEW_TILES: [string, string][] = [["mylist", "projects"], ["leave", "hires"]]; // [tile, show it after]
+const NEW_TILES: [string, string][] = [["mylist", "projects"], ["leave", "hires"], ["reviews", "recruiting"]]; // [tile, show it after]
 function withNewTiles(saved: string[]): string[] {
   const out = saved.filter((id) => !id.startsWith("!"));
   for (const [id, after] of NEW_TILES) {
@@ -542,5 +545,40 @@ function QuietAsks({ clientName, recruitingOn, onSend }: { clientName: string; r
         </Sheet>
       )}
     </>
+  );
+}
+
+/** Reviews at a glance for executives and HR: counts only, each one a link. */
+function ReviewsTile({ clientId }: { clientId: string }) {
+  const demo = useDemo(clientId);
+  const [d, setD] = useState<ListData | null>(null);
+  useEffect(() => {
+    performApi(clientId, { action: "list" }, demo).then((r) => r.ok && setD(r as ListData)).catch(() => undefined);
+  }, [clientId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const base = `/c/${clientId}/reviews`;
+  if (!d) return <Tile title="Reviews" href={base}><p className="small muted">Loading…</p></Tile>;
+  const sum = (k: "overdue" | "waiting" | "total" | "done") => d.insight.reduce((n, r) => n + r[k], 0);
+  const overdue = sum("overdue");
+  const waiting = sum("waiting");
+  const toWrite = Math.max(0, sum("total") - sum("done") - waiting);
+  const soon = d.upcoming.filter((u) => (new Date(u.due + "T12:00").getTime() - Date.now()) / 864e5 <= 30).length;
+  const lines: [string, number, string, boolean][] = [
+    ["past due", overdue, base, true],
+    ["being written", Math.max(0, toWrite - overdue), base, false],
+    ["waiting on the employee to sign off", waiting, base, false],
+    ["coming up in the next 30 days", soon, base, false],
+    ...(d.role.admin ? ([[`flagged for an improvement plan`, d.pipFlags.length, base, true]] as [string, number, string, boolean][]) : []),
+  ];
+  const any = lines.some(([, n]) => n > 0);
+  return (
+    <Tile title="Reviews" count={overdue || undefined} href={base} linkLabel="Open reviews">
+      {!any && <p className="small muted" style={{ margin: 0 }}>Nothing due. Reviews show up here a month before they&apos;re due.</p>}
+      {lines.filter(([, n]) => n > 0).map(([label, n, href, bad]) => (
+        <Link key={label} href={href} className="lv-line">
+          <span className="grow"><b>{n}</b> <span className="muted">{label}</span></span>
+          {bad && <span className="pill overdue">{label.startsWith("past") ? "Late" : "Look"}</span>}
+        </Link>
+      ))}
+    </Tile>
   );
 }

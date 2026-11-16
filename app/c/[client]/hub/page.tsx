@@ -11,6 +11,10 @@ import { HubItem, TeamLog, TeamMember, weekItems } from "@/lib/team";
 import { KIND_LABEL, loadNewsletters, monthLabel, Newsletter } from "@/lib/newsletters";
 import { hasPractice } from "@/lib/practice";
 import { AskBox } from "@/components/askbox";
+import { useDemo } from "@/components/perform";
+import { performApi, type ListData } from "@/lib/performclient";
+import { performFor, stageOf } from "@/lib/perform";
+const md = (d: string) => new Date(d + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
 const ICON: Record<HubItem["kind"], string> = { birthday: "🎂", anniversary: "🎉", starting: "👋", checkin: "💬", recognize: "⭐", commitment: "✔️" };
 
@@ -25,6 +29,9 @@ export default function HubHome() {
   const [log, setLog] = useState<{ kind: TeamLog["kind"]; person?: TeamMember } | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [minute, setMinute] = useState<Newsletter | null>(null);
+  const [rv, setRv] = useState<ListData | null>(null);
+  const perfDemo = useDemo(clientId);
+  const perfOn = !!config[clientId]?.modules.perform;
 
   const demoClients = useMemo(() => clients.map((c) => ({ id: c.id, name: c.name, accent: c.accent })), [clients]);
   useEffect(() => {
@@ -38,9 +45,24 @@ export default function HubHome() {
     loadNewsletters({ clientId, light: true, demoClients }).then((r) => setMinute(r.list.filter((n) => n.inLibrary && n.kind === "manager-minute").sort((a, b) => b.month.localeCompare(a.month))[0] ?? null));
   }, [ok, clientId, demoClients]);
 
+  useEffect(() => {
+    if (!ok || !perfOn) return;
+    performApi(clientId, { action: "list" }, perfDemo).then((r) => r.ok && setRv(r as ListData)).catch(() => undefined);
+  }, [ok, perfOn, clientId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (!ok || !client) return null;
+  // Reviews this manager owes, due in the next 3 weeks or late. They lead the list.
+  const ps = performFor(rv?.settings);
+  const today0 = new Date().toISOString().slice(0, 10);
+  const in21 = new Date(Date.now() + 21 * 864e5).toISOString().slice(0, 10);
+  const reviewItems = (rv?.reviews ?? [])
+    .filter((r) => (r.managerEmail || "").toLowerCase() === (h.managerEmail || "").toLowerCase())
+    .map((r) => ({ r, st: stageOf(r, ps) }))
+    .filter(({ r, st }) => st === "overdue" || st === "in_progress" || st === "ready" || (st === "not_started" && r.due <= in21))
+    .sort((a, b) => (a.st === "overdue" ? -1 : b.st === "overdue" ? 1 : a.r.due < b.r.due ? -1 : 1));
   const items = weekItems(h.team, h.logs);
-  const shown = showAll ? items : items.slice(0, 5);
+  const total = reviewItems.length + items.length;
+  const shown = showAll ? items : items.slice(0, Math.max(3, 5 - reviewItems.length));
   const myTasks = actions.filter((a) => a.clientId === clientId && a.side === "client" && a.status !== "completed" && !!h.managerEmail && (a.owner.email ?? "").toLowerCase() === h.managerEmail);
   const first = (h.managerName || "").split(" ")[0];
   const byId = (id?: string) => h.team.find((p) => p.id === id);
@@ -51,7 +73,7 @@ export default function HubHome() {
       <ClientTopbar client={client} />
       <ClientNav clientId={client.id} />
       <main className="wrap">
-        <HubHeader clientId={clientId} title={h.isAdvisor ? "This week" : `Hi ${first}`} sub={h.team.length ? `${items.length ? `${Math.min(items.length, 5)} things for your team this week.` : "Nothing pressing for your team this week."} ${h.team.length} ${h.team.length === 1 ? "person reports" : "people report"} to ${h.isAdvisor ? h.managerName : "you"}.` : undefined} />
+        <HubHeader clientId={clientId} title={h.isAdvisor ? "This week" : `Hi ${first}`} sub={h.team.length ? `${total ? `${Math.min(total, 5)} ${total === 1 ? "thing" : "things"} for your team this week.` : "Nothing pressing for your team this week."} ${h.team.length} ${h.team.length === 1 ? "person reports" : "people report"} to ${h.isAdvisor ? h.managerName : "you"}.` : undefined} />
 
         {h.team.length === 0 ? (
           <NoTeam clientId={clientId} />
@@ -63,7 +85,20 @@ export default function HubHome() {
             </div>
 
             <div className="card section hub-week">
-              {items.length === 0 && <p className="small muted" style={{ margin: 0 }}>You&apos;re caught up. A good week to recognize someone for something small.</p>}
+              {reviewItems.map(({ r, st }) => {
+                const f = r.name.split(" ")[0];
+                return (
+                  <div className="hub-item" key={`rv-${r.id}`}>
+                    <span className="hub-icon" aria-hidden="true">📝</span>
+                    <div className="grow" style={{ minWidth: 0 }}>
+                      <div className="title">{st === "overdue" ? `${f}'s review is past due` : st === "not_started" ? `${f}'s review is due ${md(r.due)}` : `Finish ${f}'s review`}</div>
+                      <div className="tiny muted">{st === "not_started" ? (r.self?.doneAt ? `${f}'s self-assessment is in. About 10 minutes.` : "About 10 minutes, on your phone or computer.") : st === "ready" ? "Ready to share." : `Due ${md(r.due)}. Pick up where you left off.`}</div>
+                    </div>
+                    <Link className={`btn sm ${st === "overdue" ? "primary" : ""}`} href={`/c/${clientId}/reviews/${r.id}`}>{st === "not_started" ? "Start" : "Continue"}</Link>
+                  </div>
+                );
+              })}
+              {total === 0 && <p className="small muted" style={{ margin: 0 }}>You&apos;re caught up. A good week to recognize someone for something small.</p>}
               {shown.map((it) => {
                 const p = byId(it.personId);
                 return (
@@ -81,7 +116,7 @@ export default function HubHome() {
                   </div>
                 );
               })}
-              {items.length > 5 && <button className="linklike tiny" style={{ marginTop: 6 }} onClick={() => setShowAll(!showAll)}>{showAll ? "Show the top 5" : `Show all ${items.length}`}</button>}
+              {items.length > shown.length || showAll ? (items.length > Math.max(3, 5 - reviewItems.length) && <button className="linklike tiny" style={{ marginTop: 6 }} onClick={() => setShowAll(!showAll)}>{showAll ? "Show fewer" : `Show all ${total}`}</button>) : null}
             </div>
 
             <AskBox clientId={clientId} slim />

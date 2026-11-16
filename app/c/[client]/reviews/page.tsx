@@ -67,6 +67,8 @@ export default function Reviews() {
 
   const mine = data.reviews.filter((r) => r.managerEmail === data.role.email);
   const attention = (list: typeof data.reviews) => list.filter((r) => ["not_started", "in_progress", "ready", "waiting", "overdue"].includes(stageOf(r, s))).sort((a, b) => (a.due < b.due ? -1 : 1));
+  const onMe = (list: typeof data.reviews) => attention(list).filter((r) => stageOf(r, s) !== "waiting");
+  const onThem = (list: typeof data.reviews) => attention(list).filter((r) => stageOf(r, s) === "waiting");
   const doneList = (list: typeof data.reviews) => list.filter((r) => stageOf(r, s) === "done").sort((a, b) => (a.due < b.due ? 1 : -1));
 
   const card = (r: (typeof data.reviews)[number]) => {
@@ -119,7 +121,7 @@ export default function Reviews() {
       <div className="grow">
         <h1 style={{ margin: 0 }}>{t.reviews}</h1>
         <p className="muted" style={{ margin: "4px 0 0" }}>
-          {data.role.admin ? (lang === "es" ? "Todas las evaluaciones, a tiempo y en un solo lugar." : "Every review, on schedule, in one place.") : mine.length ? (lang === "es" ? `Su equipo. ${attention(mine).length} pendientes.` : `Your team. ${attention(mine).length} need${attention(mine).length === 1 ? "s" : ""} you.`) : lang === "es" ? "Cómo van los equipos." : "How your teams are doing."}
+          {data.role.admin ? (lang === "es" ? "Todas las evaluaciones, a tiempo y en un solo lugar." : "Every review, on schedule, in one place.") : mine.length ? (lang === "es" ? `Su equipo. ${onMe(mine).length} pendientes.` : onMe(mine).length ? `Your team. ${onMe(mine).length} need${onMe(mine).length === 1 ? "s" : ""} you.` : "Your team. You're caught up.") : lang === "es" ? "Cómo van los equipos." : "How your teams are doing."}
         </p>
       </div>
       <LangSwitch lang={lang} onChange={setLang} />
@@ -155,7 +157,7 @@ export default function Reviews() {
         {header}
         {adminTabs}
         <div className="pf-tiles section">
-          <div className="pf-tile"><b>{cycle.length ? Math.round((written / cycle.length) * 100) : 0}%</b><span>{lang === "es" ? `Escritas por gerentes (${written} de ${cycle.length})` : `Written by managers (${written} of ${cycle.length})`}</span></div>
+          <div className="pf-tile"><b>{cycle.length ? Math.round((written / cycle.length) * 100) : 0}%</b><span>{lang === "es" ? `Escritas por gerentes (${written} de ${cycle.length})` : `Reviews written (${written} of ${cycle.length})`}</span></div>
           <div className="pf-tile"><b>{signed}</b><span>{lang === "es" ? "Completadas (firmadas o entregadas)" : "Finished (signed off or delivered)"}</span></div>
           <div className="pf-tile"><b>{prog}</b><span>{STAGE_LABELS(lang).in_progress}</span></div>
           <div className="pf-tile"><b className={over ? "red" : ""}>{over}</b><span>{STAGE_LABELS(lang).overdue}</span></div>
@@ -195,7 +197,13 @@ export default function Reviews() {
       {mine.length > 0 || data.people.length > 0 ? (
         <>
           <h2 className="pf-h2 section">{t.needsYou}</h2>
-          <div className="pf-list">{attention(mine).length ? attention(mine).map(card) : <p className="small muted">{lang === "es" ? "Nada pendiente. Buen trabajo." : "Nothing due right now. Nice."}</p>}</div>
+          <div className="pf-list">{onMe(mine).length ? onMe(mine).map(card) : <p className="small muted">{lang === "es" ? "Nada pendiente. Buen trabajo." : "Nothing due right now. Nice."}</p>}</div>
+          {onThem(mine).length > 0 && (
+            <>
+              <h2 className="pf-h2 section">{lang === "es" ? "Esperando al empleado" : "Waiting on them"}</h2>
+              <div className="pf-list">{onThem(mine).map(card)}</div>
+            </>
+          )}
           {upcomingList(true)}
           {doneList(mine).length > 0 && (
             <section className="card section">
@@ -223,7 +231,7 @@ function Insight({ rows, lang }: { rows: ListData["insight"]; lang: Lang }) {
       <p className="tiny muted" style={{ marginTop: 0 }}>{es ? "Últimos 12 meses. Solo números: las evaluaciones las ven el gerente y RR. HH." : "Last 12 months. Numbers only: reviews themselves stay with the manager and HR."}</p>
       <div style={{ overflowX: "auto" }}>
         <table className="pf-table">
-          <thead><tr><th>{es ? "Gerente" : "Manager"}</th><th>{es ? "Completadas" : "Finished"}</th><th>{es ? "Atrasadas" : "Overdue"}</th><th>{es ? "Calificación general" : "Overall ratings"}</th></tr></thead>
+          <thead><tr><th>{es ? "Gerente" : "Manager"}</th><th>{es ? "Escritas" : "Written"}</th><th>{es ? "Atrasadas" : "Overdue"}</th><th>{es ? "Calificación general" : "Overall ratings"}</th></tr></thead>
           <tbody>
             {rows.map((r) => {
               const rated = r.below + r.meets + r.above;
@@ -231,7 +239,8 @@ function Insight({ rows, lang }: { rows: ListData["insight"]; lang: Lang }) {
                 <tr key={r.manager}>
                   <td><b>{r.manager}</b></td>
                   <td>
-                    <span className="pf-bar"><span style={{ width: `${r.total ? Math.round((r.done / r.total) * 100) : 0}%` }} /></span> {r.done} {es ? "de" : "of"} {r.total}
+                    <span className="pf-bar"><span style={{ width: `${r.total ? Math.round(((r.done + r.waiting) / r.total) * 100) : 0}%` }} /></span> {r.done + r.waiting} {es ? "de" : "of"} {r.total}
+                    {r.waiting > 0 && <span className="tiny muted" style={{ display: "block" }}>{r.waiting} {es ? "esperando firma" : "waiting on sign-off"}</span>}
                   </td>
                   <td>{r.overdue ? <span className="pf-chip red">{r.overdue}</span> : <span className="tiny muted">0</span>}</td>
                   <td>

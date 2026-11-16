@@ -2305,3 +2305,5 @@ h2.pf-h, .pf-h { text-transform: none; letter-spacing: 0; color: var(--ink, #192
   .pf-rate button span { display: none; }
   .pf-rate button b { font-size: 19px; }
 }
+.hub-week ~ .askbox-slim { max-width: none; }
+.pf-h2.section { margin-top: 24px; }
