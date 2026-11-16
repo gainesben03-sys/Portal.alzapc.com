@@ -10,6 +10,7 @@ import { BayMap, MapPin } from "@/components/baymap";
 import { ClientNav, ClientTopbar, Sheet, Toast, useGuard, useToast } from "@/components/ui";
 import { CITIES, cleanSettings, Contact, HqCard, hqCard, keyOf, pinFor, PropertyCard, propertyCards, PropertySettings, PropItem, PropStatus, RoleKey, ROLES, rosterLocations, STATUSES } from "@/lib/properties";
 import { useStore } from "@/lib/store";
+import { useMail } from "@/components/mail";
 import { authHeader, LIVE } from "@/lib/supabase";
 
 type Roster = { id: string; name: string; title: string; location: string };
@@ -58,6 +59,7 @@ function useProperties(clientId: string) {
 }
 
 export default function PropertiesPage() {
+  const mail = useMail();
   const { client: clientId } = useParams<{ client: string }>();
   const ok = useGuard("client", clientId);
   const { getClient, config, patch, viewer } = useStore();
@@ -188,7 +190,7 @@ export default function PropertiesPage() {
                   <b>{c.name}</b>
                   <span className="tiny muted" style={{ display: "block" }}>{[c.title, c.what].filter(Boolean).join(" · ")}</span>
                 </span>
-                {c.email && <a className="btn sm" href={`mailto:${c.email}`}>Email</a>}
+                {c.email && <a className="btn sm" {...mail(c.email)}>Email</a>}
               </div>
             ))}
           </section>
@@ -212,6 +214,7 @@ const Mail = () => (
 );
 
 function Card({ card, n, onOpen }: { card: PropertyCard; n: string; onOpen: () => void }) {
+  const mail = useMail();
   const lead = card.slots.find((s) => s.role === "lead")?.person;
   return (
     <article className={`op-card ${card.photo ? "has-photo" : ""}`}>
@@ -234,14 +237,14 @@ function Card({ card, n, onOpen }: { card: PropertyCard; n: string; onOpen: () =
           <span className="op-k">Property lead</span>
           <b>{lead?.name ?? "No lead yet"}</b>
         </span>
-        {lead?.email && <a className="op-mail ring" href={`mailto:${lead.email}`} aria-label={`Email ${lead.name}`}><Mail /></a>}
+        {lead?.email && <a className="op-mail ring" {...mail(lead.email)} aria-label={`Email ${lead.name}`}><Mail /></a>}
       </div>
       <ul className="op-rows">
         {card.slots.filter((s) => s.role !== "lead" && s.person).map((s) => (
           <li key={s.role}>
             <span className="op-rk">{s.role === "backup" ? "Backup" : s.role === "maint" ? "Maint." : s.role === "acct" ? "Acct." : s.role === "facil" ? "Facilities" : s.label}</span>
             <span className={`op-rn ${s.person ? "" : "gap"}`}>{s.person?.name ?? "Not assigned"}</span>
-            {s.person?.email && <a className="op-mail" href={`mailto:${s.person.email}`} aria-label={`Email ${s.person.name}`}><Mail /></a>}
+            {s.person?.email && <a className="op-mail" {...mail(s.person.email)} aria-label={`Email ${s.person.name}`}><Mail /></a>}
           </li>
         ))}
       </ul>
@@ -287,6 +290,7 @@ function MapView({ cards, hq, num, canEdit, onOpen }: { cards: PropertyCard[]; h
 }
 
 function Hq({ hq, canEdit, onEdit }: { hq: HqCard; canEdit: boolean; onEdit: () => void }) {
+  const mail = useMail();
   const [all, setAll] = useState(false);
   return (
     <section className={`op-hq section ${hq.photo ? "has-photo" : ""}`} aria-label="Headquarters">
@@ -309,7 +313,7 @@ function Hq({ hq, canEdit, onEdit }: { hq: HqCard; canEdit: boolean; onEdit: () 
               <li key={p.id}>
                 <b>{p.name}</b>
                 <span>{p.title}</span>
-                {p.email && <a href={`mailto:${p.email}`} aria-label={`Email ${p.name}`}><Mail /> Email</a>}
+                {p.email && <a {...mail(p.email)} aria-label={`Email ${p.name}`}><Mail /> Email</a>}
               </li>
             ))}
           </ul>
@@ -322,7 +326,7 @@ function Hq({ hq, canEdit, onEdit }: { hq: HqCard; canEdit: boolean; onEdit: () 
             {all && (
               <ul>
                 {hq.others.map((p) => (
-                  <li key={p.id}>{p.email ? <a href={`mailto:${p.email}`}>{p.name}</a> : p.name}<span className="muted"> · {p.title}</span></li>
+                  <li key={p.id}>{p.email ? <a {...mail(p.email)}>{p.name}</a> : p.name}<span className="muted"> · {p.title}</span></li>
                 ))}
               </ul>
             )}
@@ -411,6 +415,7 @@ function HqSheet({ hq, settings, people, onPhoto, onClose, onSave }: { hq: HqCar
 }
 
 function Focus({ card, n, canEdit, onBack, onEdit }: { card: PropertyCard; n: string; canEdit: boolean; onBack: () => void; onEdit: () => void }) {
+  const mail = useMail();
   const lead = card.slots.find((s) => s.role === "lead");
   return (
     <>
@@ -446,7 +451,7 @@ function Focus({ card, n, canEdit, onBack, onEdit }: { card: PropertyCard; n: st
               <span className="tiny muted">{s.person?.title ?? "Only you and admins see this. Tap Edit to assign someone."}</span>
               {s.person?.email && (
                 <span className="row" style={{ gap: 8, marginTop: 6, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-start" }}>
-                  <a className="btn primary sm" href={`mailto:${s.person.email}`}>Email</a>
+                  <a className="btn primary sm" {...mail(s.person.email)}>Email</a>
                   <span className="tiny muted">{s.person.email}</span>
                 </span>
               )}

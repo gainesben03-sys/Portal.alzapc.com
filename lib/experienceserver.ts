@@ -1,6 +1,7 @@
 // Employee experience, server side: load a hire fresh, save changes on top of the latest copy, send its emails.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { emailLogoUrl } from "./brand";
+import type { MailApp } from "./mailapp";
 import { buddyAskEmail, buddyIntroEmail, ExperienceSettings, HireXp, linkEmail, newToken } from "./experience";
 import { forCompany, Hire, hireCompany, onboardingFor, OnboardingSettings, senderFor } from "./hires";
 import type { ClientConfig } from "./modules";
@@ -81,7 +82,7 @@ export async function buddyYes(c: XpCtx, by: string, phone?: string): Promise<Hi
   if (c.h.xp?.buddy?.introSentAt || c.h.outcome || c.h.xp?.closed) return c.h;
   const to = [(c.h.personalEmail || "").trim().toLowerCase(), b.email].filter(Boolean);
   const { brand, sender } = brandAndSender(c);
-  const m = buddyIntroEmail(c.h, c.x, brand, b.name, { email: b.email, phone: phone || b.phone });
+  const m = buddyIntroEmail(c.h, c.x, brand, b.name, { email: b.email, phone: phone || b.phone }, (c.cfg as { mailApp?: MailApp }).mailApp);
   const r = await sendEmail({ to, subject: m.subject, html: m.html, text: m.text, ...sender, replyTo: m.replyTo.length ? m.replyTo : undefined });
   if (r.ok) return saveXp(c, (xp) => ({ ...xp, buddy: { ...xp.buddy!, introSentAt: new Date().toISOString() } }), { by: "AlzaHR", text: `Buddy intro sent to ${to.join(", ")}` });
   return c.h;

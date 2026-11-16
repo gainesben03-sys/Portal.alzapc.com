@@ -1,5 +1,6 @@
 // Public signing endpoint. The long random token in the link is the only key: no sign-in.
 // GET: what to show the signer. POST: sign or decline.
+import { appForAddress } from "@/lib/mailapp";
 import { NextResponse } from "next/server";
 import { buildSignedPdf, forHire, headerImage, loadClient, loadHire, saveHire, SigEvent, SigRow, who } from "@/lib/esign";
 import { afterSignedTasks, safeFileName } from "@/lib/esign-after";
@@ -23,7 +24,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ token: s
   const hire0 = await loadHire(db, row.hire_id);
   const c = c0 && hire0 ? forHire(c0, hire0) : c0 ? { ...c0, company: c0.client.name } : null;
   const expired = new Date(row.expires_at) < new Date() && row.status !== "signed";
-  const base = { ok: true, status: expired ? "expired" : row.status, company: c?.company ?? "", accent: c?.brand.accent ?? "#19283c", logo: c?.logo ?? null, hrEmail: c?.s.hrEmail ?? "", title: row.title, signer: row.signer_name };
+  const base = { ok: true, status: expired ? "expired" : row.status, company: c?.company ?? "", accent: c?.brand.accent ?? "#19283c", logo: c?.logo ?? null, hrEmail: c?.s.hrEmail ?? "", mailApp: appForAddress((hire0 as { personalEmail?: string } | null)?.personalEmail), title: row.title, signer: row.signer_name };
   if (row.status === "voided" || expired) return NextResponse.json(base);
   if (row.status === "signed") {
     const { data: u } = row.signed_path ? await db.storage.from("client-files").createSignedUrl(row.signed_path, 3600) : { data: null };

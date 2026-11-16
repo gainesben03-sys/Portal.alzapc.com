@@ -7,6 +7,7 @@
 // Pure functions, used by the browser, the public pages and the daily email job.
 import { addDaysISO, Brand, esc, firstName, frameEmail, Hire, longDate, sectionHtml } from "./hires";
 import { readableInk } from "./brand";
+import { appForAddress, composeUrl, MailApp } from "./mailapp";
 
 export type XQuestion = { id: string; q: string; label?: string; private?: boolean };
 export type XNudge = { id: string; days: number; text: string };
@@ -383,7 +384,7 @@ export function buddyAskEmail(h: Hire, x: ExperienceSettings | undefined, b: Bra
 }
 
 /** To the hire and the buddy, once the buddy says yes. */
-export function buddyIntroEmail(h: Hire, x: ExperienceSettings | undefined, b: Brand, buddyName: string, buddy?: { email?: string; phone?: string }) {
+export function buddyIntroEmail(h: Hire, x: ExperienceSettings | undefined, b: Brand, buddyName: string, buddy?: { email?: string; phone?: string }, mailApp?: MailApp) {
   const v = { ...fillVals(h, b.company), buddy: buddyName };
   const w = buddyIntroWording(x);
   const subject = fillXp(w.subject, v);
@@ -394,7 +395,8 @@ export function buddyIntroEmail(h: Hire, x: ExperienceSettings | undefined, b: B
   const hireEmail = (h.personalEmail || "").trim();
   const bEmail = (buddy?.email || "").trim();
   const tel = (buddy?.phone || "").replace(/[^\d+]/g, "");
-  const mail = (to: string, subj: string) => `mailto:${to}?subject=${encodeURIComponent(subj)}`;
+  // The new hire clicks the buddy's address (from their personal inbox); the buddy clicks the hire's (from work).
+  const mail = (to: string, subj: string) => composeUrl(to === hireEmail ? mailApp : appForAddress(hireEmail, "default"), to, subj);
   // How to reach each other, right in the email, plus a one-tap way to say hi.
   const row = (name: string, sub: string, links: string) =>
     `<p style="margin:0 0 12px 0;font-family:Arial,sans-serif;font-size:15px;line-height:22px;color:#1C1A19"><b>${esc(name)}</b>${sub ? `<br><span style="color:#6B645E">${esc(sub)}</span>` : ""}${links ? `<br>${links}` : ""}</p>`;

@@ -1,5 +1,6 @@
 "use client";
 
+import { MAIL_APPS } from "@/lib/mailapp";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -271,6 +272,16 @@ export default function ClientSetup() {
                 {cfg.logo && <button className="btn ghost sm" style={{ color: "var(--red)" }} onClick={() => set({ logo: undefined, logoEmail: undefined })}>Remove</button>}
               </div>
               <p className="tiny muted" style={{ marginTop: 8 }}>A transparent PNG or SVG looks best. It also goes at the top of their emails, and the brand color is matched to it.</p>
+            </section>
+            <section className="card">
+              <h2 className="set-card-h">Email app</h2>
+              <p className="tiny muted" style={{ margin: "2px 0 10px" }}>Where &ldquo;Email&rdquo; buttons in their portal open on a computer. Phones always use the phone&apos;s own mail app.</p>
+              <div className="pf-filters" role="group" aria-label="Email app">
+                {MAIL_APPS.map((m) => (
+                  <button key={m.id} className={(cfg.mailApp ?? "default") === m.id ? "on" : ""} aria-pressed={(cfg.mailApp ?? "default") === m.id} onClick={() => set({ mailApp: m.id })} title={m.sub}>{m.label}</button>
+                ))}
+              </div>
+              <p className="tiny muted" style={{ margin: "8px 0 0" }}>{MAIL_APPS.find((m) => m.id === (cfg.mailApp ?? "default"))?.sub}. New hires writing from a personal Gmail or Outlook.com address get their own app automatically.</p>
             </section>
             <section className="card">
               <h2 className="set-card-h">Brand color</h2>

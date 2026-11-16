@@ -1,5 +1,6 @@
 "use client";
 
+import { useMail } from "@/components/mail";
 import { useState } from "react";
 import { Action, addBusinessDays, Person, toISO, today } from "@/lib/data";
 import { Candidate, CandidateBrief, PortalUser, Role } from "@/lib/modules";
@@ -172,8 +173,9 @@ export function ReviewerLinks({ role, reviews, onToast }: { role: Role; reviews:
   const seen = (sc: ReviewLink["scope"]) => candidates.filter((c) => c.roleId === role.id && reviewerSees(c, sc)).length;
   const reviewedBy = (l: ReviewLink) => new Set(reviews.filter((r) => r.reviewerId === l.id).map((r) => (r as OutsideReview & { candidateId?: string }).candidateId ?? r.at)).size;
   const copy = (l: ReviewLink) => navigator.clipboard?.writeText(urlFor(l)).then(() => onToast(`Link for ${l.name.split(" ")[0]} copied`));
+  const m = useMail();
   const mail = (l: ReviewLink) =>
-    `mailto:${encodeURIComponent(l.email ?? "")}?subject=${encodeURIComponent(`Candidates for ${role.title}`)}&body=${encodeURIComponent(`Hi ${l.name.split(" ")[0]},\n\nHere are the candidates for ${role.title}. Watch each pitch and tap Yes or No. No sign-in needed.\n\n${urlFor(l)}\n\nThis link is just for you${l.expiresAt ? ` and works through ${new Date(l.expiresAt + "T12:00").toLocaleDateString("en-US", { month: "long", day: "numeric" })}` : ""}.\n\nThanks,\nBen`)}`;
+    m(l.email ?? "", `Candidates for ${role.title}`, `Hi ${l.name.split(" ")[0]},\n\nHere are the candidates for ${role.title}. Watch each pitch and tap Yes or No. No sign-in needed.\n\n${urlFor(l)}\n\nThis link is just for you${l.expiresAt ? ` and works through ${new Date(l.expiresAt + "T12:00").toLocaleDateString("en-US", { month: "long", day: "numeric" })}` : ""}.\n\nThanks,\nBen`);
 
   return (
     <div className="pitch-link reviewer-links">
@@ -196,7 +198,7 @@ export function ReviewerLinks({ role, reviews, onToast }: { role: Role; reviews:
             {live ? (
               <>
                 <button className="btn ghost sm" onClick={() => copy(l)}>Copy</button>
-                <a className="btn ghost sm" href={mail(l)}>Email</a>
+                <a className="btn ghost sm" {...mail(l)}>Email</a>
                 <a className="btn ghost sm" href={`/review/${l.token}`} target="_blank" rel="noopener">Open</a>
                 <button className="btn ghost sm" style={{ color: "var(--red)" }} onClick={() => { set(links.map((x) => (x.id === l.id ? { ...x, revoked: true } : x))); onToast(`${l.name.split(" ")[0]}'s link turned off`); }}>Turn off</button>
               </>
@@ -287,6 +289,7 @@ function PitchSettingsSheet({ p, onClose, onSave }: { p: PitchSettings; onClose:
 // ------------------------------------------------------------------ the pitch itself
 
 export function PitchView({ c }: { c: Candidate }) {
+  const mail = useMail();
   const { roles } = useStore();
   const p = c.pitch!;
   const [src, setSrc] = useState("");
@@ -325,7 +328,7 @@ export function PitchView({ c }: { c: Candidate }) {
         </button>
       )}
       <div className="tiny muted pitch-contact">
-        <a href={`mailto:${p.email}`}>{p.email}</a>
+        <a {...mail(p.email)}>{p.email}</a>
         {p.phone && <> · <a href={`tel:${p.phone}`}>{p.phone}</a></>}
         {p.linkedin && <> · <a href={p.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn</a></>}
         {p.resumePath && <> · <button className="linklike" onClick={() => open("resume")}>Resume</button></>}
@@ -385,6 +388,7 @@ export function PitchMedia({ c }: { c: Candidate }) {
 
 /** Email, phone, LinkedIn, resume and when the video is deleted. */
 export function PitchContact({ c }: { c: Candidate }) {
+  const mail = useMail();
   const { roles } = useStore();
   const p = c.pitch!;
   const [err, setErr] = useState("");
@@ -408,7 +412,7 @@ export function PitchContact({ c }: { c: Candidate }) {
   return (
     <div className="cc-contact tiny muted">
       <div>
-        <a href={`mailto:${p.email}`}>{p.email}</a>
+        <a {...mail(p.email)}>{p.email}</a>
         {p.phone && <> · <a href={`tel:${p.phone}`}>{p.phone}</a></>}
         {p.linkedin && <> · <a href={p.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn</a></>}
         {p.resumePath && <> · <button className="linklike" onClick={resume}>Resume</button></>}

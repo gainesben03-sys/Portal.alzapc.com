@@ -2,6 +2,7 @@
 // GET  -> their questions, answers so far, and what the intro would say
 // POST { answers, preferred, share, sharePhoto, approve }  save; approve=false pulls the intro back
 // POST { action: "photo", data } / { action: "removePhoto" }
+import { appForAddress } from "@/lib/mailapp";
 import { NextResponse } from "next/server";
 import { buddyOn, DEFAULT_INTRO, fillVals, introDay, introOn, introWording, PAGE_TEXT, PAGE_TITLE, pageOpen, questionsFor } from "@/lib/experience";
 import { brandAndSender, hireByToken, saveXp, signed, XpCtx } from "@/lib/experienceserver";
@@ -30,6 +31,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
   const b = buddyOn(c.x) && xp.buddy?.status === "yes" ? xp.buddy : undefined;
   return json({
     ok: true,
+    mailApp: appForAddress(c.h.personalEmail),
     first: firstName(c.h),
     preferred: xp.preferred || "",
     last: v.last,

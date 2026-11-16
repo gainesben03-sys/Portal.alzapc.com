@@ -4,11 +4,13 @@
 // Before day one: a countdown, their first day, to-dos, their people, their intro.
 // After: "Day N", what's left, their people. Works for 90 days after the start.
 // "Tell us about you" opens the get-to-know-you questions, then they approve their intro.
+import { mailFor } from "@/components/mail";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { DEFAULT_INTRO, DEFAULT_QUESTIONS, PAGE_TEXT, PAGE_TITLE, XQuestion } from "@/lib/experience";
 
 type Info = {
+  mailApp?: string;
   first: string; preferred: string; last: string; title: string; manager: string; managerEmail: string; startISO: string; start: string; arrival: string; where: string; bring: string;
   company: string; accent: string; logo: string | null; hr: { name: string; email: string; phone: string }; mission: string; values: string[]; video: string;
   signed: boolean; todos: { text: string; done: boolean }[]; intro: boolean;
@@ -333,7 +335,7 @@ export default function Welcome() {
               <div key={p.role} className="wp-person">
                 <span className="wl-av" aria-hidden="true">{ini(p.name)}</span>
                 <div className="grow"><div className="wp-role">{p.role}</div><b>{p.name}</b>{p.sub && <div className="tiny">{p.sub}</div>}</div>
-                {p.email && <a className="wp-mail" href={`mailto:${p.email}`} aria-label={`Email ${p.name}`}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 7l9 6 9-6" /></svg></a>}
+                {p.email && <a className="wp-mail" {...mailFor(info.mailApp, p.email)} aria-label={`Email ${p.name}`}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 7l9 6 9-6" /></svg></a>}
               </div>
             ))}
           </section>
@@ -370,8 +372,8 @@ export default function Welcome() {
           <p className="wp-foot">
             {before ? "Questions before you start?" : "Something not right, or just a question?"}
             <br />
-            <a href={`mailto:${info.hr.email}`}>Email HR</a>
-            {info.managerEmail && <> · <a href={`mailto:${info.managerEmail}`}>Email {info.manager.split(" ")[0]}</a></>}
+            <a {...mailFor(info.mailApp, info.hr.email)}>Email HR</a>
+            {info.managerEmail && <> · <a {...mailFor(info.mailApp, info.managerEmail)}>Email {info.manager.split(" ")[0]}</a></>}
           </p>
         )}
       </div>

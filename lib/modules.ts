@@ -144,6 +144,7 @@ export interface ClientConfig {
   offboarding?: import("./offboard").OffboardSettings; // goodbye email wording, info sections, survey, timing
   leave?: import("./leave").LeaveSettings; // Leave center: types, reminder timing (who the HR admins are lives in its own table)
   perform?: Partial<import("./perform").PerformSettings>; // Reviews (Alza Perform): schedule, templates, who sees what
+  mailApp?: import("./mailapp").MailApp; // which app email links open: Outlook, Gmail or the device default
   askHr?: boolean; // Ask HR for managers (default on; answers come only from this client's handbook and policies)
   huddle: HuddleSettings;
   modules: Record<ModuleKey, boolean>;

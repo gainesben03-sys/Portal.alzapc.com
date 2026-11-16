@@ -1,9 +1,11 @@
 "use client";
 
+import { mailFor } from "@/components/mail";
 import { useParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
 type Info = {
+  mailApp?: string;
   ok: boolean;
   status: "open" | "signed" | "declined" | "voided" | "expired" | "viewed" | "sent";
   company: string;
@@ -120,7 +122,7 @@ export default function SignPage() {
         {header}
         <div className="card sign-card">
           <h1>{info.status === "declined" ? "You declined this document" : info.status === "expired" ? "This link has expired" : "This link is no longer active"}</h1>
-          <p className="small muted">Questions? Email {info.hrEmail ? <a href={`mailto:${info.hrEmail}`}>{info.hrEmail}</a> : "the person who sent it"}.</p>
+          <p className="small muted">Questions? Email {info.hrEmail ? <a {...mailFor(info.mailApp, info.hrEmail)}>{info.hrEmail}</a> : "the person who sent it"}.</p>
         </div>
       </main>
     );
@@ -153,7 +155,7 @@ export default function SignPage() {
           <button className="btn ghost sm" style={{ marginTop: 6 }} onClick={() => setDeclining(true)}>I have questions or don&apos;t want to sign</button>
         ) : (
           <div style={{ marginTop: 12 }}>
-            <p className="small">Have questions first? Email {info.hrEmail ? <a href={`mailto:${info.hrEmail}`}>{info.hrEmail}</a> : "the person who sent this"} and keep this link to sign later. To decline instead:</p>
+            <p className="small">Have questions first? Email {info.hrEmail ? <a {...mailFor(info.mailApp, info.hrEmail)}>{info.hrEmail}</a> : "the person who sent this"} and keep this link to sign later. To decline instead:</p>
             <textarea className="f" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Optional: let them know why" />
             <div className="action-foot" style={{ justifyContent: "flex-end" }}>
               <button className="btn ghost sm" onClick={() => setDeclining(false)}>Back</button>
