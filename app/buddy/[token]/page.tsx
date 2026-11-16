@@ -32,6 +32,7 @@ function Buddy() {
   const [note, setNote] = useState("");
   const [saved, setSaved] = useState("");
   const [busy, setBusy] = useState(false);
+  const [phone, setPhone] = useState("");
 
   useEffect(() => {
     const load = (i: Info) => {
@@ -55,7 +56,7 @@ function Buddy() {
     return r;
   };
   const answer = async (yes: boolean) => {
-    const r = await act(yes ? "yes" : "no");
+    const r = await act(yes ? "yes" : "no", yes ? { phone } : {});
     if (r.ok) setInfo({ ...info, status: yes ? "yes" : "no" });
   };
   const tick = async (id: string, done: boolean) => {
@@ -74,6 +75,9 @@ function Buddy() {
           <>
             <h1>Hi {info.buddy}, would you be {info.first}&apos;s buddy?</h1>
             <p className="ex-sub">{info.name} starts {info.start || "soon"} as {info.title || "a new team member"}{info.manager ? `, working with ${info.manager}` : ""}. You&apos;re not training anyone. Just be a friendly face for the first month.</p>
+            <label className="tiny" htmlFor="bphone" style={{ display: "block", marginTop: 16 }}>Your cell, so {info.first} can text you (optional)</label>
+            <input id="bphone" className="wl-in" type="tel" inputMode="tel" autoComplete="tel" maxLength={24} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(555) 555-1234" style={{ marginTop: 6 }} />
+            <p className="ex-sub" style={{ fontSize: 13, margin: "6px 0 0" }}>We&apos;ll send you both an intro with each other&apos;s contact info.</p>
             <div className="wl-nav" style={{ flexDirection: "column" }}>
               <button className="ex-send" disabled={busy} onClick={() => answer(true)} autoFocus={want === "yes"}>Yes, happy to</button>
               <button className="wl-back" disabled={busy} onClick={() => answer(false)} style={{ width: "100%" }} autoFocus={want === "no"}>Not right now</button>

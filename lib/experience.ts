@@ -93,6 +93,8 @@ export interface XBuddy {
   askedAt: string;
   answeredAt?: string;
   introSentAt?: string;
+  /** Optional cell the buddy chose to share with the new hire */
+  phone?: string;
   /** Nudges: id -> when sent; "done:<id>" -> when the buddy ticked it */
   log?: Record<string, string>;
   note?: string;
@@ -381,13 +383,32 @@ export function buddyAskEmail(h: Hire, x: ExperienceSettings | undefined, b: Bra
 }
 
 /** To the hire and the buddy, once the buddy says yes. */
-export function buddyIntroEmail(h: Hire, x: ExperienceSettings | undefined, b: Brand, buddyName: string) {
+export function buddyIntroEmail(h: Hire, x: ExperienceSettings | undefined, b: Brand, buddyName: string, buddy?: { email?: string; phone?: string }) {
   const v = { ...fillVals(h, b.company), buddy: buddyName };
   const w = buddyIntroWording(x);
   const subject = fillXp(w.subject, v);
   const msg = fillXp(w.message, v);
-  const hi = `Hi ${v.preferred} and ${buddyName.split(" ")[0]},`;
-  return { subject, html: wrap(b, hi, para(msg)).html, text: `${hi}\n\n${msg}` };
+  const bf = buddyName.split(" ")[0];
+  const hi = `Hi ${v.preferred} and ${bf},`;
+  const accent = readableInk(b.accent);
+  const hireEmail = (h.personalEmail || "").trim();
+  const bEmail = (buddy?.email || "").trim();
+  const tel = (buddy?.phone || "").replace(/[^\d+]/g, "");
+  const mail = (to: string, subj: string) => `mailto:${to}?subject=${encodeURIComponent(subj)}`;
+  // How to reach each other, right in the email, plus a one-tap way to say hi.
+  const row = (name: string, sub: string, links: string) =>
+    `<p style="margin:0 0 12px 0;font-family:Arial,sans-serif;font-size:15px;line-height:22px;color:#1C1A19"><b>${esc(name)}</b>${sub ? `<br><span style="color:#6B645E">${esc(sub)}</span>` : ""}${links ? `<br>${links}` : ""}</p>`;
+  const link = (label: string, url: string) => `<a href="${esc(url)}" style="color:${accent};font-weight:bold;text-decoration:underline">${esc(label)}</a>`;
+  const bLinks = [bEmail && link(bEmail, mail(bEmail, `Hi from ${v.preferred}`)), tel && link(buddy!.phone!, `sms:${tel}`)].filter(Boolean).join(" &nbsp;·&nbsp; ");
+  const hLinks = hireEmail ? link(hireEmail, mail(hireEmail, `Welcome, ${v.preferred}!`)) : "";
+  const card = sectionHtml("#F4F1EC",
+    `<p style="margin:0 0 12px 0;font-family:Arial,sans-serif;font-size:13px;letter-spacing:1px;text-transform:uppercase;color:#6B645E">How to reach each other</p>` +
+    row(buddyName, `Your buddy${tel ? ". Text is fine." : ""}`, bLinks) +
+    row(`${v.preferred}${v.last ? ` ${v.last}` : ""}`, `${v.title}${h.startDate ? ` · starts ${v.start}` : ""}`, hLinks) +
+    `<p style="margin:4px 0 0 0;font-family:Arial,sans-serif;font-size:14px;line-height:21px;color:#1C1A19">Hit reply all to say hi. It goes to both of you.</p>` +
+    (bEmail ? btn(`Say hi to ${bf}`, mail(bEmail, `Hi from ${v.preferred}`), accent) : ""));
+  const text = `${hi}\n\n${msg}\n\nHow to reach each other\n${buddyName}: ${[bEmail, buddy?.phone].filter(Boolean).join(" · ")}\n${v.preferred}: ${hireEmail}\n\nHit reply all to say hi. It goes to both of you.`;
+  return { subject, html: wrap(b, hi, para(msg) + card).html, text, replyTo: [hireEmail, bEmail].filter(Boolean) };
 }
 
 /** To the buddy: a scheduled nudge, with a link to tick it off. */

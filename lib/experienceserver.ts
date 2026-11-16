@@ -73,16 +73,16 @@ export async function askBuddy(c: XpCtx, by: string, buddy: { personId?: string;
 }
 
 /** The buddy said yes (or HR marked it): introduce them to the new hire. */
-export async function buddyYes(c: XpCtx, by: string): Promise<Hire> {
+export async function buddyYes(c: XpCtx, by: string, phone?: string): Promise<Hire> {
   const b = c.h.xp?.buddy;
   if (!b) return c.h;
   const at = new Date().toISOString();
-  await saveXp(c, (xp) => ({ ...xp, buddy: { ...xp.buddy!, status: "yes", answeredAt: xp.buddy?.answeredAt && xp.buddy.status === "yes" ? xp.buddy.answeredAt : at } }), { by, text: `${b.name} said yes to being the onboarding buddy` });
+  await saveXp(c, (xp) => ({ ...xp, buddy: { ...xp.buddy!, ...(phone ? { phone } : {}), status: "yes", answeredAt: xp.buddy?.answeredAt && xp.buddy.status === "yes" ? xp.buddy.answeredAt : at } }), { by, text: `${b.name} said yes to being the onboarding buddy` });
   if (c.h.xp?.buddy?.introSentAt || c.h.outcome || c.h.xp?.closed) return c.h;
   const to = [(c.h.personalEmail || "").trim().toLowerCase(), b.email].filter(Boolean);
   const { brand, sender } = brandAndSender(c);
-  const m = buddyIntroEmail(c.h, c.x, brand, b.name);
-  const r = await sendEmail({ to, subject: m.subject, html: m.html, text: m.text, ...sender });
+  const m = buddyIntroEmail(c.h, c.x, brand, b.name, { email: b.email, phone: phone || b.phone });
+  const r = await sendEmail({ to, subject: m.subject, html: m.html, text: m.text, ...sender, replyTo: m.replyTo.length ? m.replyTo : undefined });
   if (r.ok) return saveXp(c, (xp) => ({ ...xp, buddy: { ...xp.buddy!, introSentAt: new Date().toISOString() } }), { by: "AlzaHR", text: `Buddy intro sent to ${to.join(", ")}` });
   return c.h;
 }

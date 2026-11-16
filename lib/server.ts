@@ -85,7 +85,7 @@ export function siteUrl(req: Request): string {
   return `${/^localhost/.test(host) ? "http" : "https"}://${host}`;
 }
 
-export async function sendEmail(opts: { to: string[]; cc?: string[]; subject: string; text: string; html?: string; scheduledAt?: string; attachments?: { filename: string; content: string }[]; replyTo?: string; fromName?: string; fromBox?: string }): Promise<{ ok: boolean; reason?: string; id?: string }> {
+export async function sendEmail(opts: { to: string[]; cc?: string[]; subject: string; text: string; html?: string; scheduledAt?: string; attachments?: { filename: string; content: string }[]; replyTo?: string | string[]; fromName?: string; fromBox?: string }): Promise<{ ok: boolean; reason?: string; id?: string }> {
   const key = process.env.RESEND_API_KEY;
   let from = process.env.NOTIFY_FROM;
   if (!key || !from) return { ok: false, reason: "not_configured" };

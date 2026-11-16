@@ -44,7 +44,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   if (!SERVER_LIVE) return json({ ok: false, reason: "demo" }, 404);
   const c = await find((await params).token);
   if (!c) return json({ ok: false, reason: "not_found" }, 404);
-  let body: { action?: string; id?: string; text?: string };
+  let body: { action?: string; id?: string; text?: string; phone?: string };
   try {
     body = await req.json();
   } catch {
@@ -52,7 +52,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   }
   const b = c.h.xp!.buddy!;
   if (body.action === "yes") {
-    if (b.status !== "yes") await buddyYes(c, b.name);
+    const phone = String(body.phone ?? "").replace(/[^\d+()\-. ]/g, "").trim().slice(0, 24);
+    if (b.status !== "yes") await buddyYes(c, b.name, phone.replace(/\D/g, "").length >= 7 ? phone : undefined);
     return json({ ok: true, status: "yes" });
   }
   if (body.action === "no") {
