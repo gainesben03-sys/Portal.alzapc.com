@@ -1,7 +1,7 @@
 "use client";
 
 // Builds a real Word (.docx) file from a Claude draft, with the client's letterhead in the header.
-import { authHeader, BUCKET, LIVE, sb } from "./supabase";
+import { authHeader, LIVE } from "./supabase";
 
 export const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
@@ -14,24 +14,33 @@ interface Letterhead {
 
 const cache = new Map<string, Letterhead | null>();
 
-/** The client's letterhead image, if one has been uploaded (Ben only). */
+/** A short-lived link to the client's letterhead image, for anyone at that company. */
+export async function letterheadUrl(clientId: string): Promise<{ url: string; ext: string } | null> {
+  if (!LIVE) return null;
+  try {
+    const r = await fetch(`/api/letterhead?clientId=${encodeURIComponent(clientId)}`, { headers: await authHeader() });
+    const j = await r.json();
+    return j.ok && j.url ? { url: j.url, ext: j.ext || "png" } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The client's letterhead image, if one has been uploaded. */
 export async function getLetterhead(clientId: string): Promise<Letterhead | null> {
   if (!LIVE) return null;
   if (cache.has(clientId)) return cache.get(clientId)!;
   try {
-    const r = await fetch(`/api/knowledge?clientId=${encodeURIComponent(clientId)}`, { headers: await authHeader() });
-    const j = await r.json();
-    const lh = j.ok ? (j.docs as { kind: string; path: string }[]).find((d) => d.kind === "letterhead") : null;
+    const lh = await letterheadUrl(clientId);
     if (!lh) {
       cache.set(clientId, null);
       return null;
     }
-    const { data } = await sb().storage.from(BUCKET).download(lh.path);
-    if (!data) return null;
+    const data = await (await fetch(lh.url)).blob();
     const bmp = await createImageBitmap(data);
     // fit within 6.5in wide x 1.25in tall at 96 dpi
     const scale = Math.min(624 / bmp.width, 120 / bmp.height, 1);
-    const ext = lh.path.split(".").pop()!.toLowerCase();
+    const ext = lh.ext;
     const out: Letterhead = { data: await data.arrayBuffer(), type: ext === "png" ? "png" : ext === "gif" ? "gif" : "jpg", width: Math.round(bmp.width * scale), height: Math.round(bmp.height * scale) };
     cache.set(clientId, out);
     return out;
@@ -89,14 +98,14 @@ export async function docxBlob(title: string, text: string, clientId?: string): 
 }
 
 export function docxName(title: string) {
-  return `${title.replace(/[^\w\- ]+/g, "").trim() || "Draft"}.docx`;
+  return `${title.replace(/[^\w\-. ]+/g, "").trim() || "Draft"}.docx`;
 }
 
-export async function downloadDocx(title: string, text: string, clientId?: string) {
+export async function downloadDocx(title: string, text: string, clientId?: string, fileName?: string) {
   const blob = await docxBlob(title, text, clientId);
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = docxName(title);
+  a.download = docxName(fileName || title);
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }

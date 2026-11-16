@@ -1001,7 +1001,8 @@ audio.rv-media { background: none; }
 @media (max-width: 800px) { .so-tv main { grid-template-columns: 1fr; } }
 
 @media print {
-  body * { visibility: hidden; }
+  /* only when printing a shoutout poster; other pages print normally */
+  body:has(#so-poster) * { visibility: hidden; }
   #so-poster, #so-poster * { visibility: visible; }
   #so-poster { position: fixed; inset: 0; padding: 60px 40px; }
   #so-poster h2 { font-size: 44px; }
@@ -2382,3 +2383,10 @@ h2.pf-h, .pf-h { text-transform: none; letter-spacing: 0; color: var(--ink, #192
 .pf-ideas > .linklike { align-self: flex-start; }
 .pf-goal-row > .grow { flex: 1 1 auto; }
 .pf-tr { padding: 12px 14px; border: 1px dashed color-mix(in srgb, var(--accent) 45%, var(--line)); }
+
+.pf-print-lh { display: block; width: 100%; max-height: 1.4in; object-fit: contain; object-position: left top; margin: 0 0 18px; }
+@media print {
+  .pf-print .pf-doc { box-shadow: none; border: 0; padding: 0; }
+  .pf-print-lh { margin-bottom: 14px; }
+}
+@media print { .demo-bar, .advisor-strip, .topbar, .subnav { display: none !important; } }

@@ -11,7 +11,7 @@ import { LangSwitch, ReviewDoc, StageChip, useDemo, useLang, useTalk } from "@/c
 import { useStore } from "@/lib/store";
 import { downloadDocx } from "@/lib/docx";
 import {
-  addDays, average, docOf, docText, first, trFields, trSrc, fmtDay, Goal, GOAL_STATUS, GoalStatus, KIND_LABEL, Lang, newId, PerformSettings, pipCheckins, Review, SCALE, stageOf, StepId, stepsFor, T,
+  addDays, average, docOf, docText, first, reviewFileName, trFields, trSrc, fmtDay, Goal, GOAL_STATUS, GoalStatus, KIND_LABEL, Lang, newId, PerformSettings, pipCheckins, Review, SCALE, stageOf, StepId, stepsFor, T,
 } from "@/lib/perform";
 import { GetData, performApi } from "@/lib/performclient";
 
@@ -633,7 +633,7 @@ function FinishedActions({ r, g, lang, clientId, company, onChange, call, toast 
       </section>
       <div className="row" style={{ gap: 8 }}>
         <a className="btn grow" href={`/c/${clientId}/reviews/${r.id}/print`} target="_blank" rel="noopener">{t.pdf}</a>
-        <button className="btn grow" onClick={() => downloadDocx(`${d.title} - ${r.name}`, docText(d), clientId)}>{t.word}</button>
+        <button className="btn grow" onClick={() => downloadDocx(d.title, docText(d), clientId, reviewFileName(r))}>{t.word}</button>
       </div>
       {g.canEdit && r.status === "shared" && r.share?.how === "person" && !r.share.deliveredAt && (
         <button className="btn primary block" onClick={async () => { const x = await call({ action: "delivered", id: r.id }); if (x.ok) { onChange(x.review); toast(es ? "Marcada como entregada" : "Marked delivered"); } }}>{t.markDelivered}</button>

@@ -502,6 +502,16 @@ export function docOf(r: Review, company: string, lang: Lang = r.lang) {
 export type Doc = ReturnType<typeof docOf>;
 
 /** The same review as light markdown for the Word file. */
+/** File name for exports: FN.LN.YYYY Performance Review (or Improvement Plan). */
+export function reviewFileName(r: Pick<Review, "name" | "kind" | "due"> & { finalAt?: string }) {
+  const parts = r.name.trim().split(/\s+/).filter(Boolean);
+  const fn = parts[0] ?? "Employee";
+  const ln = parts.length > 1 ? parts[parts.length - 1] : "";
+  const year = (r.finalAt || r.due || new Date().toISOString()).slice(0, 4);
+  const what = r.kind === "pip" ? "Performance Improvement Plan" : "Performance Review";
+  return `${[fn, ln, year].filter(Boolean).join(".")} ${what}`.replace(/[\\/:*?"<>|]+/g, "");
+}
+
 export function docText(d: Doc): string {
   const es = d.lang === "es";
   const L2 = (en: string, s: string) => (es ? s : en);
