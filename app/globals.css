@@ -2359,3 +2359,18 @@ h2.pf-h, .pf-h { text-transform: none; letter-spacing: 0; color: var(--ink, #192
 .pf-launch-done { padding-left: 18px; margin: 6px 0 0; line-height: 1.6; }
 .pf-launch-skip { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--muted) 8%, transparent); }
 @media (max-width: 560px) { .pf-launch-grid { grid-template-columns: 1fr; } }
+/* Wider desktop layout */
+@media (min-width: 1000px) {
+  .wrap.wide { max-width: 1280px; }
+  .subnav-inner, .subnav-sub-inner, .subnav-inner.wide { max-width: 1280px; }
+  .subnav ~ .wrap:not(.wide) { max-width: 1100px; }
+  .wrap.wide.pf-review { max-width: 1100px; }
+}
+/* Review questions: one per row, roomy boxes */
+.pf-words { grid-template-columns: 1fr; gap: 14px; }
+.pf-answer { min-height: 130px; font-size: 16px; line-height: 1.5; }
+/* One width for the client portal so the menu and the page line up */
+@media (min-width: 1000px) {
+  .wrap.wide, .subnav-inner, .subnav-sub-inner, .subnav-inner.wide, .subnav ~ .wrap:not(.wide) { max-width: 1200px; }
+  .wrap.wide.pf-review { max-width: 1040px; }
+}

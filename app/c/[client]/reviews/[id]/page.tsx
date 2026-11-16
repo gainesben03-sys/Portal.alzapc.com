@@ -290,7 +290,7 @@ function Words({ r, s, lang, onPatch, call, toast }: { r: Review; s: PerformSett
           {ask.map((p) => (
             <div key={p.id} className="card pf-word">
               <label htmlFor={`a-${p.id}`}><b>{p.name[lang]}</b>{p.desc && <span>{p.desc[lang]}</span>}</label>
-              <textarea id={`a-${p.id}`} className="f" rows={4} value={r.answers[p.id] ?? ""} onChange={(e) => onPatch({ answers: { ...r.answers, [p.id]: e.target.value } })} placeholder={lang === "es" ? "Notas cortas están bien" : "Short notes are fine"} />
+              <textarea id={`a-${p.id}`} className="f pf-answer" rows={5} value={r.answers[p.id] ?? ""} onChange={(e) => onPatch({ answers: { ...r.answers, [p.id]: e.target.value } })} placeholder={lang === "es" ? "Notas cortas están bien" : "Short notes are fine"} />
               {sugg?.[p.id] && sugg[p.id] !== r.answers[p.id] && (
                 <div className="pf-sugg">
                   <span className="pf-chip gold">{t.draft}</span>
