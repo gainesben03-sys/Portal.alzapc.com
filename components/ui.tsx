@@ -1,5 +1,6 @@
 "use client";
 
+import { Tour, TourButton } from "@/components/tour";
 import { ContactBen } from "./contactben";
 import { useLeaveAccess } from "@/lib/leaveclient";
 import Link from "next/link";
@@ -247,7 +248,8 @@ export function ClientTopbar({ client }: { client: Client }) {
         <span className="powered hide-sm">
           powered by <span className="wordmark">Alza<span className="hr">HR</span></span>
         </span>
-        {!isAdvisor && <PushButton />}
+        {!isAdvisor && <span data-tour="push" style={{ display: "inline-flex" }}><PushButton /></span>}
+        {!isAdvisor && <TourButton />}
         <ThemeToggle />
         <PushPrompt />
         {isAdvisor ? null : (
@@ -263,6 +265,7 @@ export function ClientTopbar({ client }: { client: Client }) {
         )}
       </div>
     </header>
+    {!isAdvisor && <Tour company={client.name} homeHref={`/c/${client.id}`} />}
     </>
   );
 }
@@ -383,7 +386,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
     <nav className="subnav">
       <div className="subnav-inner">
         {groups.map((g) => (
-          <Link key={g.key} href={g.subs[0].href} className={current?.key === g.key ? "on" : ""}>
+          <Link key={g.key} href={g.subs[0].href} className={current?.key === g.key ? "on" : ""} data-tour={`nav-${g.key}`}>
             {g.label}
             {groupBadge(g) > 0 && <span className="badge">{groupBadge(g)}</span>}
           </Link>
@@ -394,7 +397,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
           <div className="subnav-sub-inner">
             {current.subs.length > 1 &&
               current.subs.map((x) => (
-                <Link key={x.href} href={x.href} className={subOn(x) ? "on" : ""}>
+                <Link key={x.href} href={x.href} className={subOn(x) ? "on" : ""} data-tour={`sub-${x.label.toLowerCase().replace(/\s+/g, "-")}`}>
                   {x.label}
                   {!!x.badge && <span className="badge">{x.badge}</span>}
                 </Link>

@@ -1,5 +1,6 @@
 "use client";
 
+import { tourSeen } from "@/components/tour";
 import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
 import { BEN_TOPICS, CLIENT_TOPICS, PushTopic, topicOn } from "@/lib/pushtopics";
@@ -62,12 +63,19 @@ export function PushPrompt() {
     if (sup === "ready" && permission() !== "default") return; // already decided on this device
     const a = readAsk(who);
     if (a.n >= 2 || Date.now() < a.until) return;
-    const t = setTimeout(async () => {
-      if (await thisDeviceOn()) return;
-      setOpen(sup === "ios-home" ? "ios" : "ask");
-    }, 1500);
-    return () => clearTimeout(t);
-  }, [ready, viewer, who]);
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const ask = () => {
+      t = setTimeout(async () => {
+        if (await thisDeviceOn()) return;
+        setOpen(sup === "ios-home" ? "ios" : "ask");
+      }, 1500);
+    };
+    // first visit: let the tour finish first
+    const waitForTour = !isBen && viewer.kind === "client" && !tourSeen(viewer.person.email || "");
+    if (waitForTour) window.addEventListener("alza-tour-done", ask, { once: true });
+    else ask();
+    return () => { if (t) clearTimeout(t); window.removeEventListener("alza-tour-done", ask); };
+  }, [ready, viewer, who, isBen]);
 
   if (!open) return null;
   const later = () => {

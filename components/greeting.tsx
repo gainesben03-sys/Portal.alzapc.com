@@ -78,7 +78,7 @@ export function Greeting({ clientId, onCustomize }: { clientId: string; onCustom
           <h1 className={celebrate ? "gr-party" : ""}>{g.headline}</h1>
           <p className="gr-sub">{g.sub}</p>
         </div>
-        <button className="btn sm" onClick={onCustomize}>Customize</button>
+        <button className="btn sm" data-tour="customize" onClick={onCustomize}>Customize</button>
       </div>
       {chips.length > 0 && (
         <div className="gr-chips">

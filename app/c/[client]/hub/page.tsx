@@ -79,12 +79,12 @@ export default function HubHome() {
           <NoTeam clientId={clientId} />
         ) : (
           <>
-            <div className="hub-quick section">
+            <div className="hub-quick section" data-tour="hub-quick">
               <button className="btn primary" onClick={() => setLog({ kind: "checkin" })}>💬 Log a check-in</button>
               <button className="btn" onClick={() => setLog({ kind: "recognition" })}>⭐ Recognize someone</button>
             </div>
 
-            <div className="card section hub-week">
+            <div className="card section hub-week" data-tour="hub-week">
               {reviewItems.map(({ r, st }) => {
                 const f = r.name.split(" ")[0];
                 return (
