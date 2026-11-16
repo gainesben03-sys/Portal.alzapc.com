@@ -283,12 +283,6 @@ function RatingCards({ r, lang, onPatch, onDone }: { r: Review; lang: Lang; onPa
 
   return (
     <div className="pf-cards">
-      <div className="pf-dots" role="tablist" aria-label={es ? "Áreas" : "Areas"}>
-        {items.map((x, k) => (
-          <button key={x.id} role="tab" aria-selected={k === i} aria-label={`${x.name}${x.value ? `, ${x.value}` : ""}`} className={`${k === i ? "cur" : ""} ${x.value ? "done" : ""}`} onClick={() => go(k)} />
-        ))}
-        <span className="tiny muted">{rated} {es ? "de" : "of"} {items.length}</span>
-      </div>
 
       {cur ? (
         <section
@@ -321,7 +315,13 @@ function RatingCards({ r, lang, onPatch, onDone }: { r: Review; lang: Lang; onPa
           ))}
           <div className="pf-rcard-nav">
             <button className="btn ghost sm" disabled={i === 0} onClick={() => go(i - 1)}>← {es ? "Anterior" : "Previous"}</button>
-            <span className="tiny muted pf-desk-only">{es ? "Atajo: teclas 1 a " : "Tip: press 1 to "}{scale.length}</span>
+            <div className="pf-bubbles" role="tablist" aria-label={es ? `${rated} de ${items.length} calificadas` : `${rated} of ${items.length} rated`}>
+              {items.map((x, k) => (
+                <button key={x.id} role="tab" aria-selected={k === i} title={x.name} aria-label={`${x.name}${x.value ? `, ${x.value}` : ""}`} className={`${k === i ? "cur" : ""} ${x.value ? "done" : ""}`} onClick={() => go(k)}>
+                  {x.value ? <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> : null}
+                </button>
+              ))}
+            </div>
             <button className="btn ghost sm" onClick={() => go(i + 1)}>{cur.value ? (es ? "Siguiente" : "Next") : es ? "Omitir" : "Skip"} →</button>
           </div>
         </section>
@@ -340,6 +340,13 @@ function RatingCards({ r, lang, onPatch, onDone }: { r: Review; lang: Lang; onPa
           <p className="tiny muted" style={{ margin: "10px 0 0" }}>{es ? "Toque cualquiera para cambiarla." : "Tap any of them to change it."}</p>
           <div className="pf-rcard-nav">
             <button className="btn ghost sm" onClick={() => go(items.length - 1)}>← {es ? "Anterior" : "Previous"}</button>
+            <div className="pf-bubbles" role="tablist" aria-label={es ? `${rated} de ${items.length} calificadas` : `${rated} of ${items.length} rated`}>
+              {items.map((x, k) => (
+                <button key={x.id} role="tab" aria-selected={k === i} title={x.name} aria-label={`${x.name}${x.value ? `, ${x.value}` : ""}`} className={`${k === i ? "cur" : ""} ${x.value ? "done" : ""}`} onClick={() => go(k)}>
+                  {x.value ? <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> : null}
+                </button>
+              ))}
+            </div>
             <button className="btn primary sm" onClick={onDone}>{es ? "Siguiente paso" : "Next step"} →</button>
           </div>
         </section>
