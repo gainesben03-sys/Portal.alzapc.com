@@ -2,6 +2,7 @@
 
 // New hires: the tracker. Every hire on one screen, with this company's steps as columns.
 // Tap a circle to mark a step done, tap a name for notes and outcome. Steps are set per company.
+import { canSeeHire } from "@/lib/hires";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
@@ -87,7 +88,8 @@ function Hires() {
     if (o) setOpen(o);
   }, [q]);
 
-  const mine = useMemo(() => hires.filter((h) => h.clientId === clientId), [hires, clientId]);
+  const viewerInfo = { advisor: viewer?.kind === "advisor", access: me?.access, name: viewer?.kind === "client" ? viewer.person.name : "" };
+  const mine = useMemo(() => hires.filter((h) => h.clientId === clientId && canSeeHire(h, viewerInfo)), [hires, clientId, viewerInfo.access, viewerInfo.name]); // eslint-disable-line react-hooks/exhaustive-deps
   const locs = useMemo(() => [...new Set(mine.map((h) => (h.location || "").trim()).filter(Boolean))].sort(), [mine]);
   const counts = useMemo(() => {
     const c = { active: 0, done: 0, out: 0 } as Record<Bucket, number>;

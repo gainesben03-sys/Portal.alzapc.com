@@ -17,8 +17,9 @@ import { canSee, daysSince, DEFAULT_TILES, Note, TILES } from "@/lib/modules";
 import { notifyBen, useStore } from "@/lib/store";
 import { AskBenSheet } from "@/components/askben";
 import { currentStep, HealthChip, projectHealth, StepTrack } from "@/components/projectprogress";
-import { HireProgressCard, hireTasks } from "@/components/hires";
-import { daysUntil, onboardingFor, shortDate } from "@/lib/hires";
+import { hireBadge, hireTasks } from "@/components/hires";
+import { canSeeHire, daysUntil, STAGE_SHORT, shortDate } from "@/lib/hires";
+import { celebrations } from "@/lib/recognition";
 
 const ORDER = { blocker: 0, overdue: 1, today: 2, soon: 3, later: 4, done: 5 } as const;
 
@@ -237,23 +238,61 @@ export default function Home() {
     },
     hires: () => {
       const recent = (h: (typeof hires)[number]) => h.status === "Started" && !!h.startDate && daysUntil(h.startDate) >= -14;
+      const who = { advisor: isAdvisor, access: me?.access, name: meName ?? "" };
+      const all = me?.access === "manager" || me?.access === "hiring";
       const list = hires
-        .filter((h) => h.clientId === client.id && (h.status !== "Started" || recent(h)))
+        .filter((h) => h.clientId === client.id && canSeeHire(h, who) && (h.status !== "Started" || recent(h)))
         .sort((a, b) => (a.status === "Started" ? 1 : 0) - (b.status === "Started" ? 1 : 0) || (a.startDate || "9999").localeCompare(b.startDate || "9999"));
       const inProgress = list.filter((h) => h.status !== "Started");
-      const s = onboardingFor(cfg?.onboarding);
       const thisMonth = inProgress.filter((h) => h.startDate && daysUntil(h.startDate) >= 0 && daysUntil(h.startDate) <= 30).length;
       return (
-        <Tile title="New hires" count={inProgress.length} href={`${base}/hires`} linkLabel="All new hires" wide>
-          {inProgress.length > 0 && <p className="tiny muted" style={{ margin: "-4px 0 10px" }}>{inProgress.length} in progress{thisMonth ? `, ${thisMonth} starting in the next 30 days` : ""}.</p>}
-          {list.length === 0 && <p className="small muted">No one in progress. Start a new hire when you&apos;re ready to make an offer.</p>}
-          <div className="proj-grid">
-            {list.slice(0, 6).map((h) => (
-              <HireProgressCard key={h.id} h={h} href={`${base}/hires/${h.id}`} tasks={hireTasks(h, actions)} s={s} rules={rules} />
-            ))}
+        <Tile title={all ? "My new hires" : "New hires"} count={inProgress.length} href={`${base}/hires`} linkLabel={all ? "Open" : "All new hires"} wide>
+          {inProgress.length > 0 && <p className="tiny muted" style={{ margin: "-4px 0 6px" }}>{inProgress.length} in progress{thisMonth ? `, ${thisMonth} starting in the next 30 days` : ""}.</p>}
+          {list.length === 0 && <p className="small muted">{all ? "No new hires on your team right now." : "No one in progress. Start a new hire when you're ready to make an offer."}</p>}
+          <div className="nh-list">
+            {list.slice(0, 8).map((h) => {
+              const b = hireBadge(h, hireTasks(h, actions), rules);
+              const n = h.startDate ? daysUntil(h.startDate) : null;
+              return (
+                <Link key={h.id} href={`${base}/hires/${h.id}`} className="nh-row">
+                  <span className="nh-who">
+                    <b>{h.name || "New hire"}</b>
+                    <span className="tiny muted">{[h.title, all ? "" : h.managerName && `with ${h.managerName.split(" ")[0]}`].filter(Boolean).join(" · ")}</span>
+                  </span>
+                  <span className="nh-stage tiny"><b>{STAGE_SHORT[h.status]}</b></span>
+                  <span className="nh-when">
+                    <b className="small">{h.startDate ? shortDate(h.startDate) : "No date"}</b>
+                    <span className="tiny muted">{n === null ? "" : n > 1 ? `in ${n} days` : n === 1 ? "tomorrow" : n === 0 ? "today" : "started"}</span>
+                  </span>
+                  <span className={`health-chip h-${b.tone}`}><span className="dot" />{b.label}</span>
+                </Link>
+              );
+            })}
           </div>
-          {list.length > 6 && <Link href={`${base}/hires`} className="tiny" style={{ display: "block", marginTop: 8, color: "var(--blue)" }}>See all {list.length}</Link>}
+          {list.length > 8 && <Link href={`${base}/hires`} className="tiny" style={{ display: "block", marginTop: 8, color: "var(--blue)" }}>See all {list.length}</Link>}
           {(isAdvisor || me?.access === "exec") && <Link href={`${base}/hires/new`} className="btn ghost sm" style={{ marginTop: 10, display: "inline-flex" }}>+ Add a new hire</Link>}
+        </Tile>
+      );
+    },
+    celebrate: () => {
+      const myEmail = (me?.email || "").toLowerCase();
+      const team = s.people.filter((p) => p.clientId === client.id && p.active && (isAdvisor || me?.access === "exec" || p.managerEmail.toLowerCase() === myEmail));
+      const list = celebrations(team, new Date(), 30).sort((a, b) => a.days - b.days);
+      const scope = isAdvisor || me?.access === "exec" ? "company" : "team";
+      const ICON = { birthday: "🎂", anniversary: "🎉", new: "👋" } as const;
+      const what = (c: (typeof list)[number]) => (c.kind === "birthday" ? "Birthday" : c.kind === "anniversary" ? `${c.years} year${c.years === 1 ? "" : "s"} here` : c.days >= 0 ? "Starts" : "Just started");
+      const when = (c: (typeof list)[number]) => (c.days === 0 ? "Today" : c.days === 1 ? "Tomorrow" : c.when);
+      return (
+        <Tile title="Celebrations" count={list.length || undefined} href={cfg?.modules.recognition ? `${base}/recognition` : undefined} linkLabel="Team Wall">
+          {list.length === 0 && <p className="small muted" style={{ margin: 0 }}>No birthdays, work anniversaries or new starters on your {scope} in the next 30 days.</p>}
+          {list.slice(0, 7).map((c) => (
+            <div key={c.kind + c.personId} className="cel-row">
+              <span aria-hidden="true">{ICON[c.kind]}</span>
+              <span className="grow" style={{ minWidth: 0 }}><b className="small">{c.name}</b> <span className="tiny muted">· {what(c)}</span></span>
+              <span className={`tiny ${c.days <= 1 ? "cel-soon" : "muted"}`}>{when(c)}</span>
+            </div>
+          ))}
+          {list.length > 7 && <p className="tiny muted" style={{ margin: "6px 0 0" }}>+{list.length - 7} more this month</p>}
         </Tile>
       );
     },
@@ -424,7 +463,7 @@ export default function Home() {
 }
 
 /** Tiles added after people may have saved a layout. They appear on saved layouts too, unless someone turned them off. */
-const NEW_TILES: [string, string][] = [["mylist", "projects"], ["leave", "hires"], ["reviews", "recruiting"]]; // [tile, show it after]
+const NEW_TILES: [string, string][] = [["mylist", "projects"], ["leave", "hires"], ["reviews", "recruiting"], ["celebrate", "mylist"]]; // [tile, show it after]
 function withNewTiles(saved: string[]): string[] {
   const out = saved.filter((id) => !id.startsWith("!"));
   for (const [id, after] of NEW_TILES) {

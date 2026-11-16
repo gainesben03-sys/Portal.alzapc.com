@@ -13,6 +13,7 @@ import { hasPractice } from "@/lib/practice";
 import { useDemo } from "@/components/perform";
 import { performApi, type ListData } from "@/lib/performclient";
 import { performFor, stageOf } from "@/lib/perform";
+import { celebrations } from "@/lib/recognition";
 const md = (d: string) => new Date(d + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
 const ICON: Record<HubItem["kind"], string> = { birthday: "🎂", anniversary: "🎉", starting: "👋", checkin: "💬", recognize: "⭐", commitment: "✔️" };
@@ -139,6 +140,24 @@ export default function HubHome() {
                       </Link>
                     );
                   })}
+                </div>
+              );
+            })()}
+            {(() => {
+              // later this month (this week's are already in the list above)
+              const later = celebrations(h.team.map((p) => ({ ...p, active: p.active !== false })), new Date(), 30).filter((c) => c.days > 7).sort((a, b) => a.days - b.days);
+              if (!later.length) return null;
+              const ICO = { birthday: "🎂", anniversary: "🎉", new: "👋" } as const;
+              return (
+                <div className="card section">
+                  <h2 className="tw-h" style={{ marginTop: 0 }}>Later this month</h2>
+                  {later.slice(0, 6).map((c) => (
+                    <div key={c.kind + c.personId} className="cel-row">
+                      <span aria-hidden="true">{ICO[c.kind]}</span>
+                      <span className="grow" style={{ minWidth: 0 }}><b className="small">{c.name}</b> <span className="tiny muted">· {c.kind === "birthday" ? "Birthday" : c.kind === "anniversary" ? `${c.years} year${c.years === 1 ? "" : "s"} here` : "Starts"}</span></span>
+                      <span className="tiny muted">{c.when}</span>
+                    </div>
+                  ))}
                 </div>
               );
             })()}

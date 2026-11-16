@@ -527,3 +527,10 @@ export function listEmail(b: Brand, kicker: string, headline: string, intro: str
 ${section("#F4F1EC", `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:2px solid ${brand.accent}">${rows}</table><p style="margin:18px 0 0 0"><a href="${esc(cta.url)}" style="display:inline-block;background:${brand.accent};color:#FFFFFF;padding:12px 20px;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;text-decoration:none;border-radius:6px">${esc(cta.label)}</a></p>`)}`;
   return { html: frame(brand, inner), text: `${headline}\n\n${intro}\n\n${items.map((it, i) => `${i + 1}. ${it.title} (${it.why})`).join("\n")}\n\n${cta.label}: ${cta.url}` };
 }
+
+/** Managers and hiring managers see only the new hires they manage; executives and Ben see everyone. */
+export function canSeeHire(h: Pick<Hire, "managerName">, viewer: { advisor?: boolean; access?: string; name?: string } ): boolean {
+  if (viewer.advisor || !viewer.access || viewer.access === "exec") return true;
+  const a = (h.managerName || "").trim().toLowerCase();
+  return !!a && a === (viewer.name || "").trim().toLowerCase();
+}

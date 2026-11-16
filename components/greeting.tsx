@@ -1,6 +1,7 @@
 "use client";
 
 // Top of the client dashboard: a warm greeting, a few things worth knowing, and today's thought.
+import { canSeeHire } from "@/lib/hires";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
@@ -53,7 +54,7 @@ export function Greeting({ clientId, onCustomize }: { clientId: string; onCustom
     const today = iso(now);
     const week = iso(new Date(now.getTime() + 7 * 864e5));
     const out: { text: string; href: string; tone: string }[] = [];
-    const starting = hires.filter((h) => h.clientId === clientId && h.startDate >= today && h.startDate <= week && h.status !== "Started");
+    const starting = hires.filter((h) => h.clientId === clientId && canSeeHire(h, { advisor: isAdvisor, access: me?.access, name }) && h.startDate >= today && h.startDate <= week && h.status !== "Started");
     for (const h of starting.slice(0, 2)) {
       const d = new Date(`${h.startDate}T12:00:00`);
       const when = h.startDate === today ? "today" : d.toLocaleDateString("en-US", { weekday: "long" });

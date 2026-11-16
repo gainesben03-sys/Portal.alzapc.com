@@ -1,5 +1,6 @@
 "use client";
 
+import { canSeeHire } from "@/lib/hires";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ReactNode, Suspense, useMemo, useRef, useState } from "react";
@@ -27,7 +28,8 @@ function HireInner() {
   const { getClient, hires, config, viewer, me, who, patch, actions, files, updateHire } = useStore();
   const client = getClient(clientId);
   const cfg = config[clientId];
-  const h = hires.find((x) => x.id === id && x.clientId === clientId);
+  const h0 = hires.find((x) => x.id === id && x.clientId === clientId);
+  const h = h0 && canSeeHire(h0, { advisor: viewer?.kind === "advisor", access: me?.access, name: viewer?.kind === "client" ? viewer.person.name : "" }) ? h0 : undefined;
   const s = onboardingFor(cfg?.onboarding);
   const toast = useToast();
   const [editing, setEditing] = useState<HireDraft | null>(null);
