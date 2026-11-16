@@ -20,7 +20,7 @@ import {
   PIP_TEMPLATE, PipIssue, Review, stageOf, templateById, first,
 } from "@/lib/perform";
 import { trSrc } from "@/lib/perform";
-import { allReviews, canEdit, canOpen, getReview, launchEmail, loadCtx, log, managerEmail, nudgeEmail, polish, putReview, roleOf, roster, send, sendSelf, shareEmail, sortTalk, sync, translate } from "@/lib/performserver";
+import { allReviews, canEdit, canOpen, getReview, suggestGoals, launchEmail, loadCtx, log, managerEmail, nudgeEmail, polish, putReview, roleOf, roster, send, sendSelf, shareEmail, sortTalk, sync, translate } from "@/lib/performserver";
 import { admin, caller, SERVER_LIVE } from "@/lib/server";
 import type { TeamLog } from "@/lib/team";
 
@@ -235,6 +235,14 @@ export async function POST(req: Request) {
     if (op === "polish") out = await polish({ firstName: first(r.name), asks, answers: (b.answers as Record<string, string>) ?? r.answers, tone: String(b.tone ?? ""), voice: String(b.voice ?? ""), lang });
     else if (op === "sort") out = await sortTalk({ firstName: first(r.name), asks, transcript: s(b.transcript, 8000), lang });
     else if (op === "translate") out = await translate(Object.fromEntries(Object.entries((b.fields as Record<string, string>) ?? {}).slice(0, 40).map(([k, v]) => [k, s(v, 3000)])), b.to === "es" ? "es" : "en");
+    else if (op === "goals") {
+      const feedback = r.template.ask.map((q) => ({ q: q.name.en, a: (r.written[q.id] ?? r.answers[q.id] ?? "").trim() })).filter((f) => f.a)
+        .concat(r.template.rate.filter((q) => r.rateNotes[q.id]?.trim()).map((q) => ({ q: `${q.name.en} (rating note)`, a: r.rateNotes[q.id] })));
+      if (!feedback.length) return json({ ok: false, reason: "empty" }, 400);
+      const low = r.template.rate.filter((q) => { const v = r.ratings[q.id]; return v && (r.template.scale === 5 ? v <= 2 : v <= 1); }).map((q) => q.name.en);
+      const prev = (await allReviews(db, clientId)).filter((q) => q.personId === r.personId && q.id !== r.id && ["final", "shared", "done"].includes(q.status)).sort((a, c) => (a.due < c.due ? 1 : -1))[0];
+      out = await suggestGoals({ firstName: first(r.name), feedback: feedback.map((f) => ({ q: f.q, a: s(f.a, 2000) })), lowAreas: low, prevGoals: (prev?.goals ?? []).map((g) => g.text).filter(Boolean), lang });
+    }
     else return json({ ok: false, reason: "bad_request" }, 400);
     await logUsage(db, { email: role.email, clientId, kind: "perform", ref: r.id, meta: { op } });
     return json(out);

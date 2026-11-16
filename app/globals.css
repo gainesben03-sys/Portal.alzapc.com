@@ -2374,3 +2374,11 @@ h2.pf-h, .pf-h { text-transform: none; letter-spacing: 0; color: var(--ink, #192
   .wrap.wide, .subnav-inner, .subnav-sub-inner, .subnav-inner.wide, .subnav ~ .wrap:not(.wide) { max-width: 1200px; }
   .wrap.wide.pf-review { max-width: 1040px; }
 }
+.pf-viewas { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 12px; }
+.pf-tr { white-space: pre-wrap; background: color-mix(in srgb, var(--accent) 5%, var(--card)); border-style: dashed; }
+.pf-ideas { display: flex; flex-direction: column; gap: 8px; margin: 0 0 16px; padding: 12px; border-radius: 14px; border: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent); background: color-mix(in srgb, var(--accent) 5%, var(--card)); }
+.pf-idea { display: flex; gap: 12px; align-items: center; background: var(--card); border-radius: 10px; padding: 10px 12px; }
+.pf-idea .grow { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; }
+.pf-ideas > .linklike { align-self: flex-start; }
+.pf-goal-row > .grow { flex: 1 1 auto; }
+.pf-tr { padding: 12px 14px; border: 1px dashed color-mix(in srgb, var(--accent) 45%, var(--line)); }

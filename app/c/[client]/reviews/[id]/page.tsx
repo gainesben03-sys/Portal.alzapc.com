@@ -136,7 +136,7 @@ export default function ReviewPage() {
   if (cur === "look") body = <LookBack r={r} g={g} s={s} lang={lang} onPatch={patch} call={call} toast={toast.show} onBuildPip={async () => { const x = await call({ action: "start", personId: r.personId, kind: "pip" }); if (x.ok) window.location.href = `/c/${clientId}/reviews/${x.review.id}`; }} />;
   if (cur === "rate") body = <Ratings r={r} lang={lang} onPatch={patch} />;
   if (cur === "words") body = <Words r={r} s={s} lang={lang} onPatch={patch} call={call} toast={toast.show} />;
-  if (cur === "goals") body = <Goals r={r} lang={lang} onPatch={patch} />;
+  if (cur === "goals") body = <Goals r={r} s={s} lang={lang} onPatch={patch} call={call} toast={toast.show} />;
   if (cur === "concerns") body = <Concerns r={r} lang={lang} onPatch={patch} />;
   if (cur === "timeline") body = <Timeline r={r} lang={lang} admin={g.admin} onPatch={patch} />;
   if (cur === "share") body = <Share r={r} g={g} s={s} lang={lang} accent={client.accent} company={g.company || client.name} onPatch={patch} call={call} toast={toast.show} flush={flush} onDone={(x) => setR(x)} />;
@@ -263,6 +263,23 @@ function Words({ r, s, lang, onPatch, call, toast }: { r: Review; s: PerformSett
   const [tone, setTone] = useState("");
   const [voice, setVoice] = useState<"you" | "about">("you");
   const [talking, setTalking] = useState(false);
+  // Read your notes in the other language. Editing stays in your own words.
+  const [view, setView] = useState<"mine" | Lang>("mine");
+  const [trView, setTrView] = useState<Record<string, Record<string, string>>>({});
+  const trKey = (to: Lang) => `${to}|${JSON.stringify(r.answers)}`;
+  const showIn = async (to: "mine" | Lang) => {
+    setView(to);
+    if (to === "mine" || trView[trKey(to)]) return;
+    const fields = Object.fromEntries(Object.entries(r.answers).filter(([, v]) => v?.trim()));
+    if (!Object.keys(fields).length) { setTrView({ ...trView, [trKey(to)]: {} }); return; }
+    setBusy("view");
+    const x = await call({ action: "ai", id: r.id, op: "translate", fields, to });
+    setBusy("");
+    if (!x.ok) { setView("mine"); return toast(x.reason === "limit" ? (lang === "es" ? "Llegó al límite de hoy" : "That's the limit for today") : lang === "es" ? "No se pudo traducir." : "Couldn't translate. Try again."); }
+    if (x.demo) toast(lang === "es" ? "La traducción no está conectada en la demo." : "Translation isn't connected in the demo.");
+    setTrView({ ...trView, [trKey(to)]: x.fields ?? {} });
+  };
+  const shownTr = view !== "mine" ? trView[trKey(view)] : null;
   const f = first(r.name);
   const help = async (tn = tone, vc = voice) => {
     setBusy("polish");
@@ -285,12 +302,25 @@ function Words({ r, s, lang, onPatch, call, toast }: { r: Review; s: PerformSett
         </button>
       )}
       {talking && <Talk r={r} lang={lang} call={call} toast={toast} onCancel={() => setTalking(false)} onSorted={(answers, v) => { onPatch({ answers: { ...r.answers, ...Object.fromEntries(Object.entries(answers).filter(([, x]) => x)) } }); setVague(v); setTalking(false); }} />}
+      {!talking && s.ai && Object.values(r.answers).some((v) => v?.trim()) && (
+        <div className="pf-viewas">
+          <span className="tiny muted">{lang === "es" ? "Ver mis notas en" : "View my notes in"}</span>
+          <div className="pf-filters" role="group" aria-label={lang === "es" ? "Ver en" : "View in"}>
+            {([["mine", lang === "es" ? "Como las escribí" : "As I wrote them"], ["en", "English"], ["es", "Español"]] as const).map(([k, lb]) => <button key={k} className={view === k ? "on" : ""} aria-pressed={view === k} disabled={busy === "view"} onClick={() => showIn(k)}>{busy === "view" && view === k ? "…" : lb}</button>)}
+          </div>
+          {view !== "mine" && <span className="tiny muted">{lang === "es" ? "Solo para leer. Para cambiar algo, vuelva a sus notas." : "For reading. To change anything, switch back to your notes."}</span>}
+        </div>
+      )}
       {!talking && (
         <div className="pf-words">
           {ask.map((p) => (
             <div key={p.id} className="card pf-word">
               <label htmlFor={`a-${p.id}`}><b>{p.name[lang]}</b>{p.desc && <span>{p.desc[lang]}</span>}</label>
-              <textarea id={`a-${p.id}`} className="f pf-answer" rows={5} value={r.answers[p.id] ?? ""} onChange={(e) => onPatch({ answers: { ...r.answers, [p.id]: e.target.value } })} placeholder={lang === "es" ? "Notas cortas están bien" : "Short notes are fine"} />
+              {shownTr ? (
+                <div className="f pf-answer pf-tr" aria-live="polite">{shownTr[p.id] || (r.answers[p.id] ? "" : <span className="muted">{lang === "es" ? "Sin notas todavía" : "No notes yet"}</span>)}</div>
+              ) : (
+                <textarea id={`a-${p.id}`} className="f pf-answer" rows={5} value={r.answers[p.id] ?? ""} onChange={(e) => onPatch({ answers: { ...r.answers, [p.id]: e.target.value } })} placeholder={lang === "es" ? "Notas cortas están bien" : "Short notes are fine"} />
+              )}
               {sugg?.[p.id] && sugg[p.id] !== r.answers[p.id] && (
                 <div className="pf-sugg">
                   <span className="pf-chip gold">{t.draft}</span>
@@ -369,13 +399,51 @@ function Talk({ r, lang, call, toast, onCancel, onSorted }: { r: Review; lang: L
 }
 
 // ---------- 4. goals ----------
-function Goals({ r, lang, onPatch }: { r: Review; lang: Lang; onPatch: (p: Partial<Review>) => void }) {
+function Goals({ r, s, lang, onPatch, call, toast }: { r: Review; s: PerformSettings; lang: Lang; onPatch: (p: Partial<Review>) => void; call: Call; toast: (m: string) => void }) {
   const t = T[lang];
+  const es = lang === "es";
   const setGoal = (i: number, p: Partial<Goal>) => onPatch({ goals: r.goals.map((x, j) => (j === i ? { ...x, ...p } : x)) });
+  const [busy, setBusy] = useState(false);
+  const [ideas, setIdeas] = useState<{ text: string; measure: string; by: string }[] | null>(null);
+  const hasFeedback = Object.values(r.answers).some((v) => v?.trim()) || Object.values(r.rateNotes).some((v) => v?.trim());
+  const suggest = async () => {
+    setBusy(true);
+    const x = await call({ action: "ai", id: r.id, op: "goals", lang });
+    setBusy(false);
+    if (!x.ok) return toast(x.reason === "limit" ? (lang === "es" ? "Llegó al límite de hoy" : "That's the limit for today") : x.reason === "empty" ? (es ? "Escriba primero sus comentarios en el paso 3." : "Add your feedback in step 3 first.") : es ? "No se pudo sugerir. Intente otra vez." : "Couldn't suggest goals. Try again.");
+    setIdeas(x.goals ?? []);
+    if (!(x.goals ?? []).length) toast(es ? "No hay suficiente en sus comentarios para sugerir metas." : "There isn't enough in your feedback to suggest goals yet.");
+  };
+  const add = (g: { text: string; measure: string; by: string }) => {
+    const blank = r.goals.findIndex((x) => !x.text.trim());
+    const goal = { id: newId(), text: g.text, measure: g.measure, by: g.by, status: "not_started" as const };
+    onPatch({ goals: blank >= 0 ? r.goals.map((x, j) => (j === blank ? { ...goal, id: x.id } : x)) : [...r.goals, goal].slice(0, 6) });
+    setIdeas((cur) => (cur ?? []).filter((x) => x !== g));
+  };
   return (
     <>
       <h2 className="pf-h">{t.goalsH}</h2>
       <p className="muted pf-p">{t.goalsP}</p>
+      {s.ai && (
+        <div className="pf-help" style={{ marginTop: 0, marginBottom: 14 }}>
+          <button className="btn" disabled={busy || !hasFeedback} onClick={suggest}>{busy ? (es ? "Pensando…" : "Thinking…") : es ? "Sugerir metas según mis comentarios" : "Suggest goals from my feedback"}</button>
+          <span className="tiny muted">{hasFeedback ? (es ? "Ideas basadas solo en lo que escribió. Usted decide." : "Ideas based only on what you wrote. You decide what goes in.") : es ? "Escriba sus comentarios en el paso 3 y vuelva aquí." : "Write your feedback in step 3, then come back."}</span>
+        </div>
+      )}
+      {ideas && ideas.length > 0 && (
+        <div className="pf-ideas">
+          {ideas.map((g, i) => (
+            <div key={i} className="pf-idea">
+              <div className="grow" style={{ minWidth: 0 }}>
+                <b>{g.text}</b>
+                {(g.measure || g.by) && <span className="tiny muted">{[g.measure, g.by].filter(Boolean).join(" · ")}</span>}
+              </div>
+              <button className="btn sm primary" onClick={() => add(g)}>{es ? "Agregar" : "Add"}</button>
+            </div>
+          ))}
+          <button className="linklike tiny" onClick={() => setIdeas(null)}>{es ? "Descartar ideas" : "Dismiss ideas"}</button>
+        </div>
+      )}
       {r.goals.map((goal, i) => (
         <section key={goal.id} className="card pf-goal">
           <label className="f">{t.goal}<input className="f" value={goal.text} onChange={(e) => setGoal(i, { text: e.target.value })} placeholder={lang === "es" ? "Ej.: Cero errores en los pedidos de diciembre" : "e.g. Zero mis-picks on December orders"} /></label>

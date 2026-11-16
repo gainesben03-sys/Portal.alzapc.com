@@ -133,6 +133,20 @@ export async function polish(o: { firstName: string; asks: { id: string; q: stri
 }
 
 /** A talked-through ramble, sorted into the template's questions. Their words, lightly cleaned. */
+/** Goal ideas drawn only from the manager's own feedback. The manager picks and edits. */
+export async function suggestGoals(o: { firstName: string; feedback: { q: string; a: string }[]; lowAreas: string[]; prevGoals: string[]; lang: Lang }) {
+  const r = await claude({
+    system: `${RULES}
+You suggest goals for an employee's next review period, drawn ONLY from the manager's feedback below. Each goal must trace back to something the manager actually wrote (an area to work on, a strength to build on, or a low-rated area they commented on). If the feedback doesn't support a goal, suggest fewer. Never invent problems or numbers the manager didn't give. When there's no number, make the measure observable (what the manager will see), not a made-up target.`,
+    maxTokens: 900,
+    messages: [{ role: "user", content: `Employee first name: ${o.firstName}\nWrite in ${LANG_NAME[o.lang]}.\nManager's feedback:\n${o.feedback.map((f) => `- ${f.q}: ${f.a}`).join("\n")}${o.lowAreas.length ? `\nRated below expectations: ${o.lowAreas.join(", ")}` : ""}${o.prevGoals.length ? `\nLast period's goals (avoid repeating unless the feedback says to): ${o.prevGoals.join("; ")}` : ""}\nSuggest 1 to 3 goals. Each: a short goal (under 12 words, starts with a verb), how it will be measured (one short phrase), and when ("By the next review", or a timeframe the manager mentioned).\nReturn {"goals":[{"text":"","measure":"","by":""}]}` }],
+  });
+  if (!r.ok) return { ok: false as const, reason: r.reason };
+  const j = parseJson<{ goals?: { text?: string; measure?: string; by?: string }[] }>(r.text);
+  const goals = (j?.goals ?? []).filter((g) => g.text?.trim()).slice(0, 3).map((g) => ({ text: clip(g.text!, 140).replace(/—/g, ", "), measure: clip(g.measure ?? "", 160).replace(/—/g, ", "), by: clip(g.by ?? "", 60) }));
+  return { ok: true as const, goals };
+}
+
 export async function sortTalk(o: { firstName: string; asks: { id: string; q: string }[]; transcript: string; lang: Lang }) {
   const t = clip(o.transcript, 6000);
   if (!t) return { ok: false as const, reason: "empty" };

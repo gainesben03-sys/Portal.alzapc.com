@@ -213,6 +213,15 @@ export async function performApi(clientId: string, body: Res, demo?: Demo): Prom
     }
     if (body.op === "sort") return { ok: true, answers: demoSort(String(body.transcript ?? ""), r.template.ask), vague: [], demo: true };
     if (body.op === "translate") return { ok: true, fields: body.fields, demo: true };
+    if (body.op === "goals") {
+      // demo: turn each "work on" point into a goal; the live portal writes these with AI from the same notes
+      const src = [r.answers.work, r.answers.improve, r.answers.start, r.answers.skills].filter(Boolean).join(". ");
+      if (!src.trim() && !Object.values(r.answers).some((v) => v?.trim())) return { ok: false, reason: "empty" };
+      const pts = (src || Object.values(r.answers).join(". ")).split(/(?<=[.!?])\s+|;\s*|\n+/).map((x) => x.trim().replace(/[.!?]+$/, "")).filter((x) => x.length > 6).slice(0, 3);
+      const es = body.lang === "es";
+      const goals = pts.map((x) => ({ text: (es ? "Mejorar: " : "Get better at: ") + x.replace(/^(needs to|need to|should|has to)\s+/i, ""), measure: es ? "El gerente ve avance constante en los seguimientos" : "Steady progress the manager can see at check-ins", by: es ? "Para la próxima evaluación" : "By the next review" }));
+      return { ok: true, goals, demo: true };
+    }
   }
   if (a === "finalize") {
     if (r.kind === "pip" && !r.pip?.hrReviewed) return { ok: false, reason: "hr_review" };
