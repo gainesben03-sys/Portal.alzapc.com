@@ -20,7 +20,7 @@ import {
   PIP_TEMPLATE, PipIssue, Review, stageOf, templateById, first,
 } from "@/lib/perform";
 import { trSrc } from "@/lib/perform";
-import { allReviews, canEdit, canOpen, getReview, loadCtx, log, managerEmail, polish, putReview, roleOf, roster, send, sendSelf, shareEmail, sortTalk, sync, translate } from "@/lib/performserver";
+import { allReviews, canEdit, canOpen, getReview, launchEmail, loadCtx, log, managerEmail, nudgeEmail, polish, putReview, roleOf, roster, send, sendSelf, shareEmail, sortTalk, sync, translate } from "@/lib/performserver";
 import { admin, caller, SERVER_LIVE } from "@/lib/server";
 import type { TeamLog } from "@/lib/team";
 
@@ -96,6 +96,59 @@ export async function POST(req: Request) {
       pipFlags,
       users: role.admin ? (x.cfg.users ?? []).map((u) => ({ name: u.name, email: u.email.toLowerCase(), access: u.access })) : [],
     });
+  }
+
+  // HR launches a round: pick people, a template and a due date. Each review goes to that person's manager.
+  if (action === "launch") {
+    if (!role.admin) return json({ ok: false, reason: "forbidden" }, 403);
+    const ids = new Set((Array.isArray(b.personIds) ? b.personIds : []).map(String).slice(0, 1000));
+    const today = iso(new Date());
+    const due = /^\d{4}-\d{2}-\d{2}$/.test(String(b.due ?? "")) && String(b.due) > today ? String(b.due) : addDays(today, 30);
+    const self = b.self === "now" || b.self === "skip" ? b.self : "before";
+    const t = templateById(x.s, String(b.template ?? "") || x.s.template);
+    const [people, all] = await Promise.all([roster(db, clientId), allReviews(db, clientId)]);
+    const created: Review[] = [];
+    const skipped: { name: string; why: string }[] = [];
+    let selfSent = 0;
+    for (const p of people) {
+      if (!ids.has(p.id)) continue;
+      if (p.active === false) { skipped.push({ name: p.name, why: "no longer on the roster" }); continue; }
+      if (!p.managerEmail) { skipped.push({ name: p.name, why: "no manager on the roster" }); continue; }
+      if (all.some((r) => r.personId === p.id && r.status === "open" && r.kind !== "pip")) { skipped.push({ name: p.name, why: "already has a review open" }); continue; }
+      const last = all.filter((r) => r.personId === p.id && ["final", "shared", "done"].includes(r.status)).sort((a, c) => (a.due < c.due ? 1 : -1))[0];
+      const start = last?.periodEnd ?? (p.hireDate && p.hireDate > addDays(due, -365) ? p.hireDate : addDays(due, -365));
+      let r = newReview({ ...p, active: true }, clientId, { kind: "cycle", due, periodStart: start, periodEnd: due }, t, by);
+      r = log({ ...r, ...(self === "skip" ? { noSelf: true } : {}) }, by, "Launched by HR");
+      await putReview(db, r);
+      if (self === "now" && x.s.selfAssess) {
+        const o = await sendSelf(x, r, by, p.email);
+        if (o.ok) { selfSent++; r = o.review; }
+      }
+      created.push(r);
+    }
+    let managers = 0;
+    if (b.notify !== false) {
+      const byMgr = new Map<string, Review[]>();
+      for (const r of created) byMgr.set(r.managerEmail, [...(byMgr.get(r.managerEmail) ?? []), r]);
+      const note = !x.s.selfAssess || self === "skip" ? "" : self === "now" ? "Your team just got a few short questions to answer first. You'll see their answers when you open each review." : `Your team will get a few short questions ${x.s.selfDaysBefore} days before the due date. You'll see their answers when you open each review.`;
+      for (const [to, rs] of byMgr) if ((await send(x, to, launchEmail(x, rs[0].managerName, rs, note))).ok) managers++;
+    }
+    return json({ ok: true, created: created.length, skipped, selfSent, managers });
+  }
+
+  // HR nudges managers: one email each, listing everything they still owe.
+  if (action === "remindAll") {
+    if (!role.admin) return json({ ok: false, reason: "forbidden" }, 403);
+    const only = Array.isArray(b.ids) ? new Set(b.ids.map(String)) : null;
+    const open = (await allReviews(db, clientId)).filter((r) => r.status === "open" && (!only || only.has(r.id)) && ["not_started", "in_progress", "overdue"].includes(stageOf(r, x.s)));
+    const byMgr = new Map<string, Review[]>();
+    for (const r of open) if (r.managerEmail) byMgr.set(r.managerEmail, [...(byMgr.get(r.managerEmail) ?? []), r]);
+    let sent = 0;
+    for (const [to, rs] of byMgr) {
+      const m = await send(x, to, nudgeEmail(x, rs[0].managerName, rs));
+      if (m.ok) { sent++; for (const r of rs) await putReview(db, log(r, by, `Reminder sent to ${r.managerName}`)); }
+    }
+    return json({ ok: true, managers: sent, reviews: open.length });
   }
 
   if (action === "start") {

@@ -29,6 +29,8 @@ export default function Reviews() {
   const [tab, setTab] = useState<Tab>("reviews");
   const [filter, setFilter] = useState("attention");
   const [picking, setPicking] = useState<null | "adhoc" | "pip">(null);
+  const [launching, setLaunching] = useState(false);
+  const [nudging, setNudging] = useState(false);
 
   const call = useCallback((body: Record<string, unknown>) => performApi(clientId, body, demo), [clientId, demo]);
   const load = useCallback(async () => {
@@ -174,17 +176,34 @@ export default function Reviews() {
           );
         })}
 
+        {data.role.admin && (
+          <div className="pf-launch section">
+            <div className="grow">
+              <b>{lang === "es" ? "Lanzar evaluaciones" : "Launch reviews"}</b>
+              <span className="tiny muted">{lang === "es" ? "Elija a quién, la plantilla y la fecha. Cada evaluación va al gerente de esa persona." : "Pick who, the template and the due date. Each review goes to that person's manager, with reminders built in."}</span>
+            </div>
+            <button className="btn ghost sm" disabled={nudging} onClick={async () => {
+              setNudging(true);
+              const r = await call({ action: "remindAll" });
+              setNudging(false);
+              toast.show(r.ok ? (r.managers ? (lang === "es" ? `Recordatorio enviado a ${r.managers} gerente${r.managers === 1 ? "" : "s"}` : `Reminder sent to ${r.managers} manager${r.managers === 1 ? "" : "s"}`) : lang === "es" ? "Nadie tiene evaluaciones pendientes" : "No one has reviews to finish") : lang === "es" ? "No se pudo enviar" : "Couldn't send. Try again.");
+              if (r.ok) load();
+            }}>{nudging ? "…" : lang === "es" ? "Recordar a los gerentes" : "Remind managers"}</button>
+            <button className="btn primary sm" onClick={() => setLaunching(true)}>{lang === "es" ? "Lanzar evaluaciones" : "Launch reviews"}</button>
+          </div>
+        )}
         <div className="row section" style={{ flexWrap: "wrap", gap: 8 }}>
           <div className="pf-filters grow" role="group" aria-label="Filter">
             {FILTERS.map(([k, label]) => <button key={k} className={filter === k ? "on" : ""} aria-pressed={filter === k} onClick={() => setFilter(k)}>{label}</button>)}
           </div>
-          <button className="btn sm" onClick={() => setPicking("adhoc")}>{lang === "es" ? "+ Nueva evaluación" : "+ Start a review"}</button>
+          <button className="btn sm" onClick={() => setPicking("adhoc")}>{lang === "es" ? "+ Una evaluación" : "+ One review"}</button>
           <button className="btn ghost sm" onClick={() => setPicking("pip")}>{lang === "es" ? "+ Plan de mejora" : "+ Improvement plan"}</button>
         </div>
         <div className="pf-list">{shown.length ? shown.map(card) : <p className="small muted">{lang === "es" ? "Nada aquí por ahora." : "Nothing here right now."}</p>}</div>
 
         {data.insight.length > 0 && <Insight rows={data.insight} lang={lang} />}
         {upcomingList(false)}
+        {launching && <LaunchSheet data={data} lang={lang} call={call} onClose={() => setLaunching(false)} onDone={(m) => { setLaunching(false); toast.show(m); load(); }} onSettings={() => { setLaunching(false); go("settings"); }} />}
         {picking && <PersonPicker people={data.people} lang={lang} pip={picking === "pip"} onClose={() => setPicking(null)} onPick={(id) => { setPicking(null); start(id, picking); }} />}
       </>
     );
@@ -260,6 +279,130 @@ function Insight({ rows, lang }: { rows: ListData["insight"]; lang: Lang }) {
         </table>
       </div>
     </section>
+  );
+}
+
+// ---------- launch a round ----------
+function LaunchSheet({ data, lang, call, onClose, onDone, onSettings }: { data: ListData; lang: Lang; call: (b: Record<string, unknown>) => Promise<Record<string, any>>; onClose: () => void; onDone: (msg: string) => void; onSettings: () => void }) { // eslint-disable-line @typescript-eslint/no-explicit-any
+  const es = lang === "es";
+  const L = (en: string, sp: string) => (es ? sp : en);
+  const s = data.settings;
+  const openIds = new Set(data.reviews.filter((r) => r.status === "open" && r.kind !== "pip").map((r) => r.personId));
+  const why = (p: ListData["people"][number]) => (!p.managerEmail ? L("No manager on the roster", "Sin gerente") : openIds.has(p.id) ? L("Already has a review open", "Ya tiene una evaluación abierta") : "");
+  const eligible = data.people.filter((p) => !why(p));
+  const [q, setQ] = useState("");
+  const [group, setGroup] = useState("");
+  const [picked, setPicked] = useState<Set<string>>(() => new Set(eligible.map((p) => p.id)));
+  const reviewTemplates = templatesFor(s).filter((x) => x.kind === "review" && x.on);
+  const [template, setTemplate] = useState(s.template);
+  const in30 = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
+  const [due, setDue] = useState(in30);
+  const [self, setSelf] = useState<"before" | "now" | "skip">("before");
+  const [notify, setNotify] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<null | { created: number; managers: number; selfSent: number; skipped: { name: string; why: string }[] }>(null);
+  const depts = [...new Set(data.people.map((p) => p.department).filter(Boolean))] as string[];
+  const mgrs = [...new Set(data.people.map((p) => p.managerName).filter(Boolean))].sort();
+  const shown = data.people.filter((p) => (!q || `${p.name} ${p.title}`.toLowerCase().includes(q.toLowerCase())) && (!group || p.department === group || p.managerName === group));
+  const shownOk = shown.filter((p) => !why(p));
+  const allOn = shownOk.length > 0 && shownOk.every((p) => picked.has(p.id));
+  const toggle = (id: string) => setPicked((cur) => { const n = new Set(cur); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const setAll = (on: boolean) => setPicked((cur) => { const n = new Set(cur); for (const p of shownOk) { if (on) n.add(p.id); else n.delete(p.id); } return n; });
+  const count = [...picked].filter((id) => eligible.some((p) => p.id === id)).length;
+  const managersCount = new Set(eligible.filter((p) => picked.has(p.id)).map((p) => p.managerEmail)).size;
+  const remindText = (() => {
+    const before = s.remind.filter((d) => d > 0).sort((a, b) => b - a);
+    const parts = [before.length ? L(`${before.join(", ")} days before`, `${before.join(", ")} días antes`) : "", s.remind.includes(0) ? L("on the due date", "el día que vence") : "", s.overdueWeekly ? L("then weekly if late", "y cada semana si se atrasa") : ""].filter(Boolean);
+    return parts.length ? parts.join(", ") : L("no automatic reminders", "sin recordatorios automáticos");
+  })();
+
+  if (result) return (
+    <Sheet title={L("Reviews launched", "Evaluaciones lanzadas")} onClose={() => onDone(L(`Launched ${result.created} reviews`, `${result.created} evaluaciones lanzadas`))}>
+      <p className="small" style={{ marginTop: 0 }}><b>{result.created}</b> {L(`review${result.created === 1 ? "" : "s"} open, due ${fmtDay(due, "en")}.`, `evaluaciones abiertas, para el ${fmtDay(due, "es")}.`)}</p>
+      <ul className="small pf-launch-done">
+        {notify && <li>{L(`${result.managers} manager${result.managers === 1 ? "" : "s"} emailed with their list.`, `Correo a ${result.managers} gerentes con su lista.`)}</li>}
+        {self === "now" && <li>{L(`${result.selfSent} self-assessment${result.selfSent === 1 ? "" : "s"} sent.`, `${result.selfSent} autoevaluaciones enviadas.`)}</li>}
+        {self === "before" && s.selfAssess && <li>{L(`Self-assessments go out ${s.selfDaysBefore} days before the due date.`, `Las autoevaluaciones salen ${s.selfDaysBefore} días antes.`)}</li>}
+        <li>{L(`Managers get reminders ${remindText}.`, `Los gerentes reciben recordatorios ${remindText}.`)}</li>
+      </ul>
+      {result.skipped.length > 0 && (
+        <div className="pf-launch-skip">
+          <b className="small">{L("Skipped", "Omitidos")}</b>
+          {result.skipped.map((x) => <div key={x.name} className="tiny muted">{x.name}: {x.why}</div>)}
+        </div>
+      )}
+      <button className="btn primary block" style={{ marginTop: 14 }} onClick={() => onDone(L(`Launched ${result.created} reviews`, `${result.created} evaluaciones lanzadas`))}>{L("Done", "Listo")}</button>
+    </Sheet>
+  );
+
+  return (
+    <Sheet title={L("Launch reviews", "Lanzar evaluaciones")} onClose={onClose}>
+      <span className="flabel">{L("Who", "Quiénes")}</span>
+      <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+        <input className="f grow" placeholder={L("Search by name or title", "Buscar por nombre o puesto")} value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search" style={{ minWidth: 160 }} />
+        {(depts.length > 0 || mgrs.length > 0) && (
+          <select className="f" value={group} onChange={(e) => setGroup(e.target.value)} aria-label={L("Filter", "Filtrar")} style={{ width: "auto" }}>
+            <option value="">{L("Everyone", "Todos")}</option>
+            {depts.length > 0 && <optgroup label={L("Department", "Departamento")}>{depts.map((d) => <option key={d} value={d}>{d}</option>)}</optgroup>}
+            <optgroup label={L("Manager", "Gerente")}>{mgrs.map((m) => <option key={m} value={m}>{L(`${m}'s team`, `Equipo de ${m}`)}</option>)}</optgroup>
+          </select>
+        )}
+      </div>
+      <div className="pf-launch-list">
+        <label className="pf-launch-row all">
+          <input type="checkbox" checked={allOn} onChange={(e) => setAll(e.target.checked)} />
+          <b className="small">{L(`Select all${q || group ? " shown" : ""} (${shownOk.length})`, `Seleccionar todos (${shownOk.length})`)}</b>
+        </label>
+        {shown.map((p) => {
+          const w = why(p);
+          return (
+            <label key={p.id} className={`pf-launch-row ${w ? "off" : ""}`}>
+              <input type="checkbox" disabled={!!w} checked={!w && picked.has(p.id)} onChange={() => toggle(p.id)} />
+              <span className="grow" style={{ minWidth: 0 }}>
+                <b className="small">{p.name}</b>
+                <span className="tiny muted">{[p.title, p.managerName && L(`Manager: ${p.managerName}`, `Gerente: ${p.managerName}`)].filter(Boolean).join(" · ")}</span>
+              </span>
+              {w ? <span className="tiny muted">{w}</span> : !p.hasEmail && s.selfAssess && self !== "skip" ? <span className="tiny muted">{L("No email for self-assessment", "Sin correo")}</span> : null}
+            </label>
+          );
+        })}
+      </div>
+
+      <div className="pf-launch-grid section">
+        <label className="f">{L("Template", "Plantilla")}
+          <select className="f" value={template} onChange={(e) => setTemplate(e.target.value)}>
+            {reviewTemplates.map((x) => <option key={x.id} value={x.id}>{x.name}{x.minutes ? ` (about ${x.minutes} min)` : ""}</option>)}
+          </select>
+        </label>
+        <label className="f">{L("Due", "Vence")}
+          <input className="f" type="date" value={due} min={new Date(Date.now() + 864e5).toISOString().slice(0, 10)} onChange={(e) => setDue(e.target.value)} />
+        </label>
+      </div>
+
+      {s.selfAssess ? (
+        <div className="section">
+          <span className="flabel">{L("Employee self-assessment", "Autoevaluación del empleado")}</span>
+          <div className="pf-filters" role="group">
+            {([["before", L(`${s.selfDaysBefore} days before due`, `${s.selfDaysBefore} días antes`)], ["now", L("Send now", "Enviar ahora")], ["skip", L("Skip", "Omitir")]] as const).map(([k, lb]) => <button key={k} className={self === k ? "on" : ""} aria-pressed={self === k} onClick={() => setSelf(k)}>{lb}</button>)}
+          </div>
+          <p className="tiny muted" style={{ margin: "6px 0 0" }}>{L("Four short questions by email, in English or Spanish. Only the manager and HR see the answers.", "Cuatro preguntas cortas por correo, en inglés o español. Solo el gerente y RR. HH. ven las respuestas.")}</p>
+        </div>
+      ) : <p className="tiny muted section">{L("Self-assessments are off.", "Las autoevaluaciones están apagadas.")} <button className="linklike tiny" onClick={onSettings}>{L("Change in Settings", "Cambiar en Ajustes")}</button></p>}
+
+      <label className="row section" style={{ gap: 10, alignItems: "flex-start" }}>
+        <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} style={{ marginTop: 3 }} />
+        <span className="small" style={{ flex: 1, textAlign: "left" }}>{L(`Email each manager their list now${managersCount ? ` (${managersCount} manager${managersCount === 1 ? "" : "s"})` : ""}`, `Enviar a cada gerente su lista ahora${managersCount ? ` (${managersCount})` : ""}`)}</span>
+      </label>
+      <p className="tiny muted" style={{ margin: "8px 0 0" }}>{L(`Reminders: managers hear from us ${remindText}. HR gets a copy when one is late.`, `Recordatorios: ${remindText}. RR. HH. recibe copia si se atrasa.`)} <button className="linklike tiny" onClick={onSettings}>{L("Change", "Cambiar")}</button></p>
+
+      <button className="btn primary block" style={{ marginTop: 16 }} disabled={busy || !count} onClick={async () => {
+        setBusy(true);
+        const r = await call({ action: "launch", personIds: [...picked], template, due, self, notify });
+        setBusy(false);
+        if (r.ok) setResult({ created: r.created, managers: r.managers, selfSent: r.selfSent, skipped: r.skipped ?? [] });
+        else onDone(L("Couldn't launch. Try again.", "No se pudo lanzar."));
+      }}>{busy ? L("Launching…", "Lanzando…") : count ? L(`Launch ${count} review${count === 1 ? "" : "s"}`, `Lanzar ${count} evaluaciones`) : L("Pick at least one person", "Elija al menos una persona")}</button>
+    </Sheet>
   );
 }
 

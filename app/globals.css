@@ -2344,3 +2344,18 @@ h2.pf-h, .pf-h { text-transform: none; letter-spacing: 0; color: var(--ink, #192
 @media (min-width: 900px) { .subnav a { padding: 11px 12px; } }
 /* Client portal pages get more room on laptops and desktops */
 @media (min-width: 900px) { .subnav ~ .wrap:not(.wide) { max-width: 920px; } }
+/* Launch reviews */
+.pf-launch { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+.pf-launch .grow { display: flex; flex-direction: column; gap: 2px; flex: 1 1 260px; }
+.pf-launch-list { margin-top: 10px; max-height: 320px; overflow-y: auto; border: 1px solid var(--line); border-radius: 12px; }
+.pf-launch-row { display: flex; gap: 10px; align-items: center; padding: 9px 12px; border-top: 1px solid var(--line); cursor: pointer; }
+.pf-launch-row:first-child { border-top: 0; }
+.pf-launch-row.all { background: color-mix(in srgb, var(--accent) 6%, transparent); position: sticky; top: 0; z-index: 1; }
+.pf-launch-row.off { opacity: .55; cursor: default; }
+.pf-launch-row .grow { display: flex; flex-direction: column; flex: 1 1 auto; }
+.pf-launch-row input { width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+.pf-launch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.pf-launch-grid label { margin: 0; }
+.pf-launch-done { padding-left: 18px; margin: 6px 0 0; line-height: 1.6; }
+.pf-launch-skip { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--muted) 8%, transparent); }
+@media (max-width: 560px) { .pf-launch-grid { grid-template-columns: 1fr; } }

@@ -155,6 +155,32 @@ export async function performApi(clientId: string, body: Res, demo?: Demo): Prom
     const pipFlags = role.admin ? [...new Set(all.map((r) => r.personId))].filter((pid) => { const n = negativeReviews(all, pid); return n.length >= s.pipAfter && !all.some((r) => r.personId === pid && r.kind === "pip" && r.status !== "cancelled" && r.createdAt > n[0].createdAt); }) : [];
     return { ok: true, role, settings: s, reviews, upcoming, people: visiblePeople.map((p) => ({ id: p.id, name: p.name, title: p.title, managerName: p.managerName, managerEmail: p.managerEmail?.toLowerCase(), hireDate: p.hireDate, department: p.department, hasEmail: !!p.email })), insight: byMgr, pipFlags, users: [] };
   }
+  if (a === "launch") {
+    if (!role.admin) return { ok: false, reason: "forbidden" };
+    const ids = new Set((body.personIds as string[]) ?? []);
+    const due = /^\d{4}-\d{2}-\d{2}$/.test(String(body.due ?? "")) ? String(body.due) : addDays(today, 30);
+    const t = templateById(s, String(body.template ?? "") || s.template);
+    let created = 0, selfSent = 0;
+    const skipped: { name: string; why: string }[] = [];
+    const mgrs = new Set<string>();
+    for (const p of people) {
+      if (!ids.has(p.id)) continue;
+      if (!p.managerEmail) { skipped.push({ name: p.name, why: "no manager on the roster" }); continue; }
+      if (all.some((r) => r.personId === p.id && r.status === "open" && r.kind !== "pip")) { skipped.push({ name: p.name, why: "already has a review open" }); continue; }
+      let r = newReview({ ...p, active: true }, clientId, { kind: "cycle", due, periodStart: p.hireDate && p.hireDate > addDays(due, -365) ? p.hireDate : addDays(due, -365), periodEnd: due }, t, demo.me.name);
+      r = log({ ...r, ...(body.self === "skip" ? { noSelf: true } : {}), ...(body.self === "now" ? { self: { token: newToken(), sentAt: new Date().toISOString(), lang: r.lang } } : {}) }, "Launched by HR");
+      if (body.self === "now") selfSent++;
+      save(r);
+      all.push(r);
+      created++;
+      mgrs.add(r.managerEmail);
+    }
+    return { ok: true, created, skipped, selfSent, managers: body.notify === false ? 0 : mgrs.size, demo: true };
+  }
+  if (a === "remindAll") {
+    const open = all.filter((r) => r.status === "open" && ["not_started", "in_progress", "overdue"].includes(stageOf(r, s)));
+    return { ok: true, managers: new Set(open.map((r) => r.managerEmail)).size, reviews: open.length, demo: true };
+  }
   if (a === "start") {
     const p = people.find((q) => q.id === body.personId);
     if (!p) return { ok: false, reason: "not_found" };

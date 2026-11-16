@@ -244,6 +244,8 @@ export interface Review {
   goalUpdates: Record<string, { status: GoalStatus; note?: string }>; // progress on last review's goals
   lang: Lang; // the language the employee reads it in
   translated?: { lang: Lang; src?: string; written: Record<string, string>; goals: { id: string; text: string; measure?: string }[]; pip?: { issues: PipIssue[]; outcome: string } };
+  /** HR chose to skip the employee's self-assessment for this one */
+  noSelf?: boolean;
   self?: { token: string; sentAt?: string; doneAt?: string; answers?: { q: string; a: string }[]; lang?: Lang };
   share?: { token?: string; how: "link" | "person"; at: string; viewedAt?: string; ackAt?: string; comment?: string; deliveredAt?: string };
   pip?: Pip;

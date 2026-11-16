@@ -188,6 +188,34 @@ export function managerEmail(x: Ctx, r: Review, days: number, lang: Lang = "en")
   return { subject, ...mail(x.brand, subject, body, { label: es ? "Abrir la evaluación" : "Open the review", url }) };
 }
 
+const names = (xs: string[]) => (xs.length <= 1 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`);
+const md = (d: string) => new Date(d + "T12:00").toLocaleDateString("en-US", { month: "long", day: "numeric" });
+
+/** To a manager when HR launches reviews: who, when, and that it's quick. */
+export function launchEmail(x: Ctx, managerName: string, rs: Review[], selfNote: string) {
+  const n = rs.length;
+  const due = rs.map((r) => r.due).sort()[0];
+  const subject = n === 1 ? `Time for ${first(rs[0].name)}'s review (due ${md(due)})` : `Time for ${n} reviews on your team (due ${md(due)})`;
+  const body = [
+    `Hi ${first(managerName)}, reviews are open for ${names(rs.map((r) => r.name))}. Please have ${n === 1 ? "it" : "them"} done by ${md(due)}.`,
+    `Each one takes about ${rs[0].template.minutes} minutes, on your phone or computer, and saves as you go. You can rate, add a few words, and set goals. We'll help you put it into words if you want.`,
+    ...(selfNote ? [selfNote] : []),
+  ];
+  return { subject, ...mail(x.brand, subject, body, { label: n === 1 ? "Open the review" : "Open your reviews", url: n === 1 ? `${PORTAL_URL}/c/${x.clientId}/reviews/${rs[0].id}` : `${PORTAL_URL}/c/${x.clientId}/reviews` }) };
+}
+
+/** A one-email nudge listing everything a manager still owes. */
+export function nudgeEmail(x: Ctx, managerName: string, rs: Review[]) {
+  const today = iso(new Date());
+  const late = rs.filter((r) => r.due < today);
+  const subject = late.length ? `Reminder: ${late.length} review${late.length === 1 ? " is" : "s are"} past due` : `Reminder: ${rs.length} review${rs.length === 1 ? "" : "s"} to finish`;
+  const body = [
+    `Hi ${first(managerName)}, a quick reminder from HR. Still to finish: ${names(rs.map((r) => `${r.name} (${r.due < today ? "past due" : `due ${md(r.due)}`})`))}.`,
+    `Each takes about ${rs[0].template.minutes} minutes and picks up where you left off.`,
+  ];
+  return { subject, ...mail(x.brand, subject, body, { label: "Open your reviews", url: `${PORTAL_URL}/c/${x.clientId}/reviews` }) };
+}
+
 export function selfEmail(x: Ctx, r: Review, token: string, lang: Lang) {
   const es = lang === "es";
   const f = first(r.name);

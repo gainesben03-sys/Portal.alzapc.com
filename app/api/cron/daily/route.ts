@@ -766,7 +766,7 @@ export async function GET(req: Request) {
         if (r.status === "open") {
           const d = daysUntil(r.due, pd);
           // the employee's self-assessment, ahead of the manager's review
-          if (x.s.selfAssess && r.kind !== "pip" && !r.self?.sentAt && d <= x.s.selfDaysBefore && d >= 0) {
+          if (x.s.selfAssess && r.kind !== "pip" && !r.noSelf && !r.self?.sentAt && d <= x.s.selfDaysBefore && d >= 0) {
             const p = people.find((q) => q.id === r.personId);
             if (p?.email) await once(`perform-self:${r.id}`, async () => { const o = await sendSelf(x, r, "AlzaHR", p.email); return { ok: o.ok, reason: o.ok ? undefined : o.reason }; });
           }
