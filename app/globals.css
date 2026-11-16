@@ -2339,3 +2339,8 @@ h2.pf-h, .pf-h { text-transform: none; letter-spacing: 0; color: var(--ink, #192
 .tour-pop p { margin: 0; font-size: 15px; line-height: 1.45; color: var(--muted); }
 .tour-count { color: var(--muted); letter-spacing: .04em; }
 .tour-nav { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+/* Client portal menu: room for every tab on a laptop */
+.subnav-inner, .subnav-sub-inner { max-width: 1120px; }
+@media (min-width: 900px) { .subnav a { padding: 11px 12px; } }
+/* Client portal pages get more room on laptops and desktops */
+@media (min-width: 900px) { .subnav ~ .wrap:not(.wide) { max-width: 920px; } }

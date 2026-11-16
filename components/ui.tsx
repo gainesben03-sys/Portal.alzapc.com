@@ -333,7 +333,6 @@ export function ClientNav({ clientId }: { clientId: string }) {
             ]
           : []),
         ...(cfg?.modules.recognition && access !== "hiring" ? [{ href: `${base}/recognition`, label: "Team Wall", match: [`${base}/recognition`] }] : []),
-        ...(cfg?.modules.perform && access !== "hiring" ? [{ href: `${base}/reviews`, label: "Reviews", match: [`${base}/reviews`] }] : []),
         ...(tools ? [{ href: `${base}/hub/library`, label: training ? "Toolkit" : "Learn", match: [`${base}/hub/library`, ...(training ? [] : [`${base}/hub/learn`, `${base}/hub/view`])] }] : []),
       ],
     },
@@ -360,6 +359,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
       subs: [
         ...(mod("hires") ? [{ href: `${base}/hires`, label: "New hires", match: [`${base}/hires`] }] : []),
         ...(mod("recruiting") ? [{ href: `${base}/recruiting`, label: "Recruiting", match: [`${base}/recruiting`] }] : []),
+        ...(cfg?.modules.perform && access !== "hiring" ? [{ href: `${base}/reviews`, label: "Reviews", match: [`${base}/reviews`] }] : []),
         ...(leaveAcc.admin && (cfg?.modules.leave || isAdvisor) ? [{ href: `${base}/leave`, label: "Leave center", match: [`${base}/leave`] }] : []),
         ...((isAdvisor || access === "exec") && (cfg?.modules.offboarding || isAdvisor) ? [{ href: `${base}/offboarding`, label: "Offboarding", match: [`${base}/offboarding`] }] : []),
         ...(canSee(access, "team") ? [{ href: `${base}/team`, label: "Portal access", match: [`${base}/team`] }] : []),
