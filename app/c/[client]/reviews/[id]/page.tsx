@@ -134,7 +134,7 @@ export default function ReviewPage() {
   // ---------- steps ----------
   let body: React.ReactNode = null;
   if (cur === "look") body = <LookBack r={r} g={g} s={s} lang={lang} onPatch={patch} call={call} toast={toast.show} onBuildPip={async () => { const x = await call({ action: "start", personId: r.personId, kind: "pip" }); if (x.ok) window.location.href = `/c/${clientId}/reviews/${x.review.id}`; }} />;
-  if (cur === "rate") body = <Ratings r={r} lang={lang} onPatch={patch} />;
+  if (cur === "rate") body = <Ratings r={r} lang={lang} onPatch={patch} onDone={() => go(step + 1)} />;
   if (cur === "words") body = <Words r={r} s={s} lang={lang} onPatch={patch} call={call} toast={toast.show} />;
   if (cur === "goals") body = <Goals r={r} s={s} lang={lang} onPatch={patch} call={call} toast={toast.show} />;
   if (cur === "concerns") body = <Concerns r={r} lang={lang} onPatch={patch} />;
@@ -210,7 +210,145 @@ function LookBack({ r, g, s, lang, onPatch, call, toast, onBuildPip }: { r: Revi
 }
 
 // ---------- 2. ratings ----------
-function Ratings({ r, lang, onPatch }: { r: Review; lang: Lang; onPatch: (p: Partial<Review>) => void }) {
+/** Ratings: one card at a time by default (rate, it moves on), or everything on one page. */
+function Ratings({ r, lang, onPatch, onDone }: { r: Review; lang: Lang; onPatch: (p: Partial<Review>) => void; onDone: () => void }) {
+  const t = T[lang];
+  const es = lang === "es";
+  const [mode, setModeRaw] = useState<"cards" | "list">(() => {
+    try { return localStorage.getItem("alza-pf-ratemode") === "list" ? "list" : "cards"; } catch { return "cards"; }
+  });
+  const setMode = (m: "cards" | "list") => { setModeRaw(m); try { localStorage.setItem("alza-pf-ratemode", m); } catch {} };
+  return (
+    <>
+      <div className="pf-rate-head">
+        <div>
+          <h2 className="pf-h">{t.rateH(first(r.name))}</h2>
+          <p className="muted pf-p">{mode === "cards" ? (es ? "Una a la vez. Toque una calificación y pasa a la siguiente." : "One at a time. Tap a rating and it moves to the next.") : t.rateP}</p>
+        </div>
+        <div className="pf-filters" role="group" aria-label={es ? "Vista" : "View"}>
+          <button className={mode === "cards" ? "on" : ""} aria-pressed={mode === "cards"} onClick={() => setMode("cards")}>{es ? "Tarjetas" : "Cards"}</button>
+          <button className={mode === "list" ? "on" : ""} aria-pressed={mode === "list"} onClick={() => setMode("list")}>{es ? "Todas" : "All at once"}</button>
+        </div>
+      </div>
+      {mode === "cards" ? <RatingCards r={r} lang={lang} onPatch={onPatch} onDone={onDone} /> : <RatingsList r={r} lang={lang} onPatch={onPatch} />}
+    </>
+  );
+}
+
+function RatingCards({ r, lang, onPatch, onDone }: { r: Review; lang: Lang; onPatch: (p: Partial<Review>) => void; onDone: () => void }) {
+  const t = T[lang];
+  const es = lang === "es";
+  const scale = SCALE[r.template.scale];
+  const avg = average(r);
+  type Item = { id: string; name: string; desc: string; value?: number; overall?: boolean };
+  const items: Item[] = [
+    ...r.template.rate.map((p) => ({ id: p.id, name: p.name[lang], desc: p.desc?.[lang] ?? "", value: r.ratings[p.id] })),
+    { id: "__overall", name: t.overall, desc: t.overallP(avg ? String(avg) : "—"), value: r.overall, overall: true },
+  ];
+  const firstOpen = items.findIndex((x) => !x.value);
+  const [i, setI] = useState(firstOpen < 0 ? items.length : firstOpen);
+  const [dir, setDir] = useState<1 | -1>(1);
+  const [noteOpen, setNoteOpen] = useState<Record<string, boolean>>({});
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touch = useRef<{ x: number; y: number } | null>(null);
+  const go = (n: number) => {
+    if (timer.current) clearTimeout(timer.current);
+    setDir(n > i ? 1 : -1);
+    setI(Math.max(0, Math.min(items.length, n)));
+  };
+  const cur = items[i];
+  const pick = (v: number) => {
+    if (!cur) return;
+    if (cur.overall) onPatch({ overall: v });
+    else onPatch({ ratings: { ...r.ratings, [cur.id]: v } });
+    // move on unless they're writing a note
+    if (noteOpen[cur.id] || r.rateNotes[cur.id]) return;
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => go(i + 1), 420);
+  };
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === "TEXTAREA" || el.tagName === "INPUT")) return;
+      const n = Number(e.key);
+      if (cur && n >= 1 && n <= scale.length) { e.preventDefault(); pick(n); }
+      if (e.key === "ArrowRight") go(i + 1);
+      if (e.key === "ArrowLeft") go(i - 1);
+    };
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  });
+  const rated = items.filter((x) => x.value).length;
+
+  return (
+    <div className="pf-cards">
+      <div className="pf-dots" role="tablist" aria-label={es ? "Áreas" : "Areas"}>
+        {items.map((x, k) => (
+          <button key={x.id} role="tab" aria-selected={k === i} aria-label={`${x.name}${x.value ? `, ${x.value}` : ""}`} className={`${k === i ? "cur" : ""} ${x.value ? "done" : ""}`} onClick={() => go(k)} />
+        ))}
+        <span className="tiny muted">{rated} {es ? "de" : "of"} {items.length}</span>
+      </div>
+
+      {cur ? (
+        <section
+          key={cur.id}
+          className={`card pf-rcard ${dir > 0 ? "in-right" : "in-left"}`}
+          onTouchStart={(e) => { touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }}
+          onTouchEnd={(e) => {
+            const s0 = touch.current;
+            touch.current = null;
+            if (!s0) return;
+            const dx = e.changedTouches[0].clientX - s0.x, dy = e.changedTouches[0].clientY - s0.y;
+            if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) go(dx < 0 ? i + 1 : i - 1);
+          }}
+        >
+          <span className="pf-rcard-n tiny">{cur.overall ? (es ? "Para cerrar" : "To finish") : `${i + 1} / ${items.length - 1}`}</span>
+          <h3>{cur.name}</h3>
+          {cur.desc && <p className="muted">{cur.desc}</p>}
+          <div className={`pf-rlist s${r.template.scale}`} role="radiogroup" aria-label={cur.name}>
+            {scale.map((x, k) => (
+              <button key={k} role="radio" aria-checked={cur.value === k + 1} className={cur.value === k + 1 ? "on" : ""} onClick={() => pick(k + 1)}>
+                <b>{k + 1}</b><span>{x[lang]}</span>
+                <svg className="pf-rcheck" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+              </button>
+            ))}
+          </div>
+          {!cur.overall && (noteOpen[cur.id] || r.rateNotes[cur.id] ? (
+            <textarea className="f" rows={2} autoFocus={!!noteOpen[cur.id] && !r.rateNotes[cur.id]} value={r.rateNotes[cur.id] ?? ""} aria-label={`${cur.name} note`} placeholder={es ? "¿Qué influyó en esta calificación? Un ejemplo ayuda." : "What made you pick this? An example helps."} onChange={(e) => onPatch({ rateNotes: { ...r.rateNotes, [cur.id]: e.target.value } })} style={{ marginTop: 12 }} />
+          ) : (
+            <button className="linklike small" style={{ marginTop: 12 }} onClick={() => setNoteOpen({ ...noteOpen, [cur.id]: true })}>{t.addNote}</button>
+          ))}
+          <div className="pf-rcard-nav">
+            <button className="btn ghost sm" disabled={i === 0} onClick={() => go(i - 1)}>← {es ? "Anterior" : "Previous"}</button>
+            <span className="tiny muted pf-desk-only">{es ? "Atajo: teclas 1 a " : "Tip: press 1 to "}{scale.length}</span>
+            <button className="btn ghost sm" onClick={() => go(i + 1)}>{cur.value ? (es ? "Siguiente" : "Next") : es ? "Omitir" : "Skip"} →</button>
+          </div>
+        </section>
+      ) : (
+        <section key="summary" className="card pf-rcard pf-rsum in-right">
+          <span className="pf-rcard-n tiny">{rated === items.length ? (es ? "Todo calificado" : "All rated") : es ? `Faltan ${items.length - rated}` : `${items.length - rated} left`}</span>
+          <h3>{es ? "Resumen" : "Here's what you picked"}</h3>
+          <div className="pf-rsum-list">
+            {items.map((x, k) => (
+              <button key={x.id} className={`pf-rsum-row ${x.overall ? "overall" : ""}`} onClick={() => go(k)}>
+                <span>{x.name}</span>
+                {x.value ? <b>{x.value} <span className="muted">· {scale[x.value - 1][lang]}</span></b> : <span className="pf-chip gold">{es ? "Sin calificar" : "Not rated"}</span>}
+              </button>
+            ))}
+          </div>
+          <p className="tiny muted" style={{ margin: "10px 0 0" }}>{es ? "Toque cualquiera para cambiarla." : "Tap any of them to change it."}</p>
+          <div className="pf-rcard-nav">
+            <button className="btn ghost sm" onClick={() => go(items.length - 1)}>← {es ? "Anterior" : "Previous"}</button>
+            <button className="btn primary sm" onClick={onDone}>{es ? "Siguiente paso" : "Next step"} →</button>
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function RatingsList({ r, lang, onPatch }: { r: Review; lang: Lang; onPatch: (p: Partial<Review>) => void }) {
   const t = T[lang];
   const scale = SCALE[r.template.scale];
   const [noteOpen, setNoteOpen] = useState<Record<string, boolean>>({});
@@ -226,8 +364,6 @@ function Ratings({ r, lang, onPatch }: { r: Review; lang: Lang; onPatch: (p: Par
   );
   return (
     <>
-      <h2 className="pf-h">{t.rateH(first(r.name))}</h2>
-      <p className="muted pf-p">{t.rateP}</p>
       <ol className="pf-scale-key" aria-hidden="true">{scale.map((x, i) => <li key={i}><b>{i + 1}</b>{x[lang]}</li>)}</ol>
       <section className="card pf-rates-card">
         {r.template.rate.map((p) => {

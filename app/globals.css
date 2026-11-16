@@ -2416,3 +2416,38 @@ h2.pf-h, .pf-h { text-transform: none; letter-spacing: 0; color: var(--ink, #192
 .pf-rate button { justify-content: flex-start; padding-top: 12px; }
 .pf-rate button.on { padding-top: 11px; }
 @media (max-width: 600px) { .pf-rate button { justify-content: center; padding-top: 8px; } .pf-rate button.on { padding-top: 7px; } }
+/* Ratings as cards */
+.pf-rate-head { display: flex; gap: 12px; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; }
+.pf-rate-head .pf-p { margin-bottom: 0; }
+.pf-cards { margin-top: 14px; max-width: 640px; margin-left: auto; margin-right: auto; }
+.pf-dots { display: flex; align-items: center; gap: 6px; margin: 0 0 12px; flex-wrap: wrap; }
+.pf-dots button { width: 26px; height: 6px; border-radius: 4px; border: 0; background: #e2dcd2; cursor: pointer; padding: 0; transition: background .2s, width .2s; }
+.pf-dots button.done { background: color-mix(in srgb, var(--accent) 55%, #e2dcd2); }
+.pf-dots button.cur { background: var(--accent); width: 40px; }
+.pf-dots .tiny { margin-left: auto; }
+.pf-rcard { padding: 22px 24px 18px; border-radius: 18px; box-shadow: 0 8px 28px rgba(25, 40, 60, .08); }
+.pf-rcard h3 { font-size: 24px; margin: 6px 0 4px; letter-spacing: -.01em; }
+.pf-rcard > p { margin: 0 0 16px; }
+.pf-rcard-n { text-transform: uppercase; letter-spacing: .08em; color: var(--accent); font-weight: 700; }
+.pf-rlist { display: flex; flex-direction: column; gap: 8px; }
+.pf-rlist button { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; padding: 12px 14px; border-radius: 12px; border: 1px solid #e2dcd2; background: #fff; font: inherit; color: var(--ink, #19283c); cursor: pointer; transition: border-color .15s, background .15s, transform .1s; }
+.pf-rlist button b { width: 32px; height: 32px; flex: none; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; border: 1.5px solid #d6cfc3; background: #faf8f4; }
+.pf-rlist button span { flex: 1; font-size: 15.5px; font-weight: 500; }
+.pf-rlist .pf-rcheck { opacity: 0; color: var(--accent); transition: opacity .15s; }
+.pf-rlist button:hover { border-color: color-mix(in srgb, var(--accent) 55%, #e2dcd2); background: color-mix(in srgb, var(--accent) 4%, #fff); }
+.pf-rlist button:active { transform: scale(.99); }
+.pf-rlist button.on { border: 2px solid var(--accent); padding: 11px 13px; background: color-mix(in srgb, var(--accent) 9%, #fff); }
+.pf-rlist button.on b { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pf-rlist button.on span { font-weight: 650; }
+.pf-rlist button.on .pf-rcheck { opacity: 1; }
+.pf-rcard-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+.pf-rsum-list { display: flex; flex-direction: column; margin-top: 8px; }
+.pf-rsum-row { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 11px 2px; border: 0; border-bottom: 1px solid var(--line); background: none; font: inherit; color: inherit; cursor: pointer; text-align: left; }
+.pf-rsum-row:hover span:first-child { text-decoration: underline; }
+.pf-rsum-row.overall { font-weight: 700; border-bottom: 0; }
+@keyframes pfInR { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes pfInL { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+.pf-rcard.in-right { animation: pfInR .28s ease both; }
+.pf-rcard.in-left { animation: pfInL .28s ease both; }
+@media (prefers-reduced-motion: reduce) { .pf-rcard.in-right, .pf-rcard.in-left { animation: none; } }
+@media (max-width: 760px) { .pf-desk-only { display: none; } .pf-rcard { padding: 18px 16px 14px; } .pf-rcard h3 { font-size: 21px; } }
