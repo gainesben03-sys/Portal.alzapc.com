@@ -339,12 +339,15 @@ export function ClientNav({ clientId }: { clientId: string }) {
     {
       key: "training",
       label: "Training",
-      subs: training
-        ? [
-            { href: `${base}/training`, label: "Trainings", match: [`${base}/hub/learn`, `${base}/hub/view`] },
-            ...(isAdvisor || access === "exec" ? [{ href: `${base}/training/progress`, label: "Who's practiced", match: [`${base}/training/progress`] }] : []),
-          ]
-        : [],
+      subs: [
+        ...(training
+          ? [
+              { href: `${base}/training`, label: "Trainings", match: [`${base}/hub/learn`, `${base}/hub/view`] },
+              ...(isAdvisor || access === "exec" ? [{ href: `${base}/training/progress`, label: "Who's practiced", match: [`${base}/training/progress`] }] : []),
+            ]
+          : []),
+        ...(cfg?.modules.compliance && access !== "hiring" && (isAdvisor || access === "exec" || access === "manager") ? [{ href: `${base}/training/required`, label: "Required training", match: [`${base}/training/required`] }] : []),
+      ],
     },
     {
       key: "todo",

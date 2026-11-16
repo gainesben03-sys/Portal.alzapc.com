@@ -1,5 +1,6 @@
 "use client";
 
+import { complianceFor } from "@/lib/compliance";
 import { MAIL_APPS } from "@/lib/mailapp";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -88,6 +89,7 @@ const ICON: Record<string, string> = {
   board: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
   askHr: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01",
   softAsks: "M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4",
+  compliance: "M12 3l8 4v5c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V7zM9 12l2 2 4-4",
   perform: "M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 14l2 2 4-4",
   tracker: "M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11",
 };
@@ -217,6 +219,9 @@ export default function ClientSetup() {
                 actions={[{ label: "Handbook and policies", onClick: () => setTab("docs") }]} />
               <FeatureCard k="training" title="Training" blurb={blurb("training")} on={mod("training")} onToggle={toggle("training")}
                 actions={[{ label: "Library", href: "/console/library" }]} />
+              <FeatureCard k="compliance" title="Required training" blurb="California harassment prevention (the state's free course) and workplace violence prevention, plus any course they add. Assigns it, collects certificates, keeps the record, reminds people." on={mod("compliance")} onToggle={toggle("compliance")}
+                status={[(() => { const c = complianceFor(cfg.compliance); const on = c.courses.filter((x) => x.on).map((x) => x.name); return on.length ? on.join(", ") : "No courses on"; })(), complianceFor(cfg.compliance).live ? "Emails on" : "Not launched yet"]}
+                actions={[{ label: "Courses and settings", href: `/c/${id}/training/required?tab=setup` }, { label: "Open", href: `/c/${id}/training/required` }]} />
             </div>
 
             <h2 className="set-h">HR tools</h2>

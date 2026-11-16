@@ -30,6 +30,8 @@ import { advisorEmails, pushTo } from "@/lib/push";
 import { ListRow, syncReminder } from "@/lib/mylistserver";
 import { Departure, offboardFor, sendOn } from "@/lib/offboard";
 import { offRoster, sendGoodbye } from "@/lib/offboardserver";
+import { hrInbox, lateCopyEmail, loadCtx as loadTraining, reminderEmail as trainingReminder, send as sendTraining, sendAssignments as sendTrainingAssignments, sync as syncTraining } from "@/lib/complianceserver";
+import { daysBetween as trainingDays } from "@/lib/compliance";
 import { DEFAULT_SETTINGS as LEAVE_DEFAULTS, dueItems, Due, fmtDay, LeaveCase, LeaveSettings, OPEN_STATUSES } from "@/lib/leave";
 
 export const dynamic = "force-dynamic";
@@ -790,6 +792,38 @@ export async function GET(req: Request) {
       }
     } catch (e) {
       log.push(`perform ${c.id} failed: ${(e as Error).message}`);
+    }
+  }
+
+  // ---------- 10c. Required training: assign what's due, email new assignments, remind people, copy managers and HR when late
+  for (const c of clientsR.data ?? []) {
+    if (!(c.config as ClientConfig | null)?.modules?.compliance) continue;
+    const x = await loadTraining(db, c.id);
+    if (!x) continue;
+    try {
+      const { records } = await syncTraining(x);
+      if (!x.s.live) continue;
+      const sent = await sendTrainingAssignments(x, records);
+      if (sent) log.push(`training ${c.id}: ${sent} assignment emails`);
+      const td = localTodayISO();
+      const late = new Map<string, typeof records>();
+      for (const r of records) {
+        if (!(r.status === "assigned" || r.status === "sentback") || !r.sentAt) continue;
+        const d = trainingDays(td, r.due);
+        const remind = x.s.remind.includes(d) || d === 0 || (d < 0 && x.s.overdueWeekly && (-d - 1) % 7 === 0);
+        if (remind && r.email) await once(`training:${r.id}:${r.due}:${d}`, () => sendTraining(x, r.email, trainingReminder(x, r, d)));
+        if (d === -1 || (d < 0 && (-d - 1) % 7 === 0)) {
+          if (r.managerEmail) late.set(r.managerEmail, [...(late.get(r.managerEmail) ?? []), r]);
+          for (const a of hrInbox(x)) late.set(`hr:${a}`, [...(late.get(`hr:${a}`) ?? []), r]);
+        }
+      }
+      for (const [k, rs] of late) {
+        const hr = k.startsWith("hr:");
+        const to = hr ? k.slice(3) : k;
+        await once(`training-late:${c.id}:${to}:${td}`, () => sendTraining(x, to, lateCopyEmail(x, hr ? "there" : rs[0].managerName, rs, !hr)));
+      }
+    } catch (e) {
+      log.push(`training ${c.id} failed: ${(e as Error).message}`);
     }
   }
 
