@@ -25,6 +25,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             __html: `try{var t=localStorage.getItem("alza-theme");if(!t){t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}document.documentElement.dataset.theme=t}catch(e){}`,
           }}
         />
+        <script
+          dangerouslySetInnerHTML={{
+            // After a new release, a page left open can ask for the old styles and come up unstyled.
+            // If the styles or code didn't load, reload once to pick up the new version.
+            __html: `(function(){var K="alza-heal",n=Date.now();function again(){try{var l=+sessionStorage.getItem(K)||0;if(n-l<60000)return;sessionStorage.setItem(K,String(n))}catch(e){}location.reload()}function check(){var v=getComputedStyle(document.documentElement).getPropertyValue("--line");if(!v||!v.trim())again()}addEventListener("load",function(){setTimeout(check,300)});addEventListener("error",function(e){var t=e.target;if(t&&(t.tagName==="LINK"||t.tagName==="SCRIPT")&&(t.href||t.src||"").indexOf("/_next/static/")>-1)again()},true);addEventListener("unhandledrejection",function(e){var m=String(e.reason&&(e.reason.name||e.reason.message)||"");if(/ChunkLoadError|Loading (CSS )?chunk/i.test(m))again()})})();`,
+          }}
+        />
       </head>
       <body>
         <StoreProvider>
