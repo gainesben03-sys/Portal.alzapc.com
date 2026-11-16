@@ -99,6 +99,13 @@ export interface Project {
   createdBy?: Person; // set when someone at the client started it (not Ben)
 }
 
+/** Managers only see Projects when something there is theirs to do. Executives and Ben always see it. */
+export function ownsOpenWork(actions: { clientId: string; side: string; status: string; owner: { name: string } }[], clientId: string, name?: string | null): boolean {
+  if (!name) return false;
+  const n = name.trim().toLowerCase();
+  return actions.some((a) => a.clientId === clientId && a.side === "client" && a.status !== "completed" && a.owner.name.trim().toLowerCase() === n);
+}
+
 export function projectProgress(p: Project): number {
   if (p.status === "done") return 100;
   if (!p.steps.length) return 0;

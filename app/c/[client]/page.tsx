@@ -14,7 +14,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { ClientNav, ClientTopbar, Sheet, Toast, UrgencyPill, useGuard, useToast } from "@/components/ui";
-import { ADVISOR, fmt, fmtTime, parseDay, projectProgress, today, urgency } from "@/lib/data";
+import { ADVISOR, fmt, fmtTime, ownsOpenWork, parseDay, projectProgress, today, urgency } from "@/lib/data";
 import { canSee, daysSince, DEFAULT_TILES, Note, TILES } from "@/lib/modules";
 import { notifyBen, useStore } from "@/lib/store";
 import { AskBenSheet } from "@/components/askben";
@@ -77,7 +77,7 @@ export default function Home() {
   const isAdvisor = viewer?.kind === "advisor";
   const meName = viewer?.kind === "client" ? viewer.person.name : null;
   const layoutKey = me ? `${client.id}:${me.email}` : "";
-  const available = TILES.filter((t) => (!t.module || cfg?.modules[t.module]) && (t.id !== "huddle" || !!me) && (t.id !== "leave" || leaveAcc.admin) && (t.id !== "reviews" || isAdvisor || me?.access === "exec") && (t.id !== "compliance" || isAdvisor || me?.access === "exec") && (t.module ? canSee(me?.access, t.module) : true));
+  const available = TILES.filter((t) => (!t.module || cfg?.modules[t.module]) && (t.id !== "huddle" || !!me) && (t.id !== "leave" || leaveAcc.admin) && (t.id !== "projects" || me?.access !== "manager" || ownsOpenWork(actions, client.id, me?.name)) && (t.module ? canSee(me?.access, t.module) : true));
   const defaults = withNewTiles(cfg?.tiles ?? DEFAULT_TILES).filter((id) => available.some((t) => t.id === id));
   const order = (layoutKey && layouts[layoutKey] && withNewTiles(layouts[layoutKey])) || defaults;
   const shown = order.filter((id) => available.some((t) => t.id === id));
@@ -141,6 +141,7 @@ export default function Home() {
       </Tile>
     ),
     projects: () => {
+      if (me?.access === "manager") return tiles.tasks(); // managers see the project tasks that are theirs, not the whole roadmap
       const act = projects.filter((p) => p.clientId === client.id && p.status === "active").sort((a, b) => a.milestoneDue.localeCompare(b.milestoneDue));
       const next = projects.filter((p) => p.clientId === client.id && p.status === "planned").length;
       return (
@@ -653,7 +654,8 @@ function ReviewsTile({ clientId }: { clientId: string }) {
 /** Required training at a glance: how many are current, late, or waiting on HR. */
 function TrainingTile({ clientId }: { clientId: string }) {
   const { people, viewer, me } = useStore();
-  const demo = { people, me: { email: viewer?.kind === "client" ? (me?.email ?? "") : "ben@alzapc.com", admin: true } };
+  const admin = viewer?.kind !== "client" || me?.access === "exec";
+  const demo = { people, me: { email: viewer?.kind === "client" ? (me?.email ?? "") : "ben@alzapc.com", admin } };
   const [d, setD] = useState<TrainingList | null>(null);
   useEffect(() => {
     trainingApi(clientId, { action: "list" }, demo).then((r) => r.ok && setD(r as TrainingList)).catch(() => undefined);
@@ -670,14 +672,14 @@ function TrainingTile({ clientId }: { clientId: string }) {
   const checking = st.filter((x) => x === "checking").length;
   const soon = st.filter((x) => x === "due_soon").length;
   return (
-    <Tile title="Required training" count={late || undefined} href={base} linkLabel="Open">
+    <Tile title={admin ? "Required training" : "Your team's training"} count={late || undefined} href={base} linkLabel="Open">
       <div className="row" style={{ alignItems: "baseline", gap: 8 }}><span className="tr-pct">{pct}%</span><span className="small muted">current</span></div>
       <span className="pf-bar" style={{ width: "100%", margin: "8px 0 4px" }}><span style={{ width: `${pct}%` }} /></span>
       {late > 0 && <Link href={base} className="lv-line"><span className="grow"><b>{late}</b> <span className="muted">late</span></span><span className="pill overdue">Late</span></Link>}
-      {checking > 0 && <Link href={`${base}?tab=certificates`} className="lv-line"><span className="grow"><b>{checking}</b> <span className="muted">certificate{checking === 1 ? "" : "s"} to check</span></span><span className="pill overdue">Act</span></Link>}
+      {admin && checking > 0 && <Link href={`${base}?tab=certificates`} className="lv-line"><span className="grow"><b>{checking}</b> <span className="muted">certificate{checking === 1 ? "" : "s"} to check</span></span><span className="pill overdue">Act</span></Link>}
       {soon > 0 && <Link href={base} className="lv-line"><span className="grow"><b>{soon}</b> <span className="muted">due in the next 60 days</span></span></Link>}
-      {!late && !checking && !soon && <p className="small muted" style={{ margin: "6px 0 0" }}>Everyone is current. Nothing due soon.</p>}
-      {!d.settings.live && <p className="tiny muted" style={{ margin: "6px 0 0" }}>Not launched yet. Nothing has been emailed.</p>}
+      {!late && !(admin && checking) && !soon && <p className="small muted" style={{ margin: "6px 0 0" }}>Everyone is current. Nothing due soon.</p>}
+      {admin && !d.settings.live && <p className="tiny muted" style={{ margin: "6px 0 0" }}>Not launched yet. Nothing has been emailed.</p>}
     </Tile>
   );
 }

@@ -63,7 +63,7 @@ export function Greeting({ clientId, onCustomize }: { clientId: string; onCustom
     const myRoles = roles.filter((r) => r.clientId === clientId).map((r) => r.id);
     const waiting = candidates.filter((c) => myRoles.includes(c.roleId) && !c.hidden && !c.cleared && !c.decision).length;
     if (waiting) out.push({ text: `${waiting} candidate${waiting === 1 ? "" : "s"} waiting on a yes or no`, href: `${base}/recruiting`, tone: "warn" });
-    const due = projects.filter((p) => p.clientId === clientId && p.status === "active" && p.milestoneDue >= today && p.milestoneDue <= week).length;
+    const due = me?.access === "manager" ? 0 : projects.filter((p) => p.clientId === clientId && p.status === "active" && p.milestoneDue >= today && p.milestoneDue <= week).length;
     if (due) out.push({ text: `${due} project milestone${due === 1 ? "" : "s"} this week`, href: `${base}/projects`, tone: "info" });
     return out;
   }, [now, hires, candidates, roles, projects, clientId, base]);

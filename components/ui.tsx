@@ -6,7 +6,7 @@ import { useLeaveAccess } from "@/lib/leaveclient";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ReactNode, useEffect, useState } from "react";
-import { Action, Client, dueLabel, reminderStage, subtaskProgress, urgency, Urgency } from "@/lib/data";
+import { Action, Client, dueLabel, ownsOpenWork, reminderStage, subtaskProgress, urgency, Urgency } from "@/lib/data";
 import { useStore } from "@/lib/store";
 import { usePathname } from "next/navigation";
 import { canSee, ModuleKey } from "@/lib/modules";
@@ -300,7 +300,7 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
  * but only what a busy executive uses is in front of them.
  */
 export function ClientNav({ clientId }: { clientId: string }) {
-  const { config, notes, viewer, me, people } = useStore();
+  const { config, notes, viewer, me, people, actions } = useStore();
   const path = usePathname();
   const cfg = config[clientId];
   const base = `/c/${clientId}`;
@@ -352,7 +352,8 @@ export function ClientNav({ clientId }: { clientId: string }) {
     {
       key: "todo",
       label: "Action Center",
-      subs: access === "hiring" ? [] : [
+      // managers get Projects only when a task there is theirs
+      subs: access === "hiring" || (access === "manager" && !ownsOpenWork(actions, clientId, me?.name)) ? [] : [
         { href: `${base}/projects`, label: "Projects", match: [`${base}/projects`, `${base}/tasks`, `${base}/a/`] },
       ],
     },
