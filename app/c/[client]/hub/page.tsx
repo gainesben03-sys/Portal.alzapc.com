@@ -10,7 +10,6 @@ import { dueLabel, urgency } from "@/lib/data";
 import { HubItem, TeamLog, TeamMember, weekItems } from "@/lib/team";
 import { KIND_LABEL, loadNewsletters, monthLabel, Newsletter } from "@/lib/newsletters";
 import { hasPractice } from "@/lib/practice";
-import { AskBox } from "@/components/askbox";
 import { useDemo } from "@/components/perform";
 import { performApi, type ListData } from "@/lib/performclient";
 import { performFor, stageOf } from "@/lib/perform";
@@ -119,7 +118,6 @@ export default function HubHome() {
               {items.length > shown.length || showAll ? (items.length > Math.max(3, 5 - reviewItems.length) && <button className="linklike tiny" style={{ marginTop: 6 }} onClick={() => setShowAll(!showAll)}>{showAll ? "Show fewer" : `Show all ${total}`}</button>) : null}
             </div>
 
-            <AskBox clientId={clientId} slim />
             {(() => {
               // new hires on this manager's team, through day 90, with their plan
               const today = new Date().toISOString().slice(0, 10);

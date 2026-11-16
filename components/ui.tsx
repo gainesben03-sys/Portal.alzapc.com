@@ -310,7 +310,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
   const leaveAcc = useLeaveAccess(clientId);
 
   type Sub = { href: string; label: string; match: string[]; badge?: number };
-  // Manager Hub: anyone with people reporting to them on the roster; Ask HR and Learn also for executives
+  // Manager Hub: anyone with people reporting to them on the roster; Learn also for executives. Ask HR lives under Resource Center.
   const leads = people.some((p) => p.clientId === clientId && p.active && (isAdvisor || (!!me?.email && p.managerEmail.toLowerCase() === me.email.toLowerCase())));
   const tools = leads || isAdvisor || access === "exec";
   const training = !!cfg?.modules.training && access !== "hiring";
@@ -329,7 +329,6 @@ export function ClientNav({ clientId }: { clientId: string }) {
               { href: `${base}/hub/team`, label: "People", match: [`${base}/hub/team`, `${base}/hub/p/`] },
             ]
           : []),
-        ...(tools && cfg?.askHr !== false ? [{ href: `${base}/hub/ask`, label: "Ask HR", match: [`${base}/hub/ask`] }] : []),
         ...(cfg?.modules.recognition && access !== "hiring" ? [{ href: `${base}/recognition`, label: "Team Wall", match: [`${base}/recognition`] }] : []),
         ...(cfg?.modules.perform && access !== "hiring" ? [{ href: `${base}/reviews`, label: "Reviews", match: [`${base}/reviews`] }] : []),
         ...(tools ? [{ href: `${base}/hub/library`, label: training ? "Toolkit" : "Learn", match: [`${base}/hub/library`, ...(training ? [] : [`${base}/hub/learn`, `${base}/hub/view`])] }] : []),
@@ -368,6 +367,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
       label: "Resource Center",
       subs: [
         ...(mod("resources") ? [{ href: `${base}/resources`, label: "Resources", match: [`${base}/resources`] }] : []),
+        ...(tools && cfg?.askHr !== false ? [{ href: `${base}/hub/ask`, label: "Ask HR", match: [`${base}/hub/ask`] }] : []),
         ...(access !== "hiring" ? [{ href: `${base}/newsletters`, label: "Newsletters", match: [`${base}/newsletters`] }] : []),
         ...(mod("wellness") ? [{ href: `${base}/wellness`, label: "Wellness", match: [`${base}/wellness`] }] : []),
         ...(access !== "hiring" ? [{ href: `${base}/share`, label: "Send files", match: [`${base}/share`] }] : []),
