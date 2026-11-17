@@ -2,6 +2,8 @@
 
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { demoState } from "@/lib/state";
+import { LIVE } from "@/lib/supabase";
 import { canRecord, clearLocal, loadLocal, mediaError, openStream, PitchKind, Recording, saveLocal, startRecording, stopStream, upload } from "@/lib/recorder";
 
 type Info = {
@@ -13,6 +15,7 @@ type Info = {
   role: { title: string; location?: string; type?: string; dept?: string };
   intro: string;
   prompts: string[];
+  questions?: { id: string; text: string; kind: "short" | "long" | "yesno" | "choice"; options?: string[]; required: boolean }[];
   maxSeconds: number;
   allowUpload: boolean;
   allowAudio: boolean;
@@ -22,7 +25,7 @@ type Info = {
   limits: { uploadMB: number; resumeMB: number };
 };
 type Mode = "video" | "upload" | "audio" | "written";
-type Step = "intro" | "details" | "record" | "send" | "done";
+type Step = "intro" | "details" | "questions" | "record" | "send" | "done";
 
 const REASONS: Record<string, string> = {
   name: "Add your full name.",
@@ -38,7 +41,28 @@ const REASONS: Record<string, string> = {
   resume: "Please attach your resume.",
   resume_type: "Attach your resume as a PDF or Word file.",
   text: "Write at least a couple of sentences.",
+  answers: "Please answer the required questions.",
 };
+
+/** Public demo: build the page from the roles in this browser, so Preview works without a server. */
+function demoInfo(slug: string): Info | null {
+  let st = demoState();
+  try {
+    const raw = Object.keys(localStorage).filter((k) => k.startsWith("alza-portal-demo")).sort().pop();
+    if (raw) st = { ...st, ...JSON.parse(localStorage.getItem(raw) || "{}").state };
+  } catch {}
+  const role = st.roles.find((r) => r.pitch?.slug === slug);
+  const p = role?.pitch;
+  if (!role || !p) return null;
+  const client = st.clients.find((c) => c.id === role.clientId);
+  return {
+    ok: true, open: p.open, company: client?.name ?? "", accent: "#19283c", logo: null,
+    role: { title: role.title, location: role.location, type: role.type, dept: role.dept },
+    intro: p.intro, prompts: p.prompts, maxSeconds: p.maxSeconds, allowUpload: p.allowUpload, allowAudio: false, allowWritten: false, askResume: true, askLinkedin: p.askLinkedin,
+    questions: (p.questions ?? []).map(({ id, text, kind, options, required }) => ({ id, text, kind, options, required })),
+    limits: { uploadMB: 50, resumeMB: 10 },
+  };
+}
 
 const fmtSec = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
@@ -56,6 +80,7 @@ export default function PitchPage() {
   const [linkedin, setLinkedin] = useState("");
   const [resume, setResume] = useState<File | null>(null);
   const [text, setText] = useState("");
+  const [answers, setAnswers] = useState<Record<string, string>>({});
   const [take, setTake] = useState<Recording | null>(null);
   const [err, setErr] = useState("");
   const [saved, setSaved] = useState<Awaited<ReturnType<typeof loadLocal>>>(null);
@@ -77,6 +102,12 @@ export default function PitchPage() {
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
+    if (!LIVE) {
+      const d = demoInfo(slug);
+      if (d) setInfo(d);
+      else setMissing(true);
+      return;
+    }
     fetch(`/api/pitch/${encodeURIComponent(slug)}`)
       .then((r) => r.json())
       .then((j) => (j.ok ? setInfo(j) : setMissing(true)))
@@ -208,7 +239,7 @@ export default function PitchPage() {
       setRecording(false);
       if (rec.blob.size < 2000) return setErr("That recording came out empty. Check your camera and microphone, then try again.");
       setTake(rec);
-      saveLocal(KEY, { blob: rec.blob, mime: rec.mime, seconds: rec.seconds, kind, name, email, phone, linkedin, at: Date.now() });
+      saveLocal(KEY, { blob: rec.blob, mime: rec.mime, seconds: rec.seconds, kind, name, email, phone, linkedin, answers, at: Date.now() });
       closeCam();
     } catch {
       setRecording(false);
@@ -217,7 +248,8 @@ export default function PitchPage() {
   };
 
   // ------------------------------------------------------------ send
-  const send = async (override?: { blob?: Blob; mime?: string; seconds?: number; kind: "video" | "audio" | "written"; text?: string }) => {
+  const send = async (override?: { blob?: Blob; mime?: string; seconds?: number; kind: "video" | "audio" | "written"; text?: string; answers?: Record<string, string> }) => {
+    const ans = override?.answers ?? answers;
     setErr("");
     const kind = override?.kind ?? (mode === "written" ? "written" : mode === "audio" ? "audio" : "video");
     const blob = override?.blob ?? take?.blob;
@@ -230,6 +262,14 @@ export default function PitchPage() {
     setSending(true);
     setProgress(0);
     setSendNote("Getting ready...");
+    if (!LIVE) {
+      // demo: nothing is uploaded or stored
+      await new Promise((r) => setTimeout(r, 900));
+      setProgress(1);
+      setSending(false);
+      setStep("done");
+      return;
+    }
     try {
       const api = async (b: Record<string, unknown>) => {
         for (let i = 0; i < 4; i++) {
@@ -243,7 +283,7 @@ export default function PitchPage() {
         }
         throw new Error("offline");
       };
-      const start = await api({ action: "start", name, email, kind, mime, size: blob?.size ?? 0, resume: resume ? { name: resume.name, type: resume.type, size: resume.size } : undefined });
+      const start = await api({ action: "start", name, email, kind, mime, size: blob?.size ?? 0, answers: ans, resume: resume ? { name: resume.name, type: resume.type, size: resume.size } : undefined });
       if (!start.ok) throw new Error(start.reason || "start");
       const total = (blob?.size ?? 0) + (resume?.size ?? 0) || 1;
       if (blob && start.mediaUrl) {
@@ -255,7 +295,7 @@ export default function PitchPage() {
         await upload(start.resumeUrl, resume, resume.name, (f) => setProgress(((blob?.size ?? 0) + f * resume.size) / total));
       }
       setSendNote("Almost done...");
-      const fin = await api({ action: "finish", ticket: start.ticket, seconds, mime, text: body, phone, linkedin, kind });
+      const fin = await api({ action: "finish", ticket: start.ticket, seconds, mime, text: body, phone, linkedin, kind, answers: ans });
       if (!fin.ok) throw new Error(fin.reason || "finish");
       await clearLocal(KEY);
       setSaved(null);
@@ -264,13 +304,15 @@ export default function PitchPage() {
     } catch (e) {
       const r = (e as Error).message;
       setErr(REASONS[r] ?? (r === "offline" ? "You seem to be offline. Your pitch is saved on this device; tap Send again when you're connected." : "Something went wrong sending your pitch. It's saved on this device, so tap Send again."));
-      setStep(r === "already_applied" ? "done" : "record");
+      setStep(r === "already_applied" ? "done" : r === "answers" && qs.length ? "questions" : "record");
     } finally {
       setSending(false);
     }
   };
 
   const first = name.split(" ")[0];
+  const qs = info.questions ?? [];
+  const setA = (id: string, v: string) => setAnswers((a) => ({ ...a, [id]: v }));
   const modes: [Mode, string][] = [
     ["video", "Record video"],
     ...(info.allowUpload || noCam ? ([["upload", "Upload a video"]] as [Mode, string][]) : []),
@@ -293,7 +335,8 @@ export default function PitchPage() {
                 setEmail(saved.email);
                 setPhone(saved.phone ?? "");
                 setLinkedin(saved.linkedin ?? "");
-                send({ blob: saved.blob, mime: saved.mime, seconds: saved.seconds, kind: saved.kind, text: saved.text });
+                setAnswers(saved.answers ?? {});
+                send({ blob: saved.blob, mime: saved.mime, seconds: saved.seconds, kind: saved.kind, text: saved.text, answers: saved.answers ?? {} });
               }}
             >
               Send it now
@@ -341,6 +384,42 @@ export default function PitchPage() {
                 if (!resume) return setErr("Please attach your resume.");
                 if (!/\.(pdf|docx?)$/i.test(resume.name)) return setErr("Attach your resume as a PDF or Word file.");
                 if (resume && resume.size > info.limits.resumeMB * 1048576) return setErr("That resume file is too large. Try a PDF under 10 MB.");
+                setErr("");
+                setStep(qs.length ? "questions" : "record");
+              }}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step === "questions" && (
+        <div className="card sign-card">
+          <h2>A few questions</h2>
+          <p className="small muted" style={{ marginTop: -4 }}>Required questions are marked with *.</p>
+          {qs.map((q, i) => (
+            <div key={q.id} className="pq">
+              <div className="pq-q">{i + 1}. {q.text}{q.required && <span className="pq-req" aria-label="required"> *</span>}</div>
+              {q.kind === "short" && <input className="f" value={answers[q.id] ?? ""} maxLength={300} onChange={(e) => setA(q.id, e.target.value)} />}
+              {q.kind === "long" && <textarea className="f" value={answers[q.id] ?? ""} maxLength={2000} onChange={(e) => setA(q.id, e.target.value)} />}
+              {(q.kind === "yesno" || q.kind === "choice") && (
+                <div className="pq-opts" role="radiogroup" aria-label={q.text}>
+                  {(q.kind === "yesno" ? ["Yes", "No"] : q.options ?? []).map((o) => (
+                    <button key={o} type="button" role="radio" aria-checked={answers[q.id] === o} className={`pq-opt ${answers[q.id] === o ? "on" : ""}`} onClick={() => setA(q.id, o)}>{o}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+          {err && <p className="small" style={{ color: "var(--red)" }}>{err}</p>}
+          <div className="sheet-actions">
+            <button className="btn ghost sm" onClick={() => { setErr(""); setStep("details"); }}>Back</button>
+            <button
+              className="btn primary sm"
+              onClick={() => {
+                const miss = qs.findIndex((q) => q.required && !(answers[q.id] ?? "").trim());
+                if (miss >= 0) return setErr(`Please answer question ${miss + 1}.`);
                 setErr("");
                 setStep("record");
               }}
@@ -436,7 +515,7 @@ export default function PitchPage() {
                       URL.revokeObjectURL(v.src);
                       const rec = { blob: f, mime: f.type || "video/mp4", seconds: secs };
                       setTake(rec);
-                      saveLocal(KEY, { ...rec, kind: "video", name, email, phone, linkedin, at: Date.now() });
+                      saveLocal(KEY, { ...rec, kind: "video", name, email, phone, linkedin, answers, at: Date.now() });
                       if (secs > info.maxSeconds + 5) setErr(`Heads up: that's ${fmtSec(secs)}, longer than the ${fmtSec(info.maxSeconds)} they asked for. You can still send it.`);
                     };
                     v.onerror = () => setTake({ blob: f, mime: f.type || "video/mp4", seconds: 0 });
@@ -454,14 +533,14 @@ export default function PitchPage() {
             <>
               <p className="small">Not a camera person? Tell them in writing.</p>
               <ul className="pitch-prompts">{info.prompts.map((p, i) => <li key={i}>{p}</li>)}</ul>
-              <textarea className="f" style={{ minHeight: 180 }} value={text} onChange={(e) => { setText(e.target.value); if (e.target.value.length % 40 === 0) saveLocal(KEY, { kind: "written", text: e.target.value, name, email, phone, linkedin, at: Date.now() }); }} maxLength={4000} placeholder="A few short paragraphs is perfect." />
+              <textarea className="f" style={{ minHeight: 180 }} value={text} onChange={(e) => { setText(e.target.value); if (e.target.value.length % 40 === 0) saveLocal(KEY, { kind: "written", text: e.target.value, name, email, phone, linkedin, answers, at: Date.now() }); }} maxLength={4000} placeholder="A few short paragraphs is perfect." />
               <div className="tiny muted" style={{ textAlign: "right" }}>{text.length} / 4000</div>
               {err && <p className="small" style={{ color: "var(--red)" }}>{err}</p>}
               <div className="sheet-actions"><button className="btn primary" onClick={() => send({ kind: "written", text })}>Send</button></div>
             </>
           )}
 
-          <button className="btn ghost sm" style={{ marginTop: 8 }} disabled={recording} onClick={() => setStep("details")}>Back</button>
+          <button className="btn ghost sm" style={{ marginTop: 8 }} disabled={recording} onClick={() => setStep(qs.length ? "questions" : "details")}>Back</button>
         </div>
       )}
 

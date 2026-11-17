@@ -117,6 +117,7 @@ export interface Saved {
   phone?: string;
   linkedin?: string;
   text?: string;
+  answers?: Record<string, string>;
   at: number;
 }
 export async function saveLocal(key: string, v: Saved) {

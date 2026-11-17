@@ -65,6 +65,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
         hasMedia: !!c.pitch?.mediaPath && !c.mediaDeletedAt,
         hasResume: !!c.pitch?.resumePath && !c.mediaDeletedAt,
         linkedin: c.pitch?.linkedin ?? null,
+        answers: c.pitch?.answers ?? [],
         at: c.pitch?.submittedAt ?? c.sentAt ?? null,
         mine: mine ? { decision: mine.decision, note: mine.note ?? "" } : null,
       };

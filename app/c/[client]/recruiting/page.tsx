@@ -7,7 +7,7 @@ import { ClientNav, ClientTopbar, Sheet, Toast, useGuard, useToast } from "@/com
 import { fmtTime, toISO, today } from "@/lib/data";
 import { Candidate, CandidateBrief, daysSince, Decision, DECISION_LABEL } from "@/lib/modules";
 import { notifyBen, useStore } from "@/lib/store";
-import { BriefBlock, deletePitchFiles, PitchContact, PitchLinkCard, PitchMedia, ReviewerLinks, RoleSheet, ShareSheet } from "@/components/pitch";
+import { BriefBlock, deletePitchFiles, PitchAnswers, PitchContact, PitchLinkCard, PitchMedia, ReviewerLinks, RoleSheet, ShareSheet } from "@/components/pitch";
 import { OutsideReview, pastCutoff } from "@/lib/pitch";
 import { authHeader, LIVE, sb } from "@/lib/supabase";
 import { Role } from "@/lib/modules";
@@ -265,6 +265,7 @@ export default function Recruiting() {
                                 {c.strengths.length > 0 && <div className="chips">{c.strengths.map((x) => <span className="chip" key={x}>{x}</span>)}</div>}
                               </>
                             )}
+                            {c.pitch?.answers && <PitchAnswers answers={c.pitch.answers} />}
                             {c.assessment && <div className="impact" style={{ margin: 0 }}><b>Alza assessment:</b> {c.assessment}</div>}
                             {c.feedback !== undefined && c.decision && (
                               <div className="reply" style={{ margin: 0 }}>

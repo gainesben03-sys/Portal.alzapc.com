@@ -4,7 +4,7 @@ import { useMail } from "@/components/mail";
 import { useState } from "react";
 import { Action, addBusinessDays, Person, toISO, today } from "@/lib/data";
 import { Candidate, CandidateBrief, PortalUser, Role } from "@/lib/modules";
-import { DEFAULT_PROMPTS, newPitch, newReviewLink, OutsideReview, reviewerSees, pitchDeleteOn, PitchSettings, pitchOpen, ReviewLink, reviewLinkLive } from "@/lib/pitch";
+import { cleanQuestions, DEFAULT_PROMPTS, MAX_QUESTIONS, newPitch, Q_KINDS, Q_PRESETS, QKind, questionWarning, ScreenA, ScreenQ, newReviewLink, OutsideReview, reviewerSees, pitchDeleteOn, PitchSettings, pitchOpen, ReviewLink, reviewLinkLive } from "@/lib/pitch";
 import { pingTask } from "@/lib/pushclient";
 import { useStore } from "@/lib/store";
 import { authHeader, LIVE } from "@/lib/supabase";
@@ -139,7 +139,7 @@ export function PitchLinkCard({ role, canEdit, toScreen, onToast }: { role: Role
         <button className="btn ghost sm" onClick={() => navigator.clipboard?.writeText(url).then(() => onToast("Link copied"))}>Copy</button>
         <a className="btn ghost sm" href={`/pitch/${p.slug}`} target="_blank" rel="noopener">Preview</a>
       </div>
-      <div className="tiny muted">{fmtSec(p.maxSeconds)} max · {p.prompts.length} prompts · {p.review === "ben" ? "Ben screens first" : "Goes straight to your team"}</div>
+      <div className="tiny muted">{fmtSec(p.maxSeconds)} max · {p.prompts.length} prompts · {p.questions?.length ? `${p.questions.length} question${p.questions.length === 1 ? "" : "s"} · ` : ""}{p.review === "ben" ? "Ben screens first" : "Goes straight to your team"}</div>
       {canEdit && (
         <div className="chips" style={{ marginTop: 8 }}>
           <button className="btn ghost sm" onClick={() => setEditing(true)}>Settings</button>
@@ -273,6 +273,7 @@ function PitchSettingsSheet({ p, onClose, onSave }: { p: PitchSettings; onClose:
           <option value="client">Straight to the hiring team</option>
         </select>
       </label>
+      <QuestionsEditor list={v.questions ?? []} onChange={(questions) => setV({ ...v, questions })} />
       <div style={{ marginTop: 10 }}>
         <span className="flabel">Candidates can also</span>
         {tog("allowUpload", "Upload a video they recorded on their phone")}
@@ -280,9 +281,101 @@ function PitchSettingsSheet({ p, onClose, onSave }: { p: PitchSettings; onClose:
       </div>
       <div className="sheet-actions">
         <button className="btn ghost sm" onClick={onClose}>Cancel</button>
-        <button className="btn primary sm" onClick={() => onSave({ ...v, prompts: prompts.split("\n").map((x) => x.trim()).filter(Boolean).slice(0, 6).length ? prompts.split("\n").map((x) => x.trim()).filter(Boolean).slice(0, 6) : DEFAULT_PROMPTS })}>Save</button>
+        <button className="btn primary sm" onClick={() => onSave({ ...v, questions: cleanQuestions(v.questions), prompts: prompts.split("\n").map((x) => x.trim()).filter(Boolean).slice(0, 6).length ? prompts.split("\n").map((x) => x.trim()).filter(Boolean).slice(0, 6) : DEFAULT_PROMPTS })}>Save</button>
       </div>
     </Sheet>
+  );
+}
+
+/** Optional questions candidates answer before they record. */
+function QuestionsEditor({ list, onChange }: { list: ScreenQ[]; onChange: (l: ScreenQ[]) => void }) {
+  const newId = () => `q${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+  const set = (i: number, p: Partial<ScreenQ>) => onChange(list.map((q, j) => (j === i ? { ...q, ...p } : q)));
+  const move = (i: number, d: number) => {
+    const l = [...list];
+    const [x] = l.splice(i, 1);
+    l.splice(i + d, 0, x);
+    onChange(l);
+  };
+  const unused = Q_PRESETS.filter((p) => !list.some((q) => q.text === p.text));
+  const full = list.length >= MAX_QUESTIONS;
+  return (
+    <div className="pqe">
+      <span className="flabel">Questions for candidates <span className="tiny muted">(optional)</span></span>
+      <p className="tiny muted" style={{ margin: "2px 0 8px" }}>Asked before they record. Answers show on each candidate card.</p>
+      {list.map((q, i) => {
+        const warn = questionWarning(q.text);
+        const opts = q.kind === "yesno" ? ["Yes", "No"] : q.options ?? [];
+        return (
+          <div key={q.id} className="pqe-row">
+            <div className="pqe-top">
+              <span className="pqe-n">{i + 1}</span>
+              <input className="f" value={q.text} onChange={(e) => set(i, { text: e.target.value })} placeholder="Type your question" maxLength={300} aria-label={`Question ${i + 1}`} />
+              <button className="pqe-x" aria-label="Move up" disabled={i === 0} onClick={() => move(i, -1)}>↑</button>
+              <button className="pqe-x" aria-label="Move down" disabled={i === list.length - 1} onClick={() => move(i, 1)}>↓</button>
+              <button className="pqe-x" aria-label="Remove question" onClick={() => onChange(list.filter((_, j) => j !== i))}>✕</button>
+            </div>
+            {warn && <div className="pqe-warn">⚠ {warn}</div>}
+            <div className="pqe-opts">
+              <select className="f" value={q.kind} onChange={(e) => set(i, { kind: e.target.value as QKind, flagIf: undefined, options: e.target.value === "choice" ? q.options ?? ["", ""] : undefined })}>
+                {Q_KINDS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+              </select>
+              <label className="pqe-req"><input type="checkbox" checked={q.required} onChange={(e) => set(i, { required: e.target.checked })} /> Required</label>
+              {(q.kind === "yesno" || q.kind === "choice") && (
+                <label className="pqe-flag">Flag if
+                  <select className="f" value={q.flagIf ?? ""} onChange={(e) => set(i, { flagIf: e.target.value || undefined })}>
+                    <option value="">Never</option>
+                    {opts.filter(Boolean).map((o) => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </label>
+              )}
+            </div>
+            {q.kind === "choice" && (
+              <div className="pqe-choices">
+                {(q.options ?? []).map((o, k) => (
+                  <div key={k} className="pqe-choice">
+                    <input className="f" value={o} placeholder={`Choice ${k + 1}`} maxLength={100} onChange={(e) => set(i, { options: (q.options ?? []).map((x, m) => (m === k ? e.target.value : x)), flagIf: q.flagIf === o ? e.target.value || undefined : q.flagIf })} />
+                    {(q.options ?? []).length > 2 && <button className="pqe-x" aria-label="Remove choice" onClick={() => set(i, { options: (q.options ?? []).filter((_, m) => m !== k), flagIf: q.flagIf === o ? undefined : q.flagIf })}>✕</button>}
+                  </div>
+                ))}
+                {(q.options ?? []).length < 8 && <button className="linklike tiny" onClick={() => set(i, { options: [...(q.options ?? []), ""] })}>+ Add a choice</button>}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      <div className="pqe-add">
+        <button className="btn ghost sm" disabled={full} onClick={() => onChange([...list, { id: newId(), text: "", kind: "short", required: true }])}>+ Add a question</button>
+        {unused.length > 0 && (
+          <select className="f" value="" disabled={full} onChange={(e) => { const p = unused[Number(e.target.value)]; if (p) onChange([...list, { ...p, options: p.options ? [...p.options] : undefined, id: newId() }]); }} aria-label="Add a common question">
+            <option value="">Add a common question…</option>
+            {unused.map((p, k) => <option key={p.text} value={k}>{p.text}</option>)}
+          </select>
+        )}
+      </div>
+      {list.length > 0 && <p className="tiny muted" style={{ margin: "6px 0 0" }}>A flag highlights an answer for whoever reviews. It never rejects anyone on its own.</p>}
+    </div>
+  );
+}
+
+/** The candidate's answers on their card. Flagged answers are called out; nothing is scored. */
+export function PitchAnswers({ answers, compact }: { answers?: ScreenA[]; compact?: boolean }) {
+  if (!answers?.length) return null;
+  const flagged = answers.filter((a) => a.flag).length;
+  return (
+    <details className={`pqa ${compact ? "compact" : ""}`} open={flagged > 0}>
+      <summary>
+        Answers ({answers.length}){flagged > 0 && <span className="pqa-flagct"> · {flagged} flagged</span>}
+      </summary>
+      <dl>
+        {answers.map((a) => (
+          <div key={a.id} className={a.flag ? "flag" : ""}>
+            <dt>{a.q}</dt>
+            <dd>{a.flag && <span className="pqa-flag">Flagged</span>}{a.a}</dd>
+          </div>
+        ))}
+      </dl>
+    </details>
   );
 }
 

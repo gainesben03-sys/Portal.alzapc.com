@@ -6,7 +6,7 @@ import { writeBriefs } from "@/lib/candidatebrief";
 import { emailLogoUrl } from "@/lib/brand";
 import { noticeEmail, onboardingFor, senderFor } from "@/lib/hires";
 import { Candidate, ClientConfig } from "@/lib/modules";
-import { MAX_RESUME_MB, MAX_UPLOAD_MB, pitchOpen, PitchSubmission } from "@/lib/pitch";
+import { checkAnswers, MAX_RESUME_MB, MAX_UPLOAD_MB, pitchOpen, PitchSubmission } from "@/lib/pitch";
 import { extFor, newCandidateId, readTicket, roleBySlug, signTicket } from "@/lib/pitchserver";
 import { advisorEmails, pushTo } from "@/lib/push";
 import { admin, sendEmail, SERVER_LIVE, siteUrl } from "@/lib/server";
@@ -36,6 +36,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     role: { title: role.title, location: role.location, type: role.type, dept: role.dept },
     intro: p.intro,
     prompts: p.prompts,
+    // which answers get flagged stays private to the hiring team
+    questions: (p.questions ?? []).map(({ id, text, kind, options, required }) => ({ id, text, kind, options, required })),
     maxSeconds: p.maxSeconds,
     allowUpload: p.allowUpload,
     allowAudio: false, // video only
@@ -76,6 +78,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     if (!emailOk(email)) return NextResponse.json({ ok: false, reason: "email" });
     if (kind === "audio") return NextResponse.json({ ok: false, reason: "kind" }); // video only
     if (await already(email)) return NextResponse.json({ ok: false, reason: "already_applied" });
+    if (checkAnswers(p.questions, b.answers).missing) return NextResponse.json({ ok: false, reason: "answers" });
     const mime = s(b.mime, 80).toLowerCase();
     const size = Number(b.size) || 0;
     if (!/^(video|audio)\//.test(mime)) return NextResponse.json({ ok: false, reason: "type" });
@@ -115,6 +118,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     const text = s(b.text, 4000);
     if (t.k === "written" && text.length < 20) return NextResponse.json({ ok: false, reason: "text" });
     if (await already(t.e)) return NextResponse.json({ ok: true, duplicate: true }); // a retry after success
+    const checked = checkAnswers(p.questions, b.answers);
+    if (checked.missing) return NextResponse.json({ ok: false, reason: "answers" });
 
     const now = new Date().toISOString();
     const sub: PitchSubmission = {
@@ -129,6 +134,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
       resumePath: t.rs,
       resumeName: t.rs ? t.rs.slice(t.rs.lastIndexOf("/") + 1) : undefined,
       submittedAt: now,
+      answers: checked.answers.length ? checked.answers : undefined,
     };
     const toClient = p.review === "client";
     const cand: Omit<Candidate, "id"> = {

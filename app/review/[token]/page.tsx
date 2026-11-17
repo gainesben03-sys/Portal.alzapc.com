@@ -2,7 +2,8 @@
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BriefBlock } from "@/components/pitch";
+import { BriefBlock, PitchAnswers } from "@/components/pitch";
+import type { ScreenA } from "@/lib/pitch";
 import type { CandidateBrief } from "@/lib/modules";
 import { DEMO_COMPANY, DEMO_ACCENT } from "@/lib/state";
 
@@ -18,6 +19,7 @@ type Cand = {
   seconds: number | null;
   hasMedia: boolean;
   hasResume: boolean;
+  answers?: ScreenA[];
   linkedin: string | null;
   at: string | null;
   mine: { decision: "yes" | "no"; note: string } | null;
@@ -40,7 +42,7 @@ const DEMO: Info = {
   expiresAt: null,
   role: { title: "Warehouse Coordinator", location: "San Francisco", type: "Full-time", criteria: ["Inventory accuracy", "Calm under deadline", "Forklift certified"] },
   candidates: [
-    { id: "d1", name: "Riley Chen", headline: "Video pitch, 84s", summary: "", strengths: [], assessment: "Clear, organized, ran inventory for a 40k sq ft space.", brief: { status: "ok", now: "Inventory lead, furniture distributor", summary: "Three years running inventory and receiving for a regional furniture distributor. Most of the resume is warehouse operations and scheduling.", points: ["Ran cycle counts for a 40,000 sq ft warehouse", "Scheduled inbound and outbound trucks daily", "Trained 6 new hires on receiving"], gap: "No forklift certification listed", at: "2026-11-03T18:05:00Z" }, kind: "video", seconds: 84, hasMedia: true, hasResume: true, linkedin: null, at: "2026-11-03T18:00:00Z", mine: null },
+    { id: "d1", name: "Riley Chen", headline: "Video pitch, 84s", summary: "", strengths: [], assessment: "Clear, organized, ran inventory for a 40k sq ft space.", brief: { status: "ok", now: "Inventory lead, furniture distributor", summary: "Three years running inventory and receiving for a regional furniture distributor. Most of the resume is warehouse operations and scheduling.", points: ["Ran cycle counts for a 40,000 sq ft warehouse", "Scheduled inbound and outbound trucks daily", "Trained 6 new hires on receiving"], gap: "No forklift certification listed", at: "2026-11-03T18:05:00Z" }, kind: "video", seconds: 84, hasMedia: true, hasResume: true, linkedin: null, at: "2026-11-03T18:00:00Z", mine: null, answers: [{ id: "q1", q: "Are you legally authorized to work in the United States?", a: "Yes" }, { id: "q2", q: "Can you work the schedule for this role, including evenings or weekends when needed?", a: "Yes" }, { id: "q3", q: "When could you start?", a: "Two weeks after an offer" }] },
     { id: "d2", name: "Jordan Alvarez", headline: "Video pitch, 71s", summary: "", strengths: [], assessment: "", brief: { status: "no_resume", at: "2026-11-04T16:05:00Z" }, kind: "video", seconds: 71, hasMedia: true, hasResume: false, linkedin: "https://www.linkedin.com/", at: "2026-11-04T16:00:00Z", mine: { decision: "yes", note: "Strong energy." } },
     { id: "d3", name: "Sam Okoro", headline: "Audio pitch", summary: "", strengths: [], assessment: "", brief: { status: "ok", now: "Shipping clerk, auto parts supplier", summary: "Shipping clerk handling daily outbound orders for an auto parts supplier. Has forklift and pallet jack certification.", points: ["Packed and shipped 150+ orders a day", "Forklift certified since 2023", "Kept shipping logs in NetSuite"], gap: "No team lead experience shown", at: "2026-11-05T20:05:00Z" }, kind: "audio", seconds: 62, hasMedia: true, hasResume: true, linkedin: null, at: "2026-11-05T20:00:00Z", mine: null },
   ],
@@ -185,6 +187,7 @@ function CandidateCard({ c, n, call, demo, onSaved }: { c: Cand; n: number; call
       {c.brief !== undefined && <div style={{ marginTop: 10 }}><BriefBlock b={c.brief ?? undefined} /></div>}
       {c.summary && <p className="rv-small" style={{ margin: "8px 0 0" }}>{c.summary}</p>}
       {c.strengths.length > 0 && <p className="rv-small rv-muted" style={{ margin: "6px 0 0" }}>{c.strengths.join(" · ")}</p>}
+      {c.answers && c.answers.length > 0 && <div style={{ marginTop: 10 }}><PitchAnswers answers={c.answers} /></div>}
       {(c.hasResume || c.linkedin) && (
         <div className="rv-links rv-small">
           {c.hasResume && <button className="rv-link" onClick={resume}>Resume</button>}
