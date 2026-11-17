@@ -64,6 +64,8 @@ function demoInfo(slug: string): Info | null {
   };
 }
 
+const ALZA = "https://alzapc.com/?utm_source=portal&utm_medium=pitch&utm_campaign=candidate";
+
 const fmtSec = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
 export default function PitchPage() {
@@ -561,7 +563,13 @@ export default function PitchPage() {
         </div>
       )}
 
-      <p className="tiny muted" style={{ textAlign: "center", margin: "18px 0 40px" }}>Powered by AlzaHR</p>
+      <p className="pitch-plug">
+        {step === "done" && !err ? (
+          <>Hiring for your own team? <a href={`${ALZA}&utm_content=done`} target="_blank" rel="noopener">See how AlzaHR makes it simple</a></>
+        ) : (
+          <>Hiring made human by <a href={`${ALZA}&utm_content=footer`} target="_blank" rel="noopener">AlzaHR</a></>
+        )}
+      </p>
     </main>
   );
 }

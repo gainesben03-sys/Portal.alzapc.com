@@ -2611,3 +2611,7 @@ h2.pf-h, .pf-h { text-transform: none; letter-spacing: 0; color: var(--ink, #192
 .pqa dd { margin: 2px 0 0; white-space: pre-wrap; }
 .pqa .flag dd { color: var(--red); font-weight: 600; }
 .pqa-flag { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; background: var(--red-bg); color: var(--red); border-radius: 6px; padding: 1px 6px; margin-right: 6px; }
+/* The quiet AlzaHR plug at the bottom of the candidate page */
+.pitch-plug { text-align: center; margin: 18px 0 40px; font-size: 12.5px; color: var(--muted); }
+.pitch-plug a { color: inherit; font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--line); }
+.pitch-plug a:hover { color: var(--ink); border-bottom-color: currentColor; }
