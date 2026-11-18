@@ -16,6 +16,7 @@ import { performFor, stageOf } from "@/lib/perform";
 import { celebrations } from "@/lib/recognition";
 const md = (d: string) => new Date(d + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
+const CELEBRATE: HubItem["kind"][] = ["birthday", "anniversary"];
 const ICON: Record<HubItem["kind"], string> = { birthday: "🎂", anniversary: "🎉", starting: "👋", checkin: "💬", recognize: "⭐", commitment: "✔️" };
 
 /** Manager Hub home: three to five things for your team this week, in a couple of minutes. */
@@ -61,8 +62,6 @@ export default function HubHome() {
     .filter(({ r, st }) => st === "overdue" || st === "in_progress" || st === "ready" || (st === "not_started" && r.due <= in21))
     .sort((a, b) => (a.st === "overdue" ? -1 : b.st === "overdue" ? 1 : a.r.due < b.r.due ? -1 : 1));
   const items = weekItems(h.team, h.logs);
-  const total = reviewItems.length + items.length;
-  const shown = showAll ? items : items.slice(0, Math.max(3, 5 - reviewItems.length));
   const myTasks = actions.filter((a) => a.clientId === clientId && a.side === "client" && a.status !== "completed" && !!h.managerEmail && (a.owner.email ?? "").toLowerCase() === h.managerEmail);
   const first = (h.managerName || "").split(" ")[0];
   const byId = (id?: string) => h.team.find((p) => p.id === id);
@@ -73,35 +72,35 @@ export default function HubHome() {
       <ClientTopbar client={client} />
       <ClientNav clientId={client.id} />
       <main className="wrap">
-        <HubHeader clientId={clientId} title={h.isAdvisor ? "This week" : `Hi ${first}`} sub={h.team.length ? `${total ? `${Math.min(total, 5)} ${total === 1 ? "thing" : "things"} for your team this week.` : "Nothing pressing for your team this week."} ${h.team.length} ${h.team.length === 1 ? "person reports" : "people report"} to ${h.isAdvisor ? h.managerName : "you"}.` : undefined} />
+        {(() => {
+          const needs = reviewItems.length + items.filter((it) => !CELEBRATE.includes(it.kind)).length;
+          const whose = h.isAdvisor ? (h.managerName ? `${h.managerName.split(" ")[0]}'s team` : "This team") : "Your team";
+          return (
+            <HubHeader
+              clientId={clientId}
+              title={`${whose} this week`}
+              sub={h.team.length ? `${needs ? `${needs} ${needs === 1 ? "thing needs" : "things need"} ${h.isAdvisor ? "attention" : "you"}` : "Nothing needs you right now"} · ${h.team.length} ${h.team.length === 1 ? "person" : "people"}` : undefined}
+            />
+          );
+        })()}
 
         {h.team.length === 0 ? (
           <NoTeam clientId={clientId} />
         ) : (
           <>
-            <div className="hub-quick section" data-tour="hub-quick">
-              <button className="btn primary" onClick={() => setLog({ kind: "checkin" })}>💬 Log a check-in</button>
-              <button className="btn" onClick={() => setLog({ kind: "recognition" })}>⭐ Recognize someone</button>
+            <div className="hub-quick" data-tour="hub-quick">
+              <button className="btn sm" onClick={() => setLog({ kind: "checkin" })}><span aria-hidden="true">💬</span> Log a check-in</button>
+              <button className="btn sm" onClick={() => setLog({ kind: "recognition" })}><span aria-hidden="true">⭐</span> Recognize someone</button>
             </div>
 
             <div className="hub-cols">
             <div className="hub-main">
-            <div className="card section hub-week" data-tour="hub-week">
-              {reviewItems.map(({ r, st }) => {
-                const f = r.name.split(" ")[0];
-                return (
-                  <div className="hub-item" key={`rv-${r.id}`}>
-                    <span className="hub-icon" aria-hidden="true">📝</span>
-                    <div className="grow" style={{ minWidth: 0 }}>
-                      <div className="title">{st === "overdue" ? `${f}'s review is past due` : st === "not_started" ? `${f}'s review is due ${md(r.due)}` : `Finish ${f}'s review`}</div>
-                      <div className="tiny muted">{st === "not_started" ? (r.self?.doneAt ? `${f}'s self-assessment is in. About 10 minutes.` : "About 10 minutes, on your phone or computer.") : st === "ready" ? "Ready to share." : `Due ${md(r.due)}. Pick up where you left off.`}</div>
-                    </div>
-                    <Link className={`btn sm ${st === "overdue" ? "primary" : ""}`} href={`/c/${clientId}/reviews/${r.id}`}>{st === "not_started" ? "Start" : "Continue"}</Link>
-                  </div>
-                );
-              })}
-              {total === 0 && <p className="small muted" style={{ margin: 0 }}>You&apos;re caught up. A good week to recognize someone for something small.</p>}
-              {shown.map((it) => {
+            {(() => {
+              const todo = items.filter((it) => !CELEBRATE.includes(it.kind));
+              const fun = items.filter((it) => CELEBRATE.includes(it.kind));
+              const cap = Math.max(3, 5 - reviewItems.length);
+              const todoShown = showAll ? todo : todo.slice(0, cap);
+              const row = (it: HubItem) => {
                 const p = byId(it.personId);
                 return (
                   <div className="hub-item" key={it.key}>
@@ -117,9 +116,38 @@ export default function HubHome() {
                     )}
                   </div>
                 );
-              })}
-              {items.length > shown.length || showAll ? (items.length > Math.max(3, 5 - reviewItems.length) && <button className="linklike tiny" style={{ marginTop: 6 }} onClick={() => setShowAll(!showAll)}>{showAll ? "Show fewer" : `Show all ${total}`}</button>) : null}
-            </div>
+              };
+              return (
+                <>
+                  <div className="card hub-week" data-tour="hub-week">
+                    <div className="hub-sec">Needs you</div>
+                    {reviewItems.map(({ r, st }) => {
+                      const f = r.name.split(" ")[0];
+                      const late = st === "overdue";
+                      return (
+                        <div className={`hub-item ${late ? "late" : ""}`} key={`rv-${r.id}`}>
+                          <span className="hub-icon" aria-hidden="true">📝</span>
+                          <div className="grow" style={{ minWidth: 0 }}>
+                            <div className="title">{late ? `${f}'s review is past due` : st === "not_started" ? `${f}'s review is due ${md(r.due)}` : `Finish ${f}'s review`}{late && <span className="hub-late">Past due</span>}</div>
+                            <div className="tiny muted">{st === "not_started" ? (r.self?.doneAt ? `${f}'s self-assessment is in. About 10 minutes.` : "About 10 minutes, on your phone or computer.") : st === "ready" ? "Ready to share." : `Due ${md(r.due)}. Pick up where you left off.`}</div>
+                          </div>
+                          <Link className={`btn sm ${late ? "primary" : ""}`} href={`/c/${clientId}/reviews/${r.id}`}>{st === "not_started" ? "Start" : "Continue"}</Link>
+                        </div>
+                      );
+                    })}
+                    {todoShown.map(row)}
+                    {reviewItems.length + todo.length === 0 && <p className="small muted" style={{ margin: "6px 0" }}>You&apos;re caught up. A good week to recognize someone for something small.</p>}
+                    {todo.length > cap && <button className="linklike tiny hub-more" onClick={() => setShowAll(!showAll)}>{showAll ? "Show fewer" : `Show all ${todo.length + reviewItems.length}`}</button>}
+                  </div>
+                  {fun.length > 0 && (
+                    <div className="card hub-week hub-fun">
+                      <div className="hub-sec">Celebrate this week</div>
+                      {fun.map(row)}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
 
             {(() => {
               // new hires on this manager's team, through day 90, with their plan

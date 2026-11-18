@@ -147,23 +147,27 @@ export function ThemeToggle() {
 export function Bell() {
   const { notices, patch, getClient } = useStore();
   const [open, setOpen] = useState(false);
-  const unread = notices.filter((n) => !n.read).length;
-  const recent = notices.slice(0, 12);
+  // the number counts only what needs Ben to do something; plain updates just get a dot
+  const ACT = ["request", "extension", "revision", "upload", "pitch", "note"];
+  const needs = notices.filter((n) => !n.read && ACT.includes(n.kind)).length;
+  const fyi = notices.filter((n) => !n.read && !ACT.includes(n.kind)).length;
+  const unread = needs + fyi;
+  const recent = [...notices.slice(0, 30).filter((n) => ACT.includes(n.kind) && !n.read), ...notices.slice(0, 30).filter((n) => !(ACT.includes(n.kind) && !n.read))].slice(0, 12);
   return (
     <div style={{ position: "relative" }}>
-      <button className="bell" aria-label={`${unread} notifications`} onClick={() => setOpen(!open)}>
+      <button className="bell" aria-label={`${needs} need you, ${fyi} unread updates`} onClick={() => setOpen(!open)}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
           <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
         </svg>
-        {unread > 0 && <span className="badge bell-badge">{unread}</span>}
+        {needs > 0 ? <span className="badge bell-badge">{needs}</span> : fyi > 0 ? <span className="bell-dot" aria-hidden="true" /> : null}
       </button>
       {open && (
         <>
           <div style={{ position: "fixed", inset: 0, zIndex: 49 }} onClick={() => setOpen(false)} />
           <div className="bell-panel">
             <div className="row" style={{ padding: "12px 14px", borderBottom: "1px solid var(--line)" }}>
-              <b>Notifications</b>
+              <b>Notifications</b>{needs > 0 && <span className="tiny muted" style={{ marginLeft: 6 }}>{needs} need{needs === 1 ? "s" : ""} you</span>}
               {unread > 0 && (
                 <button className="btn ghost sm" onClick={() => patch({ notices: notices.map((n) => ({ ...n, read: true })) })}>Mark all read</button>
               )}
@@ -173,7 +177,7 @@ export function Bell() {
               <Link
                 key={n.id}
                 href={n.href}
-                className={`bell-item ${n.read ? "" : "unread"}`}
+                className={`bell-item ${n.read ? "" : "unread"} ${!n.read && ACT.includes(n.kind) ? "act" : ""}`}
                 onClick={() => {
                   patch({ notices: notices.map((x) => (x.id === n.id ? { ...x, read: true } : x)) });
                   setOpen(false);
@@ -241,7 +245,7 @@ export function ClientTopbar({ client }: { client: Client }) {
       </div>
     )}
     <header className="topbar client">
-      <Link href={`/c/${client.id}`} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <Link href={`/c/${client.id}`} style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
         {client.logo ? <img src={client.logo} alt={client.name} className="client-logo" /> : <b>{client.name}</b>}
       </Link>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

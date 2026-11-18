@@ -27,7 +27,8 @@ export function useHub(clientId: string) {
     } catch {}
   };
   const managerEmail = isAdvisor ? (managers.some((m) => m.email === picked) ? picked : managers[0]?.email ?? "") : me?.email?.toLowerCase() ?? "";
-  const managerName = isAdvisor ? managers.find((m) => m.email === managerEmail)?.name ?? "" : me?.name ?? "";
+  // fall back to the roster, then the email, so a name is never blank
+  const managerName = (isAdvisor ? managers.find((m) => m.email === managerEmail)?.name : me?.name) || people.find((p) => (p.email ?? "").toLowerCase() === managerEmail)?.name || "";
   const team = teamFor(people, clientId, managerEmail);
   const logs = checkins.filter((l) => l.clientId === clientId && team.some((p) => p.id === l.personId));
   const cfg = config[clientId];
@@ -43,7 +44,7 @@ export function HubHeader({ clientId, title, sub }: { clientId: string; title: s
         <h1 style={{ margin: 0 }}>{title}</h1>
         {sub && <p className="muted" style={{ margin: "4px 0 0" }}>{sub}</p>}
       </div>
-      {h.isAdvisor && h.managers.length > 0 && (
+      {h.isAdvisor && h.managers.length > 1 && (
         <label className="tiny muted" style={{ display: "flex", alignItems: "center", gap: 6 }}>
           Team of
           <select className="f" style={{ width: "auto", margin: 0, padding: "6px 8px" }} value={h.managerEmail} onChange={(e) => h.pick(e.target.value)}>
