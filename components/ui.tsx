@@ -355,6 +355,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
       // managers get Projects only when a task there is theirs
       subs: access === "hiring" || (access === "manager" && !ownsOpenWork(actions, clientId, me?.name)) ? [] : [
         { href: `${base}/projects`, label: "Projects", match: [`${base}/projects`, `${base}/tasks`, `${base}/a/`] },
+        ...(isAdvisor || access === "exec" ? [{ href: `${base}/roadmap`, label: "HR Roadmap", match: [`${base}/roadmap`] }] : []),
       ],
     },
     {

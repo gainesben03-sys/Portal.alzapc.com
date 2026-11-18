@@ -129,6 +129,7 @@ export const TILES: { id: string; label: string; blurb: string; module?: ModuleK
   { id: "celebrate", label: "Celebrations", blurb: "Birthdays, work anniversaries and new starters in the next 30 days. Managers see their team, executives the whole company" },
   { id: "reviews", label: "Reviews", blurb: "Reviews due, late or waiting on sign-off, and anyone flagged for an improvement plan", module: "perform" },
   { id: "upcoming", label: "Coming up", blurb: "Next items on your HR roadmap" },
+  { id: "roadmap", label: "HR Roadmap", blurb: "Your HR year at a glance: what's next, what's late. Executives", wide: true },
   { id: "wins", label: "Recent wins", blurb: "What got done lately" },
   { id: "resources", label: "Resources", blurb: "Recently shared templates and guides", module: "resources" },
   { id: "wellness", label: "Wellness", blurb: "Latest benefits news", module: "wellness" },
@@ -136,7 +137,7 @@ export const TILES: { id: string; label: string; blurb: string; module?: ModuleK
   { id: "huddle", label: "HR Huddle email", blurb: "Turn your recap email on or off" },
 ];
 /** A busy executive's Home: what needs me, people in motion, what Ben is on, and one way to reach him. The rest is opt-in under Customize. */
-export const DEFAULT_TILES = ["projects", "mylist", "hires", "celebrate", "recruiting", "reviews", "compliance"];
+export const DEFAULT_TILES = ["projects", "roadmap", "mylist", "hires", "celebrate", "recruiting", "reviews", "compliance"];
 
 export interface ClientConfig {
   onboarding?: Partial<import("./hires").OnboardingSettings>;
@@ -148,6 +149,7 @@ export interface ClientConfig {
   properties?: import("./properties").PropertySettings; // Our Properties: property details, slot overrides, hidden locations, contacts
   offboarding?: import("./offboard").OffboardSettings; // goodbye email wording, info sections, survey, timing
   leave?: import("./leave").LeaveSettings; // Leave center: types, reminder timing (who the HR admins are lives in its own table)
+  roadmap?: Partial<import("./roadmap").RoadmapSettings>; // HR Roadmap: setup answers and reminder settings
   compliance?: Partial<import("./compliance").ComplianceSettings>; // Required training: courses, reminders, who checks certificates
   perform?: Partial<import("./perform").PerformSettings>; // Reviews (Alza Perform): schedule, templates, who sees what
   mailApp?: import("./mailapp").MailApp; // which app email links open: Outlook, Gmail or the device default

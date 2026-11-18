@@ -9,6 +9,7 @@ import { useStore } from "@/lib/store";
 import { AskBenSheet } from "@/components/askben";
 import { blankProject, EditProjectSheet, useAssignees, useSaveProject } from "@/components/projectedit";
 import { canEditProject } from "@/lib/projecttasks";
+import { isRoadmap } from "@/lib/roadmap";
 import { currentStep, HealthChip, projectHealth, StepTrack } from "@/components/projectprogress";
 
 type Tab = "active" | "planned" | "done";
@@ -34,7 +35,8 @@ export default function Projects() {
   if (!ok || !client) return null;
 
   const isAdvisor = viewer?.kind === "advisor";
-  const mine = projects.filter((p) => p.clientId === client.id);
+  // the HR Roadmap is for executives: managers don't see its items here
+  const mine = projects.filter((p) => p.clientId === client.id && (!isRoadmap(p) || isAdvisor || me?.access === "exec"));
   const by = (s: Tab) => mine.filter((p) => p.status === s).sort((a, b) => (s === "done" ? b.milestoneDue.localeCompare(a.milestoneDue) : a.milestoneDue.localeCompare(b.milestoneDue)));
   const setP = (id: string, p: Partial<Project>) => {
     const prev = projects.find((x) => x.id === id);

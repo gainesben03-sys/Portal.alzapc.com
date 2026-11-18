@@ -16,6 +16,8 @@ import { ReactNode, useEffect, useRef, useState } from "react";
 import { ClientNav, ClientTopbar, Sheet, Toast, UrgencyPill, useGuard, useToast } from "@/components/ui";
 import { ADVISOR, fmt, fmtTime, ownsOpenWork, parseDay, projectProgress, today, urgency } from "@/lib/data";
 import { canSee, daysSince, DEFAULT_TILES, Note, TILES } from "@/lib/modules";
+import { isRoadmap } from "@/lib/roadmap";
+import { RoadmapTile } from "@/components/roadmap";
 import { notifyBen, useStore } from "@/lib/store";
 import { AskBenSheet } from "@/components/askben";
 import { currentStep, HealthChip, projectHealth, StepTrack } from "@/components/projectprogress";
@@ -77,7 +79,7 @@ export default function Home() {
   const isAdvisor = viewer?.kind === "advisor";
   const meName = viewer?.kind === "client" ? viewer.person.name : null;
   const layoutKey = me ? `${client.id}:${me.email}` : "";
-  const available = TILES.filter((t) => (!t.module || cfg?.modules[t.module]) && (t.id !== "huddle" || !!me) && (t.id !== "leave" || leaveAcc.admin) && (t.id !== "projects" || me?.access !== "manager" || ownsOpenWork(actions, client.id, me?.name)) && (t.module ? canSee(me?.access, t.module) : true));
+  const available = TILES.filter((t) => (!t.module || cfg?.modules[t.module]) && (t.id !== "huddle" || !!me) && (t.id !== "leave" || leaveAcc.admin) && (t.id !== "projects" || me?.access !== "manager" || ownsOpenWork(actions, client.id, me?.name)) && (t.id !== "roadmap" || viewer?.kind === "advisor" || me?.access === "exec") && (t.module ? canSee(me?.access, t.module) : true));
   const defaults = withNewTiles(cfg?.tiles ?? DEFAULT_TILES).filter((id) => available.some((t) => t.id === id));
   const order = (layoutKey && layouts[layoutKey] && withNewTiles(layouts[layoutKey])) || defaults;
   const shown = order.filter((id) => available.some((t) => t.id === id));
@@ -299,8 +301,9 @@ export default function Home() {
         </Tile>
       );
     },
+    roadmap: () => <RoadmapTile clientId={client.id} />,
     upcoming: () => {
-      const up = projects.filter((p) => p.clientId === client.id && p.status === "planned").sort((a, b) => a.milestoneDue.localeCompare(b.milestoneDue)).slice(0, 3);
+      const up = projects.filter((p) => p.clientId === client.id && p.status === "planned" && (!isRoadmap(p) || viewer?.kind === "advisor" || me?.access === "exec")).sort((a, b) => a.milestoneDue.localeCompare(b.milestoneDue)).slice(0, 3);
       return (
         <Tile title="Coming up" href={`${base}/projects`} linkLabel="Roadmap">
           {up.length === 0 && <p className="small muted">Nothing scheduled yet.</p>}
@@ -492,7 +495,7 @@ function Dash({ children }: { children: ReactNode }) {
 }
 
 /** Tiles added after people may have saved a layout. They appear on saved layouts too, unless someone turned them off. */
-const NEW_TILES: [string, string][] = [["mylist", "projects"], ["leave", "hires"], ["reviews", "recruiting"], ["celebrate", "mylist"], ["compliance", "reviews"]]; // [tile, show it after]
+const NEW_TILES: [string, string][] = [["mylist", "projects"], ["leave", "hires"], ["reviews", "recruiting"], ["celebrate", "mylist"], ["compliance", "reviews"], ["roadmap", "projects"]]; // [tile, show it after]
 function withNewTiles(saved: string[]): string[] {
   const out = saved.filter((id) => !id.startsWith("!"));
   for (const [id, after] of NEW_TILES) {
