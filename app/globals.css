@@ -61,7 +61,7 @@ p { margin: 0; }
 .wordmark .hr { color: var(--gold); }
 .wordmark .tag { font-family: "Inter", sans-serif; font-size: 10px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: hsl(38 20% 75%); margin-left: 8px; }
 
-.client-logo { height: 30px; width: auto; max-width: min(180px, 42vw); object-fit: contain; object-position: left center; display: block; }
+.client-logo { height: 42px; width: auto; max-width: min(240px, 50vw); object-fit: contain; object-position: left center; display: block; }
 .powered { font-size: 11px; color: var(--muted); }
 .powered b { color: var(--navy-ink); }
 .viewer-switch {
@@ -2774,3 +2774,5 @@ a.pl-tr:hover { background: var(--soft); }
 .ps-q h2, .ps-intro h1 { text-transform: none; letter-spacing: 0; color: var(--ink); }
 .ps-q h2 { font-size: 21px; font-weight: 600; }
 .pl-q .pqe-choices { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+@media (max-width: 600px) { .client-logo { height: 34px; } }
+.topbar.client > a > b { font-size: 17px; }
