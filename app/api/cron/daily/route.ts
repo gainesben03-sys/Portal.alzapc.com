@@ -30,6 +30,7 @@ import { advisorEmails, pushTo } from "@/lib/push";
 import { ListRow, syncReminder } from "@/lib/mylistserver";
 import { Departure, offboardFor, sendOn } from "@/lib/offboard";
 import { offRoster, sendGoodbye } from "@/lib/offboardserver";
+import { pulseCron } from "@/lib/pulseserver";
 import { hrInbox, lateCopyEmail, loadCtx as loadTraining, reminderEmail as trainingReminder, send as sendTraining, sendAssignments as sendTrainingAssignments, sync as syncTraining } from "@/lib/complianceserver";
 import { daysBetween as trainingDays } from "@/lib/compliance";
 import { DEFAULT_SETTINGS as LEAVE_DEFAULTS, dueItems, Due, fmtDay, LeaveCase, LeaveSettings, OPEN_STATUSES } from "@/lib/leave";
@@ -793,6 +794,13 @@ export async function GET(req: Request) {
     } catch (e) {
       log.push(`perform ${c.id} failed: ${(e as Error).message}`);
     }
+  }
+
+  // ---------- 10d. Pulse: close surveys past their date, remind halfway and the day before close
+  try {
+    await pulseCron(db, log);
+  } catch (e) {
+    log.push(`pulse: ${e instanceof Error ? e.message : "error"}`);
   }
 
   // ---------- 10c. Required training: assign what's due, email new assignments, remind people, copy managers and HR when late

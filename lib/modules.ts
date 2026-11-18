@@ -4,13 +4,13 @@ import { addBusinessDays, Person, today, toISO } from "./data";
 import type { Hire } from "./hires";
 import { SEED_PRACTICE } from "./practice";
 
-export type ModuleKey = "recruiting" | "resources" | "wellness" | "board" | "hires" | "training" | "recognition" | "leave" | "offboarding" | "properties" | "perform" | "compliance";
+export type ModuleKey = "recruiting" | "resources" | "wellness" | "board" | "hires" | "training" | "recognition" | "leave" | "offboarding" | "properties" | "perform" | "compliance" | "pulse";
 
 /** Which pages each access level can open. Executives see everything, including Team. */
 export function canSee(access: Access | undefined, page: ModuleKey | "projects" | "team"): boolean {
   if (!access || access === "exec") return true;
   if (access === "hiring") return page === "recruiting" || page === "hires";
-  return page !== "team"; // manager
+  return page !== "team" && page !== "pulse"; // manager
 }
 export const MODULES: { key: ModuleKey; label: string; blurb: string }[] = [
   { key: "hires", label: "New hires", blurb: "Offer letters, onboarding emails and a tracker for every new hire" },
@@ -24,6 +24,7 @@ export const MODULES: { key: ModuleKey; label: string; blurb: string }[] = [
   { key: "offboarding", label: "Offboarding", blurb: "When someone leaves: a checklist, a thank-you email with what they need to know, an exit survey, and they come off the roster on their last day. Executives only" },
   { key: "compliance", label: "Required training", blurb: "California harassment and workplace violence training, plus any other required course: assigns it, collects certificates, keeps the record and reminds people when it's due" },
   { key: "perform", label: "Reviews", blurb: "Performance reviews on a schedule: guided reviews managers finish in about 10 minutes on a phone or computer, self-assessments, sign-off, goals and improvement plans, in English or Spanish" },
+  { key: "pulse", label: "Pulse", blurb: "Employee surveys that end in an action plan: a library of HR-designed surveys, an AI builder, anonymous phone-friendly answers in English or Spanish, AI insight on scores and comments, an executive report and tracked actions. Executives and HR only" },
   { key: "training", label: "Training", blurb: "Their trainings to view, with practice: quick checks, role-plays with feedback and a planner. Execs see who's practiced" },
 ];
 
@@ -324,7 +325,7 @@ export function seedModules() {
     blueprint: {
       huddle: { cadence: "weekly", day: 1, recipients: ["alex@example.com", "priya@example.com"], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
       recognition: { token: "DemoShoutoutLink000000", values: ["Teamwork", "Safety first", "Above and beyond", "Customer first", "Ownership"], smsNumber: "+14155550123", notifyManagers: true, showWall: true, monthly: { on: true } },
-      modules: { recruiting: true, resources: true, wellness: true, board: true, hires: true, training: true, recognition: true, leave: true, offboarding: true, properties: false , perform: true, compliance: true },
+      modules: { recruiting: true, resources: true, wellness: true, board: true, hires: true, training: true, recognition: true, leave: true, offboarding: true, properties: false , perform: true, compliance: true, pulse: true },
       videoScreening: true,
       accent: "#2b3ff5",
       logo: "/blueprint-logo.png",
@@ -339,7 +340,7 @@ export function seedModules() {
     },
     harbor: {
       huddle: { cadence: "weekly", day: 1, recipients: ["sam@example.com"], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
-      modules: { recruiting: false, resources: true, wellness: false, board: true, hires: true, training: false, recognition: false, leave: false, offboarding: false, properties: false , perform: false, compliance: false },
+      modules: { recruiting: false, resources: true, wellness: false, board: true, hires: true, training: false, recognition: false, leave: false, offboarding: false, properties: false , perform: false, compliance: false, pulse: false },
       accent: "#6b8c6b",
       codes: [],
       escalationEmail: "sam@example.com",
@@ -347,7 +348,7 @@ export function seedModules() {
     },
     northgate: {
       huddle: { cadence: "weekly", day: 1, recipients: ["rae@example.com"], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
-      modules: { recruiting: false, resources: true, wellness: true, board: true, hires: true, training: false, recognition: false, leave: false, offboarding: false, properties: false , perform: false, compliance: false },
+      modules: { recruiting: false, resources: true, wellness: true, board: true, hires: true, training: false, recognition: false, leave: false, offboarding: false, properties: false , perform: false, compliance: false, pulse: false },
       accent: "#4a7ab5",
       codes: [],
       escalationEmail: "rae@example.com",
@@ -358,7 +359,7 @@ export function seedModules() {
     },
     bayside: {
       huddle: { cadence: "weekly", day: 1, recipients: ["morgan@example.com"], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
-      modules: { recruiting: true, resources: true, wellness: false, board: true, hires: true, training: false, recognition: false, leave: false, offboarding: false, properties: true , perform: false, compliance: false },
+      modules: { recruiting: true, resources: true, wellness: false, board: true, hires: true, training: false, recognition: false, leave: false, offboarding: false, properties: true , perform: false, compliance: false, pulse: false },
       accent: "#1d4f7a",
       codes: [],
       escalationEmail: "morgan@example.com",
@@ -377,7 +378,7 @@ export function seedModules() {
     },
     cedar: {
       huddle: { cadence: "weekly", day: 1, recipients: ["jo@example.com"], skipIfQuiet: true, bundleReminders: true, personalNote: "" },
-      modules: { recruiting: true, resources: false, wellness: false, board: true, hires: true, training: false, recognition: false, leave: false, offboarding: false, properties: false , perform: false, compliance: false },
+      modules: { recruiting: true, resources: false, wellness: false, board: true, hires: true, training: false, recognition: false, leave: false, offboarding: false, properties: false , perform: false, compliance: false, pulse: false },
       accent: "#8a6d3b",
       codes: [],
       escalationEmail: "jo@example.com",

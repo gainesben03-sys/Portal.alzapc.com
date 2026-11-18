@@ -124,7 +124,7 @@ export async function sync(x: Ctx): Promise<{ records: TrainingRecord[]; people:
 const P = (t: string) => `<p style="margin:0 0 14px 0;font-family:Arial,sans-serif;font-size:16px;line-height:24px;color:#1C1A19">${t}</p>`;
 const button = (label: string, href: string, color: string) =>
   `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 18px 0"><tr><td style="border-radius:10px;background:${color}"><a href="${esc(href)}" style="display:inline-block;padding:13px 22px;font-family:Arial,sans-serif;font-size:16px;font-weight:bold;color:#ffffff;text-decoration:none;border-radius:10px">${esc(label)}</a></td></tr></table>`;
-function mail(b: Brand, heading: string, paras: string[], cta?: { label: string; url: string }) {
+export function mail(b: Brand, heading: string, paras: string[], cta?: { label: string; url: string }) {
   const ink = readableInk(b.accent);
   const inner = `<p style="margin:30px 0 14px 0;font-family:Georgia,serif;font-size:26px;line-height:32px;color:#1C1A19">${esc(heading)}</p>${paras.map((p) => P(esc(p))).join("")}${cta ? button(cta.label, cta.url, ink) : ""}<!--HERO_END-->`;
   return { html: frameEmail({ ...b, bar: b.bar ?? b.accent, accent: ink }, inner), text: [heading, ...paras, cta ? `${cta.label}: ${cta.url}` : ""].filter(Boolean).join("\n\n") };

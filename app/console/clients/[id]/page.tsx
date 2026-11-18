@@ -91,6 +91,7 @@ const ICON: Record<string, string> = {
   softAsks: "M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4",
   compliance: "M12 3l8 4v5c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V7zM9 12l2 2 4-4",
   perform: "M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 14l2 2 4-4",
+  pulse: "M22 12h-4l-3 9L9 3l-3 9H2",
   tracker: "M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11",
 };
 const Icon = ({ k }: { k: string }) => (
@@ -222,6 +223,8 @@ export default function ClientSetup() {
               <FeatureCard k="compliance" title="Required training" blurb="California harassment prevention (the state's free course) and workplace violence prevention, plus any course they add. Assigns it, collects certificates, keeps the record, reminds people." on={mod("compliance")} onToggle={toggle("compliance")}
                 status={[(() => { const c = complianceFor(cfg.compliance); const on = c.courses.filter((x) => x.on).map((x) => x.name); return on.length ? on.join(", ") : "No courses on"; })(), complianceFor(cfg.compliance).live ? "Emails on" : "Not launched yet"]}
                 actions={[{ label: "Courses and settings", href: `/c/${id}/training/required?tab=setup` }, { label: "Open", href: `/c/${id}/training/required` }]} />
+              <FeatureCard k="pulse" title="Pulse" blurb={blurb("pulse")} on={mod("pulse")} onToggle={toggle("pulse")}
+                actions={[{ label: "Open", href: `/c/${id}/pulse` }]} />
             </div>
 
             <h2 className="set-h">HR tools</h2>

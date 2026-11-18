@@ -370,6 +370,18 @@ export function ClientNav({ clientId }: { clientId: string }) {
       ],
     },
     {
+      key: "pulse",
+      label: "Pulse",
+      // executives and HR only: survey results stay with leadership
+      subs: cfg?.modules.pulse && (isAdvisor || access === "exec") ? [
+        { href: `${base}/pulse`, label: "Overview", match: [] },
+        { href: `${base}/pulse/surveys`, label: "Surveys", match: [`${base}/pulse/surveys`, `${base}/pulse/survey/`] },
+        { href: `${base}/pulse/library`, label: "Library", match: [`${base}/pulse/library`, `${base}/pulse/new`] },
+        { href: `${base}/pulse/insights`, label: "Insights", match: [`${base}/pulse/insights`] },
+        { href: `${base}/pulse/actions`, label: "Action plan", match: [`${base}/pulse/actions`] },
+      ] : [],
+    },
+    {
       key: "library",
       label: "Resource Center",
       subs: [
