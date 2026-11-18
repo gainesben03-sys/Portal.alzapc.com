@@ -95,10 +95,12 @@ export async function sendEmail(opts: { to: string[]; cc?: string[]; subject: st
   const box = (opts.fromBox ?? "").toLowerCase().replace(/[^a-z0-9._-]/g, "").replace(/^[._-]+|[._-]+$/g, "").slice(0, 40);
   const finalAddr = box && addr.includes("@") ? `${box}@${addr.split("@")[1]}` : addr;
   if (name || finalAddr !== addr) from = `${name || /^([^<]+)</.exec(from)?.[1]?.trim() || "HR"} <${finalAddr}>`;
+  // Emails with an opt-out link (celebrations, nudges) get one-click unsubscribe headers, which Gmail and Yahoo expect on bulk mail
+  const unsub = /https?:\/\/[^"'\s<>]+\/api\/celebrate\/optout\?[^"'\s<>]+/.exec(opts.html ?? opts.text)?.[0]?.replace(/&amp;/g, "&");
   const r = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from, to: opts.to, cc: opts.cc?.length ? opts.cc : undefined, subject: opts.subject.replace(/[\r\n]+/g, " ").slice(0, 200), text: opts.text, html: opts.html, scheduled_at: opts.scheduledAt, attachments: opts.attachments, reply_to: opts.replyTo }),
+    body: JSON.stringify({ headers: unsub ? { "List-Unsubscribe": `<${unsub}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } : undefined, from, to: opts.to, cc: opts.cc?.length ? opts.cc : undefined, subject: opts.subject.replace(/[\r\n]+/g, " ").slice(0, 200), text: opts.text, html: opts.html, scheduled_at: opts.scheduledAt, attachments: opts.attachments, reply_to: opts.replyTo }),
   });
   if (r.ok) {
     const j = await r.json().catch(() => ({}));

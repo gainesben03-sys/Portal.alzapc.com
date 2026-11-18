@@ -290,6 +290,7 @@ export default function ClientSetup() {
                 ))}
               </div>
               <p className="tiny muted" style={{ margin: "8px 0 0" }}>{MAIL_APPS.find((m) => m.id === (cfg.mailApp ?? "default"))?.sub}. New hires writing from a personal Gmail or Outlook.com address get their own app automatically.</p>
+              <p className="tiny muted" style={{ margin: "4px 0 0" }}>Portal emails landing in spam? Ask their IT to allowlist alzapc.com.</p>
             </section>
             <section className="card">
               <h2 className="set-card-h">Brand color</h2>

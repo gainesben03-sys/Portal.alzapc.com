@@ -24,3 +24,9 @@ export async function GET(req: Request) {
   await db.from("people").update({ data: { ...(data.data as object), celebrate: false } }).eq("id", p);
   return page("Done", "Your birthday and work anniversary won't be shown to the team or emailed to you. Your manager can turn it back on any time.");
 }
+
+// One-click unsubscribe from the email app's own button (RFC 8058): same link, sent as a POST.
+export async function POST(req: Request) {
+  await GET(req);
+  return new Response(null, { status: 200 });
+}
