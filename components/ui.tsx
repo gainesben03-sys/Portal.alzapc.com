@@ -440,6 +440,7 @@ export function AlzaNav() {
   const items = [
     { href: "/console", label: "Overview" },
     { href: "/console/board", label: "Notes", badge: unread },
+    { href: "/console/inbox", label: "Email inbox" },
     { href: "/console/files", label: "Files", badge: newFiles },
     { href: "/console/hires", label: "New hires", badge: newHires },
     { href: "/console/huddle", label: "HR Huddle" },
