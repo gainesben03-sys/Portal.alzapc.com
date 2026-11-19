@@ -3021,3 +3021,35 @@ button.pl-tr.rm-lr:hover { background: var(--soft); }
 }
 .dc-fill { background: hsl(48 95% 82%); color: inherit; border-radius: 3px; padding: 0 3px; }
 .dc-actions-col .linklike { font-size: 13px; color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
+
+/* Dark mode: in-app tiles and buttons that were hard-coded white (text follows the theme, so the background must too) */
+:root[data-theme="dark"] .pf-card,
+:root[data-theme="dark"] .pf-tile,
+:root[data-theme="dark"] .pf-choice button,
+:root[data-theme="dark"] .pf-opt,
+:root[data-theme="dark"] .pf-tpl-item,
+:root[data-theme="dark"] .pf-talk-cta,
+:root[data-theme="dark"] .pf-scale-key,
+:root[data-theme="dark"] .pl-tabs button,
+:root[data-theme="dark"] .mt-banner,
+:root[data-theme="dark"] .mt-chip,
+:root[data-theme="dark"] .mt-month,
+:root[data-theme="dark"] .wl-back { background: var(--card); border-color: var(--line); color: var(--ink); }
+:root[data-theme="dark"] .pf-choice button.on,
+:root[data-theme="dark"] .pf-opt.on,
+:root[data-theme="dark"] .pf-tpl-item.on { background: color-mix(in srgb, var(--accent) 18%, var(--card)); border-color: var(--accent); color: var(--ink); }
+:root[data-theme="dark"] .pf-tile b:not(.red) { color: var(--ink); }
+/* Paper documents stay white in dark mode, so their insides keep dark ink */
+:root[data-theme="dark"] .dc-quote { background: #f6f3ec; color: #3a4553; }
+:root[data-theme="dark"] .dc-letter .dc-lh.plain b { color: #19283c; }
+/* status colors get lighter in dark mode, so the text on them goes dark */
+:root[data-theme="dark"] .badge,
+:root[data-theme="dark"] .tr-step.done .tr-dot,
+:root[data-theme="dark"] .yn-yes.on,
+:root[data-theme="dark"] .rv-btn.yes.on,
+:root[data-theme="dark"] .nt-remove .btn.danger,
+:root[data-theme="dark"] .tw-cal small,
+:root[data-theme="dark"] .tw-today { color: #10161f; }
+:root[data-theme="dark"] .mt-prompt { color: var(--muted); }
+:root[data-theme="dark"] .mt-banner .mt-title { color: var(--ink); }
+:root[data-theme="dark"] .pf-flag { background: var(--amber-bg); border-color: transparent; color: var(--ink); }
