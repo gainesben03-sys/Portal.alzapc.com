@@ -170,8 +170,7 @@ export async function performApi(clientId: string, body: Res, demo?: Demo): Prom
       let r = newReview({ ...p, active: true }, clientId, { kind: "cycle", due, periodStart: p.hireDate && p.hireDate > addDays(due, -365) ? p.hireDate : addDays(due, -365), periodEnd: due }, t, demo.me.name);
       r = log({ ...r, ...(body.self === "skip" ? { noSelf: true } : {}), ...(body.self === "now" ? { self: { token: newToken(), sentAt: new Date().toISOString(), lang: r.lang } } : {}) }, "Launched by HR");
       if (body.self === "now") selfSent++;
-      save(r);
-      all.push(r);
+      save(r); // save() already adds it to the list
       created++;
       mgrs.add(r.managerEmail);
     }
