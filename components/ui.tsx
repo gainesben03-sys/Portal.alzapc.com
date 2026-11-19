@@ -82,6 +82,23 @@ export function ActionCard({
   );
 }
 
+export const RETURN_KEY = "alza-return-to";
+
+/** Where a signed-out visitor was headed, if it's recent and somewhere this person may go. Used once. */
+export function takeReturnPath(v: { kind: string; clientId?: string }): string | null {
+  try {
+    const raw = localStorage.getItem(RETURN_KEY);
+    localStorage.removeItem(RETURN_KEY);
+    const r = raw ? (JSON.parse(raw) as { path?: string; at?: number }) : null;
+    const path = String(r?.path ?? "");
+    if (!path.startsWith("/") || path.startsWith("//") || Date.now() - (r?.at ?? 0) > 2 * 3600e3) return null;
+    if (v.kind === "advisor") return path.startsWith("/console") || path.startsWith("/c/") ? path : null;
+    return v.clientId && (path === `/c/${v.clientId}` || path.startsWith(`/c/${v.clientId}/`) || path.startsWith(`/c/${v.clientId}?`)) ? path : null;
+  } catch {
+    return null;
+  }
+}
+
 export function useGuard(kind: "advisor" | "client", clientId?: string) {
   const { ready, viewer, preview } = useStore();
   const router = useRouter();
@@ -89,9 +106,16 @@ export function useGuard(kind: "advisor" | "client", clientId?: string) {
     !!viewer &&
     (viewer.kind === "advisor" || (kind === "client" && viewer.kind === "client" && viewer.clientId === clientId));
   useEffect(() => {
+    if (!ready || ok) return;
+    // signed out (e.g. a link from an email on a new device): remember where they were going, so sign-in lands them there
+    if (!viewer && !preview) {
+      try {
+        localStorage.setItem(RETURN_KEY, JSON.stringify({ path: window.location.pathname + window.location.search, at: Date.now() }));
+      } catch {}
+    }
     // while previewing as a client, anything outside their portal goes to their home page
-    if (ready && !ok) router.replace(preview ? (preview.access === "hiring" ? `/c/${preview.clientId}/recruiting` : `/c/${preview.clientId}`) : "/");
-  }, [ready, ok, router, preview]);
+    router.replace(preview ? (preview.access === "hiring" ? `/c/${preview.clientId}/recruiting` : `/c/${preview.clientId}`) : "/");
+  }, [ready, ok, router, preview, viewer]);
   return ready && ok;
 }
 

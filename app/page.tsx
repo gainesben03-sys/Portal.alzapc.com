@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { CLIENTS } from "@/lib/data";
 import { PENDING_INVITE, useStore } from "@/lib/store";
 import { LIVE, sb } from "@/lib/supabase";
-import { ThemeToggle } from "@/components/ui";
+import { takeReturnPath, ThemeToggle } from "@/components/ui";
 import { WorkWithUs } from "@/components/workwithus";
 import { DEMO_SITE } from "@/lib/state";
 
@@ -24,6 +24,9 @@ export default function Login() {
   // Live mode: once signed in, go straight to the right place.
   useEffect(() => {
     if (!LIVE || !ready || !viewer) return;
+    // came from a link (like one in The People Brief) while signed out: go back to it
+    const back = takeReturnPath(viewer as { kind: string; clientId?: string });
+    if (back && !(me?.access === "hiring" && !back.includes("/recruiting"))) return router.replace(back);
     if (viewer.kind === "advisor") router.replace("/console");
     else router.replace(me?.access === "hiring" ? `/c/${viewer.clientId}/recruiting` : `/c/${viewer.clientId}`);
   }, [ready, viewer, me, router]);
