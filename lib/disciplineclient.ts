@@ -193,6 +193,7 @@ export const discApi = {
 
 export const REASON: Record<string, string> = {
   setup: "Ben is finishing setup for this. Try again soon.",
+  bad_answer: "The draft came back incomplete. Try again.",
   limit: "That's today's limit. Try again tomorrow, or email Ben.",
   no_key: "This isn't switched on yet. Ben is on it.",
   forbidden: "Only executives and Ben can document issues.",
