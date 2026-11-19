@@ -14,6 +14,8 @@ import { weekLine } from "./quotes";
 import { bucket, stepDone } from "./tracker";
 
 const PORTAL = "https://portal.alzapc.com";
+/** Who the Brief comes from: The People Brief <peoplebrief@alzapc.com>. Replies go to Ben. */
+export const BRIEF_SENDER = { fromName: "The People Brief", fromBox: "peoplebrief", replyTo: process.env.NOTIFY_TO || "ben@alzapc.com" };
 const MAX = { attention: 5, people: 6, priorities: 5, upcoming: 6, wins: 4 };
 
 const esc = (s: string) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");

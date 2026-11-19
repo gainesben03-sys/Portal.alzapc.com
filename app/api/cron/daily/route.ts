@@ -14,7 +14,7 @@ import { currentTheme, MONTHS, monthlyEmail, monthlyNudgeEmail, pickFavorites, t
 import { pollFor } from "@/lib/pollserver";
 import { NextResponse } from "next/server";
 import { Action, Client, DEFAULT_RULES, fmt, Project, reminderPlan, Rules, toISO, today } from "@/lib/data";
-import { buildHuddle } from "@/lib/huddle";
+import { BRIEF_SENDER, buildHuddle } from "@/lib/huddle";
 import { Candidate, ClientConfig, HuddleSettings, SharedFile } from "@/lib/modules";
 import { pitchDeleteOn } from "@/lib/pitch";
 import { addDaysISO, type Brand, type OnboardingSettings, firstDayEmail, forCompany, Hire, hireCompany, listEmail, onboardingFor, senderFor, stageIndex, welcomeEmail } from "@/lib/hires";
@@ -185,7 +185,7 @@ export async function GET(req: Request) {
         let sent = 0;
         for (const to of huddle.recipients) {
           await once(`huddle:${c.id}:${to}:${day}`, async () => {
-            const r = await sendEmail({ to: [to], subject: out.subject, html: out.html, text: out.text });
+            const r = await sendEmail({ to: [to], subject: out.subject, html: out.html, text: out.text, ...BRIEF_SENDER });
             if (r.ok) sent++;
             return r;
           });
@@ -217,7 +217,7 @@ export async function GET(req: Request) {
     const acts = actions.filter((a) => a.clientId === c.id && a.status === "completed" && lastMonth(a.completedAt)).length;
     const projs = (rows(projectsR) as unknown as Project[]).filter((p) => p.clientId === c.id && p.status === "done" && lastMonth(p.milestoneDue)).length;
     const snap = buildSnapshot({ client: { id: c.id, name: c.name, accent: cfg.accent || "#19283c", logo: cfg.logo && !cfg.logo.startsWith("data:") ? cfg.logo : undefined }, data: peopleData(cfg), actionsDone: acts, projectsDone: projs, today: day });
-    for (const r of to) await once(`snapshot:${c.id}:${r}:${ym}`, () => sendEmail({ to: [r], subject: snap.subject, html: snap.html, text: snap.text }));
+    for (const r of to) await once(`snapshot:${c.id}:${r}:${ym}`, () => sendEmail({ to: [r], subject: snap.subject, html: snap.html, text: snap.text, ...BRIEF_SENDER }));
   }
 
   // ---------- 3. New hires: welcome email, first-day email, start, 30-day check-in

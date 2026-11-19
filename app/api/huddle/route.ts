@@ -4,6 +4,7 @@
 // The daily job (/api/cron/daily) sends Huddles automatically on schedule.
 import { NextResponse } from "next/server";
 import { admin, caller, sendEmail, SERVER_LIVE } from "@/lib/server";
+import { BRIEF_SENDER } from "@/lib/huddle";
 
 function allowed(email: string): boolean {
   const list = (process.env.REMIND_ALLOWED || "").split(",").map((x) => x.trim().toLowerCase()).filter(Boolean);
@@ -47,7 +48,7 @@ export async function POST(req: Request) {
   let sent = 0;
   let reason: string | undefined;
   for (const addr of to) {
-    const r = await sendEmail({ to: [addr], subject: b.mode === "test" ? `[Test] ${subject}` : subject, html, text });
+    const r = await sendEmail({ to: [addr], subject: b.mode === "test" ? `[Test] ${subject}` : subject, html, text, ...(/^The People Brief| at a glance: /.test(subject) ? BRIEF_SENDER : {}) });
     if (r.ok) sent++;
     else reason = r.reason;
   }
