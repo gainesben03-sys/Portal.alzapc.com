@@ -134,7 +134,7 @@ export const TILES: { id: string; label: string; blurb: string; module?: ModuleK
   { id: "resources", label: "Resources", blurb: "Recently shared templates and guides", module: "resources" },
   { id: "wellness", label: "Wellness", blurb: "Latest benefits news", module: "wellness" },
   { id: "leave", label: "Leave of absence", blurb: "Who's out, who's coming back, and what's due (HR admins only)", module: "leave" },
-  { id: "huddle", label: "HR Huddle email", blurb: "Turn your recap email on or off" },
+  { id: "huddle", label: "The People Brief", blurb: "Your weekly email on people and priorities" },
 ];
 /** A busy executive's Home: what needs me, people in motion, what Ben is on, and one way to reach him. The rest is opt-in under Customize. */
 export const DEFAULT_TILES = ["projects", "roadmap", "mylist", "hires", "celebrate", "recruiting", "reviews", "compliance"];

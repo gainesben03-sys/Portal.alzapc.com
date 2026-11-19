@@ -448,7 +448,7 @@ export function AlzaNav() {
     { href: "/console/inbox", label: "Email inbox" },
     { href: "/console/files", label: "Files", badge: newFiles },
     { href: "/console/hires", label: "New hires", badge: newHires },
-    { href: "/console/huddle", label: "HR Huddle" },
+    { href: "/console/huddle", label: "People Brief" },
     { href: "/console/newsletters", label: "Newsletters" },
     { href: "/console/library", label: "Library", badge: stale },
     { href: "/console/clients", label: "Clients" },

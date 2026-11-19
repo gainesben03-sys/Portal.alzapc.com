@@ -39,8 +39,7 @@ export default function ActionDetail() {
   const isAdvisor = viewer?.kind === "advisor";
   const open = a.status !== "completed";
   const clientCanAct = !isAdvisor && a.side === "client" && open;
-  const hud = config[clientId]?.huddle;
-  const plan = a.side === "client" ? reminderPlan(a, client, rules, !!hud && hud.bundleReminders && hud.cadence !== "off") : [];
+  const plan = a.side === "client" ? reminderPlan(a, client, rules) : [];
   const subs = a.subtasks ?? [];
   const left = subs.filter((x) => !x.done).length;
   const canCheck = open && (isAdvisor || a.side === "client");

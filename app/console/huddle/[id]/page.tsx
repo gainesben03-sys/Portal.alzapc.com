@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { AlzaNav, AlzaTopbar, Toast, useGuard, useToast } from "@/components/ui";
 import { buildHuddle } from "@/lib/huddle";
-import { buildManagerWeek, buildSnapshot, PeopleData, peopleItems } from "@/lib/peopleupdates";
+import { buildManagerWeek, buildSnapshot, PeopleData } from "@/lib/peopleupdates";
 import { onboardingFor } from "@/lib/hires";
 import { stepsFor } from "@/lib/tracker";
 import { Cadence, CADENCE_LABEL, DAY_NAMES, HuddleSettings, nextHuddle } from "@/lib/modules";
@@ -31,7 +31,7 @@ export default function HuddleSetup() {
   const todayIso = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; })();
   const steps = stepsFor(onboardingFor(cfg.onboarding));
   const pdata: PeopleData = { hires, roles, candidates, departures: [], roster: people, shouts: [], steps };
-  const huddleOut = buildHuddle({ client, settings: h, actions, projects, files, rules, softAsks: config[client.id]?.softAsks, people: peopleItems(id, pdata, todayIso) });
+  const huddleOut = buildHuddle({ client, settings: h, actions, projects, files, rules, softAsks: config[client.id]?.softAsks, people: pdata });
   // the snapshot preview shows last month as if sent today
   const snap = buildSnapshot({ client: { id, name: client.name, accent: client.accent, logo: client.logo }, data: pdata, actionsDone: 0, projectsDone: 0, today: todayIso });
   const mgrNames = Array.from(new Set([...people.filter((p) => p.clientId === id).map((p) => p.managerName), ...hires.filter((x) => x.clientId === id && !x.outcome).map((x) => x.managerName)].filter(Boolean))).sort();
@@ -56,7 +56,7 @@ export default function HuddleSetup() {
       if (!j.sent && j.reason && !["recipient_not_allowed", "no_recipients"].includes(j.reason)) setSendErr(explain(String(j.reason)));
       if (j.reason === "not_configured") toast.show("Email isn't connected yet. Add the Resend key in Vercel.");
       else if (j.reason === "recipient_not_allowed") toast.show("None of these emails are approved yet (REMIND_ALLOWED).");
-      else if (j.reason === "no_recipients") toast.show("Nobody at this client has the Huddle turned on.");
+      else if (j.reason === "no_recipients") toast.show("Nobody at this client has the People Brief turned on.");
       else if (mode === "test") toast.show(j.sent ? "Test sent. Check your inbox (and spam)." : "Didn't send. See the reason below.");
       else {
         if (j.sent) set({ lastSent: new Date().toISOString() });
@@ -70,7 +70,7 @@ export default function HuddleSetup() {
 
   const explain = (reason: string) => {
     if (reason === "not_configured") return "RESEND_API_KEY or NOTIFY_FROM is missing in Vercel. Add both, then redeploy.";
-    if (reason === "forbidden") return "You need to be signed in as Ben to send Huddles.";
+    if (reason === "forbidden") return "You need to be signed in as Ben to send People Briefs.";
     if (/resend_401|resend_403.*(api key|invalid)/i.test(reason)) return "Resend rejected the API key. Put your current Resend key in Vercel as RESEND_API_KEY, then redeploy.";
     if (/resend_403/i.test(reason)) return `Resend refused the sender. Check that alzapc.com is verified in Resend and NOTIFY_FROM uses it. (${reason})`;
     if (/resend_422/i.test(reason)) return `Resend didn't accept the sender format. NOTIFY_FROM should look like: AlzaHR Portal <portal@alzapc.com>. (${reason})`;
@@ -83,8 +83,8 @@ export default function HuddleSetup() {
       <AlzaTopbar />
       <AlzaNav />
       <main className="wrap">
-        <Link href="/console/huddle" className="small" style={{ color: "var(--blue)" }}>← All Huddles</Link>
-        <h1 style={{ marginTop: 10 }}>{client.name} Huddle</h1>
+        <Link href="/console/huddle" className="small" style={{ color: "var(--blue)" }}>← All People Briefs</Link>
+        <h1 style={{ marginTop: 10 }}>{client.name}: The People Brief</h1>
         <p className="muted small" style={{ marginTop: 4 }}>
           {h.cadence === "off"
             ? "Turned off."
@@ -114,10 +114,6 @@ export default function HuddleSetup() {
             <div><b>Skip quiet weeks</b><div className="tiny muted">Don't send if nothing is due and nothing changed</div></div>
           </label>
           <label className="rule" style={{ cursor: "pointer" }}>
-            <span className="switch"><input type="checkbox" checked={h.bundleReminders} onChange={(e) => set({ bundleReminders: e.target.checked })} /><span /></span>
-            <div><b>Bundle task reminders</b><div className="tiny muted">Friendly and due-date nudges ride along in the Huddle. Overdue notices and escalations still go out on their own.</div></div>
-          </label>
-          <label className="rule" style={{ cursor: "pointer" }}>
             <span className="switch"><input type="checkbox" checked={h.snapshot !== false} onChange={(e) => set({ snapshot: e.target.checked })} /><span /></span>
             <div><b>Monthly snapshot</b><div className="tiny muted">The month at a glance for the same people: who joined, who left, hiring, 30-day check-ins, recognition. First {DAY_NAMES[h.day] || "Monday"} of the month.</div></div>
           </label>
@@ -145,14 +141,14 @@ export default function HuddleSetup() {
         <div className="section-head section"><h2>Personal note (optional)</h2></div>
         <div className="card">
           <textarea className="f" value={h.personalNote} onChange={(e) => set({ personalNote: e.target.value })} placeholder="Quick heads up: open enrollment materials land next week." />
-          <p className="tiny muted" style={{ marginTop: 6 }}>Shows at the top of the next Huddle. Clear it after it goes out.</p>
+          <p className="tiny muted" style={{ marginTop: 6 }}>Shows at the top of the next People Brief. Clear it after it goes out.</p>
         </div>
 
         <div className="section-head section">
           <h2>Preview</h2>
         </div>
         <div className="pr-tabs" role="tablist" style={{ marginBottom: 8 }}>
-          <button className={view === "weekly" ? "on" : ""} onClick={() => setView("weekly")}>Weekly Huddle</button>
+          <button className={view === "weekly" ? "on" : ""} onClick={() => setView("weekly")}>Weekly People Brief</button>
           <button className={view === "snapshot" ? "on" : ""} onClick={() => setView("snapshot")}>Monthly snapshot</button>
           <button className={view === "manager" ? "on" : ""} onClick={() => setView("manager")}>Managers&apos; Monday</button>
         </div>

@@ -379,7 +379,7 @@ export default function Home() {
     mylist: () => <MyListTile clientId={client.id} Tile={Tile} />,
     huddle: () =>
       me && cfg ? (
-        <Tile title="HR Huddle email">
+        <Tile title="The People Brief">
           <label className="rule" style={{ cursor: "pointer" }}>
             <span className="switch">
               <input
@@ -392,7 +392,7 @@ export default function Home() {
               />
               <span />
             </span>
-            <span className="small muted">A short recap of what needs you and where projects stand. Quiet weeks are skipped.</span>
+            <span className="small muted">A weekly briefing: what needs you, your people, and where HR priorities stand. Quiet weeks are skipped.</span>
           </label>
         </Tile>
       ) : null,

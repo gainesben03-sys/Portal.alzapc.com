@@ -244,7 +244,7 @@ export default function ClientSetup() {
               <FeatureCard k="resources" title="Resources" blurb={blurb("resources")} on={mod("resources")} onToggle={toggle("resources")} actions={[{ label: "Open resources", href: `/c/${id}/resources` }]} />
               <FeatureCard k="wellness" title="Wellness" blurb={blurb("wellness")} on={mod("wellness")} onToggle={toggle("wellness")} />
               <FeatureCard k="board" title="Messages" blurb={blurb("board")} on={mod("board")} onToggle={toggle("board")} />
-              <FeatureCard k="softAsks" title="Referral and add-on lines" blurb="A quiet line on their dashboard and in the first Huddle each month inviting intros. Shows a hiring line only if Recruiting is off." on={cfg.softAsks !== false} onToggle={(v) => set({ softAsks: v })} />
+              <FeatureCard k="softAsks" title="Referral and add-on lines" blurb="A quiet line on their dashboard inviting intros. Shows a hiring line only if Recruiting is off." on={cfg.softAsks !== false} onToggle={(v) => set({ softAsks: v })} />
             </div>
           </>
         )}

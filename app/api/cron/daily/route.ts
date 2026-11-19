@@ -127,7 +127,8 @@ export async function GET(req: Request) {
       contacts: team.map((m) => ({ name: m.name, role: m.role, email: m.email })),
     };
     const huddle: HuddleSettings = { cadence: "weekly", day: 1, skipIfQuiet: true, bundleReminders: true, personalNote: "", ...(cfg.huddle ?? {}), recipients: team.filter((m) => m.huddle).map((m) => m.email) };
-    const bundled = huddle.bundleReminders && huddle.cadence !== "off";
+    // The People Brief is for leaders, so task owners always get their own reminders
+    const bundled = false;
 
     // ---------- 1. task reminders
     for (const a of actions.filter((x) => x.clientId === c.id && x.side === "client" && x.status !== "completed")) {
@@ -174,9 +175,9 @@ export async function GET(req: Request) {
       }
     }
 
-    // ---------- 2. HR Huddle
+    // ---------- 2. The People Brief (weekly email for leaders)
     if (huddleDue(huddle, now) && huddle.recipients.length) {
-      const people = cfg.modules?.hires || cfg.modules?.recruiting || cfg.modules?.offboarding ? peopleItems(c.id, peopleData(cfg), day) : [];
+      const people = cfg.modules?.hires || cfg.modules?.recruiting || cfg.modules?.offboarding ? peopleData(cfg) : undefined;
       const out = buildHuddle({ client, settings: huddle, actions, projects, files, rules, softAsks: cfg.softAsks, people });
       if (out.quiet && huddle.skipIfQuiet) {
         log.push(`huddle skipped (quiet) ${c.id}`);

@@ -22,8 +22,8 @@ const short = (iso: string) => (iso ? new Date(`${iso}T12:00:00`).toLocaleDateSt
 const first = (n: string) => (n || "").trim().split(/\s+/)[0] || "";
 const same = (a?: string, b?: string) => !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase();
 
-type Cand = { roleId: string; hidden?: boolean; cleared?: boolean; decision?: unknown };
-type RoleLite = { id: string; clientId: string; title: string; status: string };
+type Cand = { roleId: string; name?: string; hidden?: boolean; cleared?: boolean; decision?: unknown; sentAt?: string; decidedAt?: string };
+type RoleLite = { id: string; clientId: string; title: string; status: string; hiringManager?: { name: string } };
 type Shout = { at: string; status: string; to?: { personId?: string; name?: string } };
 
 export interface PeopleData {

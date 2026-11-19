@@ -15,7 +15,7 @@ export default function HuddleList() {
       <AlzaTopbar />
       <AlzaNav />
       <main className="wrap">
-        <h1>HR Huddle</h1>
+        <h1>The People Brief</h1>
         <p className="muted" style={{ marginTop: 6 }}>
           One recap email per client on a set day: what needs them, project progress, wins and what's next. Quiet weeks are skipped so it never feels like nagging.
         </p>
