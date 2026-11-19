@@ -79,7 +79,7 @@ export default function Home() {
   const isAdvisor = viewer?.kind === "advisor";
   const meName = viewer?.kind === "client" ? viewer.person.name : null;
   const layoutKey = me ? `${client.id}:${me.email}` : "";
-  const available = TILES.filter((t) => (!t.module || cfg?.modules[t.module]) && (t.id !== "huddle" || !!me) && (t.id !== "leave" || leaveAcc.admin) && (t.id !== "projects" || me?.access !== "manager" || ownsOpenWork(actions, client.id, me?.name)) && (t.id !== "roadmap" || viewer?.kind === "advisor" || me?.access === "exec") && (t.module ? canSee(me?.access, t.module) : true));
+  const available = TILES.filter((t) => (!t.module || cfg?.modules[t.module]) && (t.id !== "huddle" || !!me) && (t.id !== "leave" || leaveAcc.admin) && (t.id !== "projects" || me?.access !== "manager" || ownsOpenWork(actions, client.id, me?.name)) && (t.id !== "roadmap" || viewer?.kind === "advisor" || me?.access === "exec") && (t.id !== "askhr" || (cfg?.askHr !== false && me?.access !== "hiring")) && (t.module ? canSee(me?.access, t.module) : true));
   const defaults = withNewTiles(cfg?.tiles ?? DEFAULT_TILES).filter((id) => available.some((t) => t.id === id));
   const order = (layoutKey && layouts[layoutKey] && withNewTiles(layouts[layoutKey])) || defaults;
   const shown = order.filter((id) => available.some((t) => t.id === id));
@@ -203,6 +203,11 @@ export default function Home() {
         </Tile>
       );
     },
+    askhr: () => (
+      <Tile title="Ask HR" href={`${base}/hub/ask`} linkLabel="Open">
+        <AskBox clientId={client.id} tile />
+      </Tile>
+    ),
     share: () => {
       const reqs = openClient.filter((a) => a.kind === "document" || a.kind === "information");
       const sent = files.filter((f) => f.clientId === client.id).length;
@@ -411,7 +416,7 @@ export default function Home() {
         <Greeting clientId={client.id} onCustomize={() => (s.preview ? setPreviewNote(true) : setEditing(true))} />
 
         {/* Ask HR lives in Resources; here only when Resources is off */}
-        {!cfg.modules?.resources && <AskBox clientId={client.id} slim />}
+        {!cfg.modules?.resources && !shown.includes("askhr") && <AskBox clientId={client.id} slim />}
 
         <Dash>
           {shown.map((id) => <div key={id} className={TILES.find((t) => t.id === id)?.wide ? "span2" : ""}>{tiles[id]?.()}</div>)}
@@ -495,7 +500,7 @@ function Dash({ children }: { children: ReactNode }) {
 }
 
 /** Tiles added after people may have saved a layout. They appear on saved layouts too, unless someone turned them off. */
-const NEW_TILES: [string, string][] = [["mylist", "projects"], ["leave", "hires"], ["reviews", "recruiting"], ["celebrate", "mylist"], ["compliance", "reviews"], ["roadmap", "projects"]]; // [tile, show it after]
+const NEW_TILES: [string, string][] = [["askhr", "projects"], ["mylist", "projects"], ["leave", "hires"], ["reviews", "recruiting"], ["celebrate", "mylist"], ["compliance", "reviews"], ["roadmap", "projects"]]; // [tile, show it after]
 function withNewTiles(saved: string[]): string[] {
   const out = saved.filter((id) => !id.startsWith("!"));
   for (const [id, after] of NEW_TILES) {

@@ -120,6 +120,7 @@ export interface Notice {
 }
 
 export const TILES: { id: string; label: string; blurb: string; module?: ModuleKey; wide?: boolean }[] = [
+  { id: "askhr", label: "Ask HR", blurb: "Ask the handbook or talk through a tough conversation. Executives can document an issue from here too" },
   { id: "mylist", label: "My list", blurb: "Your private checklist, with due dates and email reminders. Only you see it" },
   { id: "projects", label: "Projects", blurb: "Progress on current work", wide: true },
   { id: "share", label: "Send files", blurb: "Upload documents securely" },
@@ -137,7 +138,7 @@ export const TILES: { id: string; label: string; blurb: string; module?: ModuleK
   { id: "huddle", label: "The People Brief", blurb: "Your weekly email on people and priorities" },
 ];
 /** A busy executive's Home: what needs me, people in motion, what Ben is on, and one way to reach him. The rest is opt-in under Customize. */
-export const DEFAULT_TILES = ["projects", "roadmap", "mylist", "hires", "celebrate", "recruiting", "reviews", "compliance"];
+export const DEFAULT_TILES = ["projects", "askhr", "roadmap", "mylist", "hires", "celebrate", "recruiting", "reviews", "compliance"];
 
 export interface ClientConfig {
   onboarding?: Partial<import("./hires").OnboardingSettings>;

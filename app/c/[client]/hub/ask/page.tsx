@@ -5,9 +5,9 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ClientNav, ClientTopbar, Toast, useGuard, useToast } from "@/components/ui";
-import { HubHeader } from "@/components/hub";
 import { AskBenSheet } from "@/components/askben";
 import { useDiscAccess } from "@/components/discipline";
+import { discApi } from "@/lib/disciplineclient";
 import { Custom, RolePlay } from "@/components/practice";
 import { useStore } from "@/lib/store";
 import { authHeader } from "@/lib/supabase";
@@ -108,58 +108,72 @@ export default function AskHr() {
       <ClientTopbar client={client} />
       <ClientNav clientId={client.id} />
       <main className="wrap">
-        <HubHeader
-          clientId={clientId}
-          title="Ask HR"
-          sub={mode === "handbook" ? `Answers from ${client.name}'s handbook, with where it says so.` : "Talk through a sticky situation before you have the conversation."}
-          action={disc.ok ? <Link href={`/c/${clientId}/hub/ask/document`} className="btn sm dc-entry">Document an issue</Link> : undefined}
-        />
-        <div className="seg section" style={{ gridTemplateColumns: "1fr 1fr" }}>
-          <button className={mode === "handbook" ? "on" : ""} onClick={() => setMode("handbook")}>📘 The handbook</button>
-          <button className={mode === "situation" ? "on" : ""} onClick={() => setMode("situation")}>🧭 A sticky situation</button>
+        <div className="ask-head">
+          <h1 style={{ margin: 0 }}>Ask HR</h1>
+          <p className="muted" style={{ margin: "4px 0 0" }}>Answers from {client.name}&apos;s handbook, help with tough conversations{disc.ok ? ", and clean documentation" : ""}.</p>
         </div>
 
-        {thread.length === 0 && (
-          <div className="ask-examples section">
-            <span className="tiny muted">{mode === "handbook" ? "Try asking" : "For example"}</span>
-            {EXAMPLES[mode].map((e) => <button key={e} className="ask-ex" onClick={() => ask(e)}>{e}</button>)}
-          </div>
-        )}
-
-        <div className="ask-thread">
-          {thread.map((t, i) => (
-            <div key={i} className="ask-turn">
-              <div className="bub me"><div>{t.q}</div></div>
-              {t.err ? (
-                <div className="card ask-a"><p className="small" style={{ margin: 0 }}>{t.err}</p><AskBenBtn onClick={() => setBen({ q: t.q, mode })} /></div>
-              ) : t.a && mode === "handbook" ? (
-                <HandbookCard a={t.a as HandbookAnswer} onBen={() => setBen({ q: t.q, mode })} />
-              ) : t.a ? (
-                <SituationCard a={t.a as SituationAnswer} onBen={() => setBen({ q: t.q, mode })} onPractice={() => { const s = t.a as SituationAnswer; setPlay({ name: s.employee?.name || "your employee", role: s.employee?.role || "", situation: thread.slice(0, i + 1).map((x) => x.q).join("\n") }); }} />
-              ) : (
-                <div className="bub typing"><span /><span /><span /></div>
-              )}
+        <div className={`ask-layout section ${disc.ok ? "with-doc" : ""}`}>
+          <section className="card ask-main" aria-label="Ask a question">
+            <div className="ask-main-top">
+              <div style={{ minWidth: 0 }}>
+                <b className="ask-card-t">Ask a question</b>
+                <span className="tiny muted ask-card-s">{mode === "handbook" ? "Plain answers, with where the handbook says so." : "Talk it through before you have the conversation."}</span>
+              </div>
+              <div className="dc-seg" role="group" aria-label="What kind of question">
+                <button className={mode === "handbook" ? "on" : ""} onClick={() => setMode("handbook")} aria-pressed={mode === "handbook"}>Handbook</button>
+                <button className={mode === "situation" ? "on" : ""} onClick={() => setMode("situation")} aria-pressed={mode === "situation"}>Sticky situation</button>
+              </div>
             </div>
-          ))}
-          <div ref={end} />
+
+            {thread.length === 0 && (
+              <div className="ask-chips">
+                {EXAMPLES[mode].map((e) => <button key={e} className="ask-chip" onClick={() => ask(e)}>{e}</button>)}
+              </div>
+            )}
+
+            {thread.length > 0 && (
+              <div className="ask-thread">
+                {thread.map((t, i) => (
+                  <div key={i} className="ask-turn">
+                    <div className="bub me"><div>{t.q}</div></div>
+                    {t.err ? (
+                      <div className="card ask-a"><p className="small" style={{ margin: 0 }}>{t.err}</p><AskBenBtn onClick={() => setBen({ q: t.q, mode })} /></div>
+                    ) : t.a && mode === "handbook" ? (
+                      <HandbookCard a={t.a as HandbookAnswer} onBen={() => setBen({ q: t.q, mode })} />
+                    ) : t.a ? (
+                      <SituationCard a={t.a as SituationAnswer} onBen={() => setBen({ q: t.q, mode })} onPractice={() => { const s = t.a as SituationAnswer; setPlay({ name: s.employee?.name || "your employee", role: s.employee?.role || "", situation: thread.slice(0, i + 1).map((x) => x.q).join("\n") }); }} />
+                    ) : (
+                      <div className="bub typing"><span /><span /><span /></div>
+                    )}
+                  </div>
+                ))}
+                <div ref={end} />
+              </div>
+            )}
+
+            <div className="ask-compose">
+              <textarea
+                className="f"
+                rows={2}
+                maxLength={2000}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask(draft); } }}
+                placeholder={thread.length ? "Ask a follow-up" : mode === "handbook" ? "Ask about a policy, in your own words" : "What's going on? Stick to what you've seen and heard."}
+                aria-label="Your question"
+              />
+              <button className="btn primary" disabled={!draft.trim() || busy} onClick={() => ask(draft)}>Ask</button>
+            </div>
+            <div className="row tiny muted" style={{ gap: 10 }}>
+              <span className="grow">🔒 Questions aren&apos;t saved. Not legal advice. Firing, leave, harassment or discrimination: talk to Ben first.</span>
+              {thread.length > 0 && <button className="linklike tiny" onClick={() => setThreads((x) => ({ ...x, [mode]: [] }))}>Clear</button>}
+            </div>
+          </section>
+
+          {disc.ok && <DocCard clientId={clientId} />}
         </div>
 
-        <div className="ask-compose section">
-          <textarea
-            className="f"
-            rows={2}
-            maxLength={2000}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask(draft); } }}
-            placeholder={thread.length ? "Ask a follow-up" : mode === "handbook" ? "Ask about a policy, in your own words" : "What's going on? Stick to what you've seen and heard."}
-          />
-          <button className="btn primary" disabled={!draft.trim() || busy} onClick={() => ask(draft)}>Ask</button>
-        </div>
-        <div className="row tiny muted" style={{ marginTop: 8, gap: 10 }}>
-          <span className="grow">🔒 Questions aren&apos;t saved. Guidance from your handbook and HR best practice, not legal advice. Firing, leave, harassment or discrimination: talk to Ben first.</span>
-          {thread.length > 0 && <button className="linklike tiny" onClick={() => setThreads((x) => ({ ...x, [mode]: [] }))}>Clear</button>}
-        </div>
         {mode === "situation" && training && (
           <Link href={`/c/${clientId}/hub/learn/${training.id}`} className="card section ask-train">
             <span className="tiny muted">From your training</span>
@@ -240,5 +254,30 @@ function SituationCard({ a, onBen, onPractice }: { a: SituationAnswer; onBen: ()
         <ContactBen strong={a.callBen} />
       </div>
     </div>
+  );
+}
+
+/** The way into discipline documentation, for executives and Ben. */
+function DocCard({ clientId }: { clientId: string }) {
+  const [open, setOpen] = useState<number | null>(null);
+  useEffect(() => {
+    discApi.list(clientId).then((r) => setOpen(r.ok ? r.records.filter((x) => x.status === "review" || x.ack === "pending").length : null));
+  }, [clientId]);
+  const base = `/c/${clientId}/hub/ask/document`;
+  return (
+    <section className="card ask-doc" aria-label="Document an issue">
+      <span className="ask-doc-icon" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z" /><path d="M14 3v5h5M9 13h6M9 17h4" /></svg>
+      </span>
+      <b className="ask-card-t">Document an issue</b>
+      <span className="small muted" style={{ lineHeight: 1.5 }}>Say what happened. You pick the level, and we write it up on your letterhead from your handbook.</span>
+      <div className="ask-doc-kinds tiny muted">Write-up · Email recap · File note</div>
+      <Link href={base} className="btn primary ask-doc-go">Start a write-up</Link>
+      <Link href={`${base}?all=1`} className="ask-doc-rec small">
+        <span>Records</span>
+        {open ? <span className="pill amber">{open} open</span> : <span className="muted">›</span>}
+      </Link>
+      <span className="tiny muted">🔒 Executives and Ben only</span>
+    </section>
   );
 }
