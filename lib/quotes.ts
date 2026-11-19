@@ -68,3 +68,47 @@ export function lineFor(d = new Date()): string {
   const day = Math.floor((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(2026, 0, 1)) / 864e5);
   return DAILY_LINES[((day % DAILY_LINES.length) + DAILY_LINES.length) % DAILY_LINES.length];
 }
+
+// One line for the week, at the end of The People Brief. Written for CEOs and COOs:
+// steady, reflective, about leading people. Original lines, no famous-quote misattributions.
+export const EXEC_LINES: string[] = [
+  "Your calendar is your strategy. Look at where the hours went, not where you meant them to go.",
+  "People don't follow plans. They follow leaders who make the plan make sense.",
+  "The most expensive problems are the ones everyone saw and nobody named.",
+  "Culture is what happens when you're not in the room. Make sure you'd like what you'd see.",
+  "Speed comes from trust. Trust comes from doing what you said, every time.",
+  "Your best people rarely ask for attention. Give it anyway.",
+  "A clear no is kinder than a slow maybe.",
+  "Growth exposes every gap in how you lead. That's information, not failure.",
+  "The tone at the top becomes the tone everywhere. Choose it on purpose.",
+  "Decide what only you can do this week. Hand off the rest with real authority.",
+  "Retention is decided in ordinary weeks, not at exit interviews.",
+  "Calm is a leadership skill. So is admitting you don't know yet.",
+  "Hire for what's hard to teach. Train for the rest.",
+  "Every policy says what you value. Read yours like an employee would.",
+  "The question you avoid asking is usually the one that matters most.",
+  "Pay attention to who goes quiet. It often says more than who complains.",
+  "Strategy is easy to write and hard to staff. Start with the people.",
+  "Recognition costs nothing and compounds faster than a raise.",
+  "When everything is a priority, the team will choose for you.",
+  "Fix the system before you blame the person.",
+  "Your managers are your culture at scale. Invest in them first.",
+  "Rest is not a reward for finishing. It's how leaders stay sharp enough to finish.",
+  "The hardest conversations get more expensive every week you wait.",
+  "Clarity is the most generous thing a leader can give.",
+  "Notice what's working before you ask for more.",
+  "Good leaders make decisions. Great ones explain them.",
+  "Protect the people who protect your customers.",
+  "Small promises kept build more trust than big promises made.",
+  "A company grows only as fast as its leaders do.",
+  "Listen longer than feels comfortable. The real answer usually comes second.",
+  "Consistency is what makes fairness believable.",
+  "Lead the person in front of you, not the org chart.",
+];
+
+/** The same line all week (Monday to Sunday), different each week. */
+export function weekLine(d = new Date()): string {
+  const start = new Date(d.getFullYear(), 0, 1);
+  const week = Math.floor((d.getTime() - start.getTime()) / (7 * 864e5));
+  return EXEC_LINES[(week + d.getFullYear()) % EXEC_LINES.length];
+}
