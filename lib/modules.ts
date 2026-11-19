@@ -150,6 +150,7 @@ export interface ClientConfig {
   offboarding?: import("./offboard").OffboardSettings; // goodbye email wording, info sections, survey, timing
   leave?: import("./leave").LeaveSettings; // Leave center: types, reminder timing (who the HR admins are lives in its own table)
   roadmap?: Partial<import("./roadmap").RoadmapSettings>; // HR Roadmap: setup answers and reminder settings
+  discipline?: Partial<import("./discipline").DiscSettings>; // discipline levels, in the company's own words
   compliance?: Partial<import("./compliance").ComplianceSettings>; // Required training: courses, reminders, who checks certificates
   perform?: Partial<import("./perform").PerformSettings>; // Reviews (Alza Perform): schedule, templates, who sees what
   mailApp?: import("./mailapp").MailApp; // which app email links open: Outlook, Gmail or the device default

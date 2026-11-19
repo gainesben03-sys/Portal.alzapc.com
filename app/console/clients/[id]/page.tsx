@@ -13,6 +13,7 @@ import { logoInfo, shrinkLogo } from "@/lib/logoimg";
 import { OnboardingSettingsCard } from "@/components/onboarding";
 import { ExperienceSetup } from "@/components/experience";
 import { KnowledgePanel } from "@/components/knowledge";
+import { LevelsEditor } from "@/components/discipline";
 import { RosterCard } from "@/components/roster";
 import { WALLS } from "@/components/wall";
 import { onboardingFor } from "@/lib/hires";
@@ -395,6 +396,7 @@ export default function ClientSetup() {
           <>
             <p className="small muted" style={{ margin: "4px 0 10px" }}>Their handbook, policies, templates and letterhead. Claude and Ask HR follow these first, then your default templates, then best practice. Past letters uploaded as Word files can be reused as is: on a hire or task, tap Fill a past one and only the details change.</p>
             {live ? <KnowledgePanel clientId={id} onToast={toast.show} /> : <div className="card small muted">Available once the portal is live.</div>}
+            <LevelsEditor levels={cfg.discipline?.levels} onChange={(levels) => { set({ discipline: { ...cfg.discipline, levels } }); toast.show("Levels saved"); }} />
           </>
         )}
 

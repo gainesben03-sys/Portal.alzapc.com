@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { ClientNav, ClientTopbar, Toast, useGuard, useToast } from "@/components/ui";
 import { HubHeader } from "@/components/hub";
 import { AskBenSheet } from "@/components/askben";
+import { useDiscAccess } from "@/components/discipline";
 import { Custom, RolePlay } from "@/components/practice";
 import { useStore } from "@/lib/store";
 import { authHeader } from "@/lib/supabase";
@@ -35,6 +36,7 @@ export default function AskHr() {
   const { getClient, resources, config } = useStore();
   const client = getClient(clientId);
   const toast = useToast();
+  const disc = useDiscAccess();
   const [mode, setMode] = useState<Mode>("handbook");
   const [threads, setThreads] = useState<Record<Mode, Turn[]>>({ handbook: [], situation: [] });
   const [draft, setDraft] = useState("");
@@ -106,7 +108,12 @@ export default function AskHr() {
       <ClientTopbar client={client} />
       <ClientNav clientId={client.id} />
       <main className="wrap">
-        <HubHeader clientId={clientId} title="Ask HR" sub={mode === "handbook" ? `Answers from ${client.name}'s handbook, with where it says so.` : "Talk through a sticky situation before you have the conversation."} />
+        <HubHeader
+          clientId={clientId}
+          title="Ask HR"
+          sub={mode === "handbook" ? `Answers from ${client.name}'s handbook, with where it says so.` : "Talk through a sticky situation before you have the conversation."}
+          action={disc.ok ? <Link href={`/c/${clientId}/hub/ask/document`} className="btn sm dc-entry">Document an issue</Link> : undefined}
+        />
         <div className="seg section" style={{ gridTemplateColumns: "1fr 1fr" }}>
           <button className={mode === "handbook" ? "on" : ""} onClick={() => setMode("handbook")}>📘 The handbook</button>
           <button className={mode === "situation" ? "on" : ""} onClick={() => setMode("situation")}>🧭 A sticky situation</button>

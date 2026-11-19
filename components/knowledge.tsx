@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { authHeader, BUCKET, safeName, sb } from "@/lib/supabase";
 
-type Kind = "handbook" | "policy" | "template" | "letterhead" | "other";
+type Kind = "handbook" | "policy" | "template" | "discipline" | "letterhead" | "other";
 interface Doc {
   id: string;
   kind: Kind;
@@ -18,6 +18,7 @@ const KIND_LABEL: Record<Kind, string> = {
   handbook: "Handbook",
   policy: "Policy",
   template: "Template or past letter",
+  discipline: "Discipline template",
   letterhead: "Letterhead",
   other: "Other",
 };
@@ -140,11 +141,12 @@ export function KnowledgePanel({ clientId, onToast }: { clientId: string | null;
 
       <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
         <select className="f" style={{ width: "auto", flex: 1, minWidth: 140 }} value={kind} onChange={(e) => setKind(e.target.value as Kind)}>
-          {(["handbook", "policy", "template", "other"] as Kind[]).map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}
+          {(clientId ? (["handbook", "policy", "template", "discipline", "other"] as Kind[]) : (["handbook", "policy", "template", "other"] as Kind[])).map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}
         </select>
         <button className="btn primary" disabled={!!busy || !!err} onClick={() => fileRef.current?.click()}>Upload document</button>
         <input ref={fileRef} type="file" hidden accept=".pdf,.docx,.txt,.md" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) upload(f, kind); }} />
       </div>
+      {kind === "discipline" && <p className="tiny muted" style={{ marginTop: 8 }}>Used for write-ups when they document an issue. One form for every level, or one per level with the level in the file name (like &quot;Written warning&quot;).</p>}
       {busy && <p className="tiny muted" style={{ marginTop: 8 }}>{busy}</p>}
       <p className="tiny muted" style={{ marginTop: 8 }}>PDF, Word (.docx) or text. Only you and Claude see these. Clients never do.</p>
     </div>

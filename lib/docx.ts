@@ -66,6 +66,11 @@ export async function docxBlob(title: string, text: string, clientId?: string): 
       children.push(new Paragraph({ heading: h[1].length === 1 ? HeadingLevel.HEADING_1 : HeadingLevel.HEADING_2, spacing: { before: 240, after: 80 }, children: runs(h[2]) }));
       continue;
     }
+    const quote = line.match(/^>\s?(.*)$/);
+    if (quote) {
+      children.push(new Paragraph({ spacing: { before: 60, after: 60 }, indent: { left: 360 }, children: [new TextRun({ text: quote[1], italics: true })] }));
+      continue;
+    }
     const bullet = line.match(/^\s*[-*•]\s+(.*)$/);
     if (bullet) {
       children.push(new Paragraph({ bullet: { level: 0 }, spacing: { after: 60 }, children: runs(bullet[1]) }));

@@ -11,7 +11,7 @@ export const maxDuration = 60;
 
 const BUCKET = "client-files";
 const MAX_TEXT = 200_000;
-const KINDS = ["handbook", "policy", "template", "letterhead", "other"];
+const KINDS = ["handbook", "policy", "template", "discipline", "letterhead", "other"];
 
 async function guard(req: Request) {
   if (!SERVER_LIVE) return { error: NextResponse.json({ ok: false, reason: "demo" }) };

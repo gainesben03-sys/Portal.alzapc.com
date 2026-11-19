@@ -41,7 +41,7 @@ export function parseJson<T = D>(text: string): T | null {
 }
 
 /** Daily limits per person, so one curious manager can't run up the bill. Ben has no limit. */
-export const DAILY: Record<string, number> = { askhr: 40, roleplay: 25, feedback: 25 };
+export const DAILY: Record<string, number> = { askhr: 40, roleplay: 25, feedback: 25, discipline: 40 };
 
 /** true when this person is under today's limit. Fails open if the usage table isn't there yet. */
 export async function underLimit(db: SupabaseClient, email: string, kind: string): Promise<boolean> {

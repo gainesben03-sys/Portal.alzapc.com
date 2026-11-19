@@ -36,7 +36,7 @@ export function useHub(clientId: string) {
 }
 
 /** Top of every Hub page: the title and, for Ben, whose team he's looking at. */
-export function HubHeader({ clientId, title, sub }: { clientId: string; title: string; sub?: string }) {
+export function HubHeader({ clientId, title, sub, action }: { clientId: string; title: string; sub?: string; action?: import("react").ReactNode }) {
   const h = useHub(clientId);
   return (
     <div className="hub-head">
@@ -52,6 +52,7 @@ export function HubHeader({ clientId, title, sub }: { clientId: string; title: s
           </select>
         </label>
       )}
+      {action}
     </div>
   );
 }

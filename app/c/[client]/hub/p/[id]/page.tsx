@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { ClientNav, ClientTopbar, Toast, useGuard, useToast } from "@/components/ui";
 import { Initials, LogSheet, useHub } from "@/components/hub";
+import { PersonDocs, useDiscAccess } from "@/components/discipline";
 import { useStore } from "@/lib/store";
 import { fmt } from "@/lib/data";
 import { anniversary, daysSinceIso, nextYearly, TeamLog, tenure } from "@/lib/team";
@@ -19,11 +20,14 @@ export default function HubPerson() {
   const toast = useToast();
   const [log, setLog] = useState<TeamLog["kind"] | null>(null);
   const [filter, setFilter] = useState<"all" | TeamLog["kind"]>("all");
+  const disc = useDiscAccess();
   if (!ok || !client) return null;
 
   const p = people.find((x) => x.id === id && x.clientId === clientId);
   // managers only see their own people; Ben sees everyone
-  const allowed = !!p && (viewer?.kind === "advisor" || (!!me?.email && p.managerEmail.toLowerCase() === me.email.toLowerCase()));
+  const manages = !!p && (viewer?.kind === "advisor" || (!!me?.email && p.managerEmail.toLowerCase() === me.email.toLowerCase()));
+  // executives can open anyone, for the Documentation section; check-in notes stay with the manager and Ben
+  const allowed = !!p && (manages || disc.ok);
   if (!p || !allowed)
     return (
       <div style={{ ["--accent" as string]: client.accent }}>
@@ -47,7 +51,7 @@ export default function HubPerson() {
       <ClientTopbar client={client} />
       <ClientNav clientId={client.id} />
       <main className="wrap">
-        <Link href={`/c/${clientId}/hub/team`} className="small" style={{ color: "var(--blue)" }}>← Your team</Link>
+        {manages ? <Link href={`/c/${clientId}/hub/team`} className="small" style={{ color: "var(--blue)" }}>← Your team</Link> : <Link href={`/c/${clientId}/hub/ask/document?all=1`} className="small" style={{ color: "var(--blue)" }}>← Records</Link>}
         <div className="hub-profile section">
           <Initials name={p.name} />
           <div className="grow" style={{ minWidth: 0 }}>
@@ -62,12 +66,14 @@ export default function HubPerson() {
           {b && <div className="card"><span className="tiny muted">Birthday</span><b>{b.date.toLocaleDateString("en-US", { month: "long", day: "numeric" })}</b><span className="tiny muted">{b.days === 0 ? "today 🎂" : `in ${b.days} days`}</span></div>}
         </div>
 
-        <div className="hub-quick section">
+        {manages && <div className="hub-quick section">
           <button className="btn primary" onClick={() => setLog("checkin")}>💬 Log a check-in</button>
           <button className="btn" onClick={() => setLog("recognition")}>⭐ Recognize {first}</button>
-        </div>
+        </div>}
 
-        {open.length > 0 && (
+        <PersonDocs clientId={clientId} person={p} />
+
+        {manages && open.length > 0 && (
           <>
             <div className="section-head section"><h2>Open follow-ups</h2></div>
             <div className="card">
@@ -81,6 +87,7 @@ export default function HubPerson() {
           </>
         )}
 
+        {manages && <>
         <div className="section-head section" style={{ alignItems: "center" }}>
           <h2>History</h2>
           <div className="chips" style={{ margin: 0 }}>
@@ -111,6 +118,7 @@ export default function HubPerson() {
             ))}
           </div>
         )}
+        </>}
       </main>
       {log && <LogSheet clientId={clientId} kind={log} person={p} team={h.team.length ? h.team : [p]} onClose={() => setLog(null)} onSaved={(m) => { setLog(null); toast.show(m); }} />}
       <Toast msg={toast.msg} onDone={toast.clear} />
