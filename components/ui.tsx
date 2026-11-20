@@ -368,19 +368,6 @@ export function ClientNav({ clientId }: { clientId: string }) {
       ],
     },
     {
-      key: "training",
-      label: "Training",
-      subs: [
-        ...(training
-          ? [
-              { href: `${base}/training`, label: "Trainings", match: [`${base}/hub/learn`, `${base}/hub/view`] },
-              ...(isAdvisor || access === "exec" ? [{ href: `${base}/training/progress`, label: "Who's practiced", match: [`${base}/training/progress`] }] : []),
-            ]
-          : []),
-        ...(cfg?.modules.compliance && access !== "hiring" && (isAdvisor || access === "exec" || access === "manager") ? [{ href: `${base}/training/required`, label: "Required training", match: [`${base}/training/required`] }] : []),
-      ],
-    },
-    {
       key: "todo",
       label: "Action Center",
       // managers get Projects only when a task there is theirs
@@ -421,6 +408,14 @@ export function ClientNav({ clientId }: { clientId: string }) {
         ...(mod("resources") ? [{ href: `${base}/resources`, label: "Resources", match: [`${base}/resources`] }] : []),
         ...(tools && cfg?.askHr !== false ? [{ href: `${base}/hub/ask`, label: "Ask HR", match: [`${base}/hub/ask`] }] : []),
         ...(access !== "hiring" ? [{ href: `${base}/newsletters`, label: "Newsletters", match: [`${base}/newsletters`] }] : []),
+        // Training lives here, not on the top line
+        ...(training
+          ? [
+              { href: `${base}/training`, label: "Trainings", match: [`${base}/hub/learn`, `${base}/hub/view`] },
+              ...(isAdvisor || access === "exec" ? [{ href: `${base}/training/progress`, label: "Who's practiced", match: [`${base}/training/progress`] }] : []),
+            ]
+          : []),
+        ...(cfg?.modules.compliance && access !== "hiring" && (isAdvisor || access === "exec" || access === "manager") ? [{ href: `${base}/training/required`, label: "Required training", match: [`${base}/training/required`] }] : []),
         ...(mod("wellness") ? [{ href: `${base}/wellness`, label: "Wellness", match: [`${base}/wellness`] }] : []),
         ...(access !== "hiring" ? [{ href: `${base}/share`, label: "Send files", match: [`${base}/share`] }] : []),
       ],
