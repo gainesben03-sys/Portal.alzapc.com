@@ -4,9 +4,9 @@
 // Templates and settings live here too, for Ben and the review admins.
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ClientNav, ClientTopbar, Sheet, Toast, useGuard, useToast } from "@/components/ui";
-import { LangSwitch, StageChip, useDemo, useLang } from "@/components/perform";
+import { StageChip, useDemo, useLang } from "@/components/perform";
 import { useStore } from "@/lib/store";
 import { BUILT_IN, cleanPerform, daysUntil, fmtDay, KIND_LABEL, Lang, Part, PerformSettings, ReviewTemplate, SCALE, stageOf, T, templatesFor, newId } from "@/lib/perform";
 import { ListData, performApi } from "@/lib/performclient";
@@ -33,6 +33,8 @@ export default function Reviews() {
   const [launching, setLaunching] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [nudging, setNudging] = useState(false);
+  const [kind, setKind] = useState<"all" | "review" | "intro" | "pip">("all");
+  const moreRef = useRef<HTMLDetailsElement>(null);
 
   const call = useCallback((body: Record<string, unknown>) => performApi(clientId, body, demo), [clientId, demo]);
   const load = useCallback(async () => {
@@ -80,23 +82,23 @@ export default function Reviews() {
     const d = daysUntil(r.due, today);
     const when = st === "waiting" ? (lang === "es" ? `Compartida ${fmtDay(r.share!.at.slice(0, 10), lang)}` : `Shared ${fmtDay(r.share!.at.slice(0, 10), lang)}`) : d < 0 ? (lang === "es" ? `Venció hace ${-d} días` : `${-d} days overdue`) : d === 0 ? (lang === "es" ? "Vence hoy" : "Due today") : `${lang === "es" ? "Vence" : "Due"} ${fmtDay(r.due, lang)}`;
     const action = st === "waiting" ? null : st === "ready" ? t.share : ["in_progress", "overdue"].includes(st) && Object.keys(r.ratings).length + Object.keys(r.answers).length > 0 ? t.cont : t.start;
+    const href = `/c/${clientId}/reviews/${r.id}`;
+    const canRemind = data.role.admin && r.managerEmail !== data.role.email && ["not_started", "in_progress", "overdue"].includes(st);
+    const who = data.role.admin ? (r.managerEmail === data.role.email ? (lang === "es" ? "Usted" : "You") : r.managerName) : "";
     return (
-      <article key={r.id} className="pf-card">
-        <span className="pf-avatar" aria-hidden="true">{r.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}</span>
-        <div className="grow" style={{ minWidth: 0 }}>
-          <b className="pf-name">{r.name} · {KIND_LABEL[r.kind][lang]}</b>
-          <span className="pf-sub">{r.title}{data.role.admin && r.managerEmail !== data.role.email ? ` · ${r.managerName}` : ""} · {when}</span>
-          <span className="pf-tags">
-            <StageChip st={st} lang={lang} />
-            {r.self?.doneAt && <span className="pf-chip green">{lang === "es" ? "Autoevaluación lista" : "Self-assessment in"}</span>}
-            {r.lang === "es" && <span className="pf-chip">Español</span>}
-          </span>
+      <article key={r.id} className={`rd-card${st === "overdue" ? " late" : ""}`} role="link" tabIndex={0} aria-label={`${r.name}, ${KIND_LABEL[r.kind][lang]}`}
+        onClick={() => router.push(href)} onKeyDown={(e) => { if (e.key === "Enter") router.push(href); }}>
+        <div className="rd-main">
+          <span className="rd-name"><b>{r.name}</b><span className="rd-type">{KIND_LABEL[r.kind][lang]}</span>{r.lang === "es" && <span className="rd-type">ES</span>}</span>
+          <span className="rd-meta">{who ? <>{lang === "es" ? "Gerente" : "Manager"}: {who}</> : r.title}<span aria-hidden="true"> · </span><span className={st === "overdue" ? "red" : ""}>{when}</span></span>
         </div>
-        <div className="pf-card-act">
-          {action ? <Link href={`/c/${clientId}/reviews/${r.id}`} className="btn primary">{action}</Link> : <Link href={`/c/${clientId}/reviews/${r.id}`} className="btn">{t.view}</Link>}
-          {action === t.start && <span className="tiny muted">{t.about(r.template.minutes)}</span>}
-          {st === "waiting" && r.share?.how === "link" && <span className="tiny muted">{lang === "es" ? "Esperando que firme" : "Waiting for them to sign off"}</span>}
-          {data.role.admin && r.managerEmail !== data.role.email && ["not_started", "in_progress", "overdue"].includes(st) && <button className="btn ghost sm" onClick={() => remind(r.id)}>{t.remind}</button>}
+        <div className="rd-status">
+          <StageChip st={st} lang={lang} />
+          {r.self?.doneAt && st !== "done" && st !== "waiting" && <span className="tiny muted">{lang === "es" ? "Autoevaluación lista" : "Self-assessment in"}</span>}
+        </div>
+        <div className="rd-act" onClick={(e) => e.stopPropagation()}>
+          {canRemind && <button className="btn ghost sm" onClick={() => remind(r.id)}>{t.remind}</button>}
+          <Link href={href} className={`btn sm${action ? " primary" : ""}`}>{action ?? t.view}</Link>
         </div>
       </article>
     );
@@ -119,6 +121,14 @@ export default function Reviews() {
     );
   };
 
+  const remindAll = async () => {
+    setNudging(true);
+    const r = await call({ action: "remindAll" });
+    setNudging(false);
+    toast.show(r.ok ? (r.managers ? (lang === "es" ? `Recordatorio enviado a ${r.managers} gerente${r.managers === 1 ? "" : "s"}` : `Reminder sent to ${r.managers} manager${r.managers === 1 ? "" : "s"}`) : lang === "es" ? "Nadie tiene evaluaciones pendientes" : "No one has reviews to finish") : lang === "es" ? "No se pudo enviar" : "Couldn't send. Try again.");
+    if (r.ok) load();
+  };
+
   // ---------- views ----------
   const header = (
     <div className="pf-top">
@@ -128,7 +138,25 @@ export default function Reviews() {
           {data.role.admin ? (lang === "es" ? "Todas las evaluaciones, a tiempo y en un solo lugar." : "Every review, on schedule, in one place.") : mine.length ? (lang === "es" ? `Su equipo. ${onMe(mine).length} pendientes.` : onMe(mine).length ? `Your team. ${onMe(mine).length} need${onMe(mine).length === 1 ? "s" : ""} you.` : "Your team. You're caught up.") : lang === "es" ? "Cómo van los equipos." : "How your teams are doing."}
         </p>
       </div>
-      <LangSwitch lang={lang} onChange={setLang} />
+      <div className="rd-top-act">
+        <div className="rd-lang" role="group" aria-label="Language">
+          <button className={lang === "en" ? "on" : ""} aria-pressed={lang === "en"} onClick={() => setLang("en")}>EN</button>
+          <button className={lang === "es" ? "on" : ""} aria-pressed={lang === "es"} onClick={() => setLang("es")}>ES</button>
+        </div>
+        {data.role.admin && tab === "reviews" && (
+          <>
+            <details className="rd-more" ref={moreRef}>
+              <summary className="btn sm">{lang === "es" ? "Más" : "More"}</summary>
+              <div className="rd-menu" onClick={() => moreRef.current?.removeAttribute("open")}>
+                <button disabled={nudging} onClick={remindAll}>{lang === "es" ? "Recordar a los gerentes" : "Remind managers"}<span>{lang === "es" ? "Todos los que tienen evaluaciones pendientes" : "Everyone with reviews to finish"}</span></button>
+                <button onClick={() => setPicking("adhoc")}>{lang === "es" ? "Una evaluación" : "One review"}<span>{lang === "es" ? "Para una sola persona, fuera del ciclo" : "For one person, outside the cycle"}</span></button>
+                <button onClick={() => setPicking("pip")}>{lang === "es" ? "Plan de mejora" : "Improvement plan"}<span>{lang === "es" ? "RR. HH. lo revisa antes de compartirlo" : "HR reviews it before it's shared"}</span></button>
+              </div>
+            </details>
+            <button className="btn primary sm" onClick={() => setLaunching(true)}>+ {lang === "es" ? "Lanzar evaluaciones" : "Launch reviews"}</button>
+          </>
+        )}
+      </div>
     </div>
   );
 
@@ -144,28 +172,37 @@ export default function Reviews() {
   if (data.role.admin) {
     const all = data.reviews.filter((r) => r.status !== "cancelled");
     const cycle = all.filter((r) => r.kind !== "pip" && r.due >= new Date(Date.now() - 365 * 864e5).toISOString().slice(0, 10));
-    const written = cycle.filter((r) => ["final", "shared", "done"].includes(r.status)).length;
     const signed = cycle.filter((r) => stageOf(r, s) === "done").length;
-    const prog = cycle.filter((r) => stageOf(r, s) === "in_progress").length;
     const over = cycle.filter((r) => stageOf(r, s) === "overdue").length;
-    const FILTERS: [string, string][] = [["attention", lang === "es" ? "Pendientes" : "Needs attention"], ["overdue", STAGE_LABELS(lang).overdue], ["waiting", STAGE_LABELS(lang).waiting], ["intro", KIND_LABEL.intro[lang]], ["pip", KIND_LABEL.pip[lang]], ["done", STAGE_LABELS(lang).done]];
+    const awaiting = cycle.filter((r) => stageOf(r, s) === "waiting").length;
+    const open = cycle.length - signed - over;
+    const pct = cycle.length ? Math.round((signed / cycle.length) * 100) : 0;
+    const FILTERS: [string, string][] = [["attention", lang === "es" ? "Pendientes" : "Needs attention"], ["progress", STAGE_LABELS(lang).in_progress], ["waiting", STAGE_LABELS(lang).waiting], ["done", STAGE_LABELS(lang).done]];
+    const rank = (st: string) => (st === "overdue" ? 0 : 1);
     const shown = all.filter((r) => {
       const st = stageOf(r, s);
-      if (filter === "attention") return ["not_started", "in_progress", "ready", "waiting", "overdue"].includes(st);
-      if (filter === "intro") return r.kind === "intro" && st !== "done";
-      if (filter === "pip") return r.kind === "pip";
+      if (kind !== "all" && (kind === "review" ? r.kind === "intro" || r.kind === "pip" : r.kind !== kind)) return false;
+      // needs attention: late, written but not shared yet, or due within two weeks
+      if (filter === "attention") return st === "overdue" || st === "ready" || (["not_started", "in_progress"].includes(st) && daysUntil(r.due, today) <= 14);
+      if (filter === "progress") return ["not_started", "in_progress", "ready", "overdue"].includes(st);
       return st === filter;
-    }).sort((a, b) => (a.due < b.due ? -1 : 1));
+    }).sort((a, b) => rank(stageOf(a, s)) - rank(stageOf(b, s)) || (filter === "done" ? (a.due < b.due ? 1 : -1) : a.due < b.due ? -1 : 1));
     return shell(
       <>
         {header}
         {adminTabs}
-        <div className="pf-tiles section">
-          <div className="pf-tile"><b>{cycle.length ? Math.round((written / cycle.length) * 100) : 0}%</b><span>{lang === "es" ? `Escritas por gerentes (${written} de ${cycle.length})` : `Reviews written (${written} of ${cycle.length})`}</span></div>
-          <div className="pf-tile"><b>{signed}</b><span>{lang === "es" ? "Completadas (firmadas o entregadas)" : "Finished (signed off or delivered)"}</span></div>
-          <div className="pf-tile"><b>{prog}</b><span>{STAGE_LABELS(lang).in_progress}</span></div>
-          <div className="pf-tile"><b className={over ? "red" : ""}>{over}</b><span>{STAGE_LABELS(lang).overdue}</span></div>
-        </div>
+        <section className="rd-health section" aria-label={lang === "es" ? "Resumen del ciclo" : "Review cycle overview"}>
+          <div className="rd-stats">
+            <div><b>{cycle.length}</b><span>{lang === "es" ? "Evaluaciones" : "Total reviews"}</span></div>
+            <div><b>{signed}</b><span>{STAGE_LABELS(lang).done}</span></div>
+            <div><b>{open}</b><span>{STAGE_LABELS(lang).in_progress}{awaiting ? <em>{awaiting} {lang === "es" ? "esperando firma" : "awaiting sign-off"}</em> : null}</span></div>
+            <div><b className={over ? "red" : ""}>{over}</b><span>{STAGE_LABELS(lang).overdue}</span></div>
+          </div>
+          <div className="rd-progress">
+            <span className="pf-bar"><span style={{ width: `${pct}%` }} /></span>
+            <span className="tiny muted">{pct}% {lang === "es" ? "completado" : "complete"}</span>
+          </div>
+        </section>
 
         {data.pipFlags.map((pid) => {
           const p = data.people.find((x) => x.id === pid);
@@ -178,30 +215,18 @@ export default function Reviews() {
           );
         })}
 
-        {data.role.admin && (
-          <div className="pf-launch section">
-            <div className="grow">
-              <b>{lang === "es" ? "Lanzar evaluaciones" : "Launch reviews"}</b>
-              <span className="tiny muted">{lang === "es" ? "Elija a quién, la plantilla y la fecha. Cada evaluación va al gerente de esa persona." : "Pick who, the template and the due date. Each review goes to that person's manager, with reminders built in."}</span>
-            </div>
-            <button className="btn ghost sm" disabled={nudging} onClick={async () => {
-              setNudging(true);
-              const r = await call({ action: "remindAll" });
-              setNudging(false);
-              toast.show(r.ok ? (r.managers ? (lang === "es" ? `Recordatorio enviado a ${r.managers} gerente${r.managers === 1 ? "" : "s"}` : `Reminder sent to ${r.managers} manager${r.managers === 1 ? "" : "s"}`) : lang === "es" ? "Nadie tiene evaluaciones pendientes" : "No one has reviews to finish") : lang === "es" ? "No se pudo enviar" : "Couldn't send. Try again.");
-              if (r.ok) load();
-            }}>{nudging ? "…" : lang === "es" ? "Recordar a los gerentes" : "Remind managers"}</button>
-            <button className="btn primary sm" onClick={() => setLaunching(true)}>{lang === "es" ? "Lanzar evaluaciones" : "Launch reviews"}</button>
-          </div>
-        )}
-        <div className="row section" style={{ flexWrap: "wrap", gap: 8 }}>
+        <div className="rd-filters section">
           <div className="pf-filters grow" role="group" aria-label="Filter">
             {FILTERS.map(([k, label]) => <button key={k} className={filter === k ? "on" : ""} aria-pressed={filter === k} onClick={() => setFilter(k)}>{label}</button>)}
           </div>
-          <button className="btn sm" onClick={() => setPicking("adhoc")}>{lang === "es" ? "+ Una evaluación" : "+ One review"}</button>
-          <button className="btn ghost sm" onClick={() => setPicking("pip")}>{lang === "es" ? "+ Plan de mejora" : "+ Improvement plan"}</button>
+          <select className="rd-kind" aria-label={lang === "es" ? "Tipo" : "Review type"} value={kind} onChange={(e) => setKind(e.target.value as typeof kind)}>
+            <option value="all">{lang === "es" ? "Todos los tipos" : "All types"}</option>
+            <option value="review">{lang === "es" ? "Evaluación de desempeño" : "Performance review"}</option>
+            <option value="intro">{KIND_LABEL.intro[lang]}</option>
+            <option value="pip">{KIND_LABEL.pip[lang]}</option>
+          </select>
         </div>
-        <div className="pf-list">{shown.length ? shown.map(card) : <p className="small muted">{lang === "es" ? "Nada aquí por ahora." : "Nothing here right now."}</p>}</div>
+        <div className="pf-list rd-list">{shown.length ? shown.map(card) : <p className="small muted rd-empty">{filter === "attention" ? (lang === "es" ? "Nada necesita atención ahora." : "Nothing needs attention right now.") : lang === "es" ? "Nada aquí por ahora." : "Nothing here right now."}</p>}</div>
 
         {data.insight.length > 0 && <Insight rows={data.insight} lang={lang} />}
         {upcomingList(false)}
@@ -226,11 +251,11 @@ export default function Reviews() {
       {mine.length > 0 || data.people.length > 0 ? (
         <>
           <h2 className="pf-h2 section">{t.needsYou}</h2>
-          <div className="pf-list">{onMe(mine).length ? onMe(mine).map(card) : <p className="small muted">{lang === "es" ? "Nada pendiente. Buen trabajo." : "Nothing due right now. Nice."}</p>}</div>
+          <div className="pf-list rd-list">{onMe(mine).length ? onMe(mine).map(card) : <p className="small muted rd-empty">{lang === "es" ? "Nada pendiente. Buen trabajo." : "Nothing due right now. Nice."}</p>}</div>
           {onThem(mine).length > 0 && (
             <>
               <h2 className="pf-h2 section">{lang === "es" ? "Esperando al empleado" : "Waiting on them"}</h2>
-              <div className="pf-list">{onThem(mine).map(card)}</div>
+              <div className="pf-list rd-list">{onThem(mine).map(card)}</div>
             </>
           )}
           {upcomingList(true)}
@@ -249,18 +274,21 @@ export default function Reviews() {
   );
 }
 
-const STAGE_LABELS = (lang: Lang) => ({ overdue: lang === "es" ? "Atrasadas" : "Overdue", waiting: lang === "es" ? "Esperando firma" : "Waiting on sign-off", done: lang === "es" ? "Completadas" : "Done", in_progress: lang === "es" ? "En progreso" : "In progress" });
+const STAGE_LABELS = (lang: Lang) => ({ overdue: lang === "es" ? "Atrasadas" : "Overdue", waiting: lang === "es" ? "Esperando firma" : "Awaiting sign-off", done: lang === "es" ? "Completadas" : "Completed", in_progress: lang === "es" ? "En progreso" : "In progress" });
 
 /** Team summaries for executives: counts only, never names or what was written. */
 function Insight({ rows, lang }: { rows: ListData["insight"]; lang: Lang }) {
   const es = lang === "es";
   return (
-    <section className="card section">
-      <h2 className="pf-h2">{es ? "Cómo van los equipos" : "How teams are doing"}</h2>
+    <details className="card section rd-mgr">
+      <summary>
+        <h2 className="pf-h2">{es ? "Progreso por gerente" : "Progress by manager"}</h2>
+        <span className="tiny muted">{rows.length} {es ? (rows.length === 1 ? "gerente" : "gerentes") : rows.length === 1 ? "manager" : "managers"} · {rows.reduce((n, r) => n + r.overdue, 0)} {es ? "atrasadas" : "overdue"}</span>
+      </summary>
       <p className="tiny muted" style={{ marginTop: 0 }}>{es ? "Últimos 12 meses. Solo números: las evaluaciones las ven el gerente y RR. HH." : "Last 12 months. Numbers only: reviews themselves stay with the manager and HR."}</p>
       <div style={{ overflowX: "auto" }}>
         <table className="pf-table">
-          <thead><tr><th>{es ? "Gerente" : "Manager"}</th><th>{es ? "Escritas" : "Written"}</th><th>{es ? "Atrasadas" : "Overdue"}</th><th>{es ? "Calificación general" : "Overall ratings"}</th></tr></thead>
+          <thead><tr><th>{es ? "Gerente" : "Manager"}</th><th>{es ? "Completadas" : "Completed"}</th><th>{es ? "Atrasadas" : "Overdue"}</th><th>{es ? "Calificación general" : "Overall ratings"}</th></tr></thead>
           <tbody>
             {rows.map((r) => {
               const rated = r.below + r.meets + r.above;
@@ -288,7 +316,7 @@ function Insight({ rows, lang }: { rows: ListData["insight"]; lang: Lang }) {
           </tbody>
         </table>
       </div>
-    </section>
+    </details>
   );
 }
 
