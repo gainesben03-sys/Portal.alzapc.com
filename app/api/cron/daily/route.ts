@@ -184,7 +184,9 @@ async function daily(req: Request) {
     // ---------- 2. The People Brief (weekly email for leaders)
     if (huddleDue(huddle, now) && huddle.recipients.length) {
       const people = cfg.modules?.hires || cfg.modules?.recruiting || cfg.modules?.offboarding ? peopleData(cfg) : undefined;
-      const out = buildHuddle({ client, settings: huddle, actions, projects, files, rules, softAsks: cfg.softAsks, people });
+      const recent = new Date(Date.now() - 120 * 864e5).toISOString();
+      const reviewsLaunched = cfg.modules?.perform ? (await allReviews(db, c.id).catch(() => [])).some((r) => r.kind === "cycle" && r.status !== "cancelled" && r.createdAt >= recent) : false;
+      const out = buildHuddle({ client, settings: huddle, actions, projects, files, rules, softAsks: cfg.softAsks, people, reviewsLaunched });
       if (out.quiet && huddle.skipIfQuiet) {
         log.push(`huddle skipped (quiet) ${c.id}`);
       } else {

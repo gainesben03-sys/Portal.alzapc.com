@@ -3234,3 +3234,5 @@ body.org-dragging, body.org-dragging * { cursor: grabbing !important; user-selec
 .org-card { touch-action: auto; user-select: none; }
 .pf-close { margin-top: 28px; text-align: center; }
 .pf-close-box { display: inline-flex; flex-direction: column; gap: 10px; align-items: center; max-width: 460px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+.pf-round { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; background: color-mix(in srgb, var(--accent) 7%, var(--card)); border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line)); border-radius: 14px; padding: 14px 18px; }
+.pf-round .grow { display: flex; flex-direction: column; gap: 2px; flex: 1 1 280px; }

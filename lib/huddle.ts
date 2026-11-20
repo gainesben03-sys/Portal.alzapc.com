@@ -36,6 +36,8 @@ export interface HuddleInput {
   softAsks?: boolean; // kept for callers; the Brief carries no referral line
   /** Hires, roles, candidates, departures and the roster, for Your People. */
   people?: PeopleData;
+  /** Reviews were launched for this round already (so no heads-up to launch them). */
+  reviewsLaunched?: boolean;
 }
 
 export interface HuddleOutput {
@@ -61,7 +63,7 @@ const WHY: Record<Action["kind"], string> = {
   todo: "It's holding up the next step.",
 };
 
-export function buildHuddle({ client, settings, actions, projects, rules, sinceDays = 7, people }: HuddleInput): HuddleOutput {
+export function buildHuddle({ client, settings, actions, projects, rules, sinceDays = 7, people, reviewsLaunched }: HuddleInput): HuddleOutput {
   const now = today();
   const todayIso = isoOf(now);
   const since = addDaysISO(todayIso, -sinceDays);
@@ -102,6 +104,16 @@ export function buildHuddle({ client, settings, actions, projects, rules, sinceD
       });
     }
   }
+  // reviews on the HR Roadmap starting within a month, not launched yet
+  const heads = new Set<string>();
+  if (!reviewsLaunched)
+    for (const p of proj.filter((x) => isRoadmap(x) && ["reviews", "midyear"].includes(x.roadmap.tpl) && x.status === "planned")) {
+      const start = (p as import("./roadmap").RoadmapProject).roadmap.start;
+      const d = Math.round((parseDay(start).getTime() - parseDay(todayIso).getTime()) / 864e5);
+      if (d < -14 || d > 30) continue;
+      heads.add(p.id);
+      att.push({ title: p.name, who: "HR", when: d > 0 ? `Starts ${day(start)}, in ${plural(d, "day")}` : d === 0 ? "Starts today" : `Planned to start ${day(start)}`, tone: d <= 7 ? "amber" : "gray", why: "Launch them from Reviews so managers get their list and reminders.", href: `${base}/reviews`, label: "Open Reviews", rank: 300 - d });
+    }
   att.sort((a, b) => b.rank - a.rank);
   const attShown = att.slice(0, MAX.attention);
 
@@ -173,7 +185,7 @@ export function buildHuddle({ client, settings, actions, projects, rules, sinceD
     })
     .sort((a, b) => b.rank - a.rank || (a.target || "9").localeCompare(b.target || "9"));
   const prioShown = prios.slice(0, MAX.priorities);
-  const shownIds = new Set(prioShown.map((x) => x.p.id));
+  const shownIds = new Set([...prioShown.map((x) => x.p.id), ...heads]);
 
   // ---------- D. Coming up: the next two weeks, real dates only, nothing already shown
   const up: Line[] = [];

@@ -11,6 +11,7 @@ import { useStore } from "@/lib/store";
 import { BUILT_IN, cleanPerform, daysUntil, fmtDay, KIND_LABEL, Lang, Part, PerformSettings, ReviewTemplate, SCALE, stageOf, T, templatesFor, newId } from "@/lib/perform";
 import { ListData, performApi } from "@/lib/performclient";
 import { ArchiveRange, buildArchive, inRange, isArchived } from "@/lib/reviewarchive";
+import { isRoadmap, tplById } from "@/lib/roadmap";
 
 type Tab = "reviews" | "templates" | "settings";
 
@@ -18,7 +19,7 @@ export default function Reviews() {
   const { client: clientId } = useParams<{ client: string }>();
   const ok = useGuard("client", clientId);
   const router = useRouter();
-  const { getClient, config } = useStore();
+  const { getClient, config, projects } = useStore();
   const client = getClient(clientId);
   const cfg = config[clientId];
   const demo = useDemo(clientId);
@@ -105,6 +106,27 @@ export default function Reviews() {
     );
   };
 
+  // the next review round on the HR Roadmap (Annual reviews, Mid-year check-ins)
+  const round = projects
+    .filter((p) => p.clientId === clientId && isRoadmap(p) && ["reviews", "midyear"].includes(p.roadmap.tpl) && p.status !== "done")
+    .map((p) => (isRoadmap(p) ? p : null)!)
+    .sort((a, b) => a.roadmap.start.localeCompare(b.roadmap.start))[0];
+  const launchedLately = data.reviews.some((r) => r.kind === "cycle" && r.status !== "cancelled" && r.createdAt >= new Date(Date.now() - 120 * 864e5).toISOString());
+  const roundDue = round ? (() => {
+    const step = tplById(round.roadmap.tpl)?.steps.find(([x]) => /managers complete/i.test(x));
+    return step ? new Date(new Date(round.roadmap.start + "T12:00:00").getTime() + step[1] * 864e5).toISOString().slice(0, 10) : round.roadmap.end;
+  })() : "";
+  const roundIn = round ? daysUntil(round.roadmap.start, today) : 999;
+  const roundBanner = data.role.admin && round && round.status === "planned" && !launchedLately && roundIn <= 60 && roundIn >= -30 && (
+    <div className="pf-round section">
+      <div className="grow">
+        <b>{roundIn > 0 ? (lang === "es" ? `${round.name}: empiezan en ${roundIn} días` : `${round.name} start in ${roundIn} day${roundIn === 1 ? "" : "s"}`) : roundIn === 0 ? (lang === "es" ? `${round.name}: empiezan hoy` : `${round.name} start today`) : lang === "es" ? `${round.name}: debían empezar el ${fmtDay(round.roadmap.start, lang)}` : `${round.name} were planned to start ${fmtDay(round.roadmap.start, lang)}`}</b>
+        <span className="small muted">{lang === "es" ? `${fmtDay(round.roadmap.start, lang)} en su plan de RR. HH. Los gerentes terminan para el ${fmtDay(roundDue, lang)}.` : `${fmtDay(round.roadmap.start, lang)} on your HR Roadmap. Managers finish by ${fmtDay(roundDue, lang)}.`}</span>
+      </div>
+      <button className="btn primary sm" onClick={() => { setLaunchDue(roundDue); setLaunching(true); }}>{lang === "es" ? "Lanzar evaluaciones" : "Launch reviews"}</button>
+    </div>
+  );
+
   const upcomingList = (onlyMine: boolean) => {
     const mineOnly = (personId: string) => !onlyMine || data.people.find((p) => p.id === personId)?.managerEmail === data.role.email;
     const hasMgr = (personId: string) => !!data.people.find((p) => p.id === personId)?.managerEmail;
@@ -115,7 +137,7 @@ export default function Reviews() {
     const noMgr = new Set<string>();
     for (const u of all) {
       if (!hasMgr(u.personId)) { noMgr.add(u.name); continue; }
-      if (u.kind === "cycle" && s.basis === "company") rounds.set(u.due, [...(rounds.get(u.due) ?? []), u]);
+      if (u.kind === "cycle" && s.basis === "company") { if (!round) rounds.set(u.due, [...(rounds.get(u.due) ?? []), u]); }
       else singles.push(u);
     }
     if (!rounds.size && !singles.length && !(data.role.admin && noMgr.size)) return null;
@@ -220,6 +242,7 @@ export default function Reviews() {
       <>
         {header}
         {adminTabs}
+        {roundBanner}
         <section className="rd-health section" aria-label={lang === "es" ? "Resumen del ciclo" : "Review cycle overview"}>
           <div className="rd-stats">
             <div><b>{cycle.length}</b><span>{lang === "es" ? "Evaluaciones" : "Total reviews"}</span></div>
