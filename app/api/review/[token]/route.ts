@@ -1,4 +1,4 @@
-// Public, link-only: someone outside the portal reviews the candidates for one role.
+// Public, link-only: someone outside the Alza Hub reviews the candidates for one role.
 // The long random token in the link is the only key. Ben creates, and can turn off, each link.
 // They see every pitch for the role except ones Ben passed on or cleared (or, if Ben set the link
 // that way, only ones he's shared with the client). They play each pitch and say yes or no.
@@ -119,7 +119,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
       await pushTo(x.db, await advisorEmails(x.db), "activity", { title: `${said} on ${c.name}`, body: `${x.link.name}, ${x.role.title} at ${x.company}`, url: href, tag: `review-${id}` });
       await sendEmail({
         to: [(process.env.NOTIFY_TO || "ben@alzapc.com").trim()],
-        subject: `[Portal] ${x.link.name} said ${said} to ${c.name} (${x.company})`,
+        subject: `[Alza Hub] ${x.link.name} said ${said} to ${c.name} (${x.company})`,
         text: `${text} at ${x.company}, through their reviewer link.${prev && prev.decision !== decision ? ` (Changed from ${prev.decision === "yes" ? "Yes" : "No"}.)` : ""}${note ? `\n\nNote: ${note}` : ""}\n\n${siteUrl(req)}${href}`,
       });
     }

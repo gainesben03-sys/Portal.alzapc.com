@@ -153,7 +153,7 @@ export function PitchLinkCard({ role, canEdit, toScreen, onToast }: { role: Role
 
 // ------------------------------------------------------------------ reviewer links (Ben only)
 
-/** Ben's private links for people who aren't on the portal: they watch the pitches and say yes or no. */
+/** Ben's private links for people who aren't on the Alza Hub: they watch the pitches and say yes or no. */
 export function ReviewerLinks({ role, reviews, onToast }: { role: Role; reviews: OutsideReview[]; onToast: (m: string) => void }) {
   const { roles, candidates, patch } = useStore();
   const [adding, setAdding] = useState(false);
@@ -183,7 +183,7 @@ export function ReviewerLinks({ role, reviews, onToast }: { role: Role; reviews:
         <b className="small grow">Reviewer links <span className="tiny muted" style={{ fontWeight: 400 }}>· only you see this</span></b>
         {!adding && <button className="btn ghost sm" onClick={() => setAdding(true)}>+ Add reviewer</button>}
       </div>
-      <div className="tiny muted">For people who aren&apos;t on the portal. They play the pitches and say yes or no. You&apos;re told each time.</div>
+      <div className="tiny muted">For people who aren&apos;t on the Alza Hub. They play the pitches and say yes or no. You&apos;re told each time.</div>
       {links.map((l) => {
         const live = reviewLinkLive(l);
         return (
@@ -389,7 +389,7 @@ export function PitchView({ c }: { c: Candidate }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const open = async (f: "media" | "resume") => {
-    if (!LIVE) return setErr("Demo mode: pitches play once the portal is live.");
+    if (!LIVE) return setErr("Demo mode: pitches play once the Alza Hub is live.");
     setBusy(true);
     setErr("");
     try {
@@ -448,7 +448,7 @@ export function PitchMedia({ c }: { c: Candidate }) {
     return <div className="cc-media gone"><span>{c.mediaDeletedAt ? `Video deleted ${day(c.mediaDeletedAt)}` : "No video"}</span></div>;
   if (p.kind === "written") return <div className="cc-written">{p.text}</div>;
   const play = async () => {
-    if (!LIVE) return setErr("Demo: pitches play in the live portal.");
+    if (!LIVE) return setErr("Demo: pitches play in the live Alza Hub.");
     setBusy(true);
     setErr("");
     try {
@@ -486,7 +486,7 @@ export function PitchContact({ c }: { c: Candidate }) {
   const p = c.pitch!;
   const [err, setErr] = useState("");
   const resume = async () => {
-    if (!LIVE) return setErr("Demo: resumes open in the live portal.");
+    if (!LIVE) return setErr("Demo: resumes open in the live Alza Hub.");
     const w = window.open("", "_blank");
     try {
       const r = await fetch(`/api/pitch/media?c=${encodeURIComponent(c.id)}&f=resume`, { headers: await authHeader() });

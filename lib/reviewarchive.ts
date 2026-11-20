@@ -103,7 +103,7 @@ async function reviewPdf(lib: PdfLib, d: Doc, r: Review, head: Head): Promise<Ui
   doc.setTitle(`${d.title} - ${d.name}`);
   doc.setAuthor(d.company);
   doc.setSubject("Personnel record");
-  doc.setCreator("AlzaHR portal");
+  doc.setCreator("Alza Hub");
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
   const ok = new Set(font.getCharacterSet());

@@ -1,11 +1,11 @@
 import type { MetadataRoute } from "next";
 
-// Lets people add the portal to their phone's Home Screen (needed for alerts on iPhone).
+// Lets people add the Alza Hub to their phone's Home Screen (needed for alerts on iPhone).
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "AlzaHR Client Portal",
-    short_name: "AlzaHR",
-    description: "Your HR workspace with Ben at AlzaHR",
+    name: "Alza Hub",
+    short_name: "Alza Hub",
+    description: "Your people and operations workspace, with AlzaHR",
     start_url: "/",
     display: "standalone",
     background_color: "#f9f7f3",

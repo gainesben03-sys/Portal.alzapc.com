@@ -167,7 +167,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     await pushTo(db, await advisorEmails(db), "activity", { title: `New pitch for ${role.title}`, body: `${t.n} at ${company}`, url: href, tag: `pitch-${role.id}` });
     await sendEmail({
       to: [(process.env.NOTIFY_TO || "ben@alzapc.com").trim()],
-      subject: `[Portal] New pitch: ${t.n} for ${role.title} (${company})`,
+      subject: `[Alza Hub] New pitch: ${t.n} for ${role.title} (${company})`,
       text: `${t.n} (${t.e}) sent a ${t.k} pitch for ${role.title} at ${company}.\n\n${toClient ? "It went straight to the client." : "It's waiting for you to screen."}\n\n${base}${href}`,
     });
     if (toClient && role.hiringManager?.email) {

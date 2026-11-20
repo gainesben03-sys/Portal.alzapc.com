@@ -141,7 +141,7 @@ export async function POST(req: Request) {
   }
 }
 
-/** A heads-up to Ben. No names or details in the email; he opens the record in the portal. */
+/** A heads-up to Ben. No names or details in the email; he opens the record in the Alza Hub. */
 async function tellBen(db: ReturnType<typeof admin>, clientId: string, company: string, from: string, rec: DiscRecord, why: "held" | "look") {
   const to = await advisorEmails(db);
   if (!to.length) return;
@@ -151,7 +151,7 @@ async function tellBen(db: ReturnType<typeof admin>, clientId: string, company: 
     to,
     subject: why === "held" ? `${company}: a discipline draft is waiting on you` : `${company}: please look over a discipline draft`,
     text: `${line}\n\nOpen it: ${url}`,
-    html: `<p style="font-family:Arial,sans-serif;font-size:15px;color:#19283c">${line}</p><p style="font-family:Arial,sans-serif;font-size:15px"><a href="${url}">Open it in the portal</a></p>`,
+    html: `<p style="font-family:Arial,sans-serif;font-size:15px;color:#19283c">${line}</p><p style="font-family:Arial,sans-serif;font-size:15px"><a href="${url}">Open it in the Alza Hub</a></p>`,
     sensitive: true,
   }).catch(() => undefined);
 }

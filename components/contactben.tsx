@@ -2,7 +2,7 @@
 
 import { useMail } from "@/components/mail";
 
-// The one way to reach Ben from the portal: his email and a tap-to-text number.
+// The one way to reach Ben from the Alza Hub: his email and a tap-to-text number.
 export const BEN_EMAIL = "ben@alzapc.com";
 export const BEN_TEXT = "+16262248161";
 export const BEN_TEXT_SHOWN = "(626) 224-8161";

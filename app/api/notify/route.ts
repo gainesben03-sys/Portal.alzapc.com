@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   const ben = process.env.NOTIFY_TO || "ben@alzapc.com";
 
   if (!SERVER_LIVE) {
-    const r = await sendEmail({ to: [ben], subject: `[Portal] ${subject}`, text });
+    const r = await sendEmail({ to: [ben], subject: `[Alza Hub] ${subject}`, text });
     return NextResponse.json({ sent: r.ok, reason: r.reason });
   }
 
@@ -42,6 +42,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ sent: r.ok, reason: r.reason });
   }
 
-  const r = await sendEmail({ to: [ben], subject: `[Portal] ${subject}`, text: `${text}\n\nSent by ${me.email}` });
+  const r = await sendEmail({ to: [ben], subject: `[Alza Hub] ${subject}`, text: `${text}\n\nSent by ${me.email}` });
   return NextResponse.json({ sent: r.ok, reason: r.reason });
 }

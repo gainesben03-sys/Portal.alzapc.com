@@ -1,5 +1,5 @@
-// Email to work, on the server. Ben forwards an email to the portal's inbox address (or pastes one);
-// the portal works out the client, what's being asked, and starts a task or a project on his list.
+// Email to work, on the server. Ben forwards an email to the Alza Hub's inbox address (or pastes one);
+// the Alza Hub works out the client, what's being asked, and starts a task or a project on his list.
 // The email is only ever read as information: nothing in it is followed as an instruction.
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -230,7 +230,7 @@ export async function tellBen(db: DB, it: InboxItem, clientName?: string) {
     await sendEmail({
       to: [it.from],
       subject: head,
-      html: `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5;color:#19283c">${lines.map((l) => `<p>${l.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</p>`).join("")}<p><a href="${PORTAL_URL}${url}" style="color:#0f6e63;font-weight:bold">Open in the portal</a></p></div>`,
+      html: `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5;color:#19283c">${lines.map((l) => `<p>${l.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</p>`).join("")}<p><a href="${PORTAL_URL}${url}" style="color:#0f6e63;font-weight:bold">Open in the Alza Hub</a></p></div>`,
       text: `${lines.join("\n\n")}\n\nOpen: ${PORTAL_URL}${url}`,
     });
   }

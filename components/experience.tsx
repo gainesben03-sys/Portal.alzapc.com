@@ -1,6 +1,6 @@
 "use client";
 
-// Employee experience in the portal: the setup (every question, email, nudge and playbook item is editable)
+// Employee experience in the Alza Hub: the setup (every question, email, nudge and playbook item is editable)
 // and the Journey section on each hire's page.
 import { useEffect, useMemo, useState } from "react";
 import { Sheet } from "@/components/ui";
@@ -32,7 +32,7 @@ const REASON: Record<string, string> = {
   no_email: "There's no email for that person yet.",
   preview: "Preview is read-only.",
   forbidden: "Only HR can do that.",
-  network: "Couldn't reach the portal. Try again.",
+  network: "Couldn't reach the Alza Hub. Try again.",
 };
 const why = (r?: string) => REASON[r ?? ""] ?? "Couldn't save. Try again.";
 
@@ -316,7 +316,7 @@ export function Journey({ h, clientId, company, firstDayDaysBefore, x, hr, manag
   const today = todayISO();
   const xp = h.xp ?? {};
 
-  // fresh copy on open: answers and buddy replies arrive from outside the portal
+  // fresh copy on open: answers and buddy replies arrive from outside the Alza Hub
   useEffect(() => {
     if (!LIVE) return;
     let off = false;
@@ -431,7 +431,7 @@ function IntroCard({ h, x, company, photo, busy, act }: { h: Hire; x: Experience
             <div className="row xp-pills" style={{ marginTop: 10, justifyContent: "flex-start" }}>
               <span className="tiny muted">Write it as</span>
               <button className={`chip ${style === "list" ? "on" : ""}`} aria-pressed={style === "list"} onClick={() => introSave({ style: "list" }, "Company intro: a short list")}>A short list</button>
-              <button className={`chip ${style === "story" ? "on" : ""}`} aria-pressed={style === "story"} disabled={!!busy} onClick={() => (story ? introSave({ style: "story" }, "Company intro: a story") : act("introStory", {}, (o) => ({ ...o, intro: { ...o.intro, style: "story", story: `${v.preferred} ${v.last} joins ${company} today as our new ${v.title}${h.managerName ? ` on ${h.managerName.split(" ")[0]}'s team` : ""}.\n\n${lines.map((l) => `${l.label}: ${l.text.replace(/[.!\s]+$/, "")}.`).join("\n")}\n\n(Demo: in the live portal, the AI writes this as a short story.)` } }), "AI drafted the company intro as a story"))}>
+              <button className={`chip ${style === "story" ? "on" : ""}`} aria-pressed={style === "story"} disabled={!!busy} onClick={() => (story ? introSave({ style: "story" }, "Company intro: a story") : act("introStory", {}, (o) => ({ ...o, intro: { ...o.intro, style: "story", story: `${v.preferred} ${v.last} joins ${company} today as our new ${v.title}${h.managerName ? ` on ${h.managerName.split(" ")[0]}'s team` : ""}.\n\n${lines.map((l) => `${l.label}: ${l.text.replace(/[.!\s]+$/, "")}.`).join("\n")}\n\n(Demo: in the live Alza Hub, the AI writes this as a short story.)` } }), "AI drafted the company intro as a story"))}>
                 {busy === "introStory" ? "Writing…" : "A story (AI writes it)"}
               </button>
             </div>

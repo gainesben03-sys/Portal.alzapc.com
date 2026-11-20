@@ -1,6 +1,6 @@
 "use client";
 
-// Pieces shared by the QR page, the TV display and the portal: the wall card, the scoreboard,
+// Pieces shared by the QR page, the TV display and the Alza Hub: the wall card, the scoreboard,
 // and the person search.
 import { useEffect, useRef, useState } from "react";
 import { ago, Board, REACTIONS } from "@/lib/recognition";

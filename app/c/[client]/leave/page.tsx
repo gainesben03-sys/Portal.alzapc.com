@@ -119,7 +119,7 @@ export default function LeaveCenter() {
               }}
               onDelete={async (c) => {
                 if (!confirm(`Permanently delete ${c.number} (${c.employee.name}) and its ${c.docs.length} document(s)? This can't be undone.`)) return;
-                if (!LIVE) return toast.show("Demo: deleting happens in the live portal");
+                if (!LIVE) return toast.show("Demo: deleting happens in the live Alza Hub");
                 const j = await leaveApi(clientId, { action: "remove", caseId: c.id });
                 toast.show(j.ok ? "Deleted" : "Couldn't delete it");
                 if (j.ok) window.location.reload();
@@ -503,7 +503,7 @@ function Settings({ settings, admins, users, cases, onSave, onAdmins, onDelete }
         ))}
         <div className="lv-addrow">
           <select className="f" value={add} onChange={(e) => setAdd(e.target.value)}>
-            <option value="">Add someone with portal access…</option>
+            <option value="">Add someone with Hub access…</option>
             {users.filter((u) => !list.some((a) => a.email === u.email)).map((u) => <option key={u.email} value={u.email}>{u.name} · {u.email}</option>)}
           </select>
           <button className="btn sm" disabled={!add} onClick={() => { setList([...list, { email: add, medical: true }]); setAdd(""); }}>Add</button>

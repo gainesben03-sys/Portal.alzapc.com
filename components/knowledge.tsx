@@ -42,7 +42,7 @@ export function KnowledgePanel({ clientId, onToast }: { clientId: string | null;
       const r = await fetch(`/api/knowledge?clientId=${encodeURIComponent(folder)}`, { headers: await authHeader() });
       const j = await r.json();
       if (!j.ok) {
-        setErr(j.reason === "demo" ? "Available once the portal is live." : /knowledge/.test(j.reason ?? "") ? "Run supabase/002_knowledge.sql in Supabase to turn this on." : "Couldn't load documents.");
+        setErr(j.reason === "demo" ? "Available once the Alza Hub is live." : /knowledge/.test(j.reason ?? "") ? "Run supabase/002_knowledge.sql in Supabase to turn this on." : "Couldn't load documents.");
         setDocs([]);
         return;
       }

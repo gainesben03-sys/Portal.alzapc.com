@@ -1,4 +1,4 @@
-// Video screening (the portal's simplified AlzaPitch): settings per role and what a candidate sends.
+// Video screening (the Alza Hub's simplified AlzaPitch): settings per role and what a candidate sends.
 // Pure, shared by browser and server.
 
 export interface PitchSettings {
@@ -121,7 +121,7 @@ export interface PitchSubmission {
   answers?: ScreenA[];
 }
 
-/** A private link Ben sends to someone outside the portal so they can watch pitches and say yes or no. */
+/** A private link Ben sends to someone outside the Alza Hub so they can watch pitches and say yes or no. */
 export interface ReviewLink {
   id: string;
   token: string; // long random; the link is /review/<token>

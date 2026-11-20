@@ -1,4 +1,4 @@
-// Resend calls this when an email arrives at the portal's inbox address (the "email.received" webhook).
+// Resend calls this when an email arrives at the Alza Hub's inbox address (the "email.received" webhook).
 // Only Ben's own addresses can create work. Anything else is dropped without a trace.
 import { NextResponse } from "next/server";
 import { addr, allowedSenders, fetchReceived, htmlToText, intake, passedChecks, tableReady, tellBen, verifySignature } from "@/lib/inboxserver";

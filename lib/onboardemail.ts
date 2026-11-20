@@ -22,7 +22,7 @@ export type When = { anchor: "signed"; days: number } | { anchor: "start"; days:
 
 export interface OnboardEmail {
   id: string; // "welcome", "firstDay", or a generated id
-  name: string; // shown in the portal
+  name: string; // shown in the Alza Hub
   on: boolean;
   when: When;
   subject: string;

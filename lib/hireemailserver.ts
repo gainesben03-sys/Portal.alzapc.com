@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Hire, OnboardingSettings } from "./hires";
 import { cleanCc, OnboardEmail } from "./onboardemail";
 
-/** The hire's manager's email, found by name on the roster or the portal team. */
+/** The hire's manager's email, found by name on the roster or the Alza Hub team. */
 export async function managerEmail(db: SupabaseClient, clientId: string, h: Pick<Hire, "managerName">): Promise<string | null> {
   const name = (h.managerName || "").trim().toLowerCase();
   if (!name) return null;

@@ -183,7 +183,7 @@ export default function ClientSetup() {
               <p className="tiny muted" style={{ margin: "2px 0 0" }}>Settings · {featuresOn} of {MODULES.length} features on · {cfg.users.length} {cfg.users.length === 1 ? "person" : "people"} with access</p>
             </div>
           </div>
-          <Link href={`/c/${id}`} className="btn sm">Open their portal</Link>
+          <Link href={`/c/${id}`} className="btn sm">Open their Alza Hub</Link>
         </div>
 
         <nav className="set-tabs" aria-label="Settings sections">
@@ -211,7 +211,7 @@ export default function ClientSetup() {
 
             <h2 className="set-h">Culture and managers</h2>
             <div className="set-grid">
-              <FeatureCard k="recognition" title="Team Wall" blurb="Shoutouts by QR code, text or the portal, birthdays, anniversaries and new starters on one wall. Every shoutout is screened first." on={mod("recognition")} onToggle={toggle("recognition")}
+              <FeatureCard k="recognition" title="Team Wall" blurb="Shoutouts by QR code, text or the Alza Hub, birthdays, anniversaries and new starters on one wall. Every shoutout is screened first." on={mod("recognition")} onToggle={toggle("recognition")}
                 status={[`${WALLS.find((w) => w.id === (rec?.theme?.wall ?? "clean"))?.name ?? "Clean"} wall`, rec?.polls?.on === false ? "This or That off" : "This or That every two weeks", rec?.monthly?.on ? "Monthly themes on" : "Monthly themes off"]}
                 actions={[{ label: "Wall settings", href: `/c/${id}/recognition?settings=1` }]} />
               <FeatureCard k="perform" title="Reviews" blurb="Performance reviews on a schedule. Managers finish a guided review in about 10 minutes on a phone or computer, in English or Spanish. Self-assessments, sign-off, goals and improvement plans." on={mod("perform")} onToggle={toggle("perform")}
@@ -284,14 +284,14 @@ export default function ClientSetup() {
             </section>
             <section className="card">
               <h2 className="set-card-h">Email app</h2>
-              <p className="tiny muted" style={{ margin: "2px 0 10px" }}>Where &ldquo;Email&rdquo; buttons in their portal open on a computer. Phones always use the phone&apos;s own mail app.</p>
+              <p className="tiny muted" style={{ margin: "2px 0 10px" }}>Where &ldquo;Email&rdquo; buttons in their Alza Hub open on a computer. Phones always use the phone&apos;s own mail app.</p>
               <div className="pf-filters" role="group" aria-label="Email app">
                 {MAIL_APPS.map((m) => (
                   <button key={m.id} className={(cfg.mailApp ?? "default") === m.id ? "on" : ""} aria-pressed={(cfg.mailApp ?? "default") === m.id} onClick={() => set({ mailApp: m.id })} title={m.sub}>{m.label}</button>
                 ))}
               </div>
               <p className="tiny muted" style={{ margin: "8px 0 0" }}>{MAIL_APPS.find((m) => m.id === (cfg.mailApp ?? "default"))?.sub}. New hires writing from a personal Gmail or Outlook.com address get their own app automatically.</p>
-              <p className="tiny muted" style={{ margin: "4px 0 0" }}>Portal emails landing in spam? Ask their IT to allowlist alzapc.com.</p>
+              <p className="tiny muted" style={{ margin: "4px 0 0" }}>Alza Hub emails landing in spam? Ask their IT to allowlist alzapc.com.</p>
             </section>
             <section className="card">
               <h2 className="set-card-h">Brand color</h2>
@@ -303,7 +303,7 @@ export default function ClientSetup() {
               </div>
               <HexField value={cfg.accent} onChange={(v) => set({ accent: v })} />
               <div className="row" style={{ marginTop: 10, alignItems: "center" }}>
-                <p className="tiny muted grow" style={{ margin: 0 }}>Buttons and highlights in their portal and emails. Light colors are darkened automatically where they&apos;re used as text.</p>
+                <p className="tiny muted grow" style={{ margin: 0 }}>Buttons and highlights in their Alza Hub and emails. Light colors are darkened automatically where they&apos;re used as text.</p>
                 {cfg.logo && (
                   <button
                     className="btn ghost sm"
@@ -395,7 +395,7 @@ export default function ClientSetup() {
         {tab === "docs" && (
           <>
             <p className="small muted" style={{ margin: "4px 0 10px" }}>Their handbook, policies, templates and letterhead. Claude and Ask HR follow these first, then your default templates, then best practice. Past letters uploaded as Word files can be reused as is: on a hire or task, tap Fill a past one and only the details change.</p>
-            {live ? <KnowledgePanel clientId={id} onToast={toast.show} /> : <div className="card small muted">Available once the portal is live.</div>}
+            {live ? <KnowledgePanel clientId={id} onToast={toast.show} /> : <div className="card small muted">Available once the Alza Hub is live.</div>}
             <LevelsEditor levels={cfg.discipline?.levels} onChange={(levels) => { set({ discipline: { ...cfg.discipline, levels } }); toast.show("Levels saved"); }} />
           </>
         )}

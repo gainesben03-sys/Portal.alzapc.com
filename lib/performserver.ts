@@ -94,8 +94,8 @@ export async function sync(x: Ctx, today = iso(new Date())) {
 }
 
 /**
- * Managers need portal access to open a review. Anyone a review is assigned to who isn't on the
- * company's portal yet gets Manager access (their own team only). Returns the names added.
+ * Managers need Hub access to open a review. Anyone a review is assigned to who isn't on the
+ * company's Alza Hub yet gets Manager access (their own team only). Returns the names added.
  */
 export async function ensureManagerAccess(db: DB, clientId: string, mgrs: { email: string; name: string }[]): Promise<string[]> {
   const want = new Map<string, string>();

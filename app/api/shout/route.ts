@@ -1,4 +1,4 @@
-// Signed in: give a shoutout from the portal, react, and (Ben and executives) review held ones.
+// Signed in: give a shoutout from the Alza Hub, react, and (Ben and executives) review held ones.
 // POST { clientId, action: "give", to, value?, message }
 // POST { clientId, action: "react", id, emoji }
 // POST { clientId, action: "review", id, approve }   Ben or an executive
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
     return poll ? NextResponse.json({ ok: true, poll }) : NextResponse.json({ ok: false, reason: "bad_request" }, { status: 400 });
   }
 
-  // Team Wall settings an executive can change (Ben saves everything through the portal itself)
+  // Team Wall settings an executive can change (Ben saves everything through the Alza Hub itself)
   if (b.action === "settings") {
     if (!exec) return NextResponse.json({ ok: false, reason: "forbidden" }, { status: 403 });
     const r = (b.rec ?? {}) as Partial<RecognitionSettings>;

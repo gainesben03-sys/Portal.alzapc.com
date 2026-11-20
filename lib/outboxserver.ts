@@ -43,7 +43,7 @@ export async function writeSettings(db: DB, next: OutboxSettings) {
   return !error;
 }
 
-/** Which company an email belongs to: its portal links first, then who it's going to. */
+/** Which company an email belongs to: its Alza Hub links first, then who it's going to. */
 async function clientOf(db: DB, o: MailOpts, known: Map<string, unknown>): Promise<string | null> {
   if (o.clientId && known.has(o.clientId)) return o.clientId;
   const body = `${o.html ?? ""} ${o.text}`;
@@ -140,10 +140,10 @@ export async function outboxCron(db: DB, deliver: (o: MailOpts) => Promise<{ ok:
   if (dig?.length) {
     const ms = dig.map((r) => ({ ...(r.data as OutMail), id: r.id as string, clientId: r.client_id as string }));
     const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    const html = `<div style="font-family:Arial,sans-serif;color:#19283c;max-width:640px"><h2 style="font-family:Georgia,serif">Your daily summary</h2><p style="color:#5b6b85">${ms.length} update${ms.length === 1 ? "" : "s"} from the portal since yesterday.</p>${ms.map((m) => `<div style="border-top:1px solid #e6e1d6;padding:14px 0"><b>${esc(m.subject)}</b><div style="font-size:14px;line-height:1.5;color:#3a4553;white-space:pre-wrap;margin-top:6px">${esc(m.text.slice(0, 900))}${m.text.length > 900 ? "…" : ""}</div></div>`).join("")}</div>`;
+    const html = `<div style="font-family:Arial,sans-serif;color:#19283c;max-width:640px"><h2 style="font-family:Georgia,serif">Your daily summary</h2><p style="color:#5b6b85">${ms.length} update${ms.length === 1 ? "" : "s"} from the Alza Hub since yesterday.</p>${ms.map((m) => `<div style="border-top:1px solid #e6e1d6;padding:14px 0"><b>${esc(m.subject)}</b><div style="font-size:14px;line-height:1.5;color:#3a4553;white-space:pre-wrap;margin-top:6px">${esc(m.text.slice(0, 900))}${m.text.length > 900 ? "…" : ""}</div></div>`).join("")}</div>`;
     const text = ms.map((m) => `${m.subject}\n${m.text.slice(0, 900)}`).join("\n\n----\n\n");
     const to = [...new Set(ms.flatMap((m) => m.to))];
-    const r = await deliver({ to, subject: `Portal summary: ${ms.length} update${ms.length === 1 ? "" : "s"}`, text, html, bypassHold: true });
+    const r = await deliver({ to, subject: `Alza Hub summary: ${ms.length} update${ms.length === 1 ? "" : "s"}`, text, html, bypassHold: true });
     if (r.ok) for (const m of ms) await setStatus(db, m, "sent", "Daily summary");
     log.push(`outbox: Ben's summary with ${ms.length}`);
   }

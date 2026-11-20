@@ -8,7 +8,7 @@ export type DraftMode = "reply" | "document" | "hire_doc";
 
 const REASONS: Record<string, string> = {
   no_key: "Drafting is off. Add ANTHROPIC_API_KEY in Vercel and redeploy to turn it on.",
-  demo: "Drafting works once the portal is connected to Supabase.",
+  demo: "Drafting works once the Alza Hub is connected to Supabase.",
   forbidden: "Only Ben can draft with Claude.",
   api_401: "The Anthropic API key was rejected. Check ANTHROPIC_API_KEY in Vercel.",
   api_400: "Claude couldn't take that request. Try shorter instructions.",

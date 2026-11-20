@@ -169,14 +169,14 @@ async function daily(req: Request) {
               await pushTo(db, benPush, "reminders", { title: `Check in with ${a.owner.name}`, body: `${a.title} at ${c.name} is past due`, url: `/c/${c.id}/a/${a.id}`, tag: `esc-${a.id}` });
               return { ok: true };
             });
-            await once(key, () => sendEmail({ to: [ben], subject: `[Portal] Check in with ${a.owner.name}: ${a.title}`, text: `"${a.title}" at ${c.name} is past due and ${a.owner.name} is the escalation contact. Worth a quick call.\n\n${link}` }));
+            await once(key, () => sendEmail({ to: [ben], subject: `[Alza Hub] Check in with ${a.owner.name}: ${a.title}`, text: `"${a.title}" at ${c.name} is past due and ${a.owner.name} is the escalation contact. Worth a quick call.\n\n${link}` }));
           }
         } else if (step.label.startsWith("Flagged as blocker")) {
           await once(`push:${key}`, async () => {
             await pushTo(db, benPush, "reminders", { title: `Blocker at ${c.name}`, body: `${a.title} (${a.owner.name})`, url: `/c/${c.id}/a/${a.id}`, tag: `blk-${a.id}` });
             return { ok: true };
           });
-          await once(key, () => sendEmail({ to: [ben], subject: `[Portal] Blocker at ${c.name}: ${a.title}`, text: `"${a.title}" (${a.owner.name}) is ${rules.blockerAfter} business days overdue.\n\n${link}` }));
+          await once(key, () => sendEmail({ to: [ben], subject: `[Alza Hub] Blocker at ${c.name}: ${a.title}`, text: `"${a.title}" (${a.owner.name}) is ${rules.blockerAfter} business days overdue.\n\n${link}` }));
         }
       }
     }
@@ -728,7 +728,7 @@ async function daily(req: Request) {
         const sorted = list.sort((a, b) => a.days - b.days);
         const late = sorted.filter((x) => x.days < 0).length;
         await once(`leave:${cl.id}:${email}:${leaveToday}`, () => {
-          const m = listEmail(brand, "Leave center", `${sorted.length} leave item${sorted.length === 1 ? "" : "s"} need${sorted.length === 1 ? "s" : ""} attention`, late ? `${late} ${late === 1 ? "is" : "are"} overdue. Details are in the portal.` : "Here's what's coming up. Details are in the portal.", sorted.map((x) => ({ title: x.line, why: "" })), { label: "Open the leave center", url });
+          const m = listEmail(brand, "Leave center", `${sorted.length} leave item${sorted.length === 1 ? "" : "s"} need${sorted.length === 1 ? "s" : ""} attention`, late ? `${late} ${late === 1 ? "is" : "are"} overdue. Details are in the Alza Hub.` : "Here's what's coming up. Details are in the Alza Hub.", sorted.map((x) => ({ title: x.line, why: "" })), { label: "Open the leave center", url });
           return sendEmail({ to: [email], subject: `${cl.name}: ${sorted.length} leave item${sorted.length === 1 ? "" : "s"} ${late ? `(${late} overdue)` : "coming up"}`, text: `${sorted.map((x) => `- ${x.line}`).join("\n")}\n\nOpen the leave center: ${url}`, html: m.html });
         });
       }

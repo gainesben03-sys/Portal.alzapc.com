@@ -62,7 +62,7 @@ function NewHireInner() {
       notice({ clientId, kind: "hire", text: `${who} started a hire: ${h.name} (${h.title})`, href: `/c/${clientId}/hires/${h.id}` });
       notifyBen(
         `${client.name}: new hire to set up, ${h.name}`,
-        `${who} started a new hire in the portal.\n\n${h.name}\n${h.title}, reports to ${h.managerName || "(not set)"}\nStarts ${h.startDate}\n\nOpen it to draft the offer letter.`
+        `${who} started a new hire in the Alza Hub.\n\n${h.name}\n${h.title}, reports to ${h.managerName || "(not set)"}\nStarts ${h.startDate}\n\nOpen it to draft the offer letter.`
       );
     }
     router.push(`/c/${clientId}/hires/${h.id}?new=1`);

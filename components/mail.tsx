@@ -15,5 +15,5 @@ export function useMail(app?: MailApp) {
   return (to: string, subject = "", body = "") => mailProps(isPhone() ? "default" : chosen, to, subject, body);
 }
 
-/** For pages outside the portal (no store), where the app comes from the server. */
+/** For pages outside the Alza Hub (no store), where the app comes from the server. */
 export const mailFor = (app: string | undefined, to: string, subject = "", body = "") => mailProps(isPhone() ? "default" : (app as MailApp) || "default", to, subject, body);

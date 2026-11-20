@@ -1,6 +1,6 @@
 // Required training: California harassment prevention (CRD course), workplace violence prevention
 // (the company's own plan), and anything else a client wants to track. One record per person per
-// course per cycle. Shared by the server, the portal pages and the employee's link page.
+// course per cycle. Shared by the server, the Alza Hub pages and the employee's link page.
 import { addDays, iso, newId, newToken } from "./perform";
 import type { TeamMember } from "./team";
 
@@ -226,7 +226,7 @@ export function nextAssignment(p: TeamMember, c: Course, sup: boolean, recs: Tra
 export function newRecord(p: TeamMember, clientId: string, c: Course, a: { due: string; reason: TrainingRecord["reason"]; variant?: Variant }, token: string): TrainingRecord {
   return {
     id: `tr-${newId()}`, clientId, personId: p.id, name: p.name, email: p.email?.toLowerCase(), title: p.title, managerEmail: (p.managerEmail || "").toLowerCase(), managerName: p.managerName || "",
-    courseId: c.id, courseName: c.name, variant: a.variant, status: "assigned", due: a.due, reason: a.reason, token, questions: [], sent: {}, history: [{ at: new Date().toISOString(), by: "Portal", text: `Assigned, due ${a.due}` }],
+    courseId: c.id, courseName: c.name, variant: a.variant, status: "assigned", due: a.due, reason: a.reason, token, questions: [], sent: {}, history: [{ at: new Date().toISOString(), by: "Alza Hub", text: `Assigned, due ${a.due}` }],
   };
 }
 export { newToken };

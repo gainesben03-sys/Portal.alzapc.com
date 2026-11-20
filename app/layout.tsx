@@ -5,9 +5,9 @@ import { DemoBar } from "@/components/demobar";
 import { PreviewBar } from "@/components/preview";
 
 export const metadata: Metadata = {
-  title: "AlzaHR Client Portal",
-  description: "Client workspaces and accountability tracking for Alza advisory clients.",
-  appleWebApp: { capable: true, title: "AlzaHR", statusBarStyle: "default" },
+  title: "Alza Hub",
+  description: "Alza Hub: the people and operations workspace for AlzaHR clients.",
+  appleWebApp: { capable: true, title: "Alza Hub", statusBarStyle: "default" },
   icons: { icon: "/icon-192.png", apple: "/apple-touch-icon.png" },
 };
 

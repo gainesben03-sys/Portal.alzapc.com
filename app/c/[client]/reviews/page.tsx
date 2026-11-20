@@ -400,7 +400,7 @@ function LaunchSheet({ data, lang, call, initialDue, onClose, onDone, onSettings
   const setAll = (on: boolean) => setPicked((cur) => { const n = new Set(cur); for (const p of shownOk) { if (on) n.add(p.id); else n.delete(p.id); } return n; });
   const count = [...picked].filter((id) => eligible.some((p) => p.id === id)).length;
   const managersCount = new Set(eligible.filter((p) => picked.has(p.id)).map((p) => p.managerEmail)).size;
-  // managers not on the portal yet: launching gives them Manager access so their review link works
+  // managers not on the Alza Hub yet: launching gives them Manager access so their review link works
   const onPortal = new Set(data.users.map((u) => u.email.toLowerCase()));
   const newMgrs = [...new Map(eligible.filter((p) => picked.has(p.id) && p.managerEmail && !onPortal.has(p.managerEmail) && p.managerEmail !== data.role.email).map((p) => [p.managerEmail, p.managerName || p.managerEmail])).values()];
   const remindText = (() => {
@@ -413,7 +413,7 @@ function LaunchSheet({ data, lang, call, initialDue, onClose, onDone, onSettings
     <Sheet title={L("Reviews launched", "Evaluaciones lanzadas")} onClose={() => onDone(L(`Launched ${result.created} reviews`, `${result.created} evaluaciones lanzadas`))}>
       <p className="small" style={{ marginTop: 0 }}><b>{result.created}</b> {L(`review${result.created === 1 ? "" : "s"} open, due ${fmtDay(due, "en")}.`, `evaluaciones abiertas, para el ${fmtDay(due, "es")}.`)}</p>
       <ul className="small pf-launch-done">
-        {result.added.length > 0 && <li>{L(`Portal access added for ${result.added.join(", ")}.`, `Acceso al portal agregado para ${result.added.join(", ")}.`)}</li>}
+        {result.added.length > 0 && <li>{L(`Hub access added for ${result.added.join(", ")}.`, `Acceso al Alza Hub agregado para ${result.added.join(", ")}.`)}</li>}
         {notify && <li>{L(`${result.managers} manager${result.managers === 1 ? "" : "s"} emailed with their list.`, `Correo a ${result.managers} gerentes con su lista.`)}</li>}
         {self === "now" && <li>{L(`${result.selfSent} self-assessment${result.selfSent === 1 ? "" : "s"} sent.`, `${result.selfSent} autoevaluaciones enviadas.`)}</li>}
         {self === "before" && s.selfAssess && <li>{L(`Self-assessments go out ${s.selfDaysBefore} days before the due date.`, `Las autoevaluaciones salen ${s.selfDaysBefore} días antes.`)}</li>}
@@ -489,7 +489,7 @@ function LaunchSheet({ data, lang, call, initialDue, onClose, onDone, onSettings
       </label>
       {newMgrs.length > 0 && (
         <p className="small pf-launch-skip" style={{ margin: "10px 0 0" }}>
-          {L(`${newMgrs.length} manager${newMgrs.length === 1 ? "" : "s"} will get portal access: ${newMgrs.join(", ")}. They'll see only their own team.`, `${newMgrs.length} gerente${newMgrs.length === 1 ? "" : "s"} recibirán acceso al portal: ${newMgrs.join(", ")}. Solo verán a su equipo.`)}
+          {L(`${newMgrs.length} manager${newMgrs.length === 1 ? "" : "s"} will get Hub access: ${newMgrs.join(", ")}. They'll see only their own team.`, `${newMgrs.length} gerente${newMgrs.length === 1 ? "" : "s"} recibirán acceso al Alza Hub: ${newMgrs.join(", ")}. Solo verán a su equipo.`)}
         </p>
       )}
       <p className="tiny muted" style={{ margin: "8px 0 0" }}>{L(`Reminders: managers hear from us ${remindText}. HR gets a copy when one is late.`, `Recordatorios: ${remindText}. RR. HH. recibe copia si se atrasa.`)} <button className="linklike tiny" onClick={onSettings}>{L("Change", "Cambiar")}</button></p>

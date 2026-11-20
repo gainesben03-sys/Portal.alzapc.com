@@ -41,7 +41,7 @@ interface Store extends State {
   reset: () => void;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
-  /** Ben looking at the portal as one of a client's people. Read-only. */
+  /** Ben looking at the Alza Hub as one of a client's people. Read-only. */
   preview: Preview | null;
   setPreview: (p: Preview | null) => void;
 }

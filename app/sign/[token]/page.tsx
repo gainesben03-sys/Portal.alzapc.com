@@ -164,7 +164,7 @@ export default function SignPage() {
           </div>
         )}
       </div>
-      <p className="tiny muted" style={{ textAlign: "center", margin: "18px 0 40px" }}>Secure signing by the AlzaHR client portal</p>
+      <p className="tiny muted" style={{ textAlign: "center", margin: "18px 0 40px" }}>Secure signing by the Alza Hub</p>
     </main>
   );
 }

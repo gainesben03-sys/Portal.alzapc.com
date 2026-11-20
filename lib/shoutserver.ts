@@ -187,7 +187,7 @@ export async function tellReviewers(db: SupabaseClient, site: string, c: ShoutCl
   const text = `A shoutout to ${s.to.name} is waiting for review (${s.heldReason ?? "flagged"})`;
   await db.from("notices").insert({ id: `x${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, client_id: c.id, created_by: "shoutouts@portal", data: { clientId: c.id, kind: "feedback", text, href, at: s.at, read: false } });
   await pushTo(db, await advisorEmails(db), "activity", { title: "Shoutout to review", body: `${c.name}: to ${s.to.name}`, url: href, tag: `shout-${s.id}` });
-  await sendEmail({ to: [(process.env.NOTIFY_TO || "ben@alzapc.com").trim()], subject: `[Portal] ${c.name}: shoutout waiting for review`, text: `${text}.\n\nFrom: ${s.from.name}${s.from.verified ? "" : " (not verified)"}\nTo: ${s.to.name}\n"${s.message}"\n\nApprove or remove: ${site}${href}` });
+  await sendEmail({ to: [(process.env.NOTIFY_TO || "ben@alzapc.com").trim()], subject: `[Alza Hub] ${c.name}: shoutout waiting for review`, text: `${text}.\n\nFrom: ${s.from.name}${s.from.verified ? "" : " (not verified)"}\nTo: ${s.to.name}\n"${s.message}"\n\nApprove or remove: ${site}${href}` });
 }
 
 /** Fuzzy match a typed name against the roster. */

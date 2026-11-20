@@ -1,4 +1,4 @@
-// Email to work: Ben forwards a client's email to the portal and it becomes a task or a project.
+// Email to work: Ben forwards a client's email to the Alza Hub and it becomes a task or a project.
 // Shared by the server and Ben's console. No secrets here.
 import { Action, ADVISOR, Project, Subtask } from "./data";
 import { syncStepTasks } from "./projecttasks";
@@ -48,7 +48,7 @@ export const STEPS: Record<Exclude<WorkType, "other">, S[]> = {
     ["Prepare the termination letter and required notices (Change in Relationship, EDD DE 2320, COBRA / Cal-COBRA, HIPP)", "ben"],
     ["Plan the meeting: who, when, what to say", "ben"],
     ["Equipment return and access shutoff", "client"],
-    ["Start offboarding in the portal", "ben"],
+    ["Start offboarding in the Alza Hub", "ben"],
   ],
   newhire: [["Get start date, title, pay and manager", "ben"], ["Offer letter out for signature", "ben"], ["Add to the new hire tracker", "ben"], ["Welcome and first-day prep", "client"]],
   jd: [["Gather role details from the manager", "ben"], ["Draft the job description", "ben"], ["Set the pay range (CA pay transparency)", "ben"], ["Client reviews", "client"], ["Finalize", "ben"]],
@@ -97,7 +97,7 @@ export function buildWork(item: InboxItem): { project?: Project; actions: Action
   if (item.type === "other" || !item.steps.length) {
     const a: Action = {
       id: nid("a"), clientId, side: "alza", kind: "todo", title: item.title, detail: [item.summary, item.note ? `Your note: ${item.note}` : "", ref].filter(Boolean).join("\n\n"),
-      owner: ADVISOR, due, status: "not_started", attachments, history: [{ at: now, by: "Portal", text: "Added from a forwarded email" }],
+      owner: ADVISOR, due, status: "not_started", attachments, history: [{ at: now, by: "Alza Hub", text: "Added from a forwarded email" }],
     };
     return { actions: [a] };
   }
@@ -108,7 +108,7 @@ export function buildWork(item: InboxItem): { project?: Project; actions: Action
     return { id: s.id, text: s.text, done: s.done, doneAt: s.doneAt, ...(k >= 0 ? { owner: ADVISOR, due: dates[k] } : {}) };
   });
   const p0: Project = { id: nid("p"), clientId, name: item.title, status: "active", summary: [item.summary, ref].filter(Boolean).join(" "), steps, nextMilestone: steps.find((s) => !s.done)?.text ?? "", milestoneDue: due, startedAt: now };
-  const { project, created } = syncStepTasks(p0, undefined, [], { name: "Portal", advisor: true });
+  const { project, created } = syncStepTasks(p0, undefined, [], { name: "Alza Hub", advisor: true });
   if (created[0] && attachments.length) created[0].attachments = attachments;
   return { project, actions: created };
 }

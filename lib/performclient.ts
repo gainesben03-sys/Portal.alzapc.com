@@ -62,7 +62,7 @@ function putAll(l: Review[]) {
   } catch {}
 }
 
-// a light cleanup for the demo, since the writing help needs the live portal
+// a light cleanup for the demo, since the writing help needs the live Alza Hub
 const tidy = (t: string) => t.trim().replace(/\s+/g, " ").replace(/(^|[.!?]\s+)([a-z])/g, (_, a, b) => a + b.toUpperCase()).replace(/\bi\b/g, "I").replace(/([^.!?])$/, "$1.");
 // The demo can't call the writing model, so it shapes notes into a review with simple rules.
 // The live portal writes a real narrative from the same notes.
@@ -213,7 +213,7 @@ export async function performApi(clientId: string, body: Res, demo?: Demo): Prom
     if (body.op === "sort") return { ok: true, answers: demoSort(String(body.transcript ?? ""), r.template.ask), vague: [], demo: true };
     if (body.op === "translate") return { ok: true, fields: body.fields, demo: true };
     if (body.op === "goals") {
-      // demo: turn each "work on" point into a goal; the live portal writes these with AI from the same notes
+      // demo: turn each "work on" point into a goal; the live Alza Hub writes these with AI from the same notes
       const src = [r.answers.work, r.answers.improve, r.answers.start, r.answers.skills].filter(Boolean).join(". ");
       if (!src.trim() && !Object.values(r.answers).some((v) => v?.trim())) return { ok: false, reason: "empty" };
       const pts = (src || Object.values(r.answers).join(". ")).split(/(?<=[.!?])\s+|;\s*|\n+/).map((x) => x.trim().replace(/[.!?]+$/, "")).filter((x) => x.length > 6).slice(0, 3);

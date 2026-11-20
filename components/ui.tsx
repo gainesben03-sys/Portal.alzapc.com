@@ -114,7 +114,7 @@ export function useGuard(kind: "advisor" | "client", clientId?: string) {
         localStorage.setItem(RETURN_KEY, JSON.stringify({ path: window.location.pathname + window.location.search, at: Date.now() }));
       } catch {}
     }
-    // while previewing as a client, anything outside their portal goes to their home page
+    // while previewing as a client, anything outside their Alza Hub goes to their home page
     router.replace(preview ? (preview.access === "hiring" ? `/c/${preview.clientId}/recruiting` : `/c/${preview.clientId}`) : "/");
   }, [ready, ok, router, preview, viewer]);
   return ready && ok;
@@ -387,7 +387,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
         ...(leaveAcc.admin && (cfg?.modules.leave || isAdvisor) ? [{ href: `${base}/leave`, label: "Leave center", match: [`${base}/leave`] }] : []),
         ...((isAdvisor || access === "exec") && (cfg?.modules.offboarding || isAdvisor) ? [{ href: `${base}/offboarding`, label: "Offboarding", match: [`${base}/offboarding`] }] : []),
         ...(isAdvisor || access === "exec" ? [{ href: `${base}/roster`, label: "Roster", match: [`${base}/roster`] }] : []),
-        ...(canSee(access, "team") ? [{ href: `${base}/team`, label: "Portal access", match: [`${base}/team`] }] : []),
+        ...(canSee(access, "team") ? [{ href: `${base}/team`, label: "Hub access", match: [`${base}/team`] }] : []),
       ],
     },
     {

@@ -126,7 +126,7 @@ export async function POST(req: Request) {
       }
       created.push(r);
     }
-    // managers who aren't on the portal yet get Manager access, so the review email's link works
+    // managers who aren't on the Alza Hub yet get Manager access, so the review email's link works
     const added = await ensureManagerAccess(db, clientId, created.map((r) => ({ email: r.managerEmail, name: r.managerName }))).catch(() => [] as string[]);
     let managers = 0;
     if (b.notify !== false) {

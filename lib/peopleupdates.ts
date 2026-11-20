@@ -1,4 +1,4 @@
-// Updates for leaders, built from the portal's own data:
+// Updates for leaders, built from the Alza Hub's own data:
 // - peopleItems: the "People" section of the weekly HR Huddle (who starts, hires in progress, decisions waiting, last days)
 // - buildSnapshot: the monthly snapshot for executives (the month at a glance)
 // - buildManagerWeek: the Monday email for managers (their new hires, their week, recognize someone, a thought)
@@ -170,7 +170,7 @@ export function buildSnapshot({ client, data, actionsDone, projectsDone, today }
     title: `${month} at a glance`,
     intro: `Your team in one screen: who joined, who left, hiring, and how new people are settling in.`,
     body,
-    cta: { label: "Open your portal", url: `${PORTAL}/c/${cid}` },
+    cta: { label: "Open your Alza Hub", url: `${PORTAL}/c/${cid}` },
     footer: `You get this from AlzaHR in the first week of each month.`,
   });
   const text =
@@ -178,7 +178,7 @@ export function buildSnapshot({ client, data, actionsDone, projectsDone, today }
     tiles.map((x) => `${x.n} ${x.label}${x.note ? ` (${x.note})` : ""}`).join("\n") +
     (watch.length ? `\n\nWORTH A LOOK\n${watch.map((x) => `- ${x}`).join("\n")}` : "") +
     (inFlight.length ? `\n\nCOMING UP\n${inFlight.slice(0, 5).map((h) => `- ${h.name} starts ${short(h.startDate)}`).join("\n")}` : "") +
-    `\n\nOpen your portal: ${PORTAL}/c/${cid}\n`;
+    `\n\nOpen your Alza Hub: ${PORTAL}/c/${cid}\n`;
   return { subject, html, text };
 }
 
@@ -268,7 +268,7 @@ export function buildManagerWeek(i: ManagerWeekInput) {
   const mtHtml = i.monthTheme ? `<p style="margin:6px 0 0;font:15px/1.5 Arial,sans-serif;color:#16213a"><b>This month: ${esc(i.monthTheme.title)}.</b> ${esc(i.monthTheme.prompt)}</p>` : "";
   const recogHtml = mtHtml + `<p style="margin:6px 0 0;font:15px/1.5 Arial,sans-serif;color:#16213a">${rec ? `${esc(rec.title)}? ` : ""}Who on your team made the week better? A two-line shoutout takes a minute and people remember it.</p>${i.recognitionOn ? `<p style="margin:10px 0 0"><a href="${base}/recognition" style="font:700 14px Arial,sans-serif;color:${i.client.accent}">Give a shoutout</a></p>` : ""}`;
   const tip = tipFor(d);
-  const tipHtml = `<div style="background:#f5f7fb;border-radius:10px;padding:14px 16px;margin-top:6px"><div style="font:700 16px Georgia,serif;color:#16213a">${esc(tip.title)}</div><p style="margin:6px 0 0;font:15px/1.5 Arial,sans-serif;color:#16213a">${esc(tip.body)}</p><p style="margin:8px 0 0;font:14px/1.5 Arial,sans-serif;color:#5b6b85"><b style="color:#16213a">Try this:</b> ${esc(tip.tryThis)}</p>${i.trainingOn ? `<p style="margin:10px 0 0"><a href="${base}/training" style="font:13px Arial,sans-serif;color:#5b6b85">Want a refresher? Your trainings are in the portal.</a></p>` : ""}</div>`;
+  const tipHtml = `<div style="background:#f5f7fb;border-radius:10px;padding:14px 16px;margin-top:6px"><div style="font:700 16px Georgia,serif;color:#16213a">${esc(tip.title)}</div><p style="margin:6px 0 0;font:15px/1.5 Arial,sans-serif;color:#16213a">${esc(tip.body)}</p><p style="margin:8px 0 0;font:14px/1.5 Arial,sans-serif;color:#5b6b85"><b style="color:#16213a">Try this:</b> ${esc(tip.tryThis)}</p>${i.trainingOn ? `<p style="margin:10px 0 0"><a href="${base}/training" style="font:13px Arial,sans-serif;color:#5b6b85">Want a refresher? Your trainings are in the Alza Hub.</a></p>` : ""}</div>`;
   const body = section("Your new hires", hireRows) + section("Your team this week", topRows) + section("Recognize someone", recogHtml) + section("A thought for the week", tipHtml);
   const lead = mine.find((h) => h.startDate >= today && h.startDate <= addDaysISO(today, 7));
   const subject = lead ? `Your week: ${first(lead.name)} starts ${dayName(lead.startDate, today)}` : top[0] ? `Your week: ${top[0].title}${top.length > 1 ? ` and ${top.length - 1} more` : ""}` : `Your week: ${tip.title}`;

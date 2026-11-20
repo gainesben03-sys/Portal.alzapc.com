@@ -139,7 +139,7 @@ export default function Recognition() {
   };
 
   const on = !!cfg?.modules.recognition;
-  // Ben saves through the portal; an executive's changes go through the server (they can't write settings directly)
+  // Ben saves through the Alza Hub; an executive's changes go through the server (they can't write settings directly)
   const saveRec = async (r: RecognitionSettings, msg = "Saved") => {
     if (isAdvisor) {
       setRec(r);
@@ -334,7 +334,7 @@ export default function Recognition() {
                 <div className="card so-review" key={s.id}>
                   <div className="tiny" style={{ color: "var(--amber)", fontWeight: 600 }}>{s.heldReason ?? "Held"}</div>
                   <p style={{ margin: "6px 0" }}>&ldquo;{s.message}&rdquo;</p>
-                  <div className="tiny muted">To {s.to.name} · from {s.from.name}{s.from.verified ? "" : s.from.personId ? " (picked from the list)" : " (typed their own name)"} · {s.channel === "sms" ? "text" : s.channel === "qr" ? "QR code" : "portal"} · {new Date(s.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</div>
+                  <div className="tiny muted">To {s.to.name} · from {s.from.name}{s.from.verified ? "" : s.from.personId ? " (picked from the list)" : " (typed their own name)"} · {s.channel === "sms" ? "text" : s.channel === "qr" ? "QR code" : "Alza Hub"} · {new Date(s.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</div>
                   <div className="sheet-actions">
                     <button className="btn sm" style={{ color: "var(--red)" }} onClick={() => review(s, false)}>Remove</button>
                     <button className="btn primary sm" onClick={() => review(s, true)}>Post it</button>
@@ -357,7 +357,7 @@ export default function Recognition() {
               clientName={client.name}
               accent={client.accent}
               onTest={isAdvisor ? async (kind, draft) => {
-                if (!LIVE) return toast.show("Demo: test emails send from the live portal");
+                if (!LIVE) return toast.show("Demo: test emails send from the live Alza Hub");
                 const j = await api({ action: "testEmail", kind, rec: draft });
                 toast.show(j.ok ? `Test sent to ${j.to}` : `Couldn't send the test (${j.reason ?? "error"})`);
               } : undefined}

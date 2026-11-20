@@ -4,7 +4,7 @@
 // The conversation: who -> what they did -> which value -> done. A first text like
 // "Maria Lopez for staying late to finish the load" skips straight to the value.
 // STOP always works and is remembered. Texting is just one way in: anyone who stops texts
-// can still give and get shoutouts by QR code, email or the portal.
+// can still give and get shoutouts by QR code, email or the Alza Hub.
 
 import { createHmac } from "crypto";
 import { clientBySms, createShout, matchPeople, rosterFor, ShoutClient } from "@/lib/shoutserver";

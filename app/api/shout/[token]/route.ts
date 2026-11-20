@@ -1,5 +1,5 @@
 // Public: the QR code page. Anyone with the company's shoutout link can give a shoutout,
-// see the wall, react and report. No login. Names outside the portal are first name + last initial.
+// see the wall, react and report. No login. Names outside the Alza Hub are first name + last initial.
 //
 // GET  ?q=name          -> up to 8 matching people from the roster (for picking who)
 // GET  ?d=<device>      -> company, values, wall, scoreboard

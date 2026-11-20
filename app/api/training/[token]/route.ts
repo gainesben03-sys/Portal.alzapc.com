@@ -90,7 +90,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
     const at = new Date().toISOString();
     let next: TrainingRecord = { ...r, file: { path, name: path.split("/").pop() ?? "certificate", mime }, attest: true, submittedAt: at, ai: { ...ai, flags }, note: undefined };
     next = clean
-      ? logRec({ ...next, status: "approved", completedAt: ai.date, approvedAt: at, approvedBy: "Portal (certificate checked)" }, r.name, `Certificate added and approved, completed ${ai.date}`)
+      ? logRec({ ...next, status: "approved", completedAt: ai.date, approvedAt: at, approvedBy: "Alza Hub (certificate checked)" }, r.name, `Certificate added and approved, completed ${ai.date}`)
       : logRec({ ...next, status: "submitted" }, r.name, flags.length ? `Certificate added, flagged: ${flags.join(" ")}` : "Certificate added, waiting for HR");
     await putRecord(db, next);
     if (clean) await sync(x);

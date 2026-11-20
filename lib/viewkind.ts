@@ -1,4 +1,4 @@
-// How a library item shows inside the portal (no download needed).
+// How a library item shows inside the Alza Hub (no download needed).
 export type ViewKind = "pdf" | "office" | "video" | "link";
 
 export function viewKind(name: string, url?: string): ViewKind {

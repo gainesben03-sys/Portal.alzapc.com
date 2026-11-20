@@ -78,7 +78,7 @@ export async function roadmapCron(db: DB, log: string[]) {
       const m = mail(x.brand, `${p.name} ${why}`, [
         `On your HR Roadmap for ${fmtRange(p.roadmap.start, p.roadmap.end)}${p.roadmap.owner ? `, owned by ${p.roadmap.owner.name}` : ""}.`,
         open.length ? `Next up: ${open.slice(0, 3).map((st) => st.text).join("; ")}${open.length > 3 ? ` and ${open.length - 3} more` : ""}.` : "Every step is checked off. Mark it done when you're finished.",
-        t?.link ? `When you're ready, ${t.link.label.toLowerCase()} from the portal.` : "",
+        t?.link ? `When you're ready, ${t.link.label.toLowerCase()} from the Alza Hub.` : "",
       ].filter(Boolean), { label: "Open it", url });
       await sendEmail({ to, subject: `HR Roadmap: ${p.name} ${why}`, html: m.html, text: m.text, ...x.sender });
       await pushTo(db, to, "reminders", { title: `${p.name} ${why}`, body: open[0] ? `Next: ${open[0].text}` : "Ready to mark done", url: `/c/${clientId}/roadmap?item=${p.id}`, tag: `rm-${p.id}` });

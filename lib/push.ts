@@ -5,7 +5,7 @@ import { PushTopic, topicOn } from "./pushtopics";
 import { PORTAL_URL } from "./server";
 
 // Keys are cleaned of stray quotes/spaces. A bad key turns alerts off (and says why in the logs);
-// it never breaks the build or any other part of the portal.
+// it never breaks the build or any other part of the Alza Hub.
 const clean = (v?: string) => (v ?? "").trim().replace(/^["']|["']$/g, "").replace(/\s+/g, "");
 const pub = clean(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY);
 const priv = clean(process.env.VAPID_PRIVATE_KEY);
@@ -35,7 +35,7 @@ export const pushReady = () => ready();
 export interface PushMsg {
   title: string;
   body: string;
-  url?: string; // path inside the portal
+  url?: string; // path inside the Alza Hub
   tag?: string; // same tag replaces an older alert instead of stacking
 }
 

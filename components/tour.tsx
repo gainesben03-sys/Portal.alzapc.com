@@ -1,6 +1,6 @@
 "use client";
 
-// A short click-through tour the first time someone opens their portal.
+// A short click-through tour the first time someone opens their Alza Hub.
 // It points at the real menu and buttons, skips anything this person can't see, and can be replayed from the "?" button.
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
@@ -15,8 +15,8 @@ export function tourSeen(email: string) {
 }
 
 function stepsFor(kind: "exec" | "manager" | "hiring", company: string, first: string): Step[] {
-  const hello: Step = { title: `Welcome, ${first}`, body: `This is ${company}'s HR portal. Here's a one-minute look around. Skip anytime.` };
-  const phone: Step = { target: "push", title: "Take it with you", body: "Add the portal to your phone's home screen and turn on alerts, so the important stuff finds you." };
+  const hello: Step = { title: `Welcome, ${first}`, body: `This is ${company}'s Alza Hub. Here's a one-minute look around. Skip anytime.` };
+  const phone: Step = { target: "push", title: "Take it with you", body: "Add the Alza Hub to your phone's home screen and turn on alerts, so the important stuff finds you." };
   const replay: Step = { target: "help", title: "That's it", body: "Tap ? up here anytime to see this again. Questions? Ben is a message away." };
   const ask: Step = { target: "nav-library", title: "Ask HR and resources", body: "Templates, newsletters and Ask HR, which answers from your own handbook and policies." };
   if (kind === "manager")
@@ -42,7 +42,7 @@ function stepsFor(kind: "exec" | "manager" | "hiring", company: string, first: s
     { target: "nav-home", title: "Your dashboard", body: "What needs you, new hires, hiring, reviews and celebrations, at a glance. Every line is a link." },
     { target: "customize", title: "Make it yours", body: "Add, remove or reorder what's on your dashboard. It only changes your view." },
     { target: "nav-hub", title: "Team Hub", body: "For anyone who leads a team: this week's to-dos, your team and recognition." },
-    { target: "nav-people", title: "People", body: "New hires from offer to day one, recruiting, performance reviews, and who has access to the portal." },
+    { target: "nav-people", title: "People", body: "New hires from offer to day one, recruiting, performance reviews, and who has access to the Alza Hub." },
     { target: "nav-todo", title: "Projects with Ben", body: "What Ben is working on for you, what's moving, and anything waiting on your side." },
     ask,
     phone,
@@ -132,7 +132,7 @@ export function Tour({ company, homeHref }: { company: string; homeHref: string 
     style = below ? { width: w, left, top: rect.bottom + pad + 10 } : above ? { width: w, left, bottom: vh - rect.top + pad + 10 } : { width: w, left, bottom: 16 };
   }
   return (
-    <div className="tour" role="dialog" aria-modal="true" aria-label="Portal tour">
+    <div className="tour" role="dialog" aria-modal="true" aria-label="Alza Hub tour">
       <div className="tour-catch" onClick={end} />
       {rect ? (
         <div className="tour-hole" style={{ left: rect.left - pad, top: rect.top - pad, width: rect.width + pad * 2, height: rect.height + pad * 2 }} />

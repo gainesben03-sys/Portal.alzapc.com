@@ -274,7 +274,7 @@ ${section("HR priorities", prioHtml, { n: prios.length - prioShown.length, href:
 ${section("Coming up", lineHtml(upShown, true))}
 ${section("Wins &amp; progress", lineHtml(winsShown))}
 <tr><td style="padding:26px 28px 0"><div style="border-top:1px solid #e6e1d6;padding-top:20px;font:italic 16px/1.55 Georgia,serif;color:#16213a">&ldquo;${esc(thought)}&rdquo;</div><div style="${SUBHEAD};padding-top:4px">A thought for the week</div></td></tr>
-<tr><td style="padding:28px 28px 8px"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:#19283c;border-radius:8px"><a href="${base}" style="display:inline-block;padding:12px 20px;font:700 14px Arial,sans-serif;color:#ffffff;text-decoration:none">Open Your AlzaHR Portal</a></td></tr></table></td></tr>
+<tr><td style="padding:28px 28px 8px"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:#19283c;border-radius:8px"><a href="${base}" style="display:inline-block;padding:12px 20px;font:700 14px Arial,sans-serif;color:#ffffff;text-decoration:none">Open Your Alza Hub</a></td></tr></table></td></tr>
 <tr><td style="padding:16px 28px 24px;font:12px/1.6 Arial,sans-serif;color:#8a8577">Prepared by Alza People &amp; Operations · <a href="${base}" style="color:#8a8577">portal.alzapc.com</a><br>You get this ${settings.cadence === "biweekly" ? "every two weeks" : settings.cadence === "monthly" ? "monthly" : "weekly"}. Quiet weeks are skipped. <a href="${base}/team" style="color:#8a8577">Email preferences</a></td></tr>
 </table></td></tr></table></body></html>`;
 
@@ -288,7 +288,7 @@ ${section("Wins &amp; progress", lineHtml(winsShown))}
     block("Coming up", upShown.map((x) => x.text)) +
     block("Wins & progress", winsShown.map((x) => x.text)) +
     `\nA thought for the week: "${thought}"\n` +
-    `\nOpen your AlzaHR portal: ${base}\n\nPrepared by Alza People & Operations\n`;
+    `\nOpen your Alza Hub: ${base}\n\nPrepared by Alza People & Operations\n`;
 
   const subject = `The People Brief | ${client.name} | ${now.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
   return { subject, html, text, quiet, counts: { needs: att.length, overdue: overdueCount, done: wins.length, active: prios.length } };

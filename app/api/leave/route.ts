@@ -107,7 +107,7 @@ export async function POST(req: Request) {
       if (to.length) {
         await pushTo(db, to, "requests", { title: "New leave case", body: text, url: href }).catch(() => 0);
         const brand = { company: cl.name, accent: cfg.accent || "#19283c", logoUrl: emailLogoUrl(clientId, cfg.logo, cfg.logoEmail, site) };
-        const m = noticeEmail(brand, "Leave center", `New leave case ${next.number}`, [`${who.name || who.email} opened leave case ${next.number} for ${short(next.employee.name)}.`, `Open it in the portal: ${site}${href}`, "For privacy, leave details are only in the portal."]);
+        const m = noticeEmail(brand, "Leave center", `New leave case ${next.number}`, [`${who.name || who.email} opened leave case ${next.number} for ${short(next.employee.name)}.`, `Open it in the Alza Hub: ${site}${href}`, "For privacy, leave details are only in the Alza Hub."]);
         await sendEmail({ to, subject: `New leave case ${next.number}`, text: m.text, html: m.html, sensitive: true }).catch(() => undefined);
       }
       return json({ ok: true, case: next });

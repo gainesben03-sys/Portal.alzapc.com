@@ -255,7 +255,7 @@ export default function NewsletterIssue() {
 
 const DRAFT_REASONS: Record<string, string> = {
   no_key: "Claude is off. Add ANTHROPIC_API_KEY in Vercel and redeploy.",
-  demo: "Claude writes issues once the portal is live.",
+  demo: "Claude writes issues once the Alza Hub is live.",
   forbidden: "Only Ben can do this.",
   not_found: "Save the issue first, then try again.",
   empty: "This email doesn't have enough text to rewrite.",

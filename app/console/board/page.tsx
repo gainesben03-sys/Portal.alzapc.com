@@ -14,7 +14,7 @@ async function replyEmail(clientId: string, email: string, clientName: string, t
       headers: { "Content-Type": "application/json", ...(await authHeader()) },
       body: JSON.stringify({
         subject: `Ben replied to your note`,
-        text: `${text}\n\nSee the conversation in your ${clientName} portal: ${window.location.origin}/c/${clientId}/board`,
+        text: `${text}\n\nSee the conversation in your ${clientName} Alza Hub: ${window.location.origin}/c/${clientId}/board`,
         toMember: { clientId, email },
       }),
     });

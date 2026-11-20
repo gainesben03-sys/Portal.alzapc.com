@@ -113,9 +113,9 @@ export default function Login() {
             <div className="wordmark">Alza<span className="hr">HR</span><span className="tag hide-sm">People Collective</span></div>
             <span className="login-theme"><ThemeToggle /></span>
           </div>
-          <h1 style={{ marginTop: 18 }}>See the client portal</h1>
+          <h1 style={{ marginTop: 18 }}>See the Alza Hub</h1>
           <p className="muted" style={{ marginTop: 6 }}>
-            Every AlzaHR client gets one. Look around as a client CEO would, or see Ben&apos;s side. {bp.name} is a made-up company with sample data.
+            The people and operations workspace every AlzaHR client gets. Look around as a client CEO would, or see Ben&apos;s side. {bp.name} is a made-up company with sample data.
           </p>
           <button
             className="btn gold block"
@@ -139,7 +139,7 @@ export default function Login() {
           </button>
           <button className="btn ghost block tiny" style={{ marginTop: 8 }} onClick={reset}>Start the demo over</button>
           <WorkWithUs />
-          <p className="demo-note">Nothing you click here is sent anywhere. Already a client? <a href="https://portal.alzapc.com">Sign in to your portal</a></p>
+          <p className="demo-note">Nothing you click here is sent anywhere. Already a client? <a href="https://portal.alzapc.com">Sign in to your Alza Hub</a></p>
         </div>
       </main>
     );
@@ -151,7 +151,8 @@ export default function Login() {
           <div className="wordmark">Alza<span className="hr">HR</span><span className="tag hide-sm">People Collective</span></div>
           <span className="login-theme"><ThemeToggle /></span>
         </div>
-        <h1 style={{ marginTop: 18 }}>Client portal</h1>
+        <h1 style={{ marginTop: 18 }}>Alza Hub</h1>
+        <p className="small" style={{ margin: "2px 0 0", fontWeight: 600 }}>Your people and operations workspace</p>
 
         {LIVE && noAccess ? (
           <>
@@ -170,7 +171,7 @@ export default function Login() {
 
         {sent ? (
           <div className="impact" style={{ marginTop: 18 }}>
-            If <b>{sent}</b> has access to a portal, an email is on its way with a sign-in link and a 6-digit code.
+            If <b>{sent}</b> has access, an email is on its way with a sign-in link and a 6-digit code.
             <form
               style={{ marginTop: 12 }}
               onSubmit={async (e) => {

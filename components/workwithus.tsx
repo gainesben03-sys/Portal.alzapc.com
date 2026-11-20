@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { DEFAULT_BOOKING_URL } from "@/lib/state";
 
-/** For people who land on the portal but aren't clients: a calm, non-salesy way to reach Ben. */
+/** For people who land on the Alza Hub but aren't clients: a calm, non-salesy way to reach Ben. */
 export function WorkWithUs({ compact }: { compact?: boolean }) {
   const { bookingUrl: saved } = useStore();
   const bookingUrl = saved || DEFAULT_BOOKING_URL;
@@ -33,7 +33,7 @@ export function WorkWithUs({ compact }: { compact?: boolean }) {
     <div className={`work-with ${compact ? "compact" : ""}`}>
       <b>Not working with AlzaHR yet?</b>
       <p className="small muted" style={{ margin: "4px 0 10px" }}>
-        Fractional HR for growing companies: policies, hiring, onboarding, employee issues, and a portal like this one for your team. No full-time HR hire needed.
+        Fractional HR for growing companies: policies, hiring, onboarding, employee issues, and an Alza Hub like this one: one place for your people and operations. No full-time HR hire needed.
       </p>
       {done ? (
         <p className="small" style={{ color: "var(--green)" }}>Thanks. Ben will be in touch within a business day.</p>

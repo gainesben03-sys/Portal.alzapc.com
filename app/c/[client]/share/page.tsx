@@ -88,7 +88,7 @@ export default function ShareWithHR() {
     const names = newFiles.map((f) => `- ${f.name} (${size(f.size)})`).join("\n");
     const sent = await notifyBen(
       `${client.name}: ${who} shared ${newFiles.length} file${newFiles.length === 1 ? "" : "s"}${confidential ? " (confidential)" : ""}`,
-      `${who} shared files with you through the portal.\n\n${names}\n\nCategory: ${category}${req ? `\nFor: ${req.title}` : ""}${note.trim() ? `\nNote: ${note.trim()}` : ""}\n\nFiles stay in the portal, not in this email: https://portal.alzapc.com/console/files`
+      `${who} shared files with you through the Alza Hub.\n\n${names}\n\nCategory: ${category}${req ? `\nFor: ${req.title}` : ""}${note.trim() ? `\nNote: ${note.trim()}` : ""}\n\nFiles stay in the Alza Hub, not in this email: https://portal.alzapc.com/console/files`
     );
     setPicked([]);
     setNote("");

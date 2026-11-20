@@ -110,7 +110,7 @@ export default function ReviewPage() {
           <span className="rv-small">{done} of {info.candidates.length} reviewed</span>
         </div>
       </div>
-      {demo && <p className="rv-demo rv-small">Demo preview. In the live portal, videos play here.</p>}
+      {demo && <p className="rv-demo rv-small">Demo preview. In the live Alza Hub, videos play here.</p>}
 
       {info.candidates.length === 0 ? (
         <div className="rv-card rv-muted">No candidates to review yet. Check back soon.</div>
@@ -131,7 +131,7 @@ function CandidateCard({ c, n, call, demo, onSaved }: { c: Cand; n: number; call
   const [saved, setSaved] = useState("");
 
   const play = async () => {
-    if (demo) return setErr("Demo preview: videos play in the live portal.");
+    if (demo) return setErr("Demo preview: videos play in the live Alza Hub.");
     setBusy(true);
     setErr("");
     const j = await call({ action: "media", c: c.id, f: "media" });
@@ -140,7 +140,7 @@ function CandidateCard({ c, n, call, demo, onSaved }: { c: Cand; n: number; call
     else setErr("Couldn't load the video. Refresh and try again.");
   };
   const resume = async () => {
-    if (demo) return setErr("Demo preview: resumes open in the live portal.");
+    if (demo) return setErr("Demo preview: resumes open in the live Alza Hub.");
     const w = window.open("", "_blank");
     const j = await call({ action: "media", c: c.id, f: "resume" });
     if (j.ok && j.url && w) w.location.href = j.url;
