@@ -118,7 +118,7 @@ export default function HuddleSetup() {
             <div><b>Monthly snapshot</b><div className="tiny muted">The month at a glance for the same people: who joined, who left, hiring, 30-day check-ins, recognition. First {DAY_NAMES[h.day] || "Monday"} of the month.</div></div>
           </label>
           <label className="rule" style={{ cursor: "pointer" }}>
-            <span className="switch"><input type="checkbox" checked={h.managerWeekly !== false} onChange={(e) => set({ managerWeekly: e.target.checked })} /><span /></span>
+            <span className="switch"><input type="checkbox" checked={h.managerWeekly === true} onChange={(e) => set({ managerWeekly: e.target.checked })} /><span /></span>
             <div><b>Monday email for managers</b><div className="tiny muted">Each manager gets their new hires, their team this week, a nudge to recognize someone, and a short leadership thought.</div></div>
           </label>
         </div>

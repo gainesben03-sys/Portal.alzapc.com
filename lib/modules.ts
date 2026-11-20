@@ -62,7 +62,7 @@ export interface HuddleSettings {
   /** Monthly snapshot to the same people, first week of the month (default on). */
   snapshot?: boolean;
   /** Monday email to each manager: their new hires, their week, recognize someone, a thought (default on). */
-  managerWeekly?: boolean;
+  managerWeekly?: boolean; // Monday email for managers: off unless turned on
 }
 
 export const DAY_NAMES = ["", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];

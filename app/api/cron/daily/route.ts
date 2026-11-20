@@ -556,7 +556,7 @@ async function daily(req: Request) {
           });
         }
         // Monday: the managers' weekly email (their new hires, their week, recognize someone, a thought)
-        if (monday && cfg.huddle?.managerWeekly !== false) {
+        if (monday && cfg.huddle?.managerWeekly === true) {
           const mw = buildManagerWeek({ client: { id: c.id, name: c.name, accent: cfg.accent || "#19283c", logo: cfg.logo && !cfg.logo.startsWith("data:") ? cfg.logo : undefined }, manager: { name: m.name, email: mgr }, team, logs, hires: prow<Hire>(pHires), steps: stepsFor(s), recognitionOn: !!cfg.modules?.recognition, trainingOn: !!cfg.modules?.training, today: day, experience: s.experience, monthTheme: cfg.modules?.recognition && cfg.recognition?.monthly?.managers !== false ? currentTheme(cfg.recognition?.monthly, day) : null });
           if (mw) {
             await once(`team-week:${c.id}:${mgr}:${day}`, () => sendEmail({ to: [mgr], subject: mw.subject, html: mw.html, text: mw.text, ...senderFor(s, c.name) }));
