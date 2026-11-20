@@ -1,4 +1,5 @@
 // Alza Perform on the server: who can see which reviews, the writing help, emails and the schedule.
+import { withOneClick } from "./oneclick";
 import { claude, parseJson } from "./ai";
 import { emailLogoUrl, readableInk } from "./brand";
 import { esc, frameEmail, onboardingFor, senderFor, type Brand } from "./hires";
@@ -279,7 +280,9 @@ export function shareEmail(x: Ctx, r: Review, token: string) {
 
 export async function send(x: Ctx, to: string, m: { subject: string; html: string; text: string }) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return { ok: false, reason: "no_email" };
-  return sendEmail({ to: [to], subject: m.subject, html: m.html, text: m.text, ...x.sender });
+  // links into the Alza Hub become one-click links for this person: tap and they're in
+  const one = withOneClick(to, m);
+  return sendEmail({ to: [to], subject: m.subject, html: one.html, text: one.text, ...x.sender });
 }
 
 /** Send the self-assessment link and record it. */
