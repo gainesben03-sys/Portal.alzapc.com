@@ -25,7 +25,8 @@ import { introReviewEmail, introStyleOf, reviewOn, execHeadsUpEmail, execOn, mgr
 import { buildManagerWeek, buildSnapshot, PeopleData, peopleItems } from "@/lib/peopleupdates";
 import { managerEmail } from "@/lib/hireemailserver";
 import { deliverIntro, writeStory } from "@/lib/experienceserver";
-import { admin, PORTAL_URL, sendEmail } from "@/lib/server";
+import { admin, deliver, PORTAL_URL, sendEmail } from "@/lib/server";
+import { outboxCron, runAutomatic } from "@/lib/outboxserver";
 import { advisorEmails, pushTo } from "@/lib/push";
 import { ListRow, syncReminder } from "@/lib/mylistserver";
 import { Departure, offboardFor, sendOn } from "@/lib/offboard";
@@ -52,6 +53,11 @@ function huddleDue(h: HuddleSettings, day: Date): boolean {
 }
 
 export async function GET(req: Request) {
+  // everything the daily run sends counts as automatic, so the Outbox can hold it
+  return runAutomatic(() => daily(req));
+}
+
+async function daily(req: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) {
     return NextResponse.json({ ok: false }, { status: 401 });
@@ -849,6 +855,12 @@ export async function GET(req: Request) {
     const soon = new Date(Date.now() + 48 * 3600e3).toISOString();
     const { data: due, error } = await db.from("my_list").select("*").eq("done", false).is("reminded_at", null).not("remind_at", "is", null).lte("remind_at", soon).limit(500);
     if (!error) for (const row of due ?? []) await syncReminder(db, row as ListRow);
+  }
+
+  try {
+    await outboxCron(db, deliver, PORTAL_URL, log);
+  } catch (e) {
+    log.push(`outbox: ${(e as Error).message}`);
   }
 
   return NextResponse.json({ ok: true, day, log });

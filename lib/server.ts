@@ -1,5 +1,6 @@
 // Server-only helpers for API routes.
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { maybeHold } from "./outboxserver";
 
 /** Accepts the project URL in any common form and returns https://<ref>.supabase.co */
 export function cleanSupabaseUrl(raw?: string): string | undefined {
@@ -62,6 +63,13 @@ export async function caller(req: Request): Promise<Caller | null> {
 
 /** Cancel an email scheduled with sendEmail({ scheduledAt }). */
 export async function cancelEmail(id: string): Promise<boolean> {
+  if (id?.startsWith("ob")) {
+    // still waiting in the Outbox: skip it there
+    const { data } = await admin().from("outbox").select("data").eq("id", id).maybeSingle();
+    if (!data) return false;
+    await admin().from("outbox").update({ status: "skipped", data: { ...(data.data as object), status: "skipped", doneAt: new Date().toISOString(), doneBy: "Cancelled" } }).eq("id", id);
+    return true;
+  }
   const key = process.env.RESEND_API_KEY;
   if (!key || !id) return false;
   const r = await fetch(`https://api.resend.com/emails/${encodeURIComponent(id)}/cancel`, { method: "POST", headers: { Authorization: `Bearer ${key}` } }).catch(() => null);
@@ -85,7 +93,40 @@ export function siteUrl(req: Request): string {
   return `${/^localhost/.test(host) ? "http" : "https"}://${host}`;
 }
 
-export async function sendEmail(opts: { to: string[]; cc?: string[]; subject: string; text: string; html?: string; scheduledAt?: string; attachments?: { filename: string; content: string }[]; replyTo?: string | string[]; fromName?: string; fromBox?: string }): Promise<{ ok: boolean; reason?: string; id?: string }> {
+export interface MailOpts {
+  to: string[];
+  cc?: string[];
+  subject: string;
+  text: string;
+  html?: string;
+  scheduledAt?: string;
+  attachments?: { filename: string; content: string }[];
+  replyTo?: string | string[];
+  fromName?: string;
+  fromBox?: string;
+  /** Which company this is for, when the caller knows. Otherwise worked out from links and recipients. */
+  clientId?: string;
+  /** Leave, write-ups: only Ben sees these in the Outbox. */
+  sensitive?: boolean;
+  /** Always send now (sign-in codes, released Outbox emails). */
+  bypassHold?: boolean;
+}
+
+/** Send an email, unless the company's Outbox setting says it should wait for approval first. */
+export async function sendEmail(opts: MailOpts): Promise<{ ok: boolean; reason?: string; id?: string; held?: boolean }> {
+  if (!opts.bypassHold && url && service && process.env.RESEND_API_KEY) {
+    try {
+      const held = await maybeHold(admin(), opts);
+      if (held) return held;
+    } catch {
+      // if the Outbox can't be checked, send as normal
+    }
+  }
+  return deliver(opts);
+}
+
+/** The actual send, through Resend. */
+export async function deliver(opts: MailOpts): Promise<{ ok: boolean; reason?: string; id?: string }> {
   const key = process.env.RESEND_API_KEY;
   let from = process.env.NOTIFY_FROM;
   if (!key || !from) return { ok: false, reason: "not_configured" };

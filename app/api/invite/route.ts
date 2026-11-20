@@ -48,7 +48,7 @@ Ben Gaines, AlzaHR`;
 <p><a href="${base}" style="display:inline-block;background:#19283c;color:#fff;padding:11px 18px;border-radius:10px;text-decoration:none;font-weight:700">Open your Manager Hub</a></p>
 <p style="color:#5b6b85;font-size:13px">Sign in with ${e(email)} (we email you a code, no password). When it asks, turn on alerts so reminders come to your phone. On iPhone, add it to your Home Screen first.</p>
 <p style="font-family:Georgia,serif;font-weight:700">Alza<span style="color:#d9a046">HR</span></p></div>`;
-    const r = await sendEmail({ to: [email], subject: `Your Manager Hub at ${client.name}`, text: mtext, html: mhtml });
+    const r = await sendEmail({ to: [email], subject: `Your Manager Hub at ${client.name}`, text: mtext, html: mhtml, bypassHold: true });
     return NextResponse.json({ sent: r.ok, reason: r.reason });
   }
   const inviter = me.advisor ? "Ben Gaines at AlzaHR" : me.name;
@@ -65,6 +65,6 @@ AlzaHR`;
 <p><a href="${base}" style="display:inline-block;background:#19283c;color:#fff;padding:11px 18px;border-radius:10px;text-decoration:none;font-weight:700">Open the portal</a></p>
 <p style="color:#5b6b85;font-size:13px">Sign in with ${email}. We'll email you a one-time link, no password needed.</p>
 <p style="font-family:Georgia,serif;font-weight:700">Alza<span style="color:#d9a046">HR</span></p></div>`;
-  const r = await sendEmail({ to: [email], subject: `You're invited to the ${client.name} HR portal`, text, html });
+  const r = await sendEmail({ to: [email], subject: `You're invited to the ${client.name} HR portal`, text, html, bypassHold: true });
   return NextResponse.json({ sent: r.ok, reason: r.reason });
 }

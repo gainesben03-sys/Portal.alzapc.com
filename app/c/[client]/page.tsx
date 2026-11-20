@@ -10,6 +10,7 @@ import { MyListTile } from "@/components/mylist";
 import { ContactBenLine } from "@/components/contactben";
 import { useLeaveAccess } from "@/lib/leaveclient";
 import { AskBox } from "@/components/askbox";
+import { OutboxBanner } from "@/components/outbox";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useRef, useState } from "react";
@@ -414,6 +415,7 @@ export default function Home() {
       <ClientNav clientId={client.id} />
       <main className="wrap wide">
         <Greeting clientId={client.id} onCustomize={() => (s.preview ? setPreviewNote(true) : setEditing(true))} />
+        <OutboxBanner clientId={client.id} advisor={isAdvisor} exec={me?.access === "exec"} />
 
         {/* Ask HR lives in Resources; here only when Resources is off */}
         {!cfg.modules?.resources && !shown.includes("askhr") && <AskBox clientId={client.id} slim />}

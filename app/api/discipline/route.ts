@@ -152,5 +152,6 @@ async function tellBen(db: ReturnType<typeof admin>, clientId: string, company: 
     subject: why === "held" ? `${company}: a discipline draft is waiting on you` : `${company}: please look over a discipline draft`,
     text: `${line}\n\nOpen it: ${url}`,
     html: `<p style="font-family:Arial,sans-serif;font-size:15px;color:#19283c">${line}</p><p style="font-family:Arial,sans-serif;font-size:15px"><a href="${url}">Open it in the portal</a></p>`,
+    sensitive: true,
   }).catch(() => undefined);
 }

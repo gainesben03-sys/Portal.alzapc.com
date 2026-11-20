@@ -5,7 +5,8 @@ import { ContactBen } from "./contactben";
 import { useLeaveAccess } from "@/lib/leaveclient";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
+import { useHeldCount } from "@/lib/outboxclient";
 import { Action, Client, dueLabel, ownsOpenWork, reminderStage, subtaskProgress, urgency, Urgency } from "@/lib/data";
 import { useStore } from "@/lib/store";
 import { usePathname } from "next/navigation";
@@ -339,6 +340,8 @@ export function ClientNav({ clientId }: { clientId: string }) {
   const [asking, setAsking] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const leaveAcc = useLeaveAccess(clientId);
+  const obViewer = useMemo(() => (isAdvisor || access === "exec" ? { advisor: isAdvisor, clientId, name: "" } : null), [isAdvisor, access, clientId]);
+  const heldHere = useHeldCount(obViewer, cfg ? [{ id: clientId, name: "" }] : []);
 
   type Sub = { href: string; label: string; match: string[]; badge?: number };
   // Manager Hub: anyone with people reporting to them on the roster; Learn also for executives. Ask HR lives under Resource Center.
@@ -384,6 +387,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
       subs: access === "hiring" || (access === "manager" && !ownsOpenWork(actions, clientId, me?.name)) ? [] : [
         { href: `${base}/projects`, label: "Projects", match: [`${base}/projects`, `${base}/tasks`, `${base}/a/`] },
         ...(isAdvisor || access === "exec" ? [{ href: `${base}/roadmap`, label: "HR Roadmap", match: [`${base}/roadmap`] }] : []),
+        ...(isAdvisor || access === "exec" ? [{ href: `${base}/outbox`, label: "Outbox", match: [`${base}/outbox`], badge: heldHere || undefined }] : []),
       ],
     },
     {
@@ -459,6 +463,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
   );
 }
 
+const ADVISOR_VIEW = { advisor: true, name: "" };
 export function AlzaNav() {
   const { notes, resources, files, hires } = useStore();
   const newHires = hires.filter((h) => h.status === "Approved to hire" && !(h.docs ?? []).length).length;
@@ -466,10 +471,12 @@ export function AlzaNav() {
   const newFiles = files.filter((f) => !f.reviewed && !f.fromAdvisor).length;
   const unread = notes.filter((n) => n.status === "new").length;
   const stale = resources.filter((r) => r.outdated).length;
+  const held = useHeldCount(ADVISOR_VIEW, []);
   const items = [
     { href: "/console", label: "Overview" },
     { href: "/console/board", label: "Notes", badge: unread },
     { href: "/console/inbox", label: "Email inbox" },
+    { href: "/console/outbox", label: "Outbox", badge: held },
     { href: "/console/files", label: "Files", badge: newFiles },
     { href: "/console/hires", label: "New hires", badge: newHires },
     { href: "/console/huddle", label: "People Brief" },

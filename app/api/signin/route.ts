@@ -21,7 +21,7 @@ async function sendCode(email: string, redirectTo: string): Promise<"sent" | "fa
   const link = r.data?.properties?.action_link;
   if (r.error || !code || !link) return "fallback";
   const m = codeEmail(code, link);
-  const sent = await sendEmail({ to: [email], subject: m.subject, html: m.html, text: m.text, fromName: "AlzaHR" });
+  const sent = await sendEmail({ to: [email], subject: m.subject, html: m.html, text: m.text, fromName: "AlzaHR", bypassHold: true });
   return sent.ok ? "sent" : "fallback";
 }
 

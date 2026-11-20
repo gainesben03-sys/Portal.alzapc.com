@@ -108,7 +108,7 @@ export async function POST(req: Request) {
         await pushTo(db, to, "requests", { title: "New leave case", body: text, url: href }).catch(() => 0);
         const brand = { company: cl.name, accent: cfg.accent || "#19283c", logoUrl: emailLogoUrl(clientId, cfg.logo, cfg.logoEmail, site) };
         const m = noticeEmail(brand, "Leave center", `New leave case ${next.number}`, [`${who.name || who.email} opened leave case ${next.number} for ${short(next.employee.name)}.`, `Open it in the portal: ${site}${href}`, "For privacy, leave details are only in the portal."]);
-        await sendEmail({ to, subject: `New leave case ${next.number}`, text: m.text, html: m.html }).catch(() => undefined);
+        await sendEmail({ to, subject: `New leave case ${next.number}`, text: m.text, html: m.html, sensitive: true }).catch(() => undefined);
       }
       return json({ ok: true, case: next });
     }
@@ -212,9 +212,9 @@ export async function POST(req: Request) {
     const paras = body.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
     const m = noticeEmail(brand, cl.name, subject, paras);
     const sender = senderFor(onboardingFor(cfg.onboarding), cl.name);
-    const r = await sendEmail({ to: [to], subject, text: body, html: m.html, attachments: attachments.length ? attachments : undefined, ...sender, replyTo: who.advisor ? sender.replyTo || who.email : who.email });
+    const r = await sendEmail({ to: [to], subject, text: body, html: m.html, attachments: attachments.length ? attachments : undefined, ...sender, sensitive: true, replyTo: who.advisor ? sender.replyTo || who.email : who.email });
     if (!r.ok) return json({ ok: false, reason: r.reason ?? "send" }, 502);
-    if (b.copyMe) await sendEmail({ to: [who.email], subject: `Copy: ${subject}`, text: `Sent to ${to} from the leave center (${c.number}).\n\n${body}`, ...sender }).catch(() => undefined);
+    if (b.copyMe) await sendEmail({ to: [who.email], subject: `Copy: ${subject}`, text: `Sent to ${to} from the leave center (${c.number}).\n\n${body}`, ...sender, sensitive: true }).catch(() => undefined);
     const next = { ...c, emails: [...c.emails, { at: new Date().toISOString(), by: who.name || who.email, to, subject }] };
     await putCase(next);
     await audit(caseId, "sent an email", `"${subject}" to ${to}${attachments.length ? ` with ${attachments.map((a) => a.filename).join(", ")}` : ""}`);
