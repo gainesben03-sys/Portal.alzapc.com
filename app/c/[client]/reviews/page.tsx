@@ -10,6 +10,7 @@ import { LangSwitch, StageChip, useDemo, useLang } from "@/components/perform";
 import { useStore } from "@/lib/store";
 import { BUILT_IN, cleanPerform, daysUntil, fmtDay, KIND_LABEL, Lang, Part, PerformSettings, ReviewTemplate, SCALE, stageOf, T, templatesFor, newId } from "@/lib/perform";
 import { ListData, performApi } from "@/lib/performclient";
+import { ArchiveRange, buildArchive, inRange, isArchived } from "@/lib/reviewarchive";
 
 type Tab = "reviews" | "templates" | "settings";
 
@@ -30,6 +31,7 @@ export default function Reviews() {
   const [filter, setFilter] = useState("attention");
   const [picking, setPicking] = useState<null | "adhoc" | "pip">(null);
   const [launching, setLaunching] = useState(false);
+  const [archiving, setArchiving] = useState(false);
   const [nudging, setNudging] = useState(false);
 
   const call = useCallback((body: Record<string, unknown>) => performApi(clientId, body, demo), [clientId, demo]);
@@ -203,6 +205,14 @@ export default function Reviews() {
 
         {data.insight.length > 0 && <Insight rows={data.insight} lang={lang} />}
         {upcomingList(false)}
+        <div className="pf-launch section">
+          <div className="grow">
+            <b>{lang === "es" ? "Descargar evaluaciones" : "Download reviews"}</b>
+            <span className="tiny muted">{lang === "es" ? "Cada evaluación terminada como PDF, en un solo zip. Para respaldo o para los expedientes del personal." : "Every finished review as a PDF, in one zip. For backup or to move into personnel files."}</span>
+          </div>
+          <button className="btn sm" onClick={() => setArchiving(true)}>{lang === "es" ? "Descargar todo" : "Download all"}</button>
+        </div>
+        {archiving && <ArchiveSheet data={data} clientId={clientId} company={client.name} logo={client.logo} lang={lang} onClose={() => setArchiving(false)} onDone={(m) => { setArchiving(false); toast.show(m); }} />}
         {launching && <LaunchSheet data={data} lang={lang} call={call} onClose={() => setLaunching(false)} onDone={(m) => { setLaunching(false); toast.show(m); load(); }} onSettings={() => { setLaunching(false); go("settings"); }} />}
         {picking && <PersonPicker people={data.people} lang={lang} pip={picking === "pip"} onClose={() => setPicking(null)} onPick={(id) => { setPicking(null); start(id, picking); }} />}
       </>
@@ -579,3 +589,66 @@ function SettingsEditor({ s, users, lang, onSave }: { s: PerformSettings; users:
 }
 
 
+
+/** Review admins: every finished review in a date range as PDFs, zipped. */
+function ArchiveSheet({ data, clientId, company, logo, lang, onClose, onDone }: { data: ListData; clientId: string; company: string; logo?: string; lang: Lang; onClose: () => void; onDone: (msg: string) => void }) {
+  const es = lang === "es";
+  const L = (en: string, s: string) => (es ? s : en);
+  const today = new Date().toISOString().slice(0, 10);
+  const y = Number(today.slice(0, 4));
+  const yearAgo = `${y - 1}${today.slice(4)}`;
+  const first = data.reviews.map((r) => (r.finalAt ?? r.due).slice(0, 10)).sort()[0] ?? today;
+  const opts: [string, ArchiveRange][] = [
+    ["this", { from: `${y}-01-01`, to: `${y}-12-31`, label: String(y) }],
+    ["last", { from: `${y - 1}-01-01`, to: `${y - 1}-12-31`, label: String(y - 1) }],
+    ["12", { from: yearAgo, to: today, label: L("Last 12 months", "Últimos 12 meses") }],
+    ["all", { from: first < "2000-01-01" ? "2000-01-01" : first, to: "2999-12-31", label: L("All", "Todas") }],
+  ];
+  const [k, setK] = useState("this");
+  const [from, setFrom] = useState(`${y}-01-01`);
+  const [to, setTo] = useState(today);
+  const [busy, setBusy] = useState<string | null>(null);
+  const range: ArchiveRange = k === "custom" ? { from, to, label: `${from} to ${to}` } : opts.find((o) => o[0] === k)![1];
+  const pick = data.reviews.filter((r) => inRange(r, range));
+  const ready = pick.filter(isArchived).length;
+  const open = pick.length - ready;
+  const labels: Record<string, string> = { this: String(y), last: String(y - 1), "12": L("Last 12 months", "Últimos 12 meses"), all: L("All time", "Todo"), custom: L("Pick dates", "Elegir fechas") };
+  const go = async () => {
+    setBusy(L("Getting started…", "Empezando…"));
+    try {
+      const out = await buildArchive({ clientId, company, logo, reviews: data.reviews, range, onProgress: (n, t) => setBusy(L(`Making PDFs: ${n} of ${t}`, `Creando PDFs: ${n} de ${t}`)) });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(out.blob);
+      a.download = out.name;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+      onDone(L(`Downloaded ${out.files} review${out.files === 1 ? "" : "s"}`, `${out.files} evaluaciones descargadas`));
+    } catch {
+      setBusy(null);
+      onDone(L("Couldn't build the zip. Try again.", "No se pudo crear el zip. Intente de nuevo."));
+    }
+  };
+  return (
+    <Sheet title={L("Download reviews", "Descargar evaluaciones")} onClose={onClose}>
+      <p className="small muted" style={{ marginTop: 0 }}>{L("Finished reviews and improvement plans as PDFs, sorted into folders, with an index you can open in Excel.", "Evaluaciones y planes de mejora terminados como PDF, en carpetas, con un índice que se abre en Excel.")}</p>
+      <div className="small" style={{ fontWeight: 600, margin: "14px 0 8px" }}>{L("Which reviews", "Cuáles evaluaciones")}</div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        {[...opts.map((o) => o[0]), "custom"].map((x) => <button key={x} className={`chip chip-btn ${k === x ? "on" : ""}`} aria-pressed={k === x} onClick={() => setK(x)}>{labels[x]}</button>)}
+      </div>
+      {k === "custom" && (
+        <div className="row" style={{ gap: 8, marginTop: 10 }}>
+          <label className="grow small">{L("From", "Desde")}<input className="f" type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
+          <label className="grow small">{L("To", "Hasta")}<input className="f" type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
+        </div>
+      )}
+      <div className="card" style={{ margin: "14px 0", padding: 14 }}>
+        <b className="small">{ready ? L(`${ready} finished review${ready === 1 ? "" : "s"}`, `${ready} evaluaciones terminadas`) : L("No finished reviews in these dates", "No hay evaluaciones terminadas en estas fechas")}</b>
+        {open > 0 && <div className="tiny muted" style={{ marginTop: 4 }}>{L(`${open} not finished yet. They're listed in the index, not included as PDFs.`, `${open} sin terminar. Aparecen en el índice, sin PDF.`)}</div>}
+        <div className="tiny muted" style={{ marginTop: 6, lineHeight: 1.5 }}>{L("Each PDF has the full review, the employee's comment and the sign-off dates. Reviews read in Spanish come in both languages. Folders: Performance reviews, New hire reviews, Improvement plans.", "Cada PDF tiene la evaluación completa, el comentario del empleado/a y las fechas de firma. Las leídas en español vienen en ambos idiomas.")}</div>
+      </div>
+      <button className="btn primary" style={{ width: "100%" }} disabled={!ready || !!busy} onClick={go}>{busy ?? L("Download zip", "Descargar zip")}</button>
+      <p className="tiny muted" style={{ marginBottom: 0 }}>🔒 {L("Only review admins can do this. Store the zip somewhere secure.", "Solo los administradores de evaluaciones pueden hacer esto. Guarde el zip en un lugar seguro.")}</p>
+    </Sheet>
+  );
+}
