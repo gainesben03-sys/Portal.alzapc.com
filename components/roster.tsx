@@ -272,7 +272,7 @@ export function RosterCard({ clientId, onToast }: { clientId: string; onToast: (
         </Sheet>
       )}
 
-      {edit && <PersonSheet p={edit} users={users} onClose={() => setEdit(null)} onSave={(p) => {
+      {edit && <PersonSheet p={edit} users={users} team={team} onClose={() => setEdit(null)} onSave={(p) => {
         const exists = people.some((x) => x.id === p.id);
         patch({ people: exists ? people.map((x) => (x.id === p.id ? p : x)) : [...people, { ...p, id: newPersonId() }] });
         setEdit(null);
@@ -286,13 +286,16 @@ export function RosterCard({ clientId, onToast }: { clientId: string; onToast: (
   );
 }
 
-function PersonSheet({ p, users, onClose, onSave, onRemove }: { p: TeamMember; users: PortalUser[]; onClose: () => void; onSave: (p: TeamMember) => void; onRemove?: () => void }) {
+function PersonSheet({ p, users, team, onClose, onSave, onRemove }: { p: TeamMember; users: PortalUser[]; team: TeamMember[]; onClose: () => void; onSave: (p: TeamMember) => void; onRemove?: () => void }) {
   const [v, setV] = useState<TeamMember>(p);
   const [bm, setBm] = useState(p.birthday ? Number(p.birthday.slice(0, 2)) : 0);
   const [bd, setBd] = useState(p.birthday ? Number(p.birthday.slice(3)) : 0);
   const [confirm, setConfirm] = useState(false);
   // a manager who isn't on the portal yet can be typed in
-  const onPortal = (e: string) => users.some((u) => sameEmail(u.email, e));
+  // anyone on the portal, plus anyone on the roster with a work email, can be picked as a manager
+  const staff = team.filter((x) => x.id !== p.id && x.active !== false && x.email && !users.some((u) => sameEmail(u.email, x.email!))).sort((a, b) => a.name.localeCompare(b.name));
+  const pick = [...users.map((u) => ({ email: u.email, name: u.name })), ...staff.map((x) => ({ email: x.email!, name: x.name }))];
+  const onPortal = (e: string) => pick.some((u) => sameEmail(u.email, e));
   const [typed, setTyped] = useState(!!(p.managerName || p.managerEmail) && !onPortal(p.managerEmail));
   const set = (k: keyof TeamMember, val: unknown) => setV({ ...v, [k]: val });
   const months = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleDateString("en-US", { month: "long" }));
@@ -306,17 +309,22 @@ function PersonSheet({ p, users, onClose, onSave, onRemove }: { p: TeamMember; u
           <label className="f">Manager
             <select
               className="f"
-              value={typed ? "__typed" : users.find((u) => sameEmail(u.email, v.managerEmail))?.email ?? ""}
+              value={typed ? "__typed" : pick.find((u) => sameEmail(u.email, v.managerEmail))?.email ?? ""}
               onChange={(e) => {
                 if (e.target.value === "__typed") return setTyped(true);
                 setTyped(false);
-                const u = users.find((x) => x.email === e.target.value);
+                const u = pick.find((x) => x.email === e.target.value);
                 setV({ ...v, managerEmail: u?.email.toLowerCase() ?? "", managerName: u?.name ?? "" });
               }}
             >
               <option value="">No manager (an owner or executive)</option>
-              {users.map((u) => <option key={u.email} value={u.email}>{u.name}</option>)}
-              <option value="__typed">Someone not on the portal yet…</option>
+              {staff.length ? (
+                <>
+                  <optgroup label="On the portal">{users.map((u) => <option key={u.email} value={u.email}>{u.name}</option>)}</optgroup>
+                  <optgroup label="Employees">{staff.map((x) => <option key={x.id} value={x.email}>{x.name}</option>)}</optgroup>
+                </>
+              ) : users.map((u) => <option key={u.email} value={u.email}>{u.name}</option>)}
+              <option value="__typed">Someone else…</option>
             </select>
           </label>
           {typed && (
