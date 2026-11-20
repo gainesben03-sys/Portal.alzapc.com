@@ -85,7 +85,7 @@ export default function Team() {
             if (!nu.name.trim() || !email) return;
             if (cfg.users.some((u) => u.email.toLowerCase() === email.toLowerCase())) return toast.show("That email already has access");
             const lower = email.toLowerCase();
-            save({ users: [...cfg.users, { ...nu, email: lower, name: nu.name.trim(), role: nu.role.trim() || "Team member", invited: true, addedBy: who }], huddle: { ...cfg.huddle, recipients: [...cfg.huddle.recipients, lower] } });
+            save({ users: [...cfg.users, { ...nu, email: lower, name: nu.name.trim(), role: nu.role.trim() || "Team member", invited: true, addedBy: who }], huddle: { ...cfg.huddle, recipients: nu.access === "exec" ? [...cfg.huddle.recipients, lower] : cfg.huddle.recipients.filter((x) => x !== lower) } });
             setNu({ name: "", role: "", email: "", access: "manager" });
             if (welcome) sendInvite(client.id, lower, nu.name.trim()).then(toast.show);
             else toast.show(`${nu.name.trim()} added. They can sign in with ${lower}.`);

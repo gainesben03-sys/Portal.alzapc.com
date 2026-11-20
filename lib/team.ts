@@ -259,6 +259,7 @@ export function rowsToTeam(rows: Record<string, string>[], headers: string[], cl
   })) as Record<RosterField, string | undefined>;
   const people: TeamMember[] = [];
   const problems: string[] = [];
+  const unmatched: { row: number; name: string; mName: string; idx: number }[] = [];
   rows.forEach((r, i) => {
     let name = (c.name ? r[c.name] : [c.first && r[c.first], c.last && r[c.last]].filter(Boolean).join(" ")).trim();
     // payroll exports often use "Last, First"
@@ -273,7 +274,7 @@ export function rowsToTeam(rows: Record<string, string>[], headers: string[], cl
     if (!mEmail && mName) mEmail = users.find((u) => u.name.trim().toLowerCase() === mName.trim().toLowerCase())?.email ?? "";
     if (mEmail && !mName) mName = users.find((u) => sameEmail(u.email, mEmail))?.name ?? mEmail.split("@")[0];
     if (!mEmail && !mName) problems.push(`Row ${i + 2}: ${name} has no manager.`);
-    else if (!mEmail) problems.push(`Row ${i + 2}: ${name}'s manager "${mName}" isn't on the portal yet. Add a manager email column, or invite ${mName} first.`);
+    else if (!mEmail) unmatched.push({ row: i + 2, name, mName, idx: people.length });
     people.push({
       id: `pp${Date.now().toString(36)}${i.toString(36)}${Math.random().toString(36).slice(2, 5)}`,
       clientId,
@@ -291,6 +292,13 @@ export function rowsToTeam(rows: Record<string, string>[], headers: string[], cl
       active: true,
     });
   });
+  // Only a manager name? Most managers are on the same file, so use their own work email from it.
+  const norm = (x: string) => x.trim().toLowerCase().replace(/\s+/g, " ");
+  for (const u of unmatched) {
+    const hits = people.filter((p) => p.email && norm(p.name) === norm(u.mName));
+    if (hits.length === 1) people[u.idx] = { ...people[u.idx], managerEmail: hits[0].email!, managerName: hits[0].name };
+    else problems.push(`Row ${u.row}: couldn't find a work email for ${u.name}'s manager "${u.mName}". Add a manager email column, or make sure ${u.mName} is on the file with a work email.`);
+  }
   const missing = (["name", "title", "hire", "birthday"] as const).filter((k) => (k === "name" ? !c.name && !c.first : !c[k]));
   return { people, problems, columns: c, missing };
 }

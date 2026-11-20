@@ -125,7 +125,7 @@ export default function HuddleSetup() {
 
         <div className="section-head section"><h2>Who gets it</h2></div>
         <div className="card">
-          {cfg.users.map((u) => (
+          {cfg.users.filter((u) => u.access === "exec").map((u) => (
             <label className="check" key={u.email}>
               <input
                 type="checkbox"
@@ -135,7 +135,7 @@ export default function HuddleSetup() {
               <span>{u.name} <span className="tiny muted">· {u.role} · {u.email}</span></span>
             </label>
           ))}
-          <p className="tiny muted" style={{ marginTop: 8 }}>People can also turn it on or off for themselves from their Team page.</p>
+          <p className="tiny muted" style={{ marginTop: 8 }}>Executives only. Managers get their own Monday email instead (above).</p>
         </div>
 
         <div className="section-head section"><h2>Personal note (optional)</h2></div>

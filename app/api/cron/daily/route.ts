@@ -132,7 +132,7 @@ async function daily(req: Request) {
       escalation: escM ? { name: escM.name, role: escM.role, email: escM.email } : { name: "", role: "" },
       contacts: team.map((m) => ({ name: m.name, role: m.role, email: m.email })),
     };
-    const huddle: HuddleSettings = { cadence: "weekly", day: 1, skipIfQuiet: true, bundleReminders: true, personalNote: "", ...(cfg.huddle ?? {}), recipients: team.filter((m) => m.huddle).map((m) => m.email) };
+    const huddle: HuddleSettings = { cadence: "weekly", day: 1, skipIfQuiet: true, bundleReminders: true, personalNote: "", ...(cfg.huddle ?? {}), recipients: team.filter((m) => m.huddle && m.access === "exec").map((m) => m.email) }; // the People Brief is for executives
     // The People Brief is for leaders, so task owners always get their own reminders
     const bundled = false;
 
@@ -211,7 +211,7 @@ async function daily(req: Request) {
     if (h.snapshot === false) continue;
     const jsDay = new Date(`${day}T12:00:00`);
     if (jsDay.getDate() > 7 || jsDay.getDay() !== (h.day || 1)) continue;
-    const to = members.filter((m) => m.client_id === c.id && m.huddle).map((m) => m.email);
+    const to = members.filter((m) => m.client_id === c.id && m.huddle && m.access === "exec").map((m) => m.email);
     if (!to.length) continue;
     const ym = day.slice(0, 7);
     const lastMonth = (iso?: string) => {

@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     if (!me?.advisor) return NextResponse.json({ sent: 0, reason: "forbidden" }, { status: 403 });
     if (b.mode === "test") to = [ben];
     else {
-      const { data } = await admin().from("members").select("email").eq("client_id", String(b.clientId ?? "")).eq("huddle", true);
+      const { data } = await admin().from("members").select("email").eq("client_id", String(b.clientId ?? "")).eq("huddle", true).eq("access", "exec");
       to = (data ?? []).map((m) => m.email);
       if (!to.length) return NextResponse.json({ sent: 0, reason: "no_recipients" });
     }
