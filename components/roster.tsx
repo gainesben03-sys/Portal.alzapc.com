@@ -22,6 +22,19 @@ export function useRosterSave(clientId: string) {
   const { people, patch, viewer } = useStore();
   return async (changed: TeamMember[]): Promise<TeamMember[] | null> => {
     if (!changed.length) return [];
+    // a manager's email changed: their team follows them to the new address
+    const moved = new Map<string, { email: string; name: string }>();
+    for (const p of changed) {
+      const old = people.find((x) => x.id === p.id);
+      if (old?.email && p.email && !sameEmail(old.email, p.email)) moved.set(old.email.toLowerCase(), { email: p.email.toLowerCase(), name: p.name });
+    }
+    if (moved.size) {
+      const ids = new Set(changed.map((p) => p.id));
+      for (const x of people) {
+        const to = x.clientId === clientId && !ids.has(x.id) ? moved.get(x.managerEmail.toLowerCase()) : undefined;
+        if (to) changed = [...changed, { ...x, managerEmail: to.email, managerName: to.name }];
+      }
+    }
     let saved = changed.map((p) => (p.id ? p : { ...p, id: newPersonId() }));
     if (LIVE && viewer?.kind !== "advisor") {
       try {
