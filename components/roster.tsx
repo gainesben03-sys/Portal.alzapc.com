@@ -437,6 +437,7 @@ function PersonSheet({ p, users, team, limited, onClose, onSave, onRemove }: { p
         ) : <span />}
         <div style={{ display: "flex", gap: 8 }}>
           <button className="btn ghost sm" onClick={onClose}>Cancel</button>
+          {v.email && team.some((x) => x.id !== v.id && x.active && sameEmail(x.email, v.email)) && <span className="tiny" style={{ color: "#9a3412", alignSelf: "center" }}>{team.find((x) => x.id !== v.id && sameEmail(x.email, v.email))!.name} already uses this email.</span>}
           <button className="btn primary sm" disabled={!v.name.trim()} onClick={() => onSave({ ...v, name: v.name.trim(), title: v.title.trim(), managerName: v.managerName.trim(), managerEmail: v.managerEmail.trim().toLowerCase() })}>Save</button>
         </div>
       </div>

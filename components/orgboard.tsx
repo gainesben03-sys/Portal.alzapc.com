@@ -40,7 +40,10 @@ export function OrgBoard({ team, onSave, onClose }: { team: TeamMember[]; onSave
     const outside = [...new Map(list.filter((p) => p.managerEmail && !onRoster.has(p.managerEmail)).map((p) => [p.managerEmail, p.managerName || p.managerEmail])).entries()];
     return [
       { key: NONE, title: "Unassigned", sub: "No manager. Owners can stay here." },
-      ...leads.map((p) => ({ key: `m:${p.id}`, title: p.name, sub: [p.title, p.email].filter(Boolean).join(" · "), email: p.email, locked: p.email ? undefined : "Add a work email to give them a team" })),
+      ...leads.map((p) => {
+        const dup = p.email ? list.find((x) => x.id !== p.id && x.email && sameEmail(x.email, p.email)) : undefined;
+        return { key: `m:${p.id}`, title: p.name, sub: [p.title, p.email].filter(Boolean).join(" · "), email: p.email, locked: !p.email ? "Add a work email to give them a team" : dup ? `${dup.name} has the same email, so their teams get mixed up. Give each person their own email.` : undefined };
+      }),
       ...outside.map(([e, n]) => {
         // same name as someone on the roster, different email: almost always the same person
         const twin = list.find((p) => p.email && p.name.trim().toLowerCase() === String(n).trim().toLowerCase());
