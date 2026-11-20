@@ -40,8 +40,12 @@ export function OrgBoard({ team, onSave, onClose }: { team: TeamMember[]; onSave
     const outside = [...new Map(list.filter((p) => p.managerEmail && !onRoster.has(p.managerEmail)).map((p) => [p.managerEmail, p.managerName || p.managerEmail])).entries()];
     return [
       { key: NONE, title: "Unassigned", sub: "No manager. Owners can stay here." },
-      ...leads.map((p) => ({ key: `m:${p.id}`, title: p.name, sub: p.title, email: p.email, locked: p.email ? undefined : "Add a work email to give them a team" })),
-      ...outside.map(([e, n]) => ({ key: `x:${e}`, title: n, sub: "Not on the roster", email: e })),
+      ...leads.map((p) => ({ key: `m:${p.id}`, title: p.name, sub: [p.title, p.email].filter(Boolean).join(" · "), email: p.email, locked: p.email ? undefined : "Add a work email to give them a team" })),
+      ...outside.map(([e, n]) => {
+        // same name as someone on the roster, different email: almost always the same person
+        const twin = list.find((p) => p.email && p.name.trim().toLowerCase() === String(n).trim().toLowerCase());
+        return { key: `x:${e}`, title: n, sub: `Not on the roster · ${e}`, email: e, locked: twin ? `${twin.name} is on the roster as ${twin.email}. Drag these people to that column, or use the same email for both.` : undefined };
+      }),
     ];
   }, [by, list, newDept]);
 
