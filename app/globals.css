@@ -3229,3 +3229,6 @@ button.pl-tr.rm-lr:hover { background: var(--soft); }
   .org-head, .org-cols, .org-bar { padding-left: 16px; padding-right: 16px; }
   .org-col { flex-basis: 78vw; }
 }
+.org-ghost { position: fixed; z-index: 60; pointer-events: none; box-shadow: 0 14px 30px -10px rgba(16, 24, 40, .35); transform: rotate(-1.5deg); border-color: var(--accent); }
+body.org-dragging, body.org-dragging * { cursor: grabbing !important; user-select: none; }
+.org-card { touch-action: auto; user-select: none; }

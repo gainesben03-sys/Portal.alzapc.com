@@ -1,7 +1,7 @@
 "use client";
 
 // Organize teams: drag people between managers (or departments). Nothing changes until Save.
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { leadsTeam, sameEmail, TeamMember } from "@/lib/team";
 
 type Col = { key: string; title: string; sub?: string; email?: string; locked?: string };
@@ -18,6 +18,10 @@ export function OrgBoard({ team, onSave, onClose }: { team: TeamMember[]; onSave
   const [adding, setAdding] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
+  // pointer dragging (works the same in Chrome, Safari, Edge and Firefox)
+  const [ghost, setGhost] = useState<{ x: number; y: number; w: number; name: string; title: string } | null>(null);
+  const press = useRef<{ id: string; x: number; y: number; dx: number; dy: number; w: number; on: boolean } | null>(null);
+  const moveRef = useRef<(id: string, key: string) => void>(() => {});
 
   const changed = list.filter((p) => {
     const o = base.find((x) => x.id === p.id)!;
@@ -60,7 +64,7 @@ export function OrgBoard({ team, onSave, onClose }: { team: TeamMember[]; onSave
     if (by === "dept") return put({ department: key === NONE ? undefined : key.slice(2) });
     if (key === NONE) return put({ managerEmail: "", managerName: "" });
     const c = cols.find((x) => x.key === key);
-    if (!c?.email) return setMsg(c?.locked ?? "");
+    if (!c?.email) return setMsg(c?.locked ?? "That team needs a manager with a work email.");
     if (p.email && sameEmail(p.email, c.email)) return;
     // no loops: someone can't report to a person on their own team
     let up = c.email, guard = 0;
@@ -79,13 +83,51 @@ export function OrgBoard({ team, onSave, onClose }: { team: TeamMember[]; onSave
     else setMsg("Couldn't save. Try again.");
   };
 
+  moveRef.current = move;
+  const colAt = (x: number, y: number) => (document.elementFromPoint(x, y)?.closest("[data-col]") as HTMLElement | null)?.dataset.col ?? null;
+  useEffect(() => {
+    const mv = (e: PointerEvent) => {
+      const s = press.current;
+      if (!s) return;
+      if (!s.on) {
+        if (Math.abs(e.clientX - s.x) + Math.abs(e.clientY - s.y) < 6) return;
+        s.on = true;
+        setDrag(s.id);
+        document.body.classList.add("org-dragging");
+      }
+      const p = list.find((x) => x.id === s.id);
+      setGhost({ x: e.clientX - s.dx, y: e.clientY - s.dy, w: s.w, name: p?.name ?? "", title: p?.title ?? "" });
+      setOver(colAt(e.clientX, e.clientY));
+    };
+    const up = (e: PointerEvent) => {
+      const s = press.current;
+      press.current = null;
+      document.body.classList.remove("org-dragging");
+      if (!s?.on) return;
+      const key = colAt(e.clientX, e.clientY);
+      setGhost(null);
+      setOver(null);
+      setDrag(null);
+      if (key) moveRef.current(s.id, key);
+    };
+    window.addEventListener("pointermove", mv);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+    return () => { window.removeEventListener("pointermove", mv); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up); };
+  }, [list]);
+
   const card = (p: TeamMember) => {
     const lead = leadsTeam(p, list);
     const moved = changed.some((x) => x.id === p.id);
     return (
-      <div key={p.id} className={`org-card${drag === p.id ? " dragging" : ""}${moved ? " moved" : ""}`} draggable
-        onDragStart={(e) => { e.dataTransfer.setData("text/plain", p.id); e.dataTransfer.effectAllowed = "move"; setDrag(p.id); }}
-        onDragEnd={() => { setDrag(null); setOver(null); }}>
+      <div key={p.id} className={`org-card${drag === p.id ? " dragging" : ""}${moved ? " moved" : ""}`}
+        onPointerDown={(e) => {
+          // mouse and pen drag; on a touch screen, use Move so the columns still scroll
+          if (e.pointerType === "touch" || e.button !== 0 || (e.target as HTMLElement).closest("select")) return;
+          const r = e.currentTarget.getBoundingClientRect();
+          press.current = { id: p.id, x: e.clientX, y: e.clientY, dx: e.clientX - r.left, dy: e.clientY - r.top, w: r.width, on: false };
+          e.preventDefault();
+        }}>
         <span className="org-who">
           <b>{p.name}</b>
           <span>{p.title || "No title"}</span>
@@ -100,11 +142,7 @@ export function OrgBoard({ team, onSave, onClose }: { team: TeamMember[]; onSave
     );
   };
 
-  const drop = (key: string) => ({
-    onDragOver: (e: React.DragEvent) => { e.preventDefault(); setOver(key); },
-    onDragLeave: () => setOver((o) => (o === key ? null : o)),
-    onDrop: (e: React.DragEvent) => { e.preventDefault(); setOver(null); const id = e.dataTransfer.getData("text/plain"); if (id) move(id, key); setDrag(null); },
-  });
+  const drop = (key: string) => ({ "data-col": key });
 
   return (
     <div className="org-overlay" role="dialog" aria-label="Organize teams">
@@ -154,6 +192,12 @@ export function OrgBoard({ team, onSave, onClose }: { team: TeamMember[]; onSave
           </section>
         )}
       </div>
+
+      {ghost && (
+        <div className="org-card org-ghost" style={{ left: ghost.x, top: ghost.y, width: ghost.w }} aria-hidden="true">
+          <span className="org-who"><b>{ghost.name}</b><span>{ghost.title || "No title"}</span></span>
+        </div>
+      )}
 
       <div className="org-bar">
         <span className="small">
