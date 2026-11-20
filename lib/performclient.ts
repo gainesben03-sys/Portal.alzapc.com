@@ -21,7 +21,7 @@ export type ListData = {
   users: { name: string; email: string; access: string }[];
 };
 export type GetData = { review: Review; canEdit: boolean; admin: boolean; notes: { date: string; notes: string }[]; prevGoals: Review["goals"]; past: { id: string; kind: string; due: string; overall?: number; scale: 3 | 5 }[]; negatives: number; hasEmail: boolean; company: string };
-type Demo = { people: TeamMember[]; checkins: TeamLog[]; settings?: Partial<PerformSettings>; me: { email: string; name: string; advisor: boolean; exec: boolean }; company: string; saveSettings: (s: PerformSettings) => void };
+type Demo = { people: TeamMember[]; checkins: TeamLog[]; settings?: Partial<PerformSettings>; me: { email: string; name: string; advisor: boolean; exec: boolean }; company: string; users?: { name: string; email: string; access: string }[]; saveSettings: (s: PerformSettings) => void };
 type Res = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 function seed(people: TeamMember[], clientId: string): Review[] {
@@ -153,7 +153,7 @@ export async function performApi(clientId: string, body: Res, demo?: Demo): Prom
       if (r.overall && ["final", "shared", "done"].includes(r.status)) { const mid = r.template.scale === 5 ? 3 : 2; if (r.overall < mid) m.below++; else if (r.overall === mid) m.meets++; else m.above++; }
     }
     const pipFlags = role.admin ? [...new Set(all.map((r) => r.personId))].filter((pid) => { const n = negativeReviews(all, pid); return n.length >= s.pipAfter && !all.some((r) => r.personId === pid && r.kind === "pip" && r.status !== "cancelled" && r.createdAt > n[0].createdAt); }) : [];
-    return { ok: true, role, settings: s, reviews, upcoming, people: visiblePeople.map((p) => ({ id: p.id, name: p.name, title: p.title, managerName: p.managerName, managerEmail: p.managerEmail?.toLowerCase(), hireDate: p.hireDate, department: p.department, hasEmail: !!p.email })), insight: byMgr, pipFlags, users: [] };
+    return { ok: true, role, settings: s, reviews, upcoming, people: visiblePeople.map((p) => ({ id: p.id, name: p.name, title: p.title, managerName: p.managerName, managerEmail: p.managerEmail?.toLowerCase(), hireDate: p.hireDate, department: p.department, hasEmail: !!p.email })), insight: byMgr, pipFlags, users: role.admin ? demo.users ?? [] : [] };
   }
   if (a === "launch") {
     if (!role.admin) return { ok: false, reason: "forbidden" };

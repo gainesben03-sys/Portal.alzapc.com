@@ -20,7 +20,7 @@ import {
   PIP_TEMPLATE, PipIssue, Review, stageOf, templateById, first,
 } from "@/lib/perform";
 import { trSrc } from "@/lib/perform";
-import { allReviews, canEdit, canOpen, getReview, suggestGoals, launchEmail, loadCtx, log, managerEmail, nudgeEmail, polish, putReview, roleOf, roster, send, sendSelf, shareEmail, sortTalk, sync, translate } from "@/lib/performserver";
+import { allReviews, canEdit, canOpen, ensureManagerAccess, getReview, suggestGoals, launchEmail, loadCtx, log, managerEmail, nudgeEmail, polish, putReview, roleOf, roster, send, sendSelf, shareEmail, sortTalk, sync, translate } from "@/lib/performserver";
 import { admin, caller, SERVER_LIVE } from "@/lib/server";
 import type { TeamLog } from "@/lib/team";
 
@@ -94,7 +94,7 @@ export async function POST(req: Request) {
       people: visiblePeople.map((p) => ({ id: p.id, name: p.name, title: p.title, managerName: p.managerName, managerEmail: (p.managerEmail || "").toLowerCase(), hireDate: p.hireDate, department: p.department, hasEmail: !!p.email })),
       insight,
       pipFlags,
-      users: role.admin ? (x.cfg.users ?? []).map((u) => ({ name: u.name, email: u.email.toLowerCase(), access: u.access })) : [],
+      users: role.admin ? ((await db.from("members").select("name, email, access").eq("client_id", clientId)).data ?? []).map((u) => ({ name: String(u.name), email: String(u.email).toLowerCase(), access: String(u.access) })) : [],
     });
   }
 
@@ -126,6 +126,8 @@ export async function POST(req: Request) {
       }
       created.push(r);
     }
+    // managers who aren't on the portal yet get Manager access, so the review email's link works
+    const added = await ensureManagerAccess(db, clientId, created.map((r) => ({ email: r.managerEmail, name: r.managerName }))).catch(() => [] as string[]);
     let managers = 0;
     if (b.notify !== false) {
       const byMgr = new Map<string, Review[]>();
@@ -133,7 +135,7 @@ export async function POST(req: Request) {
       const note = !x.s.selfAssess || self === "skip" ? "" : self === "now" ? "Your team just got a few short questions to answer first. You'll see their answers when you open each review." : `Your team will get a few short questions ${x.s.selfDaysBefore} days before the due date. You'll see their answers when you open each review.`;
       for (const [to, rs] of byMgr) if ((await send(x, to, launchEmail(x, rs[0].managerName, rs, note))).ok) managers++;
     }
-    return json({ ok: true, created: created.length, skipped, selfSent, managers });
+    return json({ ok: true, created: created.length, skipped, selfSent, managers, added });
   }
 
   // HR nudges managers: one email each, listing everything they still owe.
@@ -169,7 +171,8 @@ export async function POST(req: Request) {
       if (words) r = { ...r, pip: { ...r.pip!, issues: [{ id: newId(), what: words, expected: "", support: "" }] } };
     }
     await putReview(db, r);
-    return json({ ok: true, review: r });
+    const added = await ensureManagerAccess(db, clientId, [{ email: r.managerEmail, name: r.managerName }]).catch(() => [] as string[]);
+    return json({ ok: true, review: r, added });
   }
 
   const r = await getReview(db, String(b.id ?? ""), clientId);

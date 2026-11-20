@@ -15,6 +15,7 @@ export default function Team() {
   const client = getClient(clientId);
   const cfg = config[clientId];
   const [nu, setNu] = useState<PortalUser>({ name: "", role: "", email: "", access: "manager" });
+  const [welcome, setWelcome] = useState(true);
   const [codeAccess, setCodeAccess] = useState<Access>("manager");
   const toast = useToast();
 
@@ -75,7 +76,7 @@ export default function Team() {
           ))}
         </div>
 
-        <div className="section-head section"><h2>Invite by email</h2></div>
+        <div className="section-head section"><h2>Add someone</h2></div>
         <form
           className="card"
           onSubmit={(e) => {
@@ -86,7 +87,8 @@ export default function Team() {
             const lower = email.toLowerCase();
             save({ users: [...cfg.users, { ...nu, email: lower, name: nu.name.trim(), role: nu.role.trim() || "Team member", invited: true, addedBy: who }], huddle: { ...cfg.huddle, recipients: [...cfg.huddle.recipients, lower] } });
             setNu({ name: "", role: "", email: "", access: "manager" });
-            sendInvite(client.id, lower, nu.name.trim()).then(toast.show);
+            if (welcome) sendInvite(client.id, lower, nu.name.trim()).then(toast.show);
+            else toast.show(`${nu.name.trim()} added. They can sign in with ${lower}.`);
           }}
         >
           <div style={{ display: "grid", gap: 8, gridTemplateColumns: "1fr 1fr" }}>
@@ -97,7 +99,11 @@ export default function Team() {
               {(Object.keys(ACCESS_LABEL) as Access[]).map((a) => <option key={a} value={a}>{ACCESS_LABEL[a]}</option>)}
             </select>
           </div>
-          <button className="btn primary block" style={{ marginTop: 10 }} disabled={!nu.name.trim() || !nu.email.trim()}>Send invite</button>
+          <label className="small" style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center", justifyContent: "flex-start", cursor: "pointer" }}>
+            <input type="checkbox" checked={welcome} onChange={(e) => setWelcome(e.target.checked)} />
+            <span>Email them a welcome now</span>
+          </label>
+          <button className="btn primary block" style={{ marginTop: 10 }} disabled={!nu.name.trim() || !nu.email.trim()}>{welcome ? "Send invite" : "Add"}</button>
         </form>
 
         <div className="section-head section"><h2>Invite with a code</h2></div>

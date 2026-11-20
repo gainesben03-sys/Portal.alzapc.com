@@ -148,6 +148,7 @@ export function useDemo(clientId: string) {
     checkins,
     settings: cfg?.perform,
     company: getClient(clientId)?.name ?? "",
+    users: (cfg?.users ?? []).map((u) => ({ name: u.name, email: u.email.toLowerCase(), access: u.access as string })),
     me: { email: viewer?.kind === "client" ? (me?.email ?? "").toLowerCase() : "ben@alzapc.com", name: viewer?.kind === "client" ? viewer.person.name : "Ben Gaines", advisor: viewer?.kind === "advisor", exec: me?.access === "exec" },
     saveSettings: (s: PerformSettings) => cfg && patch({ config: { ...config, [clientId]: { ...cfg, perform: s } } }),
   };

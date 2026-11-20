@@ -60,7 +60,7 @@ export const log = (r: Review, by: string, text: string): Review => ({ ...r, his
  * people who left, and move open reviews to a new manager. Safe to run any number of times.
  */
 export async function sync(x: Ctx, today = iso(new Date())) {
-  if (!x.cfg.modules?.perform) return { opened: 0, cancelled: 0, moved: 0 };
+  if (!x.cfg.modules?.perform) return { opened: 0, cancelled: 0, moved: 0, added: 0 };
   const [people, reviews] = await Promise.all([roster(x.db, x.clientId), allReviews(x.db, x.clientId)]);
   let opened = 0, cancelled = 0, moved = 0;
   const byId = new Map(people.map((p) => [p.id, p]));
@@ -87,7 +87,33 @@ export async function sync(x: Ctx, today = iso(new Date())) {
       opened++;
     }
   }
-  return { opened, cancelled, moved };
+  const open = reviews.filter((r) => r.status === "open" && r.managerEmail);
+  const added = await ensureManagerAccess(x.db, x.clientId, open.map((r) => ({ email: r.managerEmail, name: r.managerName }))).catch(() => []);
+  return { opened, cancelled, moved, added: added.length };
+}
+
+/**
+ * Managers need portal access to open a review. Anyone a review is assigned to who isn't on the
+ * company's portal yet gets Manager access (their own team only). Returns the names added.
+ */
+export async function ensureManagerAccess(db: DB, clientId: string, mgrs: { email: string; name: string }[]): Promise<string[]> {
+  const want = new Map<string, string>();
+  for (const m of mgrs) {
+    const e = (m.email || "").trim().toLowerCase();
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) && !want.has(e)) want.set(e, m.name || e);
+  }
+  if (!want.size) return [];
+  const emails = [...want.keys()];
+  const [{ data: have }, { data: adv }] = await Promise.all([
+    db.from("members").select("email").eq("client_id", clientId).in("email", emails),
+    db.from("advisors").select("email").in("email", emails),
+  ]);
+  const skip = new Set([...(have ?? []), ...(adv ?? [])].map((r) => String(r.email).toLowerCase()));
+  const add = emails.filter((e) => !skip.has(e));
+  if (!add.length) return [];
+  // no People Brief for them: that's for executives
+  const { error } = await db.from("members").upsert(add.map((e) => ({ client_id: clientId, email: e, name: want.get(e)!, role: "Manager", access: "manager", huddle: false, invited: true, added_by: "Reviews" })), { onConflict: "client_id,email", ignoreDuplicates: true });
+  return error ? [] : add.map((e) => want.get(e)!);
 }
 
 // ---------- writing help ----------
