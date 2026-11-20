@@ -392,7 +392,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
     },
     {
       key: "people",
-      label: "People & Hiring",
+      label: "People",
       subs: [
         ...(mod("hires") ? [{ href: `${base}/hires`, label: "New hires", match: [`${base}/hires`] }] : []),
         ...(mod("recruiting") ? [{ href: `${base}/recruiting`, label: "Recruiting", match: [`${base}/recruiting`] }] : []),
