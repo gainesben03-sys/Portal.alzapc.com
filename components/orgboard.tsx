@@ -65,7 +65,7 @@ export function OrgBoard({ team, onSave, onClose }: { team: TeamMember[]; onSave
     if (key === NONE) return put({ managerEmail: "", managerName: "" });
     const c = cols.find((x) => x.key === key);
     if (!c?.email) return setMsg(c?.locked ?? "That team needs a manager with a work email.");
-    if (p.email && sameEmail(p.email, c.email)) return;
+    if (p.email && sameEmail(p.email, c.email)) return setMsg(p.id === c.key.slice(2) ? "" : `${p.name} and ${c.title} have the same email, so they look like one person. Give each a different email.`);
     // no loops: someone can't report to a person on their own team
     let up = c.email, guard = 0;
     while (up && guard++ < 50) {
