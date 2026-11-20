@@ -359,11 +359,11 @@ export function ClientNav({ clientId }: { clientId: string }) {
       subs: [
         ...(leads
           ? [
-              { href: `${base}/hub`, label: "This week", match: [] },
-              { href: `${base}/hub/team`, label: "People", match: [`${base}/hub/team`, `${base}/hub/p/`] },
+              { href: `${base}/hub`, label: "Overview", match: [] },
+              { href: `${base}/hub/team`, label: "Team", match: [`${base}/hub/team`, `${base}/hub/p/`] },
             ]
           : []),
-        ...(cfg?.modules.recognition && access !== "hiring" ? [{ href: `${base}/recognition`, label: "Team Wall", match: [`${base}/recognition`] }] : []),
+        ...(cfg?.modules.recognition && access !== "hiring" ? [{ href: `${base}/recognition`, label: "Recognition", match: [`${base}/recognition`] }] : []),
         ...(tools ? [{ href: `${base}/hub/library`, label: training ? "Toolkit" : "Learn", match: [`${base}/hub/library`, ...(training ? [] : [`${base}/hub/learn`, `${base}/hub/view`])] }] : []),
       ],
     },
