@@ -386,6 +386,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
         ...(cfg?.modules.perform && access !== "hiring" ? [{ href: `${base}/reviews`, label: "Reviews", match: [`${base}/reviews`] }] : []),
         ...(leaveAcc.admin && (cfg?.modules.leave || isAdvisor) ? [{ href: `${base}/leave`, label: "Leave center", match: [`${base}/leave`] }] : []),
         ...((isAdvisor || access === "exec") && (cfg?.modules.offboarding || isAdvisor) ? [{ href: `${base}/offboarding`, label: "Offboarding", match: [`${base}/offboarding`] }] : []),
+        ...(isAdvisor || access === "exec" ? [{ href: `${base}/roster`, label: "Roster", match: [`${base}/roster`] }] : []),
         ...(canSee(access, "team") ? [{ href: `${base}/team`, label: "Portal access", match: [`${base}/team`] }] : []),
       ],
     },

@@ -167,6 +167,7 @@ export async function saveDiff(db: SupabaseClient, prev: State, next: State, me:
   // Client-scoped items
   const roleClient = (roleId: string) => next.roles.find((r) => r.id === roleId)?.clientId ?? prev.roles.find((r) => r.id === roleId)?.clientId;
   for (const t of ENTITY) {
+    if (t === "people" && !me.advisor) continue; // executives change the roster through /api/roster
     const A = prev[t] as unknown as { id: string; clientId?: string; roleId?: string }[];
     const B = next[t] as unknown as { id: string; clientId?: string; roleId?: string }[];
     const amap = new Map(A.map((x) => [x.id, x]));

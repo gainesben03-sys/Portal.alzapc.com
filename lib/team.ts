@@ -18,8 +18,12 @@ export interface TeamMember {
   employeeId?: string; // from payroll (ADP associate ID / file number), the most reliable match on refresh
   nudges?: boolean; // false = they turned off "recognize someone" nudge emails
   celebrate?: boolean; // false = they opted out of public birthday and anniversary celebrations
+  isManager?: boolean; // marked as a manager on the roster, even before anyone reports to them
   active: boolean;
 }
+
+/** A manager: marked as one, or someone on the roster reports to them. */
+export const leadsTeam = (p: TeamMember, team: TeamMember[]) => !!p.isManager || (!!p.email && team.some((x) => x.active && x.id !== p.id && sameEmail(x.managerEmail, p.email)));
 
 export interface Commitment {
   id: string;

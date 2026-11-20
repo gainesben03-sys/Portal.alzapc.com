@@ -1,10 +1,12 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { OrgBoard } from "./orgboard";
+import { authHeader, LIVE } from "@/lib/supabase";
 import { useStore } from "@/lib/store";
 import { sendInvite } from "@/lib/invite";
 import { PortalUser } from "@/lib/modules";
-import { guessColumns, parseRoster, ROSTER_FIELDS, ROSTER_TEMPLATE, RosterField, rowsToTeam, sameEmail, TeamMember, tenure } from "@/lib/team";
+import { guessColumns, leadsTeam, parseRoster, ROSTER_FIELDS, ROSTER_TEMPLATE, RosterField, rowsToTeam, sameEmail, TeamMember, tenure } from "@/lib/team";
 import { cleanCell, diffRoster } from "@/lib/team";
 import { Sheet } from "./ui";
 
@@ -15,9 +17,35 @@ const mdLabel = (md?: string) => {
 };
 const newPersonId = () => `pp${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
-/** Client setup: the team roster that powers the Manager Hub (reminders, check-ins, recognition). */
-export function RosterCard({ clientId, onToast }: { clientId: string; onToast: (m: string) => void }) {
+/** Save roster changes. Ben writes directly; executives go through /api/roster, which checks access. */
+export function useRosterSave(clientId: string) {
+  const { people, patch, viewer } = useStore();
+  return async (changed: TeamMember[]): Promise<TeamMember[] | null> => {
+    if (!changed.length) return [];
+    let saved = changed.map((p) => (p.id ? p : { ...p, id: newPersonId() }));
+    if (LIVE && viewer?.kind !== "advisor") {
+      try {
+        const r = await fetch("/api/roster", { method: "POST", headers: { "Content-Type": "application/json", ...(await authHeader()) }, body: JSON.stringify({ clientId, people: changed }) }).then((x) => x.json());
+        if (!r.ok) return null;
+        saved = r.saved as TeamMember[];
+      } catch {
+        return null;
+      }
+    }
+    const ids = new Set(saved.map((p) => p.id));
+    patch({ people: [...people.filter((p) => !ids.has(p.id)), ...saved] });
+    return saved;
+  };
+}
+
+/**
+ * The team roster that powers the Manager Hub, reviews and reminders.
+ * limited (executives): no file upload, no removing people, no invites from here.
+ */
+export function RosterCard({ clientId, onToast, limited }: { clientId: string; onToast: (m: string) => void; limited?: boolean }) {
   const { people, config, patch } = useStore();
+  const saveRoster = useRosterSave(clientId);
+  const [organizing, setOrganizing] = useState(false);
   const cfg = config[clientId];
   const team = useMemo(() => people.filter((p) => p.clientId === clientId).sort((a, b) => a.managerName.localeCompare(b.managerName) || a.name.localeCompare(b.name)), [people, clientId]);
   const [parsed, setParsed] = useState<{ rows: Record<string, string>[]; headers: string[] } | null>(null);
@@ -42,6 +70,7 @@ export function RosterCard({ clientId, onToast }: { clientId: string; onToast: (
     user: users.find((u) => sameEmail(u.email, email)),
   }));
   const notOnPortal = managers.filter((m) => !m.user);
+  const mgrCount = new Set([...managers.map((m) => m.email.toLowerCase()), ...team.filter((p) => p.active && p.isManager && p.email).map((p) => p.email!.toLowerCase())]).size;
 
   const read = (text: string) => {
     const { rows, headers } = parseRoster(text);
@@ -91,16 +120,17 @@ export function RosterCard({ clientId, onToast }: { clientId: string; onToast: (
     <div className="card">
       <div className="row" style={{ alignItems: "center", flexWrap: "wrap", gap: 8 }}>
         <div className="grow small">
-          {team.length ? <><b>{team.filter((p) => p.active).length} people</b> · {managers.length} manager{managers.length === 1 ? "" : "s"}</> : <span className="muted">No roster yet.</span>}
+          {team.length ? <><b>{team.filter((p) => p.active).length} people</b> · {mgrCount} manager{mgrCount === 1 ? "" : "s"}</> : <span className="muted">No roster yet.</span>}
         </div>
-        <button className="btn sm" onClick={() => fileRef.current?.click()}>Upload roster</button>
-        <button className="btn ghost sm" onClick={() => setPaste("")}>Paste</button>
+        {team.length > 1 && <button className="btn sm primary" onClick={() => setOrganizing(true)}>Organize teams</button>}
+        {!limited && <button className="btn sm" onClick={() => fileRef.current?.click()}>Upload roster</button>}
+        {!limited && <button className="btn ghost sm" onClick={() => setPaste("")}>Paste</button>}
         <button className="btn ghost sm" onClick={() => setEdit({ id: "", clientId, name: "", title: "", managerEmail: "", managerName: "", active: true })}>Add a person</button>
       </div>
-      <p className="tiny muted" style={{ margin: "8px 0 0" }}>
+      {!limited && <p className="tiny muted" style={{ margin: "8px 0 0" }}>
         A CSV export from payroll works (save Excel as CSV). Columns: Name, Title, Email, Manager Email (or Manager), Hire Date, Birthday. Birthdays keep the month and day only.{" "}
         <button className="linklike tiny" onClick={download}>Download a template</button>
-      </p>
+      </p>}
       <input
         ref={fileRef}
         type="file"
@@ -115,7 +145,7 @@ export function RosterCard({ clientId, onToast }: { clientId: string; onToast: (
         }}
       />
 
-      {notOnPortal.length > 0 && (
+      {!limited && notOnPortal.length > 0 && (
         <div className="for-ben" style={{ marginTop: 12 }}>
           <b>Managers not on the portal yet</b>
           <div style={{ marginTop: 6, display: "grid", gap: 6 }}>
@@ -155,8 +185,12 @@ export function RosterCard({ clientId, onToast }: { clientId: string; onToast: (
           )}
           {team.length > 8 && <input className="f" style={{ marginTop: 10 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search people" />}
           <div className="roster-list">
-            {(showAll || q ? shown : shown.slice(0, 8)).map((p) => (
-              <button key={p.id} className="roster-row" onClick={() => setEdit(p)}>
+            {(showAll || q ? shown : shown.slice(0, 8)).map((p) => {
+              const lead = leadsTeam(p, team);
+              const hasTeam = lead && !p.isManager;
+              return (
+              <div key={p.id} className="roster-row-wrap">
+              <button className="roster-row" onClick={() => setEdit(p)}>
                 <span className="grow" style={{ minWidth: 0, textAlign: "left" }}>
                   <b className="small">{p.name}</b>{!p.active && <span className="tiny muted"> (inactive)</span>}
                   <span className="tiny muted" style={{ display: "block" }}>{[p.title, p.managerName && `reports to ${p.managerName}`].filter(Boolean).join(" · ")}</span>
@@ -166,7 +200,17 @@ export function RosterCard({ clientId, onToast }: { clientId: string; onToast: (
                   <span style={{ display: "block" }}>{p.birthday ? `🎂 ${mdLabel(p.birthday)}` : ""}</span>
                 </span>
               </button>
-            ))}
+              <label className="roster-mgr" title={hasTeam ? "People report to them" : "Mark as a manager"}>
+                <input type="checkbox" checked={lead} disabled={hasTeam || !p.active} onChange={async (e) => {
+                  if (e.target.checked && !p.email) return onToast(`Add ${p.name}'s work email first, so their team can be assigned to them.`);
+                  const r = await saveRoster([{ ...p, isManager: e.target.checked || undefined }]);
+                  onToast(r ? (e.target.checked ? `${p.name} is a manager` : `${p.name} is no longer marked as a manager`) : "Couldn't save. Try again.");
+                }} />
+                <span>Manager</span>
+              </label>
+              </div>
+              );
+            })}
           </div>
           {!q && shown.length > 8 && <button className="linklike tiny" style={{ marginTop: 6 }} onClick={() => setShowAll(!showAll)}>{showAll ? "Show fewer" : `Show all ${shown.length}`}</button>}
         </>
@@ -272,12 +316,19 @@ export function RosterCard({ clientId, onToast }: { clientId: string; onToast: (
         </Sheet>
       )}
 
-      {edit && <PersonSheet p={edit} users={users} team={team} onClose={() => setEdit(null)} onSave={(p) => {
+      {organizing && <OrgBoard team={team} onClose={() => setOrganizing(false)} onSave={async (changed) => {
+        const r = await saveRoster(changed);
+        if (r) onToast(`Saved ${r.length} change${r.length === 1 ? "" : "s"}`);
+        return !!r;
+      }} />}
+
+      {edit && <PersonSheet p={edit} users={users} team={team} limited={limited} onClose={() => setEdit(null)} onSave={async (p) => {
         const exists = people.some((x) => x.id === p.id);
-        patch({ people: exists ? people.map((x) => (x.id === p.id ? p : x)) : [...people, { ...p, id: newPersonId() }] });
+        const r = await saveRoster([p]);
+        if (!r) return onToast("Couldn't save. Try again.");
         setEdit(null);
         onToast(exists ? "Saved" : `${p.name} added`);
-      }} onRemove={people.some((x) => x.id === edit.id) ? () => {
+      }} onRemove={!limited && people.some((x) => x.id === edit.id) ? () => {
         patch({ people: people.filter((x) => x.id !== edit.id) });
         setEdit(null);
         onToast(`${edit.name} removed`);
@@ -286,14 +337,14 @@ export function RosterCard({ clientId, onToast }: { clientId: string; onToast: (
   );
 }
 
-function PersonSheet({ p, users, team, onClose, onSave, onRemove }: { p: TeamMember; users: PortalUser[]; team: TeamMember[]; onClose: () => void; onSave: (p: TeamMember) => void; onRemove?: () => void }) {
+function PersonSheet({ p, users, team, limited, onClose, onSave, onRemove }: { p: TeamMember; users: PortalUser[]; team: TeamMember[]; limited?: boolean; onClose: () => void; onSave: (p: TeamMember) => void; onRemove?: () => void }) {
   const [v, setV] = useState<TeamMember>(p);
   const [bm, setBm] = useState(p.birthday ? Number(p.birthday.slice(0, 2)) : 0);
   const [bd, setBd] = useState(p.birthday ? Number(p.birthday.slice(3)) : 0);
   const [confirm, setConfirm] = useState(false);
   // a manager who isn't on the portal yet can be typed in
   // anyone on the portal, plus anyone on the roster with a work email, can be picked as a manager
-  const staff = team.filter((x) => x.id !== p.id && x.active !== false && x.email && !users.some((u) => sameEmail(u.email, x.email!))).sort((a, b) => a.name.localeCompare(b.name));
+  const staff = team.filter((x) => x.id !== p.id && x.active !== false && x.email && !users.some((u) => sameEmail(u.email, x.email!))).sort((a, b) => Number(leadsTeam(b, team)) - Number(leadsTeam(a, team)) || a.name.localeCompare(b.name));
   const pick = [...users.map((u) => ({ email: u.email, name: u.name })), ...staff.map((x) => ({ email: x.email!, name: x.name }))];
   const onPortal = (e: string) => pick.some((u) => sameEmail(u.email, e));
   const [typed, setTyped] = useState(!!(p.managerName || p.managerEmail) && !onPortal(p.managerEmail));
@@ -321,7 +372,8 @@ function PersonSheet({ p, users, team, onClose, onSave, onRemove }: { p: TeamMem
               {staff.length ? (
                 <>
                   <optgroup label="On the portal">{users.map((u) => <option key={u.email} value={u.email}>{u.name}</option>)}</optgroup>
-                  <optgroup label="Employees">{staff.map((x) => <option key={x.id} value={x.email}>{x.name}</option>)}</optgroup>
+                  {staff.some((x) => leadsTeam(x, team)) && <optgroup label="Managers">{staff.filter((x) => leadsTeam(x, team)).map((x) => <option key={x.id} value={x.email}>{x.name}</option>)}</optgroup>}
+                  {staff.some((x) => !leadsTeam(x, team)) && <optgroup label="Everyone else">{staff.filter((x) => !leadsTeam(x, team)).map((x) => <option key={x.id} value={x.email}>{x.name}</option>)}</optgroup>}
                 </>
               ) : users.map((u) => <option key={u.email} value={u.email}>{u.name}</option>)}
               <option value="__typed">Someone else…</option>
@@ -356,7 +408,11 @@ function PersonSheet({ p, users, team, onClose, onSave, onRemove }: { p: TeamMem
         <input type="checkbox" checked={v.celebrate !== false} onChange={(e) => set("celebrate", e.target.checked ? undefined : false)} />
         <div><b className="small">Celebrate their birthday and work anniversary with the team</b><div className="tiny muted">Shows on the Team Wall (month and day only). Uncheck if they&apos;d rather not. Their manager still gets a private reminder.</div></div>
       </label>
-      {p.id && (
+      <label className="rule" style={{ cursor: "pointer" }}>
+        <input type="checkbox" checked={leadsTeam(v, team)} disabled={leadsTeam({ ...v, isManager: false }, team)} onChange={(e) => set("isManager", e.target.checked || undefined)} />
+        <div><b className="small">Manager</b><div className="tiny muted">{leadsTeam({ ...v, isManager: false }, team) ? "People report to them." : "They lead a team, even if nobody is assigned to them yet. Needs a work email."}</div></div>
+      </label>
+      {p.id && !limited && (
         <label className="rule" style={{ cursor: "pointer" }}>
           <input type="checkbox" checked={!v.active} onChange={(e) => set("active", !e.target.checked)} />
           <div><b className="small">No longer with the company</b><div className="tiny muted">Hides them from the Manager Hub and reminders. Their check-in history stays.</div></div>
