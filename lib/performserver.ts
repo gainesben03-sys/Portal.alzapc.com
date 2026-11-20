@@ -75,7 +75,8 @@ export async function sync(x: Ctx, today = iso(new Date())) {
       moved++;
     }
   }
-  for (const p of people) {
+  // reviews open on their own only when the company turned that on; otherwise HR launches them
+  for (const p of x.s.autoOpen ? people : []) {
     if (p.active === false || !p.managerEmail) continue;
     for (const d of nextDue({ ...p, active: true }, x.s, today, 1)) {
       if (daysUntil(d.due, today) > x.s.openDays) continue;

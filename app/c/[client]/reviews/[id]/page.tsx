@@ -151,7 +151,30 @@ export default function ReviewPage() {
           <button className="btn primary" onClick={() => go(step + 1)}>{t.next}</button>
         </div>
       )}
+      {g.admin && <CloseReview lang={lang} call={call} id={r.id} name={r.name} back={`/c/${clientId}/reviews`} />}
     </>
+  );
+}
+
+/** HR only: close a review that shouldn't be open (launched by mistake, or to start over). */
+function CloseReview({ lang, call, id, name, back }: { lang: Lang; call: Call; id: string; name: string; back: string }) {
+  const es = lang === "es";
+  const [sure, setSure] = useState(false);
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="pf-close">
+      {!sure ? (
+        <button className="linklike small" onClick={() => setSure(true)}>{es ? "Cerrar esta evaluación" : "Close this review"}</button>
+      ) : (
+        <div className="pf-close-box">
+          <span className="small">{es ? `¿Cerrar la evaluación de ${name}? Sale de la lista y deja de enviar recordatorios. Puede lanzar una nueva cuando quiera.` : `Close ${name}'s review? It leaves the list and reminders stop. You can launch a new one anytime.`}</span>
+          <span className="row" style={{ gap: 8 }}>
+            <button className="btn sm ghost" onClick={() => setSure(false)}>{es ? "Mantener" : "Keep it"}</button>
+            <button className="btn sm" disabled={busy} onClick={async () => { setBusy(true); const x = await call({ action: "cancel", id }); setBusy(false); if (x.ok) window.location.href = back; }}>{es ? "Cerrar evaluación" : "Close review"}</button>
+          </span>
+        </div>
+      )}
+    </div>
   );
 }
 

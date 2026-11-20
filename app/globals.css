@@ -3232,3 +3232,5 @@ button.pl-tr.rm-lr:hover { background: var(--soft); }
 .org-ghost { position: fixed; z-index: 60; pointer-events: none; box-shadow: 0 14px 30px -10px rgba(16, 24, 40, .35); transform: rotate(-1.5deg); border-color: var(--accent); }
 body.org-dragging, body.org-dragging * { cursor: grabbing !important; user-select: none; }
 .org-card { touch-action: auto; user-select: none; }
+.pf-close { margin-top: 28px; text-align: center; }
+.pf-close-box { display: inline-flex; flex-direction: column; gap: 10px; align-items: center; max-width: 460px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }

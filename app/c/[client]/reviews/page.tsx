@@ -31,6 +31,7 @@ export default function Reviews() {
   const [filter, setFilter] = useState("attention");
   const [picking, setPicking] = useState<null | "adhoc" | "pip">(null);
   const [launching, setLaunching] = useState(false);
+  const [launchDue, setLaunchDue] = useState<string | undefined>();
   const [archiving, setArchiving] = useState(false);
   const [nudging, setNudging] = useState(false);
   const [kind, setKind] = useState<"all" | "review" | "intro" | "pip">("all");
@@ -105,18 +106,46 @@ export default function Reviews() {
   };
 
   const upcomingList = (onlyMine: boolean) => {
-    const list = data.upcoming.filter((u) => !onlyMine || data.people.find((p) => p.id === u.personId)?.managerEmail === data.role.email).sort((a, b) => (a.due < b.due ? -1 : 1)).slice(0, 12);
-    if (!list.length) return null;
+    const mineOnly = (personId: string) => !onlyMine || data.people.find((p) => p.id === personId)?.managerEmail === data.role.email;
+    const hasMgr = (personId: string) => !!data.people.find((p) => p.id === personId)?.managerEmail;
+    const all = data.upcoming.filter((u) => mineOnly(u.personId)).sort((a, b) => (a.due < b.due ? -1 : 1));
+    // a company-wide round is one line; new hire and anniversary reviews are one line each
+    const rounds = new Map<string, typeof all>();
+    const singles: typeof all = [];
+    const noMgr = new Set<string>();
+    for (const u of all) {
+      if (!hasMgr(u.personId)) { noMgr.add(u.name); continue; }
+      if (u.kind === "cycle" && s.basis === "company") rounds.set(u.due, [...(rounds.get(u.due) ?? []), u]);
+      else singles.push(u);
+    }
+    if (!rounds.size && !singles.length && !(data.role.admin && noMgr.size)) return null;
+    const es = lang === "es";
+    const opensOn = (due: string) => fmtDay(new Date(new Date(due + "T12:00:00").getTime() - s.openDays * 864e5).toISOString().slice(0, 10), lang);
     return (
       <section className="card section">
         <h2 className="pf-h2">{t.comingUp}</h2>
-        {list.map((u) => (
+        {[...rounds].slice(0, 2).map(([due, list]) => (
+          <div key={due} className="pf-row">
+            <span className="grow">
+              <b>{es ? "Evaluaciones de desempeño" : "Performance reviews"}</b> · {list.length} {es ? (list.length === 1 ? "persona" : "personas") : list.length === 1 ? "person" : "people"}
+              <span className="tiny muted" style={{ display: "block" }}>{s.autoOpen ? (es ? `Se abren solas el ${opensOn(due)}` : `Open on their own ${opensOn(due)}`) : data.role.admin ? (es ? "Se abren cuando usted las lance" : "Open when you launch them") : es ? "RR. HH. las lanza" : "HR launches these"}</span>
+            </span>
+            <span className="tiny muted">{es ? "Vence" : "Due"} {fmtDay(due, lang)}</span>
+            {data.role.admin && <button className="btn sm" onClick={() => { setLaunchDue(due); setLaunching(true); }}>{es ? "Lanzar" : "Launch"}</button>}
+          </div>
+        ))}
+        {singles.slice(0, 10).map((u) => (
           <div key={u.personId + u.kind} className="pf-row">
             <span className="grow"><b>{u.name}</b> · {KIND_LABEL[u.kind][lang]}{data.role.admin ? <span className="tiny muted"> · {u.managerName}</span> : null}</span>
             <span className="tiny muted">{fmtDay(u.due, lang)}</span>
-            <button className="btn ghost sm" onClick={() => start(u.personId, u.kind)}>{lang === "es" ? "Empezar antes" : "Start early"}</button>
+            <button className="btn ghost sm" onClick={() => start(u.personId, u.kind)}>{es ? "Empezar antes" : "Start early"}</button>
           </div>
         ))}
+        {data.role.admin && noMgr.size > 0 && (
+          <p className="tiny muted" style={{ margin: "10px 0 0" }}>
+            {[...noMgr].slice(0, 4).join(", ")}{noMgr.size > 4 ? ` +${noMgr.size - 4}` : ""} {es ? "no tienen gerente, así que no se incluyen." : `${noMgr.size === 1 ? "has" : "have"} no manager, so ${noMgr.size === 1 ? "isn't" : "aren't"} included.`} <Link href={`/c/${clientId}/roster`}>{es ? "Asignar en la lista" : "Set one on the Roster"}</Link>
+          </p>
+        )}
       </section>
     );
   };
@@ -238,7 +267,7 @@ export default function Reviews() {
           <button className="btn sm" onClick={() => setArchiving(true)}>{lang === "es" ? "Descargar todo" : "Download all"}</button>
         </div>
         {archiving && <ArchiveSheet data={data} clientId={clientId} company={client.name} logo={client.logo} lang={lang} onClose={() => setArchiving(false)} onDone={(m) => { setArchiving(false); toast.show(m); }} />}
-        {launching && <LaunchSheet data={data} lang={lang} call={call} onClose={() => setLaunching(false)} onDone={(m) => { setLaunching(false); toast.show(m); load(); }} onSettings={() => { setLaunching(false); go("settings"); }} />}
+        {launching && <LaunchSheet data={data} lang={lang} call={call} initialDue={launchDue} onClose={() => { setLaunching(false); setLaunchDue(undefined); }} onDone={(m) => { setLaunching(false); setLaunchDue(undefined); toast.show(m); load(); }} onSettings={() => { setLaunching(false); go("settings"); }} />}
         {picking && <PersonPicker people={data.people} lang={lang} pip={picking === "pip"} onClose={() => setPicking(null)} onPick={(id) => { setPicking(null); start(id, picking); }} />}
       </>
     );
@@ -321,7 +350,7 @@ function Insight({ rows, lang }: { rows: ListData["insight"]; lang: Lang }) {
 }
 
 // ---------- launch a round ----------
-function LaunchSheet({ data, lang, call, onClose, onDone, onSettings }: { data: ListData; lang: Lang; call: (b: Record<string, unknown>) => Promise<Record<string, any>>; onClose: () => void; onDone: (msg: string) => void; onSettings: () => void }) { // eslint-disable-line @typescript-eslint/no-explicit-any
+function LaunchSheet({ data, lang, call, initialDue, onClose, onDone, onSettings }: { data: ListData; lang: Lang; initialDue?: string; call: (b: Record<string, unknown>) => Promise<Record<string, any>>; onClose: () => void; onDone: (msg: string) => void; onSettings: () => void }) { // eslint-disable-line @typescript-eslint/no-explicit-any
   const es = lang === "es";
   const L = (en: string, sp: string) => (es ? sp : en);
   const s = data.settings;
@@ -334,7 +363,7 @@ function LaunchSheet({ data, lang, call, onClose, onDone, onSettings }: { data: 
   const reviewTemplates = templatesFor(s).filter((x) => x.kind === "review" && x.on);
   const [template, setTemplate] = useState(s.template);
   const in30 = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
-  const [due, setDue] = useState(in30);
+  const [due, setDue] = useState(initialDue && initialDue > new Date().toISOString().slice(0, 10) ? initialDue : in30);
   const [self, setSelf] = useState<"before" | "now" | "skip">("before");
   const [notify, setNotify] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -572,9 +601,13 @@ function SettingsEditor({ s, users, lang, onSave }: { s: PerformSettings; users:
           <div className="row section" style={{ gap: 10, flexWrap: "wrap" }}>
             <label className="f" style={{ width: 160 }}>{es ? "Mes de vencimiento" : "Due month"}<select className="f" value={mm} onChange={(e) => setV({ ...v, cycleDue: `${e.target.value}-${dd}` })}>{Array.from({ length: 12 }, (_, i) => <option key={i} value={String(i + 1).padStart(2, "0")}>{new Date(2026, i, 1).toLocaleDateString(es ? "es-US" : "en-US", { month: "long" })}</option>)}</select></label>
             <label className="f" style={{ width: 100 }}>{es ? "Día" : "Day"}<select className="f" value={dd} onChange={(e) => setV({ ...v, cycleDue: `${mm}-${e.target.value}` })}>{Array.from({ length: 28 }, (_, i) => <option key={i} value={String(i + 1).padStart(2, "0")}>{i + 1}</option>)}</select></label>
-            <label className="f" style={{ width: 200 }}>{es ? "Abre (días antes)" : "Opens (days before)"}<input className="f" type="number" min={7} max={120} value={v.openDays} onChange={(e) => setV({ ...v, openDays: Number(e.target.value) || 45 })} /></label>
+            <label className="f" style={{ width: 200 }}>{es ? "Abre (días antes)" : "Opens (days before)"}{!v.autoOpen && <span className="tiny muted"> {es ? "(si es automático)" : "(when automatic)"}</span>}<input className="f" type="number" min={7} max={120} value={v.openDays} onChange={(e) => setV({ ...v, openDays: Number(e.target.value) || 45 })} /></label>
           </div>
         )}
+        <label className="tw-switch section">
+          <span className="grow"><b>{es ? "Abrir evaluaciones automáticamente" : "Open reviews automatically"}</b><span className="tiny muted" style={{ display: "block", marginTop: 2 }}>{v.autoOpen ? (es ? `Cada evaluación se abre ${v.openDays} días antes de la fecha y el gerente recibe un correo.` : `Each review opens ${v.openDays} days before it's due and the manager gets an email.`) : es ? "Apagado: usted las lanza desde Evaluaciones cuando esté listo. Nada se abre ni se envía solo." : "Off: you launch them from Reviews when you're ready. Nothing opens or sends on its own."}</span></span>
+          <input type="checkbox" role="switch" checked={v.autoOpen} onChange={(e) => setV({ ...v, autoOpen: e.target.checked })} />
+        </label>
         <label className="f section" style={{ maxWidth: 320 }}>{es ? "Plantilla predeterminada" : "Default template"}<select className="f" value={v.template} onChange={(e) => setV({ ...v, template: e.target.value })}>{tpls.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
       </section>
 

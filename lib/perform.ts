@@ -105,6 +105,7 @@ export interface PerformSettings {
   basis: "company" | "anniversary";
   cycleDue: string; // MM-DD, the company-wide due date (and every 6 or 3 months from it)
   openDays: number; // how long before the due date a review opens
+  autoOpen: boolean; // open scheduled reviews on their own; off = HR launches them
   minTenureDays: number; // people hired more recently skip the company cycle (their new hire review covers them)
   intro: { on: boolean; days: number; template: string };
   template: string; // the default template for regular reviews
@@ -122,7 +123,7 @@ export interface PerformSettings {
 }
 
 export const DEFAULT_PERFORM: PerformSettings = {
-  cadence: "year", basis: "company", cycleDue: "12-15", openDays: 45, minTenureDays: 90,
+  cadence: "year", basis: "company", cycleDue: "12-15", openDays: 45, autoOpen: false, minTenureDays: 90,
   intro: { on: true, days: 90, template: "intro" }, template: "scorecard",
   selfAssess: true, selfDaysBefore: 14, signOff: true, ai: true, talk: true, execRead: false, admins: [],
   remind: [30, 14, 7, 0], overdueWeekly: true, pipAfter: 2, templates: [],
@@ -178,6 +179,7 @@ export function cleanPerform(x: unknown): PerformSettings {
     basis: o.basis === "anniversary" ? "anniversary" : "company",
     cycleDue: /^\d{2}-\d{2}$/.test(String(o.cycleDue)) ? String(o.cycleDue) : DEFAULT_PERFORM.cycleDue,
     openDays: n(o.openDays, 45, 7, 120),
+    autoOpen: o.autoOpen === true,
     minTenureDays: n(o.minTenureDays, 90, 0, 365),
     intro: { on: o.intro?.on !== false, days: n(o.intro?.days, 90, 14, 365), template: str(o.intro?.template, 24) || "intro" },
     template: str(o.template, 24) || "scorecard",

@@ -292,6 +292,7 @@ export async function POST(req: Request) {
     return json(out, out.ok ? 200 : 400);
   }
   if (action === "cancel") {
+    if (!role.admin) return json({ ok: false, reason: "forbidden" }, 403);
     const next = log({ ...r, status: "cancelled" }, by, "Cancelled");
     await putReview(db, next);
     return json({ ok: true, review: next });
