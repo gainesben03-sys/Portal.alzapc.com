@@ -2,13 +2,15 @@
 
 // Shared pieces of Alza Perform: the finished review document, status chips, the language switch,
 // and "Talk it through" (the phone's own speech-to-text: no recording is kept).
+import { TrText } from "./trtext";
 import { useEffect, useRef, useState } from "react";
 import { Doc, fmtDay, GOAL_STATUS, Lang, Stage, STAGE_LABEL } from "@/lib/perform";
 import { useStore } from "@/lib/store";
 import { performFor, type PerformSettings } from "@/lib/perform";
 
 /** The finished review, laid out cleanly for the screen, print/PDF and the employee's page. */
-export function ReviewDoc({ d, accent }: { d: Doc; accent: string }) {
+/** readerLang: the person reading (a manager), so the employee's comment shows in their language too. */
+export function ReviewDoc({ d, accent, readerLang }: { d: Doc; accent: string; readerLang?: "en" | "es" }) {
   const es = d.lang === "es";
   const L2 = (en: string, s: string) => (es ? s : en);
   return (
@@ -99,7 +101,7 @@ export function ReviewDoc({ d, accent }: { d: Doc; accent: string }) {
       {d.comment && (
         <section>
           <h2>{L2("Employee comments", "Comentarios del empleado/a")}</h2>
-          <p className="pf-prose">{d.comment}</p>
+          {readerLang ? <TrText className="pf-prose" text={d.comment} to={readerLang} /> : <p className="pf-prose">{d.comment}</p>}
         </section>
       )}
 

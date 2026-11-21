@@ -196,7 +196,7 @@ export async function translate(fields: Record<string, string>, to: Lang) {
   const items = Object.fromEntries(Object.entries(fields).filter(([, v]) => v && v.trim()).map(([k, v]) => [k, clip(v, 3000)]));
   if (!Object.keys(items).length) return { ok: true as const, fields: {} as Record<string, string> };
   const r = await claude({
-    system: `You translate workplace documents into ${LANG_NAME[to]}. Translate faithfully: same meaning, same strength, nothing added, removed or softened. Keep names as they are. Plain, respectful, professional. No em dashes. Reply with JSON only.`,
+    system: `You translate workplace documents into ${LANG_NAME[to]}. Translate faithfully: same meaning, same strength, nothing added, removed or softened. Keep names as they are. Plain, respectful, professional. No em dashes. If a value is already in ${LANG_NAME[to]}, return it exactly as written. Reply with JSON only.`,
     maxTokens: 3000,
     messages: [{ role: "user", content: `Translate every value. Keep the keys.\n${JSON.stringify(items)}\nReturn {"fields": {"<key>": "<translation>"}}` }],
   });

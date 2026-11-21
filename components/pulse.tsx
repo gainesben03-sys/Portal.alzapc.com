@@ -1,6 +1,7 @@
 "use client";
 
 // Alza Pulse screens: overview, surveys, library and builder, a survey (draft, open or closed), insights and the action plan.
+import { TrText } from "./trtext";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import QRCode from "qrcode";
@@ -667,7 +668,7 @@ function Questions({ sum }: { sum: Summary }) {
           {(q.kind === "choice" || q.kind === "multi" || q.kind === "yesno") && (
             <div className="pl-opts">{[...q.dist].sort((a, b) => b.count - a.count).map((d) => <div key={d.label} className="pl-opt-row"><span className="grow">{d.label}</span><span className="pl-bar sm"><span style={{ width: `${Math.round((100 * d.count) / Math.max(1, q.n))}%` }} /></span><span className="tiny">{d.count}</span></div>)}</div>
           )}
-          {q.kind === "text" && <div className="pl-comments">{(q.comments ?? []).length ? (q.comments ?? []).map((c, k) => <p key={k} className="small">{c}</p>) : <p className="tiny muted">No comments.</p>}</div>}
+          {q.kind === "text" && <div className="pl-comments">{(q.comments ?? []).length ? (q.comments ?? []).map((c, k) => <TrText key={k} className="small" text={c} to="en" />) : <p className="tiny muted">No comments.</p>}</div>}
         </div>
       ))}
     </details>

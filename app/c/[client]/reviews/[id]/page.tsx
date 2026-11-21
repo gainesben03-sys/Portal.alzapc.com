@@ -4,6 +4,7 @@
 // Guided questions are the default; "Talk it through" is an option on phones.
 // The writing help only rewords, sorts and translates. The manager always has the final say.
 import Link from "next/link";
+import { TrText } from "@/components/trtext";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ClientNav, ClientTopbar, Toast, useGuard, useToast } from "@/components/ui";
@@ -122,7 +123,7 @@ export default function ReviewPage() {
       <>
         {head}
         <div className="pf-done-layout section">
-          <div className="grow" style={{ minWidth: 0 }}><ReviewDoc d={d} accent={client.accent} /></div>
+          <div className="grow" style={{ minWidth: 0 }}><ReviewDoc d={d} accent={client.accent} readerLang={lang} /></div>
           <aside className="pf-side">
             <FinishedActions r={r} g={g} lang={lang} clientId={clientId} accent={client.accent} company={g.company || client.name} onChange={setR} call={call} toast={toast.show} />
           </aside>
@@ -197,7 +198,7 @@ function LookBack({ r, g, s, lang, onPatch, call, toast, onBuildPip }: { r: Revi
           <section className="card">
             <h3 className="pf-h3">{t.selfH(f)}</h3>
             {self?.doneAt && self.answers?.length ? (
-              self.answers.map((a) => <div key={a.q} className="pf-qa"><span>{a.q}</span><p>{a.a || "—"}</p></div>)
+              self.answers.map((a) => <div key={a.q} className="pf-qa"><span>{a.q}</span>{a.a ? <TrText text={a.a} to={lang} /> : <p>—</p>}</div>)
             ) : !s.selfAssess ? <p className="small muted">{t.selfOff}</p> : (
               <>
                 <p className="small muted">{self?.sentAt ? (lang === "es" ? `Enviada ${fmtDay(self.sentAt.slice(0, 10), lang)}. ${t.selfNone(f)}` : `Sent ${fmtDay(self.sentAt.slice(0, 10), lang)}. ${t.selfNone(f)}`) : t.selfNone(f)}</p>
@@ -208,7 +209,7 @@ function LookBack({ r, g, s, lang, onPatch, call, toast, onBuildPip }: { r: Revi
         )}
         <section className="card">
           <h3 className="pf-h3">{t.notesH} <span className="tiny muted">· {t.notesSub}</span></h3>
-          {g.notes.length ? g.notes.map((n) => <div key={n.date + n.notes.slice(0, 10)} className="pf-note"><span>{fmtDay(n.date, lang)}</span><p>{n.notes}</p></div>) : <p className="small muted">{t.notesNone}</p>}
+          {g.notes.length ? g.notes.map((n) => <div key={n.date + n.notes.slice(0, 10)} className="pf-note"><span>{fmtDay(n.date, lang)}</span><TrText text={n.notes} to={lang} /></div>) : <p className="small muted">{t.notesNone}</p>}
         </section>
       </div>
       {r.kind !== "pip" && (
@@ -218,7 +219,7 @@ function LookBack({ r, g, s, lang, onPatch, call, toast, onBuildPip }: { r: Revi
             const u = r.goalUpdates[goal.id] ?? { status: goal.status === "not_started" ? "in_progress" : goal.status };
             return (
               <div key={goal.id} className="pf-goal-prog">
-                <b>{goal.text}</b>
+                <TrText as="div" className="pf-goal-t" text={goal.text} to={lang} />
                 <div className="pf-filters" role="group" aria-label={goal.text}>
                   {(["done", "in_progress", "not_started", "deferred", "na"] as GoalStatus[]).map((k) => <button key={k} className={u.status === k ? "on" : ""} aria-pressed={u.status === k} onClick={() => onPatch({ goalUpdates: { ...r.goalUpdates, [goal.id]: { ...u, status: k } } })}>{GOAL_STATUS[k][lang]}</button>)}
                 </div>
@@ -703,17 +704,26 @@ function Share({ r, g, s, lang, accent, company, onPatch, call, toast, flush, on
   const tr = trAny && !stale ? trAny : null;
   // Spanish and English readers both get a translate option; we don't guess which language the manager wrote in.
   const needsTr = s.ai && hasText && r.lang !== lang && !tr;
-  const translate = async () => {
+  const translate = async (auto = false) => {
     setBusy("tr");
     const x = await call({ action: "ai", id: r.id, op: "translate", fields, to: r.lang });
     setBusy("");
-    if (!x.ok) return toast(lang === "es" ? "No se pudo traducir. Intente otra vez." : "Couldn't translate right now. Try again.");
+    if (!x.ok) return auto ? undefined : toast(lang === "es" ? "No se pudo traducir. Intente otra vez." : "Couldn't translate right now. Try again.");
+    if (x.demo && auto) return;
     const F = x.fields as Record<string, string>;
     onPatch({
       translated: translatedFrom(r, r.lang, F),
     });
     if (x.demo) toast(lang === "es" ? "En la demo la traducción no está conectada" : "Translation isn't connected in the demo");
   };
+  // translate on its own: when the review is first shared, when its language changes, or after edits
+  // (the AI leaves text alone if it's already in that language)
+  const autoKey = `${r.lang}:${trSrc(r)}`;
+  useEffect(() => {
+    if (!s.ai || !hasText || busy || (tr && tr.lang === r.lang)) return;
+    const t = setTimeout(() => { translate(true); }, stale ? 1200 : 200);
+    return () => clearTimeout(t);
+  }, [autoKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const finish = async () => {
     setBusy("fin");
     await flush();
@@ -730,7 +740,7 @@ function Share({ r, g, s, lang, accent, company, onPatch, call, toast, flush, on
       <h2 className="pf-h">{t.shareH}</h2>
       <div className="pf-done-layout">
         <div className="grow" style={{ minWidth: 0 }}>
-          <ReviewDoc d={d} accent={accent} />
+          <ReviewDoc d={d} accent={accent} readerLang={lang} />
         </div>
         <aside className="pf-side">
           <section className="card">
@@ -741,7 +751,7 @@ function Share({ r, g, s, lang, accent, company, onPatch, call, toast, flush, on
             </div>
             {s.ai && hasText && (
               <div style={{ marginTop: 10 }}>
-                <button className={`btn sm ${needsTr || stale ? "primary" : ""}`} disabled={!!busy} onClick={translate}>{busy === "tr" ? t.translating : tr || stale ? (lang === "es" ? "Traducir de nuevo" : "Translate again") : r.lang === "es" ? (lang === "es" ? "Traducir al español" : "Translate to Spanish") : lang === "es" ? "Traducir al inglés" : "Translate to English"}</button>
+                <button className={`btn sm ${needsTr || stale ? "primary" : ""}`} disabled={!!busy} onClick={() => translate()}>{busy === "tr" ? t.translating : tr || stale ? (lang === "es" ? "Traducir de nuevo" : "Translate again") : r.lang === "es" ? (lang === "es" ? "Traducir al español" : "Translate to Spanish") : lang === "es" ? "Traducir al inglés" : "Translate to English"}</button>
                 {stale && <p className="small" style={{ margin: "6px 0 0", color: "var(--red)" }}>{lang === "es" ? "Cambió la evaluación después de traducirla. Tradúzcala de nuevo." : "You changed the review after translating it. Translate it again."}</p>}
                 {tr && <p className="tiny muted" style={{ margin: "6px 0 0" }}>{t.checkTr}</p>}
                 {tr && <button className="btn sm ghost" style={{ marginTop: 6 }} onClick={() => onPatch({ translated: null as unknown as undefined })}>{lang === "es" ? "Quitar la traducción" : "Remove translation"}</button>}
@@ -761,7 +771,7 @@ function Share({ r, g, s, lang, accent, company, onPatch, call, toast, flush, on
             <button className={`pf-opt ${how === "person" ? "on" : ""}`} aria-pressed={how === "person"} onClick={() => setHow("person")}><b>{t.inPerson}</b><span>{t.inPersonSub}</span></button>
           </section>
           {missing && <p className="small" style={{ color: "var(--red)", margin: 0 }}>{lang === "es" ? "Falta la calificación general." : "Add the overall rating first."}</p>}
-          {needsTr && <p className="tiny muted" style={{ margin: 0 }}>{lang === "es" ? `Escribió en español y ${f} la lee en inglés. Traduzca primero para revisarla.` : `${f} reads it in ${r.lang === "es" ? "Spanish" : "English"}. Translate it first so you can check it.`}</p>}
+          {busy === "tr" && <p className="tiny muted" style={{ margin: 0 }}>{lang === "es" ? `Traduciendo para que ${f} la lea en ${r.lang === "es" ? "español" : "inglés"}…` : `Translating so ${f} can read it in ${r.lang === "es" ? "Spanish" : "English"}…`}</p>}
           {r.kind === "pip" && !r.pip?.hrReviewed && <p className="small" style={{ color: "var(--red)", margin: 0 }}>{t.hrNeeded}</p>}
           <button className="btn primary block" disabled={!!busy || missing || stale || (r.kind === "pip" && !r.pip?.hrReviewed)} onClick={finish}>{busy === "fin" ? "…" : t.finalize}</button>
           <p className="tiny muted" style={{ margin: 0 }}>{t.finalNote}</p>
