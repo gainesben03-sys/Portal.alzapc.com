@@ -40,13 +40,14 @@ export async function POST(req: Request) {
   if (Date.now() > v.x) return json({ ok: false, reason: "expired" });
   if (!(await hasAccess(v.e))) return json({ ok: false, reason: "no_access" });
   if (!(await useOnce(db, v.n, v.e))) return json({ ok: false, reason: "used" });
-  const redirectTo = siteUrl(req);
+  const redirectTo = siteUrl(req) + v.p;
   let r = await db.auth.admin.generateLink({ type: "magiclink", email: v.e, options: { redirectTo } });
   if (r.error && /not.*found|no user/i.test(r.error.message)) {
     await db.auth.admin.createUser({ email: v.e, email_confirm: true });
     r = await db.auth.admin.generateLink({ type: "magiclink", email: v.e, options: { redirectTo } });
   }
-  const link = r.data?.properties?.action_link;
-  if (r.error || !link) return json({ ok: false, reason: "signin" });
-  return json({ ok: true, link, path: v.p });
+  const hash = r.data?.properties?.hashed_token;
+  if (r.error || !hash) return json({ ok: false, reason: "signin" });
+  // the page finishes signing in right in the browser, then opens the review itself
+  return json({ ok: true, hash, path: v.p });
 }

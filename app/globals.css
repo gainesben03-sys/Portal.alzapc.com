@@ -3281,3 +3281,5 @@ body.org-dragging, body.org-dragging * { cursor: grabbing !important; user-selec
 }
 .th-row > .grow, .th-cat-h > .grow, .th-person > .grow, .hub-head > .grow { flex: 1 1 auto; }
 .th-row .linklike { text-decoration: none; font-weight: 600; }
+.go-spin { width: 28px; height: 28px; border: 3px solid var(--line); border-top-color: var(--ink); border-radius: 50%; margin: 6px auto 14px; animation: go-r .8s linear infinite; }
+@keyframes go-r { to { transform: rotate(360deg); } }
