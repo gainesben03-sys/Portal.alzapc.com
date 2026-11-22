@@ -11,6 +11,9 @@ import { ContactBenLine } from "@/components/contactben";
 import { useLeaveAccess } from "@/lib/leaveclient";
 import { AskBox } from "@/components/askbox";
 import { OutboxBanner } from "@/components/outbox";
+import { DEMO_SITE } from "@/lib/state";
+
+const DEMO_TILES = ["projects", "hires", "reviews", "celebrate"];
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useRef, useState } from "react";
@@ -83,7 +86,8 @@ export default function Home() {
   const available = TILES.filter((t) => (!t.module || cfg?.modules[t.module]) && (t.id !== "huddle" || !!me) && (t.id !== "leave" || leaveAcc.admin) && (t.id !== "projects" || me?.access !== "manager" || ownsOpenWork(actions, client.id, me?.name)) && (t.id !== "roadmap" || viewer?.kind === "advisor" || me?.access === "exec") && (t.id !== "askhr" || (cfg?.askHr !== false && me?.access !== "hiring")) && (t.module ? canSee(me?.access, t.module) : true));
   const defaults = withNewTiles(cfg?.tiles ?? DEFAULT_TILES).filter((id) => available.some((t) => t.id === id));
   const order = (layoutKey && layouts[layoutKey] && withNewTiles(layouts[layoutKey])) || defaults;
-  const shown = order.filter((id) => available.some((t) => t.id === id));
+  // public demo: four cards, nothing else, so it reads in seconds
+  const shown = DEMO_SITE ? DEMO_TILES.filter((id) => available.some((t) => t.id === id)) : order.filter((id) => available.some((t) => t.id === id));
 
   // ----- data -----
   const mine = actions.filter((a) => a.clientId === client.id);
@@ -415,15 +419,15 @@ export default function Home() {
       <ClientNav clientId={client.id} />
       <main className="wrap wide">
         <Greeting clientId={client.id} onCustomize={() => (s.preview ? setPreviewNote(true) : setEditing(true))} />
-        <OutboxBanner clientId={client.id} advisor={isAdvisor} exec={me?.access === "exec"} />
+        {!DEMO_SITE && <OutboxBanner clientId={client.id} advisor={isAdvisor} exec={me?.access === "exec"} />}
 
         {/* Ask HR lives in Resources; here only when Resources is off */}
-        {!cfg.modules?.resources && !shown.includes("askhr") && <AskBox clientId={client.id} slim />}
+        {!DEMO_SITE && !cfg.modules?.resources && !shown.includes("askhr") && <AskBox clientId={client.id} slim />}
 
         <Dash>
           {shown.map((id) => <div key={id} className={TILES.find((t) => t.id === id)?.wide ? "span2" : ""}>{tiles[id]?.()}</div>)}
         </Dash>
-        {cfg?.softAsks !== false && <QuietAsks clientName={client.name} recruitingOn={!!cfg?.modules.recruiting} onSend={async (kind, text) => {
+        {!DEMO_SITE && cfg?.softAsks !== false && <QuietAsks clientName={client.name} recruitingOn={!!cfg?.modules.recruiting} onSend={async (kind, text) => {
           const author = viewer?.kind === "client" ? viewer.person : ADVISOR;
           const n: Note = { id: `n${Date.now()}`, clientId: client.id, author, kind: "Message", text, urgent: false, at: new Date().toISOString(), status: "new", replies: [] };
           const sent = isAdvisor ? false : await notifyBen(`${client.name}: ${kind === "referral" ? "an introduction" : "a hiring need"} from ${author.name}`, `${author.name} (${author.role}) at ${client.name}:\n\n${text}`);
@@ -431,8 +435,8 @@ export default function Home() {
           if (!isAdvisor) notice({ clientId: client.id, kind: "note", text: `${author.name} ${kind === "referral" ? "sent an introduction" : "mentioned a hiring need"}`, href: "/console/board" });
           toast.show(kind === "referral" ? "Thank you. Ben will take it from here." : "Sent. Ben will follow up.");
         }} />}
-        <p className="demo-note">Fictional sample data for the prototype.</p>
-        {!isAdvisor && <ContactBenLine />}
+        {!DEMO_SITE && <p className="demo-note">Fictional sample data for the prototype.</p>}
+        {!isAdvisor && !DEMO_SITE && <ContactBenLine />}
       </main>
 
       {previewNote && (

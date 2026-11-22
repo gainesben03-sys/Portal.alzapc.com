@@ -11,6 +11,10 @@ import { Action, Client, dueLabel, ownsOpenWork, reminderStage, subtaskProgress,
 import { useStore } from "@/lib/store";
 import { usePathname } from "next/navigation";
 import { canSee, ModuleKey } from "@/lib/modules";
+import { DEMO_SITE } from "@/lib/state";
+
+const DEMO_TABS = ["home", "hub", "people", "pulse"];
+const DEMO_KEEP = ["", "/hub", "/hub/team", "/recognition", "/hires", "/reviews", "/roster", "/pulse", "/pulse/insights"];
 import { PushButton, PushPrompt } from "./push";
 import { AskBenSheet } from "./askben";
 
@@ -421,7 +425,11 @@ export function ClientNav({ clientId }: { clientId: string }) {
         ...(access !== "hiring" ? [{ href: `${base}/share`, label: "Send files", match: [`${base}/share`] }] : []),
       ],
     },
-  ].filter((g) => g.subs.length);
+  ]
+    .filter((g) => g.subs.length)
+    // public demo: just the essentials, so it reads in seconds
+    .map((g) => (DEMO_SITE ? { ...g, subs: g.subs.filter((x) => DEMO_KEEP.some((k) => x.href === `${base}${k}`)) } : g))
+    .filter((g) => g.subs.length && (!DEMO_SITE || DEMO_TABS.includes(g.key)));
 
   const subOn = (x: Sub) => path === x.href || x.match.some((m) => path.startsWith(m));
   const current = groups.find((g) => g.subs.some(subOn));

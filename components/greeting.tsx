@@ -2,6 +2,7 @@
 
 // Top of the client dashboard: a warm greeting, a few things worth knowing, and today's thought.
 import { canSeeHire } from "@/lib/hires";
+import { DEMO_SITE } from "@/lib/state";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
@@ -62,7 +63,7 @@ export function Greeting({ clientId, onCustomize }: { clientId: string; onCustom
     }
     const myRoles = roles.filter((r) => r.clientId === clientId).map((r) => r.id);
     const waiting = candidates.filter((c) => myRoles.includes(c.roleId) && !c.hidden && !c.cleared && !c.decision).length;
-    if (waiting) out.push({ text: `${waiting} candidate${waiting === 1 ? "" : "s"} waiting on a yes or no`, href: `${base}/recruiting`, tone: "warn" });
+    if (waiting && !DEMO_SITE) out.push({ text: `${waiting} candidate${waiting === 1 ? "" : "s"} waiting on a yes or no`, href: `${base}/recruiting`, tone: "warn" });
     const due = me?.access === "manager" ? 0 : projects.filter((p) => p.clientId === clientId && p.status === "active" && p.milestoneDue >= today && p.milestoneDue <= week).length;
     if (due) out.push({ text: `${due} project milestone${due === 1 ? "" : "s"} this week`, href: `${base}/projects`, tone: "info" });
     return out;
@@ -78,7 +79,7 @@ export function Greeting({ clientId, onCustomize }: { clientId: string; onCustom
           <h1 className={celebrate ? "gr-party" : ""}>{g.headline}</h1>
           <p className="gr-sub">{g.sub}</p>
         </div>
-        <button className="btn sm" data-tour="customize" onClick={onCustomize}>Customize</button>
+        {!DEMO_SITE && <button className="btn sm" data-tour="customize" onClick={onCustomize}>Customize</button>}
       </div>
       {chips.length > 0 && (
         <div className="gr-chips">
@@ -87,7 +88,7 @@ export function Greeting({ clientId, onCustomize }: { clientId: string; onCustom
           ))}
         </div>
       )}
-      {!off && <p className="gr-line"><span aria-hidden="true">&ldquo;</span>{line}<span aria-hidden="true">&rdquo;</span> <button className="gr-x" aria-label="Hide the daily line" title="Hide" onClick={() => { set("alza-line-off", "1"); setOff(true); }}>×</button></p>}
+      {!off && !DEMO_SITE && <p className="gr-line"><span aria-hidden="true">&ldquo;</span>{line}<span aria-hidden="true">&rdquo;</span> <button className="gr-x" aria-label="Hide the daily line" title="Hide" onClick={() => { set("alza-line-off", "1"); setOff(true); }}>×</button></p>}
     </div>
   );
 }
