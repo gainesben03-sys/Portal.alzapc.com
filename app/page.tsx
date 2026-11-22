@@ -1,5 +1,6 @@
 "use client";
 
+import { TOUR, TOUR_ROLES, TourRole, writeTour } from "@/lib/demotour";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CLIENTS } from "@/lib/data";
@@ -101,6 +102,18 @@ export default function Login() {
   };
 
   const bp = clients[0] ?? CLIENTS[0];
+  // the guided demo: sign in as the right sample person, skip first-run prompts, then go to stop one
+  const startTour = (role: TourRole) => {
+    const who = role === "manager" ? { name: "Dana Ortiz", role: "Office Manager", email: "dana@example.com" } : { ...bp.contacts[0], email: "alex@example.com" };
+    try {
+      localStorage.setItem(`alza-tour-v1:${who.email}`, "x");
+      localStorage.setItem(`alza-push-ask:${who.email}`, JSON.stringify({ n: 9, until: Date.now() + 9e10 }));
+      sessionStorage.setItem("alza-home-ok", "1");
+    } catch {}
+    if (role !== "employee") setViewer({ kind: "client", clientId: bp.id, person: who });
+    writeTour({ role, step: 0 });
+    router.push(TOUR[role][0].path);
+  };
 
   if (LIVE && !ready) return <main className="login"><p className="muted">Loading...</p></main>;
 
@@ -115,11 +128,19 @@ export default function Login() {
           </div>
           <h1 style={{ marginTop: 18 }}>See the Alza Hub</h1>
           <p className="muted" style={{ marginTop: 6 }}>
-            The people and operations workspace every AlzaHR client gets. Look around as a client CEO would, or see Ben&apos;s side. {bp.name} is a made-up company with sample data.
+            A 90-second tour of the people and operations workspace every AlzaHR client gets. Who are you?
           </p>
+          <div className="demo-roles">
+            {TOUR_ROLES.map((r) => (
+              <button key={r.id} className="demo-role" onClick={() => startTour(r.id)}>
+                <span><b>{r.label}</b><span className="tiny">{r.blurb}</span></span><i aria-hidden="true">→</i>
+              </button>
+            ))}
+          </div>
+          <p className="tiny muted" style={{ margin: "18px 0 0" }}>Or explore everything on your own. {bp.name} is a made-up company with sample data.</p>
           <button
-            className="btn gold block"
-            style={{ marginTop: 16 }}
+            className="btn block"
+            style={{ marginTop: 8 }}
             onClick={() => {
               setViewer({ kind: "client", clientId: bp.id, person: { ...bp.contacts[0], email: "alex@example.com" } });
               router.push(`/c/${bp.id}`);
@@ -128,7 +149,7 @@ export default function Login() {
             See it as a client CEO
           </button>
           <button
-            className="btn block"
+            className="btn ghost block"
             style={{ marginTop: 8 }}
             onClick={() => {
               setViewer({ kind: "advisor" });

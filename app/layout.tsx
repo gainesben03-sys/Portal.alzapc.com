@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { StoreProvider } from "@/lib/store";
+import { DemoTour } from "@/components/demotour";
+import { DEMO_SITE } from "@/lib/state";
 import { DemoBar } from "@/components/demobar";
 import { PreviewBar } from "@/components/preview";
 
@@ -38,6 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <DemoBar />
           <PreviewBar />
           {children}
+          {DEMO_SITE && <DemoTour />}
         </StoreProvider>
       </body>
     </html>
