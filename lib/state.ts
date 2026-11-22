@@ -56,7 +56,7 @@ export function emptyState(): State {
 export const DEMO_SITE = process.env.NEXT_PUBLIC_DEMO_SITE === "1";
 /** The sample company on public demo pages (exit survey, review, shoutouts, TV). */
 export const DEMO_COMPANY = DEMO_SITE ? "Harborlight Events" : "Blueprint Studios";
-export const DEMO_ACCENT = DEMO_SITE ? "#0f766e" : "#2b3cf5";
+export const DEMO_ACCENT = DEMO_SITE ? "#192A43" : "#2b3cf5";
 
 export function demoState(): State {
   const s: State = { ...emptyState(), clients: CLIENTS, ...seed(), ...seedModules() };
@@ -68,7 +68,7 @@ export function demoState(): State {
       .replace(/blueprint/g, "harborlight")
       .replace(/"\/harborlight-logo\.png"/g, "null")
   ) as State;
-  const accent = "#0f766e";
+  const accent = "#192A43"; // AlzaHR navy, to match alzapc.com
   out.clients = out.clients.map((c) => (c.id === "harborlight" ? { ...c, accent, logo: undefined } : c));
   if (out.config.harborlight) out.config.harborlight = { ...out.config.harborlight, accent, logo: undefined };
   return out;
