@@ -136,7 +136,7 @@ export default function Login() {
           </div>
           <h1 style={{ marginTop: 18 }}>Try the Alza Hub</h1>
           <p className="muted" style={{ marginTop: 6 }}>
-            This is the real thing with a made-up company. Click anything: give a shoutout, add a new hire, launch a review. Nothing gets sent.
+            Go ahead, try it out. Give a shoutout, add a new hire, launch a review. Nothing gets sent.
           </p>
           <p className="demo-h">Take the 90-second tour</p>
           <div className="demo-roles">
