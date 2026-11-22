@@ -69,7 +69,7 @@ export function DemoTour() {
         <div className="dt-finish">
           <p className="dt-kicker">The Alza Hub</p>
           <h2>Now it&apos;s yours.</h2>
-          <p>Click anything: give a shoutout, add a new hire, launch a review. It&apos;s all sample data and nothing gets sent.</p>
+          <p>Give a shoutout, add a new hire, launch a review. Go ahead, try it out.</p>
           <button className="btn gold block" onClick={() => writeTour(null)}>Start playing</button>
           <div className="dt-row">
             <button className="btn block" onClick={() => { writeTour(null); router.push("/"); }}>See another view</button>

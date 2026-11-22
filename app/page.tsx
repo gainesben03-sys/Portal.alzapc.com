@@ -136,7 +136,7 @@ export default function Login() {
           </div>
           <h1 style={{ marginTop: 18 }}>Try the Alza Hub</h1>
           <p className="muted" style={{ marginTop: 6 }}>
-            Go ahead, try it out. Give a shoutout, add a new hire, launch a review. Nothing gets sent.
+            Go ahead, try it out. Give a shoutout, add a new hire, launch a review.
           </p>
           <p className="demo-h">Take the 90-second tour</p>
           <div className="demo-roles">
@@ -155,7 +155,7 @@ export default function Login() {
           </div>
           <button className="btn ghost block tiny" style={{ marginTop: 8 }} onClick={reset}>Start the demo over</button>
           <WorkWithUs />
-          <p className="demo-note">Nothing you click here is sent anywhere. Already a client? <a href="https://portal.alzapc.com">Sign in to your Alza Hub</a></p>
+          <p className="demo-note">Already a client? <a href="https://portal.alzapc.com">Sign in to your Alza Hub</a></p>
         </div>
       </main>
     );
@@ -290,7 +290,7 @@ export default function Login() {
             <button className="btn ghost block tiny" style={{ marginTop: 8 }} onClick={reset}>
               Reset demo data
             </button>
-            <p className="demo-note">{DEMO_SITE ? "A demo with a made-up company and sample data. Click anything; nothing is sent anywhere." : "Prototype with fictional sample data. Nothing here is sent or stored outside this browser."}</p>
+            <p className="demo-note">{DEMO_SITE ? "Go ahead, try it out." : "Prototype with fictional sample data. Nothing here is sent or stored outside this browser."}</p>
           </>
         )}
       </div>

@@ -194,7 +194,7 @@ export default function ShoutPage() {
         <h1 className="so-h1">{lang === "es" ? info.theme?.headlineEs || DEFAULT_HEADLINE.es : mt?.prompt || info.theme?.headline || DEFAULT_HEADLINE.en}</h1>
         {mt && lang === "en" && <p className="so-mt-intro">{mt.intro}</p>}
       </div>
-      {demo && <p className="so-demo">Demo: type any names you like. Nothing gets sent.</p>}
+      {demo && <p className="so-demo">Type any name you like.</p>}
       {(info.showWall || info.celebrate.length > 0) && (
         <div className="so-tabs" role="tablist" style={{ gridTemplateColumns: `repeat(${1 + (info.celebrate.length ? 1 : 0) + (info.showWall ? 1 : 0)}, 1fr)` }}>
           <button role="tab" aria-selected={tab === "give"} className={tab === "give" ? "on" : ""} onClick={() => setTab("give")}>{info.celebrate.length && info.showWall ? (lang === "es" ? "Dar" : "Give") : t.give}</button>
