@@ -85,7 +85,8 @@ export function Scoreboard({ b, big }: { b: Board; big?: boolean }) {
 }
 
 /** Type a name, pick from the roster. */
-export function PersonSearch({ search, value, onPick, placeholder, exclude, autoFocus }: { search: (q: string) => Promise<Pick[]>; value: Pick | null; onPick: (p: Pick | null) => void; placeholder: string; exclude?: string; autoFocus?: boolean }) {
+/** allowAny (public demo): any typed name can be picked, even if it isn't on the roster. */
+export function PersonSearch({ search, value, onPick, placeholder, exclude, autoFocus, allowAny }: { search: (q: string) => Promise<Pick[]>; value: Pick | null; onPick: (p: Pick | null) => void; placeholder: string; exclude?: string; autoFocus?: boolean; allowAny?: boolean }) {
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<Pick[]>([]);
   const t = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -106,7 +107,7 @@ export function PersonSearch({ search, value, onPick, placeholder, exclude, auto
   return (
     <div className="so-search">
       <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={placeholder} autoFocus={autoFocus} autoComplete="off" />
-      {hits.length > 0 && (
+      {(hits.length > 0 || (allowAny && q.trim().length >= 2)) && (
         <div className="so-hits">
           {hits.map((h) => (
             <button key={h.id} onClick={() => { onPick(h); setHits([]); }}>
@@ -114,9 +115,14 @@ export function PersonSearch({ search, value, onPick, placeholder, exclude, auto
               {h.team && <span>{h.team}</span>}
             </button>
           ))}
+          {allowAny && q.trim().length >= 2 && !hits.some((h) => h.name.toLowerCase() === q.trim().toLowerCase()) && (
+            <button onClick={() => { onPick({ id: `any-${q.trim().toLowerCase()}`, name: q.trim().replace(/\b\w/g, (c) => c.toUpperCase()), team: "" }); setHits([]); }}>
+              <b>Use &ldquo;{q.trim()}&rdquo;</b>
+            </button>
+          )}
         </div>
       )}
-      {q.trim().length >= 2 && hits.length === 0 && <p className="so-meta" style={{ margin: "6px 2px 0" }}>No match yet. Try their first name.</p>}
+      {!allowAny && q.trim().length >= 2 && hits.length === 0 && <p className="so-meta" style={{ margin: "6px 2px 0" }}>No match yet. Try their first name.</p>}
     </div>
   );
 }

@@ -128,10 +128,16 @@ export default function ShoutPage() {
     setBusy(false);
     if (!r.ok) return flash(r.reason === "limit" ? t.limit : r.reason === "self" ? "😄" : r.reason === "already_in_chain" ? t.inChain : r.reason?.startsWith("chain") ? t.chainOver : t.err);
     try {
-      if (from) localStorage.setItem("alza-shout-me", JSON.stringify(from));
+      if (from && !demo) localStorage.setItem("alza-shout-me", JSON.stringify(from));
     } catch {}
     setDone(r.status === "held" ? "held" : "live");
     if (!demo) load();
+    // demo: put it on the wall so they can see it land
+    else if (info) {
+      const fromName = passing ? passing.holder.name : from?.name ?? typed ?? "";
+      const item: WallItem = { id: `demo-${Date.now()}`, to: shortName(to.name), team: to.team, from: shortName(fromName), value: null, tag: null, reason: reason || null, message: msg.trim(), at: new Date().toISOString(), reactions: {}, mine: [] };
+      setInfo({ ...info, wall: [item, ...info.wall], board: info.board ? { ...info.board, total: info.board.total + 1 } : info.board });
+    }
   };
   const react = async (id: string, emoji: string) => {
     if (!info) return;
@@ -188,7 +194,7 @@ export default function ShoutPage() {
         <h1 className="so-h1">{lang === "es" ? info.theme?.headlineEs || DEFAULT_HEADLINE.es : mt?.prompt || info.theme?.headline || DEFAULT_HEADLINE.en}</h1>
         {mt && lang === "en" && <p className="so-mt-intro">{mt.intro}</p>}
       </div>
-      {demo && <p className="so-demo">Demo preview with sample people.</p>}
+      {demo && <p className="so-demo">Demo: type any names you like. Nothing gets sent.</p>}
       {(info.showWall || info.celebrate.length > 0) && (
         <div className="so-tabs" role="tablist" style={{ gridTemplateColumns: `repeat(${1 + (info.celebrate.length ? 1 : 0) + (info.showWall ? 1 : 0)}, 1fr)` }}>
           <button role="tab" aria-selected={tab === "give"} className={tab === "give" ? "on" : ""} onClick={() => setTab("give")}>{info.celebrate.length && info.showWall ? (lang === "es" ? "Dar" : "Give") : t.give}</button>
@@ -218,7 +224,7 @@ export default function ShoutPage() {
             )}
             {info.pass?.error && <p className="so-demo">{t.chainOver}</p>}
             <label className="so-label">{t.who}</label>
-            <PersonSearch search={search} value={to} onPick={setTo} placeholder={t.whoPh} exclude={from?.id} />
+            <PersonSearch search={search} value={to} onPick={setTo} placeholder={t.whoPh} exclude={from?.id} allowAny={demo} />
 
             {mt && lang === "en" && <ReasonChips reasons={mt.reasons} value={reason} onPick={setReason} label="Pick a reason (optional)" />}
             <label className="so-label">{t.what}</label>
@@ -233,8 +239,8 @@ export default function ShoutPage() {
               <div className="so-picked"><span className="so-av sm" aria-hidden="true">{passing.holder.name.split(" ").map((w) => w[0]).join("").slice(0, 2)}</span><b>{passing.holder.name}</b></div>
             ) : typed === null ? (
               <>
-                <PersonSearch search={search} value={from} onPick={setFrom} placeholder={t.fromPh} exclude={to?.id} />
-                {!from && <button className="so-link" onClick={() => setTyped("")}>{t.notListed}</button>}
+                <PersonSearch search={search} value={from} onPick={setFrom} placeholder={t.fromPh} exclude={to?.id} allowAny={demo} />
+                {!from && !demo && <button className="so-link" onClick={() => setTyped("")}>{t.notListed}</button>}
               </>
             ) : (
               <>

@@ -68,12 +68,12 @@ export function DemoTour() {
       <div className="dt-scrim" role="dialog" aria-label="That's the Alza Hub">
         <div className="dt-finish">
           <p className="dt-kicker">The Alza Hub</p>
-          <h2>That&apos;s it.</h2>
-          <p>Your people and operations, in one place. Want to see it with your own team in mind?</p>
-          <a className="btn gold block" href={CALENDLY} target="_blank" rel="noreferrer">Book a 30-minute walkthrough with Ben</a>
+          <h2>Now it&apos;s yours.</h2>
+          <p>Click anything: give a shoutout, add a new hire, launch a review. It&apos;s all sample data and nothing gets sent.</p>
+          <button className="btn gold block" onClick={() => writeTour(null)}>Start playing</button>
           <div className="dt-row">
-            <button className="btn block" onClick={() => { writeTour(null); router.push("/"); }}>Try another view</button>
-            <button className="btn ghost block" onClick={() => writeTour(null)}>Keep exploring</button>
+            <button className="btn block" onClick={() => { writeTour(null); router.push("/"); }}>See another view</button>
+            <a className="btn ghost block" href={CALENDLY} target="_blank" rel="noreferrer">Book a call with Ben</a>
           </div>
         </div>
       </div>
@@ -91,6 +91,7 @@ export function DemoTour() {
           <>
             <b className="dt-title">{step!.title}</b>
             <p className="dt-text">{step!.text}</p>
+            {step!.tryIt && <p className="dt-try"><b>Try it:</b> {step!.tryIt}</p>}
             <div className="dt-bar"><span style={{ width: `${((t.step + 1) / steps.length) * 100}%` }} /></div>
             <div className="dt-row">
               {t.step > 0 ? <button className="btn ghost sm" onClick={() => go(t.step - 1)}>Back</button> : <span />}

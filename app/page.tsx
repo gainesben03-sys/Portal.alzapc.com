@@ -103,7 +103,7 @@ export default function Login() {
 
   const bp = clients[0] ?? CLIENTS[0];
   // the guided demo: sign in as the right sample person, skip first-run prompts, then go to stop one
-  const startTour = (role: TourRole) => {
+  const viewAs = (role: TourRole) => {
     const who = role === "manager" ? { name: "Dana Ortiz", role: "Office Manager", email: "dana@example.com" } : { ...bp.contacts[0], email: "alex@example.com" };
     try {
       localStorage.setItem(`alza-tour-v1:${who.email}`, "x");
@@ -111,6 +111,14 @@ export default function Login() {
       sessionStorage.setItem("alza-home-ok", "1");
     } catch {}
     if (role !== "employee") setViewer({ kind: "client", clientId: bp.id, person: who });
+  };
+  const jumpIn = (role: TourRole) => {
+    viewAs(role);
+    writeTour(null);
+    router.push(role === "manager" ? `/c/${bp.id}/hub` : `/c/${bp.id}`);
+  };
+  const startTour = (role: TourRole) => {
+    viewAs(role);
     writeTour({ role, step: 0 });
     router.push(TOUR[role][0].path);
   };
@@ -126,10 +134,11 @@ export default function Login() {
             <div className="wordmark">Alza<span className="hr">HR</span><span className="tag hide-sm">People Collective</span></div>
             <span className="login-theme"><ThemeToggle /></span>
           </div>
-          <h1 style={{ marginTop: 18 }}>See the Alza Hub</h1>
+          <h1 style={{ marginTop: 18 }}>Try the Alza Hub</h1>
           <p className="muted" style={{ marginTop: 6 }}>
-            A 90-second tour of the people and operations workspace every AlzaHR client gets. Who are you?
+            This is the real thing with a made-up company. Click anything: give a shoutout, add a new hire, launch a review. Nothing gets sent.
           </p>
+          <p className="demo-h">Take the 90-second tour</p>
           <div className="demo-roles">
             {TOUR_ROLES.map((r) => (
               <button key={r.id} className="demo-role" onClick={() => startTour(r.id)}>
@@ -137,27 +146,13 @@ export default function Login() {
               </button>
             ))}
           </div>
-          <p className="tiny muted" style={{ margin: "18px 0 0" }}>Or explore everything on your own. {bp.name} is a made-up company with sample data.</p>
-          <button
-            className="btn block"
-            style={{ marginTop: 8 }}
-            onClick={() => {
-              setViewer({ kind: "client", clientId: bp.id, person: { ...bp.contacts[0], email: "alex@example.com" } });
-              router.push(`/c/${bp.id}`);
-            }}
-          >
-            See it as a client CEO
-          </button>
-          <button
-            className="btn ghost block"
-            style={{ marginTop: 8 }}
-            onClick={() => {
-              setViewer({ kind: "advisor" });
-              router.push("/console");
-            }}
-          >
-            See Ben&apos;s side
-          </button>
+          <p className="demo-h">Or jump in and play</p>
+          <div className="demo-play">
+            <button className="btn primary" onClick={() => jumpIn("leader")}>As the CEO</button>
+            <button className="btn primary" onClick={() => jumpIn("manager")}>As a manager</button>
+            <button className="btn" onClick={() => router.push("/shout/demo")}>Give a shoutout</button>
+            <button className="btn" onClick={() => router.push("/welcome/demo")}>Be a new hire</button>
+          </div>
           <button className="btn ghost block tiny" style={{ marginTop: 8 }} onClick={reset}>Start the demo over</button>
           <WorkWithUs />
           <p className="demo-note">Nothing you click here is sent anywhere. Already a client? <a href="https://portal.alzapc.com">Sign in to your Alza Hub</a></p>
