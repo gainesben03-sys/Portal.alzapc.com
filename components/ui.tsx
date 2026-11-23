@@ -421,6 +421,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
             ]
           : []),
         ...(cfg?.modules.compliance && access !== "hiring" && (isAdvisor || access === "exec" || access === "manager") ? [{ href: `${base}/training/required`, label: "Required training", match: [`${base}/training/required`] }] : []),
+        ...(access !== "hiring" ? [{ href: `${base}/pause`, label: "The Pause", match: [`${base}/pause`] }] : []),
         ...(mod("wellness") ? [{ href: `${base}/wellness`, label: "Wellness", match: [`${base}/wellness`] }] : []),
         ...(access !== "hiring" ? [{ href: `${base}/share`, label: "Send files", match: [`${base}/share`] }] : []),
       ],
@@ -485,6 +486,7 @@ export function AlzaNav() {
     { href: "/console/hires", label: "New hires", badge: newHires },
     { href: "/console/huddle", label: "People Brief" },
     { href: "/console/newsletters", label: "Newsletters" },
+    { href: "/console/pause", label: "The Pause" },
     { href: "/console/library", label: "Library", badge: stale },
     { href: "/console/clients", label: "Clients" },
     { href: "/console/rules", label: "Reminder rules" },
