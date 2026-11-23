@@ -4,6 +4,7 @@
 // Before day one: a countdown, their first day, to-dos, their people, their intro.
 // After: "Day N", what's left, their people. Works for 90 days after the start.
 // "Tell us about you" opens the get-to-know-you questions, then they approve their intro.
+import { DEMO_ACCENT, DEMO_COMPANY } from "@/lib/state";
 import { mailFor } from "@/components/mail";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -22,9 +23,9 @@ const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart
 const plus = (n: number) => iso(new Date(Date.now() + n * 864e5));
 
 const SAMPLE: Info = {
-  first: "Maya", preferred: "", last: "Torres", title: "Leasing Manager", manager: "Jordan Ellis", managerEmail: "jordan@example.com", startISO: plus(9), start: "", arrival: "9:00 AM", where: "Harbor View leasing office", bring: "Accepted ID: a U.S. passport, or a driver's license plus a Social Security card or birth certificate.",
-  company: "Bayside Residential", accent: "#1d4f7a", logo: null, hr: { name: "Alex Kim", email: "hr@example.com", phone: "" }, mission: "Homes people are proud to come back to.", values: ["Residents first", "Own it", "Leave it better"], video: "",
-  signed: true, todos: [{ text: "Fill in your new-hire paperwork in Rippling", done: false }, { text: "Add an emergency contact", done: false }], intro: true,
+  first: "Jordan", preferred: "", last: "Lee", title: "Warehouse Associate", manager: "Dana Ortiz", managerEmail: "dana@example.com", startISO: plus(9), start: "", arrival: "7:00 AM", where: "Harborlight warehouse, Bay 3", bring: "Accepted ID: a U.S. passport, or a driver's license plus a Social Security card or birth certificate.",
+  company: DEMO_COMPANY, accent: DEMO_ACCENT, logo: null, hr: { name: "Ben Gaines", email: "hr@example.com", phone: "" }, mission: "Events people remember.", values: ["Show up ready", "Own it", "Leave it better"], video: "",
+  signed: true, todos: [{ text: "Fill in your new-hire paperwork in ADP", done: false }, { text: "Add an emergency contact", done: false }], intro: true,
   pageTitle: PAGE_TITLE, pageText: PAGE_TEXT, questions: DEFAULT_QUESTIONS, answers: {}, share: null, sharePhoto: true, photos: true, submitted: false, approved: false, sent: false, introDay: plus(9),
   opening: DEFAULT_INTRO.message, closing: DEFAULT_INTRO.closing, subject: DEFAULT_INTRO.subject, buddy: "Sam Okafor", buddyEmail: "sam@example.com",
 };

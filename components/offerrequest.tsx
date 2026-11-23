@@ -152,7 +152,7 @@ type View = { kind: "pre" | "letter"; company: Co; who: string; status: string; 
 
 const DEMO_VIEW = (kind: "pre" | "letter"): View => ({
   kind, company: { name: DEMO_COMPANY, accent: DEMO_ACCENT, logo: null }, who: kind === "pre" ? "Alex Rivera" : "Dana Ortiz", status: "waiting", note: "", requester: "Dana Ortiz", first: "Jordan",
-  rows: [["New hire", "Jordan Lee"], ["Job title", "Warehouse Associate"], ["Reports to", "Dana Ortiz"], ["Start date", longDate("2026-12-08")], ["Pay", `${payText({ payType: "hourly", payAmount: 24 })}, non-exempt`], ["Type", "Full-time"]],
+  rows: [["New hire", "Jordan Lee"], ["Job title", "Warehouse Associate"], ["Reports to", "Dana Ortiz"], ["Start date", longDate(new Date(Date.now() + 9 * 864e5).toISOString().slice(0, 10))], ["Pay", `${payText({ payType: "hourly", payAmount: 24 })}, non-exempt`], ["Type", "Full-time"]],
   letter: kind === "letter" ? { name: "Offer Letter - Jordan Lee.docx", url: "#" } : null,
 });
 

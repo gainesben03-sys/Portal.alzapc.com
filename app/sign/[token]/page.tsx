@@ -1,5 +1,6 @@
 "use client";
 
+import { DEMO_ACCENT, DEMO_COMPANY } from "@/lib/state";
 import { mailFor } from "@/components/mail";
 import { useParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
@@ -56,6 +57,27 @@ function Letter({ text }: { text: string }) {
   return <div className="sign-letter">{out}</div>;
 }
 
+const DEMO_SIGN: Info = {
+  ok: true, status: "open", company: DEMO_COMPANY, accent: DEMO_ACCENT, logo: null, hrEmail: "hr@example.com", title: "Offer Letter", signer: "Jordan Lee",
+  body: `Dear Jordan,
+
+We're excited to offer you the position of **Warehouse Associate** at ${DEMO_COMPANY}, reporting to Dana Ortiz. We think you'll be a great fit for the team.
+
+## The details
+- Start date: ${new Date(Date.now() + 9 * 864e5).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+- Schedule: Monday to Friday, 7:00 AM to 3:30 PM
+- Pay: $24.00 per hour, non-exempt, paid every other Friday
+- Benefits: medical, dental and vision from your first of the month, 401(k) with a 4% match, and 15 days of PTO
+
+## A few things to know
+This offer depends on a background check. Your employment with ${DEMO_COMPANY} is at will.
+
+Please sign within two days. We can't wait to have you on the team.
+
+Alex Rivera
+CEO, ${DEMO_COMPANY}`,
+};
+
 export default function SignPage() {
   const { token } = useParams<{ token: string }>();
   const [info, setInfo] = useState<Info | null>(null);
@@ -68,6 +90,7 @@ export default function SignPage() {
   const [reason, setReason] = useState("");
 
   useEffect(() => {
+    if (token === "demo") return setInfo(DEMO_SIGN);
     fetch(`/api/esign/${encodeURIComponent(token)}`)
       .then((r) => r.json())
       .then((j) => (j.ok ? setInfo(j) : setLoadErr(true)))
@@ -75,6 +98,12 @@ export default function SignPage() {
   }, [token]);
 
   const post = async (body: Record<string, unknown>) => {
+    if (token === "demo") {
+      setBusy(true);
+      await new Promise((r) => setTimeout(r, 700));
+      setInfo((i) => (i ? { ...i, status: body.action === "sign" ? "signed" : "declined", signedAt: new Date().toISOString() } : i));
+      return setBusy(false);
+    }
     setBusy(true);
     setErr("");
     try {
