@@ -31,9 +31,9 @@ export function WorkWithUs({ compact }: { compact?: boolean }) {
 
   return (
     <div className={`work-with ${compact ? "compact" : ""}`}>
-      <b>Not working with AlzaHR yet?</b>
+      <b>Your people. Your operations. One place.</b>
       <p className="small muted" style={{ margin: "4px 0 10px" }}>
-        Fractional HR for growing companies: policies, hiring, onboarding, employee issues, and an Alza Hub like this one: one place for your people and operations. No full-time HR hire needed.
+        Alza provides growing companies with the HR expertise, practical support, and technology they need: from hiring and onboarding to policies, employee support, and the Alza Hub.
       </p>
       {done ? (
         <p className="small" style={{ color: "var(--green)" }}>Thanks. Ben will be in touch within a business day.</p>
