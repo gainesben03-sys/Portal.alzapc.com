@@ -381,6 +381,15 @@ export default function ClientSetup() {
                 </select>
                 <p className="tiny muted" style={{ marginTop: 8 }}>Gets the escalation when an item is overdue past your reminder rule. If they own the item themselves, it comes to you as a check-in call instead.</p>
               </section>
+              <section className="card">
+                <h2 className="set-card-h">Offer approver</h2>
+                <select className="f" value={cfg.offerApprover?.email ?? ""} aria-label="Offer approver" style={{ marginTop: 6 }}
+                  onChange={(e) => { const u = cfg.users.find((x) => x.email === e.target.value); set({ offerApprover: u ? { name: u.name, email: u.email } : undefined }); }}>
+                  <option value="">No approver: requests come straight to you</option>
+                  {cfg.users.map((u) => <option key={u.email} value={u.email}>{u.name}, {u.role}</option>)}
+                </select>
+                <p className="tiny muted" style={{ marginTop: 8 }}>Optional. When a hiring manager requests an offer, this person approves it by email first. With no approver, the manager checks that it&apos;s approved and it comes to you. Either way, the manager approves the offer letter before you send it.</p>
+              </section>
             </div>
           </div>
         )}

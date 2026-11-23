@@ -162,6 +162,8 @@ export interface ClientConfig {
   logo?: string; // URL or data URL
   logoEmail?: string; // PNG copy of an SVG logo, for email apps
   escalationEmail: string;
+  /** Optional: who approves an offer request before Ben writes the letter. Blank means requests come straight to Ben. */
+  offerApprover?: { name: string; email: string };
   users: PortalUser[];
   codes: InviteCode[];
 }

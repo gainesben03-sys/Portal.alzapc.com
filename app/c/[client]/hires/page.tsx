@@ -11,7 +11,8 @@ import { addDaysISO, daysUntil, Hire, onboardingFor, shortDate } from "@/lib/hir
 import { newId } from "@/lib/hiretasks";
 import { useStore } from "@/lib/store";
 import { ExperienceSetup } from "@/components/experience";
-import { authHeader } from "@/lib/supabase";
+import { authHeader, LIVE } from "@/lib/supabase";
+import { requestStage } from "@/lib/offerreq";
 import { Bucket, bucket, defaultSteps, newStepId, Outcome, outcomeLabel, OUTCOMES, progress, readImport, remarkNote, shortLabel, stepDone, stepsFor, TrackerStep } from "@/lib/tracker";
 
 const todayISO = () => {
@@ -78,6 +79,7 @@ function Hires() {
   const [loc, setLoc] = useState("");
   const [find, setFind] = useState("");
   const [open, setOpen] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [editing, setEditing] = useState(false);
   const [importing, setImporting] = useState(false);
   const [xpOpen, setXpOpen] = useState(false);
@@ -131,6 +133,20 @@ function Hires() {
 
   const openHire = mine.find((h) => h.id === open);
 
+  /** The link hiring managers use to request an offer (no sign-in). */
+  const copyRequestLink = async () => {
+    let url = `${location.origin}/request/demo`;
+    if (LIVE) {
+      try {
+        const r = await fetch("/api/offer", { method: "POST", headers: { "Content-Type": "application/json", ...(await authHeader()) }, body: JSON.stringify({ action: "link", clientId }) });
+        const j = await r.json();
+        if (!j.ok) return;
+        url = j.url;
+      } catch { return; }
+    }
+    try { await navigator.clipboard.writeText(url); setLinkCopied(true); setTimeout(() => setLinkCopied(false), 2500); } catch { window.prompt("Copy this link", url); }
+  };
+
   return (
     <div style={{ ["--accent" as string]: client.accent }}>
       <ClientTopbar client={client} />
@@ -148,6 +164,7 @@ function Hires() {
               <button className="btn sm" onClick={() => setEditing(true)}>Edit steps</button>
               <button className="btn sm" onClick={() => setXpOpen(true)}>Employee experience{s.experience?.on ? "" : " (off)"}</button>
               <button className="btn sm" onClick={() => setImporting(true)}>Import</button>
+              <button className="btn sm" onClick={copyRequestLink}>{linkCopied ? "Link copied" : "Offer request link"}</button>
               <Link href={`/c/${clientId}/hires/new`} className="btn primary sm">+ New hire</Link>
             </div>
           )}
@@ -204,6 +221,7 @@ function Hires() {
                         <td className="nt-who">
                           <button className="nt-name" onClick={() => setOpen(h.id)}>{h.name || "Unnamed hire"}</button>
                           <div className="tiny muted">{[h.title, h.location].filter(Boolean).join(" · ")}</div>
+                          {requestStage(h) && <span className="req-pill" style={{ display: "inline-block", marginTop: 4 }}>{requestStage(h)}</span>}
                         </td>
                         <td className="nt-mgr small">{h.managerName || <span className="muted">-</span>}</td>
                         <td className="nt-start">

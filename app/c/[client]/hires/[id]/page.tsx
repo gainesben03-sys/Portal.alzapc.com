@@ -17,7 +17,8 @@ import { docxBlob, docxName, DOCX_MIME } from "@/lib/docx";
 import { addDaysISO, firstName, forCompany, Hire, hireCompany, senderFor, longDate, onboardingFor, payLine, shortDate, Stage, STAGES, stageIndex } from "@/lib/hires";
 import { useStore } from "@/lib/store";
 import { pingTask } from "@/lib/pushclient";
-import { LIVE, openStored } from "@/lib/supabase";
+import { authHeader, LIVE, openStored } from "@/lib/supabase";
+import { requestStage } from "@/lib/offerreq";
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -179,13 +180,40 @@ function HireInner() {
     toast.show(`Sent to ${client.escalation.name} to approve`);
   };
 
+  /** Send the drafted letter to the hiring manager who requested it, by email (no sign-in). */
+  const askManager = async () => {
+    const r = h.request;
+    if (!r) return;
+    if (!LIVE) {
+      updateHire(h.id, { letterApproval: { status: "waiting", name: r.name, email: r.email, at: new Date().toISOString() } }, `Offer letter sent to ${r.name} to approve`);
+      return toast.show(`Sent to ${r.name} to approve`);
+    }
+    setBusy("approve");
+    try {
+      const res = await fetch("/api/offer", { method: "POST", headers: { "Content-Type": "application/json", ...(await authHeader()) }, body: JSON.stringify({ action: "letter", clientId, hireId: h.id }) });
+      const j = await res.json();
+      if (j.hire) patch({ hires: hires.map((x) => (x.id === h.id ? j.hire : x)) });
+      toast.show(j.ok ? `Sent to ${r.name} to approve` : j.reason === "no_letter" ? "Save the offer letter here first." : j.reason === "save_failed" ? "Didn't save. Try again." : "Saved, but the email didn't send. Try again.");
+    } catch {
+      toast.show("No connection. Try again.");
+    }
+    setBusy("");
+  };
+  const reqStage = requestStage(h);
+
   // ---------------------------------------------------------------- next step
   let next: { text: ReactNode; buttons?: ReactNode } = { text: "" };
   const sig = h.esign ?? {};
   const respond = h.respondBy ? ` They have until ${shortDate(h.respondBy)} to respond.` : "";
   switch (h.status) {
     case "Approved to hire":
-      next = isAdvisor
+      next = h.preApproval?.status === "waiting"
+        ? { text: `${h.preApproval.name} has the request to approve. Nothing to do until then; you'll get an email either way.` }
+        : h.preApproval?.status === "sent_back"
+        ? { text: `${h.preApproval.name} sent the request back. ${h.request?.name ?? "The hiring manager"} was told. Remove this hire if it's not going ahead.` }
+        : h.letterApproval?.status === "approved" && isAdvisor
+        ? { text: `${h.letterApproval.name} approved the letter. Send it for e-signature below.` }
+        : isAdvisor
         ? { text: "Draft the offer letter below, get it approved, then send it for e-signature. Sent it another way? Mark it sent.", buttons: <button className="btn sm" onClick={() => setStage("Offer sent", "Offer sent")}>Mark offer sent</button> }
         : { text: "Ben is preparing the offer letter. You'll get it here to approve before it goes out." };
       break;
@@ -309,6 +337,13 @@ function HireInner() {
             </div>
           </div>
           <Tracker h={h} />
+          {(reqStage || h.request) && (
+            <div className="req-line small">
+              {h.request && <span>Requested by <b>{h.request.name}</b>{h.request.approvedBy ? `, approved by ${h.request.approvedBy}` : h.preApproval?.status === "approved" ? `, approved by ${h.preApproval.name}` : ""}.</span>}
+              {reqStage && <span className={`req-pill ${/sent the request back|asked for changes/.test(reqStage) ? "warn" : /Ready to send/.test(reqStage) ? "ok" : ""}`}>{reqStage}</span>}
+              {(h.letterApproval?.note || h.preApproval?.note) && <div className="tiny muted" style={{ marginTop: 4 }}>&ldquo;{h.letterApproval?.note || h.preApproval?.note}&rdquo;</div>}
+            </div>
+          )}
           <div className="next-step">
             <div className="small">{next.text}</div>
             {next.buttons && <div className="next-buttons">{next.buttons}</div>}
@@ -338,7 +373,9 @@ function HireInner() {
                     <div className="tiny muted">{d.kind === "offer" ? "Offer letter" : d.kind === "agreement" ? "Employment agreement" : "Signed"} · {fmtTime(d.at)}</div>
                   </div>
                   <button className="btn ghost sm" onClick={() => openDoc(d)}>Open</button>
-                  {isAdvisor && d.kind === "offer" && h.status === "Approved to hire" && !sig.offer && <button className="btn ghost sm" onClick={() => askApproval(d)}>Ask {client.escalation.name.split(" ")[0]} to approve</button>}
+                  {isAdvisor && d.kind === "offer" && h.status === "Approved to hire" && !sig.offer && (h.request?.email
+                    ? <button className="btn ghost sm" disabled={busy === "approve" || h.preApproval?.status === "waiting"} onClick={askManager}>{h.letterApproval ? "Send again" : "Send"} to {h.request.name.split(" ")[0]} to approve</button>
+                    : <button className="btn ghost sm" onClick={() => askApproval(d)}>Ask {client.escalation.name.split(" ")[0]} to approve</button>)}
                   {canManage && d.kind !== "signed" && sig[d.kind]?.status !== "signed" && (
                     <button className={`btn sm ${sig[d.kind] ? "" : "primary"}`} disabled={busy === "sign"} onClick={() => (h.personalEmail ? setConfirmSign(d) : toast.show(`Add ${first}'s personal email first (Details → Edit).`))}>
                       {busy === "sign" ? "Sending..." : sig[d.kind] ? "Resend" : "Send for e-signature"}

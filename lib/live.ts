@@ -184,8 +184,16 @@ export async function saveDiff(db: SupabaseClient, prev: State, next: State, me:
         run(
           (async () => {
             const { data: cur } = await db.from("hires").select("data").eq("id", item.id).maybeSingle();
-            const xp = (cur?.data as { xp?: unknown } | null)?.xp;
-            return db.from("hires").update({ data: xp ? { ...data, xp } : data }).eq("id", item.id);
+            const c = (cur?.data ?? {}) as { xp?: unknown; preApproval?: { at: string }; letterApproval?: { at: string } };
+            const d = data as typeof c;
+            const next = { ...data, ...(c.xp ? { xp: c.xp } : {}) } as Record<string, unknown>;
+            // approvals are decided from email links: keep whichever copy is newer
+            for (const k of ["preApproval", "letterApproval"] as const) if (c[k] && (!d[k] || c[k]!.at > d[k]!.at)) next[k] = c[k];
+            const hc = ((cur?.data as { history?: { at: string; text: string }[] } | null)?.history ?? []);
+            const hd = ((data as { history?: { at: string; text: string }[] }).history ?? []);
+            const seen = new Set(hd.map((x) => x.at + x.text));
+            if (hc.some((x) => !seen.has(x.at + x.text))) next.history = [...hd, ...hc.filter((x) => !seen.has(x.at + x.text))].sort((a, b) => a.at.localeCompare(b.at));
+            return db.from("hires").update({ data: next }).eq("id", item.id);
           })()
         );
       else run(db.from(t).update({ data }).eq("id", item.id));

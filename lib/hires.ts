@@ -81,6 +81,20 @@ export interface Hire {
   imported?: boolean;
   /** Employee experience: get to know you, intro, buddy, manager playbook. */
   xp?: import("./experience").HireXp;
+  /** Came in through the hiring manager's offer request form. */
+  request?: { name: string; email: string; at: string; employment?: string; approvedBy?: string };
+  /** The company's approver signs off before Ben writes the offer (only if the company set one up). */
+  preApproval?: Approval;
+  /** The hiring manager approves the offer letter Ben drafted, before it goes out. */
+  letterApproval?: Approval;
+}
+
+export interface Approval {
+  status: "waiting" | "approved" | "sent_back";
+  name: string;
+  email: string;
+  at: string; // when it was asked, then when it was decided
+  note?: string;
 }
 
 /** The signing link itself is never stored here: only the signer gets it. */
