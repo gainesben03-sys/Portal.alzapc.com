@@ -26,7 +26,7 @@ const PILLARS: { id: string; name: string; color: string; items: Item[] }[] = [
   {
     id: "financial", name: "Financial", color: "#b98a47", items: [
       { t: "Money basics workshop", d: "Thursday, Dec 11 at noon. Budgeting for the holidays, 30 minutes, lunch on us.", cta: "Save my seat" },
-      { t: "1:1 financial coaching", d: "A free, private call with a certified coach. Debt, saving, buying a home, anything.", cta: "Book a call" },
+      { t: "1:1 with Chris at Wood Financial", d: "A free, private call. Debt, saving, buying a home, retirement, anything. You book directly with Chris, so Harborlight never sees who books.", cta: "Book a call" },
       { t: "401(k) in 5 minutes", d: "How the match works and how to raise your contribution.", cta: "Watch" },
     ],
   },
@@ -90,7 +90,7 @@ export default function ThriveMock() {
         </section>
 
         {PILLARS.map((p) => (
-          <section key={p.id} className="th-pillar" style={{ ["--pc" as string]: p.color }}>
+          <section key={p.id} id={p.id} className="th-pillar" style={{ ["--pc" as string]: p.color }}>
             <div className="th-ph"><span />{p.name}</div>
             {p.items.map((it) => (
               <div key={it.t} className="th-item">

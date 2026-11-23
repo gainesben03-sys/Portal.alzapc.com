@@ -4,7 +4,7 @@
 // No sign-in and nothing to fill out. Private notes stay on this device only.
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { hasSpanish, monthSlug, PAUSE_SEED, pauseMonthLabel, PauseRitual, published, wordsFor } from "@/lib/pause";
+import { DEFAULT_PARTNER, hasSpanish, monthSlug, PAUSE_SEED, pauseMonthLabel, PausePartner, PauseRitual, PILLAR_DEFAULT, PILLAR_NAME, PILLARS, published, wordsFor } from "@/lib/pause";
 import { DEMO_ACCENT, DEMO_COMPANY } from "@/lib/state";
 import { LIVE } from "@/lib/supabase";
 
@@ -12,8 +12,8 @@ type Lang = "en" | "es";
 type Company = { name: string; accent: string; logo: string | null };
 
 const T = {
-  en: { tag: "Five minutes for yourself.", min: (n: number) => `${n} minutes`, start: "Start", resume: "Resume", pause: "Pause", reset: "Reset", prompt: "This month's prompt", doneK: "Done", again: "Do it again", reread: "Read the prompt again", note: "A private note, just for you", notePh: "Anything you want to remember. Only you can see this.", noteHint: "Saved on this device only. Nobody else can see it, including your employer.", past: "Past Pauses", sound: "Chime when done", by: "The Pause by Alza", nothing: "The next Pause is on its way. Check back soon.", missing: "This link isn't working. Ask HR for a new one." },
-  es: { tag: "Cinco minutos para ti.", min: (n: number) => `${n} minutos`, start: "Empezar", resume: "Seguir", pause: "Pausar", reset: "Reiniciar", prompt: "La reflexión del mes", doneK: "Listo", again: "Hacerlo otra vez", reread: "Leer la reflexión otra vez", note: "Una nota privada, solo para ti", notePh: "Lo que quieras recordar. Solo tú puedes verlo.", noteHint: "Se guarda solo en este dispositivo. Nadie más puede verla, ni tu empleador.", past: "Pausas anteriores", sound: "Sonido al terminar", by: "La Pausa de Alza", nothing: "La próxima Pausa viene en camino. Vuelve pronto.", missing: "Este enlace no funciona. Pide uno nuevo a Recursos Humanos." },
+  en: { tag: "Five minutes for yourself.", min: (n: number) => `${n} minutes`, start: "Start", resume: "Resume", pause: "Pause", reset: "Reset", prompt: "This month's prompt", doneK: "Done", again: "Do it again", reread: "Read the prompt again", note: "A private note, just for you", notePh: "Anything you want to remember. Only you can see this.", noteHint: "Saved on this device only. Nobody else can see it, including your employer.", past: "Past Pauses", sound: "Chime when done", by: "The Pause by Alza", nothing: "The next Pause is on its way. Check back soon.", missing: "This link isn't working. Ask HR for a new one.", thrive: "This month in Thrive", book: "Book a free 1:1", soon: "Booking opens soon", open: "Open", private: (w: string) => `Booked directly with ${w}. Your employer never sees who books.` },
+  es: { tag: "Cinco minutos para ti.", min: (n: number) => `${n} minutos`, start: "Empezar", resume: "Seguir", pause: "Pausar", reset: "Reiniciar", prompt: "La reflexión del mes", doneK: "Listo", again: "Hacerlo otra vez", reread: "Leer la reflexión otra vez", note: "Una nota privada, solo para ti", notePh: "Lo que quieras recordar. Solo tú puedes verlo.", noteHint: "Se guarda solo en este dispositivo. Nadie más puede verla, ni tu empleador.", past: "Pausas anteriores", sound: "Sonido al terminar", by: "La Pausa de Alza", nothing: "La próxima Pausa viene en camino. Vuelve pronto.", missing: "Este enlace no funciona. Pide uno nuevo a Recursos Humanos.", thrive: "Este mes en Thrive", book: "Agendar 1:1 gratis", soon: "Muy pronto podrás agendar", open: "Abrir", private: (w: string) => `Se agenda directo con ${w}. Tu empleador nunca ve quién agenda.` },
 };
 
 const store = {
@@ -27,6 +27,7 @@ export function PauseView({ token, slug }: { token: string; slug?: string }) {
   const [list, setList] = useState<PauseRitual[] | null>(null);
   const [missing, setMissing] = useState(false);
   const [lang, setLang] = useState<Lang>("en");
+  const [partner, setPartner] = useState<PausePartner>(DEFAULT_PARTNER);
 
   useEffect(() => {
     const saved = store.get("alza-pause-lang");
@@ -38,7 +39,7 @@ export function PauseView({ token, slug }: { token: string; slug?: string }) {
     }
     fetch(`/api/pause/${encodeURIComponent(token)}`)
       .then((r) => r.json())
-      .then((j) => (j.ok ? (setCompany(j.company), setList(j.rituals)) : setMissing(true)))
+      .then((j) => (j.ok ? (setCompany(j.company), setList(j.rituals), j.partner && setPartner(j.partner)) : setMissing(true)))
       .catch(() => setMissing(true));
   }, [token, demo]);
 
@@ -58,6 +59,7 @@ export function PauseView({ token, slug }: { token: string; slug?: string }) {
   return (
     <Shell company={company} langs={canEs ? { lang, pick: pickLang } : undefined} lang={lang}>
       <Ritual key={month.month} r={month} lang={canEs ? lang : "en"} token={token} demo={demo} />
+      <ThriveStrip r={month} lang={canEs ? lang : "en"} token={token} demo={demo} partner={partner} />
       {list.length > 1 && (
         <section className="pz-past">
           <h2>{t.past}</h2>
@@ -215,6 +217,42 @@ function Ritual({ r, lang, token, demo }: { r: PauseRitual; lang: Lang; token: s
         <p>{t.noteHint}</p>
       </details>
     </>
+  );
+}
+
+/** One nudge per Thrive pillar, tied to the month's theme. The financial one books Ben's partner directly. */
+function ThriveStrip({ r, lang, token, demo, partner }: { r: PauseRitual; lang: Lang; token: string; demo: boolean; partner: PausePartner }) {
+  const t = T[lang];
+  const w = wordsFor(r, lang);
+  const who = [partner.name, partner.firm].filter(Boolean).join(lang === "es" ? " de " : " at ");
+  const coach = () => {
+    if (demo) return;
+    fetch(`/api/pause/${encodeURIComponent(token)}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ month: r.month, event: "coach" }), keepalive: true }).catch(() => {});
+  };
+  return (
+    <section className="pz-thrive">
+      <div className="pz-kicker">{t.thrive}</div>
+      {PILLARS.map((p) => (
+        <div key={p} className={`pz-th pz-th-${p}`}>
+          <div className="pz-th-name">{PILLAR_NAME[lang][p]}</div>
+          <p>{w.thrive?.[p] || r.thrive?.[p] || PILLAR_DEFAULT[lang][p]}</p>
+          {p === "financial" ? (
+            partner.url ? (
+              <>
+                <a className="pz-th-cta" href={partner.url} target="_blank" rel="noopener noreferrer" onClick={coach}>{t.book}{who ? ` · ${who}` : ""}</a>
+                <small>{t.private(who || "the coach")}</small>
+              </>
+            ) : demo ? (
+              <Link className="pz-th-cta" href="/thrive/demo#financial">{t.book}{who ? ` · ${who}` : ""}</Link>
+            ) : (
+              <span className="pz-th-soon">{t.soon}</span>
+            )
+          ) : demo ? (
+            <Link className="pz-th-cta" href={p === "connection" ? "/shout/demo" : "/thrive/demo#physical"}>{t.open}</Link>
+          ) : null}
+        </div>
+      ))}
+    </section>
   );
 }
 

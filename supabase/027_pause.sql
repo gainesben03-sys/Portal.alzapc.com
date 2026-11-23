@@ -4,7 +4,7 @@ create table if not exists public.pause_events (
   id bigint generated always as identity primary key,
   client_id text not null references public.clients(id) on delete cascade,
   month text not null,            -- yyyy-mm
-  kind text not null check (kind in ('visit', 'start', 'complete')),
+  kind text not null check (kind in ('visit', 'start', 'complete', 'coach')),
   at timestamptz not null default now()
 );
 create index if not exists pause_events_client_month on public.pause_events (client_id, month);

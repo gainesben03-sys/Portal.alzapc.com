@@ -3432,3 +3432,11 @@ body.org-dragging, body.org-dragging * { cursor: grabbing !important; user-selec
 .th-private { text-align: center; font-size: 12.5px; color: #6a7282; margin: 22px 0 0; }
 .th-foot { text-align: center; font-size: 12px; color: #6a7282; padding-top: 14px; padding-bottom: 28px; }
 @media (max-width: 380px) { .th-two, .th-ben { grid-template-columns: 1fr; } }
+.pz-thrive { margin-top: 26px; }
+.pz-th { background: #fff; border-radius: 14px; padding: 14px 16px; margin-top: 10px; border-left: 4px solid var(--th, #17505d); }
+.pz-th-physical { --th: #17505d; } .pz-th-financial { --th: #b98a47; } .pz-th-connection { --th: #d9714e; }
+.pz-th-name { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--th); }
+.pz-th p { font-size: 14.5px; line-height: 1.45; color: #2c3446; margin: 4px 0 0; }
+.pz-th-cta { display: inline-block; margin-top: 10px; font: 600 13px Inter, sans-serif; color: var(--th); border: 1px solid var(--th); border-radius: 999px; padding: 7px 14px; text-decoration: none; }
+.pz-th small { display: block; font-size: 11.5px; color: #6a7282; margin-top: 6px; }
+.pz-th-soon { display: inline-block; margin-top: 8px; font-size: 12.5px; color: #6a7282; }

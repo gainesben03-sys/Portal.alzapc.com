@@ -2,7 +2,7 @@
 // and finishes (never who). GET ?month=yyyy-mm   POST { month, event: "visit" | "start" | "complete" }
 import { NextResponse } from "next/server";
 import { published } from "@/lib/pause";
-import { clientByPauseToken, logEvent, readRituals } from "@/lib/pauseserver";
+import { clientByPauseToken, logEvent, readPause, readRituals } from "@/lib/pauseserver";
 import { admin, SERVER_LIVE } from "@/lib/server";
 
 const H = { "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow" };
@@ -14,8 +14,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ token: s
   const db = admin();
   const c = await clientByPauseToken(db, token);
   if (!c) return json({ ok: false, reason: "not_found" }, 404);
-  const list = published(await readRituals(db));
-  return json({ ok: true, company: { name: c.name, accent: c.accent, logo: c.logo }, rituals: list });
+  const p = await readPause(db);
+  return json({ ok: true, company: { name: c.name, accent: c.accent, logo: c.logo }, rituals: published(p.rituals), partner: p.partner });
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ token: string }> }) {

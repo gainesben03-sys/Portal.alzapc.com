@@ -3,11 +3,11 @@
 // Ben writes The Pause once a month here. Every company's link shows it with their name.
 import { useEffect, useMemo, useState } from "react";
 import { AlzaNav, AlzaTopbar, Toast, useGuard, useToast } from "@/components/ui";
-import { blankRitual, cleanRituals, monthSlug, PAUSE_SEED, pauseMonthLabel, PauseRitual, PauseWords } from "@/lib/pause";
+import { blankRitual, cleanPartner, cleanRituals, DEFAULT_PARTNER, monthSlug, PAUSE_SEED, pauseMonthLabel, PausePartner, PauseRitual, PauseWords, PILLAR_DEFAULT, PILLAR_NAME, PILLARS } from "@/lib/pause";
 import { useStore } from "@/lib/store";
 import { authHeader, LIVE } from "@/lib/supabase";
 
-type Stat = { clientId: string; month: string; visit: number; start: number; complete: number };
+type Stat = { clientId: string; month: string; visit: number; start: number; complete: number; coach?: number };
 type LinkRow = { id: string; name: string; url: string };
 const DEMO_KEY = "alza-demo-pause-v1";
 
@@ -37,20 +37,22 @@ export default function ConsolePause() {
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const [showEs, setShowEs] = useState(false);
+  const [partner, setPartner] = useState<PausePartner>(DEFAULT_PARTNER);
 
   useEffect(() => {
     if (!ok) return;
     if (!LIVE) {
       let l = PAUSE_SEED;
-      try { const s = cleanRituals(JSON.parse(localStorage.getItem(DEMO_KEY) ?? "null")); if (s.length) l = s; } catch {}
+      try { const d = JSON.parse(localStorage.getItem(DEMO_KEY) ?? "null"); const s = cleanRituals(d?.rituals ?? d); if (s.length) l = s; if (d?.partner) setPartner(cleanPartner(d.partner)); } catch {}
       setList(l);
       setLinks(clients.map((c) => ({ id: c.id, name: c.name, url: `${location.origin}/pause/demo` })));
       setStats([{ clientId: clients[0]?.id ?? "", month: "2026-11", visit: 38, start: 27, complete: 19 }, { clientId: clients[0]?.id ?? "", month: "2026-10", visit: 44, start: 30, complete: 22 }]);
       return;
     }
-    api<{ ok: boolean; rituals: PauseRitual[]; stats: Stat[]; statsReady: boolean; links: LinkRow[] }>({ action: "list" }).then((r) => {
+    api<{ ok: boolean; rituals: PauseRitual[]; partner: PausePartner; stats: Stat[]; statsReady: boolean; links: LinkRow[] }>({ action: "list" }).then((r) => {
       if (!r?.ok) return toast.show("Couldn't load The Pause");
       setList(r.rituals);
+      setPartner(r.partner);
       setStats(r.stats);
       setStatsReady(r.statsReady);
       setLinks(r.links);
@@ -80,12 +82,12 @@ export default function ConsolePause() {
     if (!list) return;
     setBusy(true);
     if (!LIVE) {
-      try { localStorage.setItem(DEMO_KEY, JSON.stringify(list)); } catch {}
+      try { localStorage.setItem(DEMO_KEY, JSON.stringify({ rituals: list, partner })); } catch {}
       setDirty(false);
       toast.show("Saved");
     } else {
-      const r = await api<{ ok: boolean; rituals: PauseRitual[] }>({ action: "save", rituals: list });
-      if (r?.ok) { setList(r.rituals); setDirty(false); toast.show("Saved. It's live on every company's link."); } else toast.show("Didn't save. Try again.");
+      const r = await api<{ ok: boolean; rituals: PauseRitual[]; partner: PausePartner }>({ action: "save", rituals: list, partner });
+      if (r?.ok) { setList(r.rituals); setPartner(r.partner); setDirty(false); toast.show("Saved. It's live on every company's link."); } else toast.show("Didn't save. Try again.");
     }
     setBusy(false);
   };
@@ -152,6 +154,12 @@ export default function ConsolePause() {
                   <input key={i} className="f" style={{ marginTop: 6 }} value={steps[i] ?? ""} placeholder={`Cue ${i + 1}`} onChange={(e) => { const s = [...steps]; s[i] = e.target.value; edit({ steps: s }); }} />
                 ))}
                 {f("Closing thought", cur.closing, (v) => edit({ closing: v }), 3, "Shows when the timer reaches zero.")}
+                <div className="tiny muted" style={{ margin: "12px 0 4px" }}>This month in Thrive: one line per pillar, tied to the theme. Blank uses the standard line.</div>
+                {PILLARS.map((p) => (
+                  <label key={p} className="f">{PILLAR_NAME.en[p]}
+                    <input className="f" value={cur.thrive?.[p] ?? ""} placeholder={PILLAR_DEFAULT.en[p]} onChange={(e) => edit({ thrive: { ...(cur.thrive ?? {}), [p]: e.target.value } })} />
+                  </label>
+                ))}
 
                 <button className="btn ghost sm" style={{ marginTop: 12 }} onClick={() => setShowEs(!showEs)}>{showEs ? "Hide Spanish" : cur.es?.title ? "Edit Spanish" : "Add Spanish"}</button>
                 {showEs && (
@@ -166,6 +174,11 @@ export default function ConsolePause() {
                       <input key={i} className="f" style={{ marginTop: 6 }} value={esSteps[i] ?? ""} placeholder={`Paso ${i + 1}`} onChange={(e) => { const s = [...esSteps]; s[i] = e.target.value; editEs({ steps: s }); }} />
                     ))}
                     {f("Cierre", cur.es?.closing ?? "", (v) => editEs({ closing: v }), 3)}
+                    {PILLARS.map((p) => (
+                      <label key={p} className="f">{PILLAR_NAME.es[p]}
+                        <input className="f" value={cur.es?.thrive?.[p] ?? ""} placeholder={PILLAR_DEFAULT.es[p]} onChange={(e) => editEs({ thrive: { ...(cur.es?.thrive ?? {}), [p]: e.target.value } })} />
+                      </label>
+                    ))}
                     <p className="tiny muted">Employees see an EN / ES switch when the Spanish title and reflection are filled in.</p>
                   </div>
                 )}
@@ -173,6 +186,16 @@ export default function ConsolePause() {
             )}
           </div>
         )}
+
+        <div className="card section" style={{ marginTop: 16 }}>
+          <h2 style={{ margin: 0 }}>Financial coach</h2>
+          <p className="small muted" style={{ margin: "4px 0 10px" }}>The Financial line in The Pause and Thrive books this person directly. Employees book with them, so no one at the company sees who booked. Until there&apos;s a link, it says booking opens soon.</p>
+          <div className="two">
+            <label className="f">Name<input className="f" value={partner.name} onChange={(e) => { setPartner({ ...partner, name: e.target.value }); setDirty(true); }} /></label>
+            <label className="f">Firm<input className="f" value={partner.firm} onChange={(e) => { setPartner({ ...partner, firm: e.target.value }); setDirty(true); }} /></label>
+          </div>
+          <label className="f">Booking link (https://…)<input className="f" value={partner.url} placeholder="e.g. https://calendly.com/…" onChange={(e) => { setPartner({ ...partner, url: e.target.value }); setDirty(true); }} /></label>
+        </div>
 
         <div className="card section" style={{ marginTop: 16 }}>
           <h2 style={{ margin: 0 }}>Links for the newsletter</h2>
@@ -198,10 +221,10 @@ export default function ConsolePause() {
             <p className="small muted">No visits yet.</p>
           ) : (
             <table className="pz-stats">
-              <thead><tr><th>Company</th><th>Month</th><th>Opened</th><th>Started</th><th>Finished</th></tr></thead>
+              <thead><tr><th>Company</th><th>Month</th><th>Opened</th><th>Started</th><th>Finished</th><th>Coach link</th></tr></thead>
               <tbody>
                 {stats.map((s) => (
-                  <tr key={s.clientId + s.month}><td>{names.get(s.clientId) ?? s.clientId}</td><td>{pauseMonthLabel(s.month)}</td><td>{s.visit}</td><td>{s.start}</td><td>{s.complete}</td></tr>
+                  <tr key={s.clientId + s.month}><td>{names.get(s.clientId) ?? s.clientId}</td><td>{pauseMonthLabel(s.month)}</td><td>{s.visit}</td><td>{s.start}</td><td>{s.complete}</td><td>{s.coach ?? 0}</td></tr>
                 ))}
               </tbody>
             </table>
