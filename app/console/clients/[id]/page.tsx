@@ -389,6 +389,11 @@ export default function ClientSetup() {
                   {cfg.users.map((u) => <option key={u.email} value={u.email}>{u.name}, {u.role}</option>)}
                 </select>
                 <p className="tiny muted" style={{ marginTop: 8 }}>Optional. When a hiring manager requests an offer, this person approves it by email first. With no approver, the manager checks that it&apos;s approved and it comes to you. Either way, the manager approves the offer letter before you send it.</p>
+                <label className="row tiny" style={{ gap: 8, marginTop: 10, alignItems: "center" }}>
+                  <input type="checkbox" checked={cfg.offerPto ?? /presidio/i.test(`${client.id} ${client.name}`)} onChange={(e) => set({ offerPto: e.target.checked })} />
+                  Ask for PTO type on requests (accrued or DTO)
+                </label>
+                <p className="tiny muted" style={{ marginTop: 6 }}>Locations come from this company&apos;s onboarding offices and properties. A location a manager types in is saved for next time.</p>
               </section>
             </div>
           </div>

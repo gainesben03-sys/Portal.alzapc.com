@@ -82,7 +82,7 @@ export interface Hire {
   /** Employee experience: get to know you, intro, buddy, manager playbook. */
   xp?: import("./experience").HireXp;
   /** Came in through the hiring manager's offer request form. */
-  request?: { name: string; email: string; at: string; employment?: string; approvedBy?: string };
+  request?: { name: string; email: string; at: string; employment?: string; approvedBy?: string; pto?: string };
   /** The company's approver signs off before HR writes the offer (only if the company set one up). */
   preApproval?: Approval;
   /** The hiring manager approves the offer letter HR drafted, before it goes out. */

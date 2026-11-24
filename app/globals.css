@@ -3452,6 +3452,9 @@ body.org-dragging, body.org-dragging * { cursor: grabbing !important; user-selec
 .orq-card h2 { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 22px 0 2px; }
 .orq-two { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
 @media (max-width: 520px) { .orq-two { grid-template-columns: 1fr; } }
+.orq-two .f.full { grid-column: 1 / -1; }
+.orq div.f { margin: 12px 0 6px; }
+.orq div.f > .flabel { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
 .orq-seg { grid-template-columns: 1fr 1fr; margin-top: 8px; }
 .orq .f.bad input, .orq .f.bad select { border-color: #c0392b; }
 .orq-ok { margin-top: 18px; background: #f7f4ec; border: 1px solid #e6dcc5; border-radius: 12px; padding: 12px 14px; }

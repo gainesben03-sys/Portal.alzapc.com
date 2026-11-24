@@ -72,7 +72,7 @@ function mail(co: Co, title: string, paras: string[], button?: { label: string; 
 export const summaryRows = (h: Hire): [string, string][] => [
   ["New hire", h.name], ["Job title", h.title], ["Reports to", h.managerName || "-"], ["Start date", h.startDate ? longDate(h.startDate) : "-"],
   ["Pay", `${payText({ payType: h.payType, payAmount: h.payAmount as number })}${h.exempt === "exempt" ? ", exempt" : ", non-exempt"}`],
-  ["Type", h.request?.employment || "-"], ...(h.notes ? ([["Notes", h.notes]] as [string, string][]) : []),
+  ["Type", h.request?.employment || "-"], ...(h.location ? ([["Location", h.location]] as [string, string][]) : []), ...(h.notes ? ([["Notes", h.notes]] as [string, string][]) : []),
 ];
 
 const ben = () => process.env.NOTIFY_TO || "ben@alzapc.com";

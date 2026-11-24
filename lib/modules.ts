@@ -164,6 +164,8 @@ export interface ClientConfig {
   escalationEmail: string;
   /** Optional: who approves an offer request before HR writes the letter. Blank means requests come straight to HR. */
   offerApprover?: { name: string; email: string };
+  /** Ask for the PTO type (accrued or DTO) on offer requests. Unset: on for Presidio Bay only. */
+  offerPto?: boolean;
   users: PortalUser[];
   codes: InviteCode[];
 }

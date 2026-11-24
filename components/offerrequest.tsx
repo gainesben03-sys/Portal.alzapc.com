@@ -27,6 +27,9 @@ export function RequestForm({ token }: { token: string }) {
   const { hires, patch } = useStore();
   const [co, setCo] = useState<Co | null>(null);
   const [approver, setApprover] = useState<string | null>(null);
+  const [locs, setLocs] = useState<string[]>([]);
+  const [askPto, setAskPto] = useState(false);
+  const [typeLoc, setTypeLoc] = useState(false);
   const [missing, setMissing] = useState(false);
   const [v, setV] = useState<OfferRequest>(blankRequest);
   const [tried, setTried] = useState(false);
@@ -36,12 +39,12 @@ export function RequestForm({ token }: { token: string }) {
 
   useEffect(() => {
     try { const me = JSON.parse(localStorage.getItem("alza-request-me") ?? "null"); if (me?.requester) setV((x) => ({ ...x, requester: me.requester, requesterEmail: me.requesterEmail })); } catch {}
-    if (demo) { setCo({ name: DEMO_COMPANY, accent: DEMO_ACCENT, logo: null }); setApprover("Alex Rivera"); return; }
-    fetch(`/api/request/${encodeURIComponent(token)}`).then((r) => r.json()).then((j) => (j.ok ? (setCo(j.company), setApprover(j.approver)) : setMissing(true))).catch(() => setMissing(true));
+    if (demo) { setCo({ name: DEMO_COMPANY, accent: DEMO_ACCENT, logo: null }); setApprover("Alex Rivera"); setLocs(["Harborlight HQ, 200 Pier Way", "Harborlight warehouse, Bay 3"]); return; }
+    fetch(`/api/request/${encodeURIComponent(token)}`).then((r) => r.json()).then((j) => (j.ok ? (setCo(j.company), setApprover(j.approver), setLocs(j.locations ?? []), setAskPto(!!j.pto)) : setMissing(true))).catch(() => setMissing(true));
   }, [token, demo]);
 
   const set = <K extends keyof OfferRequest>(k: K, val: OfferRequest[K]) => setV((x) => ({ ...x, [k]: val }));
-  const problems = requestProblems(v, !!approver);
+  const problems = requestProblems(v, !!approver, askPto);
 
   const send = async () => {
     setTried(true);
@@ -74,7 +77,7 @@ export function RequestForm({ token }: { token: string }) {
         <div className="orq-card orq-done">
           <div className="orq-check" aria-hidden="true">✓</div>
           <h1>Sent</h1>
-          <p>{done.approver ? `Your request for ${v.name} went to ${done.approver} to approve. Once it's approved, HR writes the offer letter and sends it to you to look over before it goes out.` : `HR has your request for ${v.name}. He'll write the offer letter and send it to you to look over before it goes out.`}</p>
+          <p>{done.approver ? `Your request for ${v.name} went to ${done.approver} to approve. Once it's approved, HR writes the offer letter and sends it to you to look over before it goes out.` : `HR has your request for ${v.name}. They'll write the offer letter and send it to you to look over before it goes out.`}</p>
           <p className="muted small">A copy is on its way to {v.requesterEmail}.</p>
           <button className="btn" onClick={() => { setDone(null); setTried(false); setV({ ...blankRequest(), requester: v.requester, requesterEmail: v.requesterEmail }); }}>Request another offer</button>
         </div>
@@ -110,6 +113,18 @@ export function RequestForm({ token }: { token: string }) {
               {["Full-time", "Part-time", "Seasonal", "Temporary"].map((x) => <option key={x}>{x}</option>)}
             </select>
           </label>
+          <div className={`f full ${bad("a work location") ? "bad" : ""}`}>
+            <span className="flabel">Location</span>
+            {locs.length > 0 && (
+              <select className="f" aria-label="Location" value={typeLoc ? "__other" : locs.includes(v.location) ? v.location : ""}
+                onChange={(e) => { const o = e.target.value === "__other"; setTypeLoc(o); set("location", o ? "" : e.target.value); }}>
+                <option value="">Choose...</option>
+                {locs.map((l) => <option key={l} value={l}>{l}</option>)}
+                <option value="__other">Somewhere else (type it in)</option>
+              </select>
+            )}
+            {(typeLoc || locs.length === 0) && <input className="f" style={locs.length ? { marginTop: 8 } : undefined} aria-label="Location" value={v.location} onChange={(e) => set("location", e.target.value)} placeholder="Office, site or address. We'll save it for next time." />}
+          </div>
         </div>
 
         <h2>Pay</h2>
@@ -128,6 +143,15 @@ export function RequestForm({ token }: { token: string }) {
             </label>
           )}
         </div>
+        {askPto && (
+          <label className={`f ${bad("the PTO type") ? "bad" : ""}`}>PTO
+            <select className="f" value={v.pto} onChange={(e) => set("pto", e.target.value as OfferRequest["pto"])}>
+              <option value="">Choose...</option>
+              <option value="Accrued">Accrued PTO</option>
+              <option value="DTO">DTO (discretionary time off)</option>
+            </select>
+          </label>
+        )}
         <label className="f">Anything else for the offer <span className="tiny muted">(optional)</span>
           <textarea className="f" style={{ minHeight: 70 }} value={v.extras} onChange={(e) => set("extras", e.target.value)} placeholder="Bonus, sign-on, relocation, background check, schedule…" />
         </label>
@@ -152,7 +176,7 @@ type View = { kind: "pre" | "letter"; company: Co; who: string; status: string; 
 
 const DEMO_VIEW = (kind: "pre" | "letter"): View => ({
   kind, company: { name: DEMO_COMPANY, accent: DEMO_ACCENT, logo: null }, who: kind === "pre" ? "Alex Rivera" : "Dana Ortiz", status: "waiting", note: "", requester: "Dana Ortiz", first: "Jordan",
-  rows: [["New hire", "Jordan Lee"], ["Job title", "Warehouse Associate"], ["Reports to", "Dana Ortiz"], ["Start date", longDate(new Date(Date.now() + 9 * 864e5).toISOString().slice(0, 10))], ["Pay", `${payText({ payType: "hourly", payAmount: 24 })}, non-exempt`], ["Type", "Full-time"]],
+  rows: [["New hire", "Jordan Lee"], ["Job title", "Warehouse Associate"], ["Reports to", "Dana Ortiz"], ["Start date", longDate(new Date(Date.now() + 9 * 864e5).toISOString().slice(0, 10))], ["Pay", `${payText({ payType: "hourly", payAmount: 24 })}, non-exempt`], ["Type", "Full-time"], ["Location", "Harborlight warehouse, Bay 3"]],
   letter: kind === "letter" ? { name: "Offer Letter - Jordan Lee.docx", url: "#" } : null,
 });
 
