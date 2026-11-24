@@ -149,10 +149,10 @@ export default function Login() {
           </div>
           <p className="demo-h">Or jump in and play</p>
           <div className="demo-play">
-            <button className="btn primary" onClick={() => jumpIn("leader")}>As the CEO</button>
             <button className="btn primary" onClick={() => jumpIn("manager")}>As a manager</button>
-            <button className="btn" onClick={() => router.push("/shout/demo")}>Give a shoutout</button>
-            <button className="btn" onClick={() => router.push("/welcome/demo")}>Be a new hire</button>
+            <button className="btn primary" onClick={() => router.push("/welcome/demo")}>As a new hire</button>
+            <button className="btn" onClick={() => router.push("/shout/demo")}>Send a shoutout</button>
+            <button className="btn" onClick={() => router.push("/shout/demo?wall=1")}>See the Team Wall</button>
           </div>
           <button className="btn ghost block tiny" style={{ marginTop: 8 }} onClick={reset}>Start the demo over</button>
           <WorkWithUs />

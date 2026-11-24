@@ -130,14 +130,24 @@ export function PersonSearch({ search, value, onPick, placeholder, exclude, auto
 // ---------- challenges ----------
 
 /** Live challenges as cards: the chain's length and streak, a goal's progress bar, the Welcome Wagon. */
+const ABOUT: Record<string, { en: string; es: string }> = {
+  chain: { en: "Someone sends a shoutout to start it. Whoever gets it has a few days to pass it on with a shoutout of their own. See how long the team can keep it going.", es: "Alguien manda un reconocimiento para empezar. Quien lo recibe tiene unos días para pasarlo con uno suyo. A ver qué tan larga la hace el equipo." },
+  goal: { en: "A team target: this many shoutouts by a date. Hit it together and the team gets the reward.", es: "Una meta de equipo: cierta cantidad de reconocimientos para una fecha. Si la logran juntos, el equipo gana el premio." },
+  welcome: { en: "Every new person should get a few shoutouts in their first weeks. The names here are still new. Send one a quick welcome.", es: "Cada persona nueva debería recibir algunos reconocimientos en sus primeras semanas. Estos nombres aún son nuevos. Mándales una bienvenida." },
+};
+
 export function ChallengeCards({ list, lang = "en", big }: { list: PublicChallenge[]; lang?: "en" | "es"; big?: boolean }) {
+  const [open, setOpen] = useState<string | null>(null);
   if (!list.length) return null;
   const es = lang === "es";
+  const about = (c: PublicChallenge) =>
+    open === c.id ? <p className="so-ch-about">{ABOUT[c.kind]?.[es ? "es" : "en"]}</p> : <span className="so-ch-what">{es ? "¿Qué es esto?" : "What's this?"}</span>;
+  const tap = (id: string) => ({ role: "button", tabIndex: 0, "aria-expanded": open === id, onClick: () => setOpen(open === id ? null : id), onKeyDown: (e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen(open === id ? null : id); } } });
   return (
     <div className={`so-ch-list ${big ? "big" : ""}`}>
       {list.map((c) =>
         c.kind === "chain" && c.chain ? (
-          <div key={c.id} className="so-ch chain">
+          <div key={c.id} className="so-ch chain" {...tap(c.id)}>
             <span className="so-ch-ic" aria-hidden="true">🔗</span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <b>{c.title}</b>
@@ -148,10 +158,11 @@ export function ChallengeCards({ list, lang = "en", big }: { list: PublicChallen
                 {c.chain.open > 0 && <span><em>{c.chain.open}</em>{es ? " pasándolo ahora" : " passing it on now"}</span>}
               </div>
               <div className="so-chainviz" aria-hidden="true">{Array.from({ length: Math.min(c.chain.links, 24) }, (_, i) => <i key={i} />)}{c.chain.links > 24 && <span>+{c.chain.links - 24}</span>}</div>
+              {about(c)}
             </div>
           </div>
         ) : c.kind === "goal" && c.goal ? (
-          <div key={c.id} className={`so-ch goal ${c.goal.reached ? "done" : ""}`}>
+          <div key={c.id} className={`so-ch goal ${c.goal.reached ? "done" : ""}`} {...tap(c.id)}>
             <span className="so-ch-ic" aria-hidden="true">{c.goal.reached ? "🏆" : "🎯"}</span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <b>{c.title}</b>
@@ -161,10 +172,11 @@ export function ChallengeCards({ list, lang = "en", big }: { list: PublicChallen
                 {c.goal.reached ? <span>🎉 {es ? "¡Meta lograda!" : "Goal reached!"}</span> : c.goal.daysLeft != null && <span>{c.goal.daysLeft} {es ? "días" : c.goal.daysLeft === 1 ? "day left" : "days left"}</span>}
                 {c.goal.reward && <span>🎁 {c.goal.reward}</span>}
               </div>
+              {about(c)}
             </div>
           </div>
         ) : c.kind === "welcome" && c.welcome && c.welcome.length > 0 ? (
-          <div key={c.id} className="so-ch welcome">
+          <div key={c.id} className="so-ch welcome" {...tap(c.id)}>
             <span className="so-ch-ic" aria-hidden="true">👋</span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <b>{c.title}</b>
@@ -175,6 +187,7 @@ export function ChallengeCards({ list, lang = "en", big }: { list: PublicChallen
                   </span>
                 ))}
               </div>
+              {about(c)}
             </div>
           </div>
         ) : null

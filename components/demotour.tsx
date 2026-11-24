@@ -32,7 +32,7 @@ export function DemoTour() {
   }, []);
   const steps = t ? TOUR[t.role] : [];
   const step = t && !t.done ? steps[t.step] : null;
-  const here = !!step && path === step.path;
+  const here = !!step && path === step.path.split("?")[0];
 
   // highlight the thing this stop is about
   const place = useCallback(() => {
@@ -59,7 +59,9 @@ export function DemoTour() {
     if (n >= steps.length) return writeTour({ ...t, done: true });
     const next = { ...t, step: Math.max(0, n) };
     writeTour(next);
-    if (steps[next.step].path !== path) router.push(steps[next.step].path);
+    const to = steps[next.step].path;
+    if (to.split("?")[0] !== path) router.push(to);
+    else if (to.includes("?") && !window.location.search) window.location.href = to; // same page, different view
   };
   const role = TOUR_ROLES.find((r) => r.id === t.role)!;
 

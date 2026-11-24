@@ -3491,3 +3491,7 @@ body.org-dragging, body.org-dragging * { cursor: grabbing !important; user-selec
 .topbar.client .client-name { font-size: 19px; font-weight: 700; }
 .login-brand { display: flex; align-items: center; gap: 12px; }
 .login-by { font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-top: 5px; }
+.so-ch[role="button"] { cursor: pointer; }
+.so-ch[role="button"]:focus-visible { outline: 3px solid var(--accent, #192A43); outline-offset: 2px; }
+.so-ch-what { display: inline-block; margin-top: 6px; font-size: 12px; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; opacity: .75; }
+.so-ch-about { margin: 8px 0 0; font-size: 13.5px; line-height: 1.45; opacity: .9; }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
+import { LIVE } from "@/lib/supabase";
 import { Commitment, isoDay, sameEmail, TeamLog, TeamMember, teamFor } from "@/lib/team";
 import { Sheet } from "./ui";
 
@@ -68,7 +69,8 @@ const PROMPTS: Record<TeamLog["kind"], string[]> = {
 export function LogSheet({ clientId, person, kind, team, onClose, onSaved }: { clientId: string; person?: TeamMember; kind: TeamLog["kind"]; team: TeamMember[]; onClose: () => void; onSaved: (msg: string) => void }) {
   const { patch, checkins, who, me, viewer } = useStore();
   const [pid, setPid] = useState(person?.id ?? team[0]?.id ?? "");
-  const [k, setK] = useState(kind);
+  const k: TeamLog["kind"] = "checkin"; // shoutouts now go through the Team Wall
+  void kind;
   const [date, setDate] = useState(isoDay(new Date()));
   const [notes, setNotes] = useState("");
   const [commits, setCommits] = useState("");
@@ -76,10 +78,6 @@ export function LogSheet({ clientId, person, kind, team, onClose, onSaved }: { c
   const first = p?.name.split(" ")[0] ?? "them";
   return (
     <Sheet title={k === "checkin" ? "Log a check-in" : "Recognize someone"} onClose={onClose}>
-      <div className="seg" style={{ gridTemplateColumns: "1fr 1fr", marginTop: 0 }}>
-        <button className={k === "checkin" ? "on" : ""} onClick={() => setK("checkin")}>Check-in</button>
-        <button className={k === "recognition" ? "on" : ""} onClick={() => setK("recognition")}>Recognition</button>
-      </div>
       {!person && (
         <label className="f">Who
           <select className="f" value={pid} onChange={(e) => setPid(e.target.value)}>
@@ -152,3 +150,15 @@ export function NoTeam({ clientId }: { clientId: string }) {
 }
 
 export const isMine = (p: TeamMember, email?: string) => sameEmail(p.managerEmail, email);
+
+/** The company's shoutout page (no sign-in), optionally with the person already picked. Null when recognition is off. */
+export function useShoutHref(clientId: string) {
+  const { config } = useStore();
+  const cfg = config[clientId];
+  const token = cfg?.recognition?.token;
+  if (!token || !(cfg?.modules as Record<string, boolean> | undefined)?.recognition) return null;
+  return (p?: TeamMember) => {
+    const base = `/shout/${LIVE ? token : "demo"}`;
+    return p ? `${base}?to=${encodeURIComponent(p.name)}&tid=${encodeURIComponent(p.id)}&team=${encodeURIComponent(p.department ?? "")}` : base;
+  };
+}

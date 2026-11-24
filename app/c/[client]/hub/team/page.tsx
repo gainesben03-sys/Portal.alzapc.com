@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { ClientNav, ClientTopbar, Toast, useGuard, useToast } from "@/components/ui";
-import { HubHeader, Initials, LogSheet, NoTeam, personHref, useHub } from "@/components/hub";
+import { HubHeader, Initials, LogSheet, NoTeam, personHref, useHub, useShoutHref } from "@/components/hub";
 import { useStore } from "@/lib/store";
 import { anniversary, daysSinceIso, lastLog, nextYearly, TeamLog, TeamMember, tenure } from "@/lib/team";
 
@@ -21,6 +21,7 @@ export default function HubTeam() {
   const { getClient } = useStore();
   const client = getClient(clientId);
   const h = useHub(clientId);
+  const shout = useShoutHref(clientId);
   const toast = useToast();
   const [log, setLog] = useState<{ kind: TeamLog["kind"]; person: TeamMember } | null>(null);
   if (!ok || !client) return null;
@@ -54,7 +55,7 @@ export default function HubTeam() {
                   </Link>
                   <div className="hub-person-actions">
                     <button className="btn sm" aria-label={`Log a check-in with ${p.name}`} onClick={() => setLog({ kind: "checkin", person: p })}>💬</button>
-                    <button className="btn sm" aria-label={`Recognize ${p.name}`} onClick={() => setLog({ kind: "recognition", person: p })}>⭐</button>
+                    {shout && <Link className="btn sm" aria-label={`Send ${p.name} a shoutout`} href={shout(p)}>⭐</Link>}
                   </div>
                 </div>
               );

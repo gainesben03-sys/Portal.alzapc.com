@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ClientNav, ClientTopbar, Toast, useGuard, useToast } from "@/components/ui";
-import { HubHeader, Initials, LogSheet, NoTeam, personHref, useHub } from "@/components/hub";
+import { HubHeader, Initials, LogSheet, NoTeam, personHref, useHub, useShoutHref } from "@/components/hub";
 import { useStore } from "@/lib/store";
 import { HubItem, TeamLog, TeamMember, weekItems } from "@/lib/team";
 import { KIND_LABEL, loadNewsletters, monthLabel, Newsletter } from "@/lib/newsletters";
@@ -24,6 +24,7 @@ export default function HubHome() {
   const { getClient, clients, resources, config, hires } = useStore();
   const client = getClient(clientId);
   const h = useHub(clientId);
+  const shout = useShoutHref(clientId);
   const toast = useToast();
   const [log, setLog] = useState<{ kind: TeamLog["kind"]; person?: TeamMember } | null>(null);
   const [showAll, setShowAll] = useState(false);
@@ -79,7 +80,7 @@ export default function HubHome() {
         {it.action === "open" || !p ? (
           <Link className="btn sm" href={p ? personHref(clientId, p.id) : `/c/${clientId}/hub/team`}>Open</Link>
         ) : (
-          <button className="btn sm" onClick={() => setLog({ kind: it.action === "recognize" ? "recognition" : "checkin", person: p })}>{it.action === "recognize" ? "Recognize" : "Log check-in"}</button>
+          it.action === "recognize" ? (shout ? <Link className="btn sm" href={shout(p)}>Send a shoutout</Link> : null) : <button className="btn sm" onClick={() => setLog({ kind: "checkin", person: p })}>Log check-in</button>
         )}
       </div>
     );
@@ -133,7 +134,7 @@ export default function HubHome() {
           action={h.team.length ? (
             <div className="th-actions" data-tour="hub-quick">
               <button className="btn primary sm" onClick={() => setLog({ kind: "checkin" })}>+ New check-in</button>
-              <button className="btn sm" onClick={() => setLog({ kind: "recognition" })}>Recognize someone</button>
+              {shout && <Link className="btn sm" href={shout()}>Send a shoutout</Link>}
             </div>
           ) : undefined}
         />
@@ -184,7 +185,7 @@ export default function HubHome() {
                             <div className="th-row-t">{m.name}&apos;s {m.kind === "anniversary" ? `${m.years}-year anniversary` : m.kind === "birthday" ? "birthday" : "first day"}</div>
                             <div className="tiny muted">{m.days === 0 ? "Today" : m.days === 1 ? "Tomorrow" : new Date(Date.now() + m.days * 864e5).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</div>
                           </div>
-                          {soon && p && <button className="linklike small" onClick={() => setLog({ kind: "recognition", person: p })}>Recognize ›</button>}
+                          {soon && p && shout && <Link className="linklike small" href={shout(p)}>Send a shoutout ›</Link>}
                           {m.kind === "new" && p && <Link className="linklike small" href={personHref(clientId, p.id)}>Plan their first week ›</Link>}
                         </div>
                       );

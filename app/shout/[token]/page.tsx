@@ -91,7 +91,11 @@ export default function ShoutPage() {
       const me = JSON.parse(localStorage.getItem("alza-shout-me") || "null");
       if (me?.id) setFrom(me);
     } catch {}
-    const s = new URLSearchParams(window.location.search).get("s");
+    const qs = new URLSearchParams(window.location.search);
+    const toName = qs.get("to");
+    if (toName) setTo({ id: qs.get("tid") || `any-${toName.toLowerCase()}`, name: shortName(toName), team: qs.get("team") || "" });
+    if (qs.get("wall")) setTab("wall");
+    const s = qs.get("s");
     if (s) {
       setTab("wall");
       setFocus(s);
