@@ -1,4 +1,4 @@
-// Signed in. Ben: read and save the months, see each company's link and the counts.
+// Signed in. HR: read and save the months, see each company's link and the counts.
 // Anyone signed in to a company: get that company's Pause link (for the Hub's Wellness tab).
 import { NextResponse } from "next/server";
 import { cleanPartner, cleanRituals } from "@/lib/pause";

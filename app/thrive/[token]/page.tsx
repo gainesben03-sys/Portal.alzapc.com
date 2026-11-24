@@ -119,7 +119,7 @@ export default function ThriveMock() {
 
         <p className="th-private">🔒 {company} only ever sees totals, never who used what.</p>
       </main>
-      <footer className="th-foot">Questions? Ask HR or text Ben at (626) 224-8161 · Thrive by Alza</footer>
+      <footer className="th-foot">Questions? Ask HR · Thrive by Alza</footer>
     </div>
   );
 }

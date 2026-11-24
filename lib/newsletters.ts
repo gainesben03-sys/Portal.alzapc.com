@@ -1,6 +1,6 @@
 "use client";
 
-// Monthly newsletters (Manager Minute, The Pause). Ben queues and edits them in the console,
+// Monthly newsletters (Manager Minute, The Pause). HR queues and edits them in the console,
 // copies the HTML to send from the client's own mailbox, and saves them to the client's Library.
 // Not part of the main store: issues are large and only loaded on the pages that use them.
 
@@ -26,7 +26,7 @@ export interface Newsletter {
   label?: string;
   /** Short topic, e.g. "Feedback", so the next draft doesn't repeat it */
   topic?: string;
-  /** Month it was copied from, until Claude (or Ben) writes this month's words */
+  /** Month it was copied from, until Claude (or HR) writes this month's words */
   copiedFrom?: string;
   createdAt: string;
   updatedAt: string;
@@ -105,7 +105,7 @@ const fromRow = (r: Row): Newsletter => ({ ...(r.data as Newsletter), id: r.id, 
 const setupError = (m: string) => (/newsletters/.test(m) && /exist|schema cache/i.test(m) ? "setup" : m);
 const LIGHT = "id, client_id, kind:data->>kind, month:data->>month, lang:data->>lang, subject:data->>subject, status:data->>status, inLibrary:data->inLibrary, sentAt:data->>sentAt, sendFrom:data->>sendFrom, updatedAt:data->>updatedAt, createdAt:data->>createdAt";
 
-/** All issues Ben can see, or one client's Library (RLS hides the rest from clients). `light` skips the email itself. */
+/** All issues HR can see, or one client's Library (RLS hides the rest from clients). `light` skips the email itself. */
 export async function loadNewsletters(opts: { clientId?: string; light?: boolean; demoClients?: { id: string; name: string; accent: string }[] } = {}): Promise<{ list: Newsletter[]; error?: string }> {
   if (!LIVE) {
     const all = demoLoad(opts.demoClients ?? []);

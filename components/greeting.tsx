@@ -25,7 +25,7 @@ const set = (k: string, v: string) => {
 export function Greeting({ clientId, onCustomize }: { clientId: string; onCustomize: () => void }) {
   const { viewer, me, people, hires, candidates, roles, projects } = useStore();
   const isAdvisor = viewer?.kind === "advisor";
-  const name = viewer?.kind === "client" ? viewer.person.name : "Ben Gaines";
+  const name = viewer?.kind === "client" ? viewer.person.name : "HR";
   const first = name.split(" ")[0];
   const email = (me?.email ?? "").toLowerCase();
   const [now, setNow] = useState<Date | null>(null);

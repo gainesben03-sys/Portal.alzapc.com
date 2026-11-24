@@ -1,5 +1,5 @@
 // Sends a new hire's welcome or first-day email, branded for their company.
-// Ben or an executive at that client can send. The recipient is always the hire's
+// HR or an executive at that client can send. The recipient is always the hire's
 // personal email on file (or the sender, for a test), never an address from the browser.
 import { NextResponse } from "next/server";
 import { withPage } from "@/lib/experience";
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
   const { data: client } = await db.from("clients").select("name, config").eq("id", row.client_id).maybeSingle();
   if (!client) return NextResponse.json({ sent: false, reason: "no_client" }, { status: 404 });
 
-  // Wording Ben or the exec changed in the preview. Plain text only; the email builder escapes it.
+  // Wording HR or the exec changed in the preview. Plain text only; the email builder escapes it.
   const str = (v: unknown, n: number) => (typeof v === "string" ? v.replace(/\r/g, "").slice(0, n) : undefined);
   const e = b.edits && typeof b.edits === "object" ? b.edits : null;
   const changes: Partial<Hire> = {};

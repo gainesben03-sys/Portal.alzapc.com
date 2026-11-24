@@ -8,7 +8,7 @@ import { Sheet } from "./ui";
 
 const KINDS = ["A new project", "A document or letter", "A policy question", "Help with an employee situation", "Hiring help", "Something else"];
 
-/** A client asks Ben for something. It lands on Ben's "You owe" list and he gets an email and an alert. */
+/** A client asks HR for something. It lands on HR's "You owe" list and he gets an email and an alert. */
 export function AskBenSheet({ clientId, onClose, onDone, projectId, startKind, startTitle, startDetail }: { clientId: string; onClose: () => void; onDone: (msg: string) => void; projectId?: string; startKind?: string; startTitle?: string; startDetail?: string }) {
   const { actions, files, patch, viewer, who, notice, getClient, projects } = useStore();
   const client = getClient(clientId)!;
@@ -64,12 +64,12 @@ export function AskBenSheet({ clientId, onClose, onDone, projectId, startKind, s
       `${client.name}: ${urgent ? "URGENT " : ""}request from ${person.name}`,
       `${person.name} asked for: ${a.title}\nType: ${kind}${project ? `\nProject: ${project.name}` : ""}\nNeeded by: ${due}${urgent ? "\nMarked urgent" : ""}\n\n${detail.trim() || "(no details)"}\n\nOpen it: https://portal.alzapc.com/c/${clientId}/a/${a.id}`
     );
-    onDone("Sent to Ben. You'll see it under In progress.");
+    onDone("Sent to HR. You'll see it under In progress.");
   };
 
   return (
-    <Sheet title={project ? `Ask Ben about ${project.name}` : "Ask Ben for something"} onClose={onClose}>
-      {project && <p className="small muted" style={{ marginTop: 0 }}>This goes on Ben&apos;s list as part of {project.name}.</p>}
+    <Sheet title={project ? `Ask HR about ${project.name}` : "Send a request to HR"} onClose={onClose}>
+      {project && <p className="small muted" style={{ marginTop: 0 }}>This goes on HR&apos;s list as part of {project.name}.</p>}
       <label className="f">What kind of help
         <select className="f" value={kind} onChange={(e) => setKind(e.target.value)}>
           {KINDS.map((k) => <option key={k}>{k}</option>)}
@@ -79,7 +79,7 @@ export function AskBenSheet({ clientId, onClose, onDone, projectId, startKind, s
         <input className="f" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={kind === "A new project" ? "e.g. Set up a performance review process" : project ? "e.g. Can we add the Las Vegas team to this?" : "e.g. Offer letter for our new office manager"} />
       </label>
       <label className="f">Details <span className="tiny muted">(optional)</span>
-        <textarea className="f" value={detail} onChange={(e) => setDetail(e.target.value)} placeholder="Anything that helps Ben get it right the first time" />
+        <textarea className="f" value={detail} onChange={(e) => setDetail(e.target.value)} placeholder="Anything that helps HR get it right the first time" />
       </label>
       <label className="f">Need it by
         <input className="f" type="date" value={due} min={toISO(today())} onChange={(e) => setDue(e.target.value)} />
@@ -94,7 +94,7 @@ export function AskBenSheet({ clientId, onClose, onDone, projectId, startKind, s
       {err && <p className="small" style={{ color: "var(--red)" }}>{err}</p>}
       <div className="sheet-actions">
         <button className="btn ghost sm" onClick={onClose}>Cancel</button>
-        <button className="btn primary sm" disabled={busy} onClick={send}>{busy ? "Sending..." : "Send to Ben"}</button>
+        <button className="btn primary sm" disabled={busy} onClick={send}>{busy ? "Sending..." : "Send to HR"}</button>
       </div>
     </Sheet>
   );

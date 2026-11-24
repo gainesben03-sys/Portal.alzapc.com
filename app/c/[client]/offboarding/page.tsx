@@ -1,6 +1,6 @@
 "use client";
 
-// Offboarding: who's leaving, their checklist, the goodbye email and exit survey. Ben and executives only.
+// Offboarding: who's leaving, their checklist, the goodbye email and exit survey. HR and executives only.
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -33,7 +33,7 @@ export default function Offboarding() {
   if (!ok || !client) return null;
   const s = onboardingFor(cfg?.onboarding);
   const o = offboardFor(cfg?.offboarding);
-  const meName = viewer?.kind === "client" ? viewer.person.name : "Ben Gaines";
+  const meName = viewer?.kind === "client" ? viewer.person.name : "HR";
 
   const shell = (body: React.ReactNode) => (
     <div style={{ ["--accent" as string]: client.accent }}>
@@ -43,7 +43,7 @@ export default function Offboarding() {
       <Toast msg={toast.msg} onDone={toast.clear} />
     </div>
   );
-  if (!allowed) return shell(<div className="card section small muted">Offboarding is for executives and Ben.</div>);
+  if (!allowed) return shell(<div className="card section small muted">Offboarding is for executives and HR.</div>);
 
   const leaving = (list ?? []).filter((d) => d.status === "planned").sort((a, b) => (a.lastDay < b.lastDay ? -1 : 1));
   const past = (list ?? []).filter((d) => d.status !== "planned").sort((a, b) => (a.lastDay > b.lastDay ? -1 : 1));
@@ -182,7 +182,7 @@ function StartSheet({ roster, onClose, onStart }: { roster: Roster[]; onClose: (
         <label className="f">Eligible for rehire?<select className="f" value={rehire} onChange={(e) => setRehire(e.target.value as typeof rehire)}><option value="unsure">Not sure yet</option><option value="yes">Yes</option><option value="no">No</option></select></label>
       </div>
       <label className="f">Personal email <span className="tiny muted">(the goodbye email goes here; work email may be off by then)</span><input className="f" type="email" value={personal} onChange={(e) => setPersonal(e.target.value)} /></label>
-      <label className="f">Reason <span className="tiny muted">(private: you and Ben only)</span><textarea className="f" style={{ minHeight: 70 }} value={reason} onChange={(e) => setReason(e.target.value)} /></label>
+      <label className="f">Reason <span className="tiny muted">(private: you and HR only)</span><textarea className="f" style={{ minHeight: 70 }} value={reason} onChange={(e) => setReason(e.target.value)} /></label>
       {err && <p className="small" style={{ color: "var(--red)" }}>{err}</p>}
       <div className="sheet-actions">
         <button className="btn" onClick={onClose}>Cancel</button>
@@ -233,7 +233,7 @@ function Settings({ o, company, s, accent, onSave }: { o: OffboardSettings; comp
           ))}
           <button className="btn sm" style={{ marginTop: 10 }} onClick={() => set({ sections: [...x.sections, { id: `s${Date.now().toString(36)}`, title: "New section", text: "" }] })}>+ Add a section</button>
           <label className="f">Closing line<input className="f" value={x.closing} onChange={(e) => set({ closing: e.target.value })} /></label>
-          <label className="lv-check" style={{ marginTop: 10 }}><input type="checkbox" checked={x.survey} onChange={(e) => set({ survey: e.target.checked })} /> Include the exit survey (7 short questions; answers go to you and Ben)</label>
+          <label className="lv-check" style={{ marginTop: 10 }}><input type="checkbox" checked={x.survey} onChange={(e) => set({ survey: e.target.checked })} /> Include the exit survey (7 short questions; answers go to you and HR)</label>
         </div>
         <div className="card section">
           <h3 className="lv-h">When it goes out</h3>

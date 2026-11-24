@@ -1,5 +1,5 @@
-// Signed in. link: a company's offer request link (its executives and Ben).
-// letter: Ben sends the offer letter to the hiring manager to approve.
+// Signed in. link: a company's offer request link (its executives and HR).
+// letter: HR sends the offer letter to the hiring manager to approve.
 import { NextResponse } from "next/server";
 import { clientById, emailLetterApproval, getHire, putHire, requestUrl } from "@/lib/offerserver";
 import { admin, caller, SERVER_LIVE, siteUrl } from "@/lib/server";
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return NextResponse.json({ ok: false, reason: "no_email" }, { status: 400 });
     if (!(h.docs ?? []).some((d) => d.kind === "offer" && d.path)) return NextResponse.json({ ok: false, reason: "no_letter" }, { status: 400 });
     const now = new Date().toISOString();
-    const next = { ...h, letterApproval: { status: "waiting" as const, name, email, at: now }, history: [...h.history, { at: now, by: "Ben Gaines", text: `Offer letter sent to ${name} to approve` }] };
+    const next = { ...h, letterApproval: { status: "waiting" as const, name, email, at: now }, history: [...h.history, { at: now, by: "HR", text: `Offer letter sent to ${name} to approve` }] };
     if (!(await putHire(db, next))) return NextResponse.json({ ok: false, reason: "save_failed" }, { status: 500 });
     const r = await emailLetterApproval(co, next, base);
     return NextResponse.json({ ok: r.ok, hire: next, reason: r.reason });

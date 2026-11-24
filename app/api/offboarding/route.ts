@@ -1,4 +1,4 @@
-// Offboarding actions that need the server. Ben, or an executive at the client.
+// Offboarding actions that need the server. HR, or an executive at the client.
 // POST { clientId, action: "send", id, test? }   -> the goodbye email (to their personal email, or you for a test)
 // POST { clientId, action: "roster", id }        -> take them off the team roster now
 // POST { clientId, action: "settings", settings } -> save the goodbye email wording and timing

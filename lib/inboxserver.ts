@@ -1,4 +1,4 @@
-// Email to work, on the server. Ben forwards an email to the Alza Hub's inbox address (or pastes one);
+// Email to work, on the server. HR forwards an email to the Alza Hub's inbox address (or pastes one);
 // the Alza Hub works out the client, what's being asked, and starts a task or a project on his list.
 // The email is only ever read as information: nothing in it is followed as an instruction.
 import { createHmac, timingSafeEqual } from "node:crypto";
@@ -77,7 +77,7 @@ export function htmlToText(html: string): string {
     .replace(/\n{3,}/g, "\n\n").trim();
 }
 
-/** What Ben typed above the forward, and the original sender if the forward shows one. */
+/** What HR typed above the forward, and the original sender if the forward shows one. */
 export function splitForward(text: string): { note: string; origFrom?: string } {
   const m = /^(-{2,}\s*Forwarded message\s*-{2,}|Begin forwarded message:|-{2,}\s*Original Message\s*-{2,}|From:\s.+$)/im.exec(text);
   const note = m ? text.slice(0, m.index).trim() : "";
@@ -146,7 +146,7 @@ Titles are short and plain, like "Offer letter for Jamie Rivera" or "Update PTO 
   };
 }
 
-/** Writes the project and Ben's tasks for an item that has a client and isn't private. */
+/** Writes the project and HR's tasks for an item that has a client and isn't private. */
 export async function makeWork(db: DB, item: InboxItem): Promise<InboxItem> {
   if (!item.clientId) return item;
   const w = buildWork(item);
@@ -214,7 +214,7 @@ export async function intake(db: DB, input: { via: "email" | "paste"; from: stri
   return item;
 }
 
-/** A heads-up to Ben: a push to his phone, and an email back to whoever forwarded it. */
+/** A heads-up to HR: a push to his phone, and an email back to whoever forwarded it. */
 export async function tellBen(db: DB, it: InboxItem, clientName?: string) {
   const what = it.status === "created" ? (it.made?.projectId ? "Project started" : "Added to your list") : it.status === "private" ? "Saved privately" : it.status === "unsorted" ? "Pick a client" : "Needs your OK";
   const head = `${what}: ${it.title}${clientName ? ` (${clientName})` : ""}`;

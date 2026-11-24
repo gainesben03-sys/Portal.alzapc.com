@@ -1,5 +1,5 @@
 // HR Roadmap settings: setup answers, reminder timing and who gets reminders.
-// Executives at the company and Ben can change them. POST { clientId, settings }.
+// Executives at the company and HR can change them. POST { clientId, settings }.
 // (The roadmap items themselves are projects, saved like any other project.)
 import { NextResponse } from "next/server";
 import type { ClientConfig } from "@/lib/modules";

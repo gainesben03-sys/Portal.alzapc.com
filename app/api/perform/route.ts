@@ -12,7 +12,7 @@
 //   remind { id }                email the manager now
 //   sendSelf { id }              send the employee their self-assessment now
 //   cancel { id }                cancel a review
-//   settings { settings }        save the schedule, templates and who sees what (Ben and review admins)
+//   settings { settings }        save the schedule, templates and who sees what (HR and review admins)
 import { NextResponse } from "next/server";
 import { logUsage, underLimit } from "@/lib/ai";
 import {
@@ -182,7 +182,7 @@ export async function POST(req: Request) {
   if (action === "get") {
     const all = await allReviews(db, clientId);
     const past = all.filter((q) => q.personId === r.personId && q.id !== r.id && ["final", "shared", "done"].includes(q.status)).sort((a, c) => (a.due < c.due ? 1 : -1));
-    // check-in notes: only the person's manager and Ben ever see these
+    // check-in notes: only the person's manager and HR ever see these
     let notes: { date: string; notes: string }[] = [];
     if (role.ben || r.managerEmail === role.email) {
       const { data } = await db.from("checkins").select("data").eq("client_id", clientId);
@@ -220,7 +220,7 @@ export async function POST(req: Request) {
         length: [30, 60, 90].includes(Number(p.pip.length)) ? (Number(p.pip.length) as 30 | 60 | 90) : r.pip!.length,
         checkins: (p.pip.checkins ?? []).slice(0, 8).map((c) => ({ date: /^\d{4}-\d{2}-\d{2}$/.test(String(c.date)) ? c.date : r.pip!.start, note: s(c.note, 1000), done: !!c.done })),
         outcome: s(p.pip.outcome, 1000) || r.pip!.outcome,
-        // only Ben or a review admin can say HR has reviewed the plan
+        // only HR or a review admin can say HR has reviewed the plan
         hrReviewed: role.admin ? !!p.pip.hrReviewed : r.pip!.hrReviewed,
       };
     }

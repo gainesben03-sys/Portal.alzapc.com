@@ -96,8 +96,8 @@ export const discApi = {
     if (LIVE) return post(clientId, "draft", { input, override, issuer });
     await wait(1100);
     const hold = protectedHits(`${input.facts} ${input.witnesses ?? ""}`).map((w) => `The description mentions ${w}.`);
-    if (TERMINATION.test(input.facts)) hold.push("It sounds like termination may be on the table. That goes through Ben.");
-    if (input.personId === "pp1") hold.push("Something on file for this person needs Ben's eyes first.");
+    if (TERMINATION.test(input.facts)) hold.push("It sounds like termination may be on the table. That goes through HR.");
+    if (input.personId === "pp1") hold.push("Something on file for this person needs HR's eyes first.");
     if (hold.length && !override) return { ok: false, reason: "hold", hold };
     return { ok: true, draft: demoDraft(input, issuer, load(clientId).filter((r) => r.personId === input.personId)) };
   },
@@ -105,7 +105,7 @@ export const discApi = {
   async hold(clientId: string, input: DiscInput, by: string): Promise<Res<{ record: DiscRecord }>> {
     if (LIVE) return post(clientId, "hold", { input });
     const now = new Date().toISOString();
-    const rec: DiscRecord = { ...input, id: newDiscId(), clientId, status: "review", hold: ["Waiting on Ben"], ack: "none", createdBy: by, createdAt: now, updatedAt: now };
+    const rec: DiscRecord = { ...input, id: newDiscId(), clientId, status: "review", hold: ["Waiting on HR"], ack: "none", createdBy: by, createdAt: now, updatedAt: now };
     store(clientId, [rec, ...load(clientId)]);
     return { ok: true, record: rec };
   },
@@ -192,14 +192,14 @@ export const discApi = {
 };
 
 export const REASON: Record<string, string> = {
-  setup: "Ben is finishing setup for this. Try again soon.",
+  setup: "HR is finishing setup for this. Try again soon.",
   bad_answer: "The draft came back incomplete. Try again.",
-  limit: "That's today's limit. Try again tomorrow, or email Ben.",
-  no_key: "This isn't switched on yet. Ben is on it.",
-  forbidden: "Only executives and Ben can document issues.",
+  limit: "That's today's limit. Try again tomorrow, or email HR.",
+  no_key: "This isn't switched on yet. HR is on it.",
+  forbidden: "Only executives and HR can document issues.",
   signed_out: "Sign in again to keep going.",
   offline: "Couldn't connect. Check your connection and try again.",
   too_big: "Files can be up to 20 MB.",
-  signed: "This one is signed, so it's locked. Ask Ben if it needs a change.",
+  signed: "This one is signed, so it's locked. Ask HR if it needs a change.",
 };
 export const reasonText = (r: string) => REASON[r] ?? "Something went wrong. Try that again.";

@@ -173,7 +173,7 @@ export default function Login() {
         {LIVE && noAccess ? (
           <>
             <p className="muted" style={{ marginTop: 6 }}>
-              You're signed in as <b>{noAccess}</b>, but this email isn't on a team yet. Ask Ben or your company's admin for an invite, or join with an invite code.
+              You're signed in as <b>{noAccess}</b>, but this email isn't on a team yet. Ask HR or your company's admin for an invite, or join with an invite code.
             </p>
             <button className="btn block" style={{ marginTop: 14 }} onClick={() => setJoining(true)}>I have an invite code</button>
             <button className="btn ghost block" style={{ marginTop: 6 }} onClick={() => signOut()}>Use a different email</button>
@@ -210,7 +210,7 @@ export default function Login() {
               </div>
             </form>
             <p className="tiny muted" style={{ marginTop: 10 }}>
-              Or tap the link in the email, ideally on this device. Once you&apos;re in, you stay signed in here until you sign out. Nothing after a few minutes? Check spam, or ask Ben to confirm your email is on your team.
+              Or tap the link in the email, ideally on this device. Once you&apos;re in, you stay signed in here until you sign out. Nothing after a few minutes? Check spam, or ask HR to confirm your email is on your team.
             </p>
             <div style={{ marginTop: 8 }}>
               <button className="btn ghost sm" onClick={() => { setSent(null); setOtp(""); }}>Use a different email</button>
@@ -285,7 +285,7 @@ export default function Login() {
                 router.push("/console");
               }}
             >
-              {DEMO_SITE ? "See it as Ben (AlzaHR console)" : "View as Ben (AlzaHR console)"}
+              {DEMO_SITE ? "See the HR console" : "View the HR console"}
             </button>
             <button className="btn ghost block tiny" style={{ marginTop: 8 }} onClick={reset}>
               Reset demo data

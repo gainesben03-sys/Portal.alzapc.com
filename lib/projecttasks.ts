@@ -1,9 +1,9 @@
 // Project steps with an owner and a due date become tasks, so they land on that person's list
-// (Ben's "You owe", or a manager's "Needs you") with the usual reminders. Checking one off checks the other.
+// (HR's "You owe", or a manager's "Needs you") with the usual reminders. Checking one off checks the other.
 
-import { Action, ADVISOR, Person, Project } from "./data";
+import { Action, ADVISOR, Person, Project, isAdvisorName } from "./data";
 
-const isBen = (p?: Person) => !!p && (p.name === ADVISOR.name || (!!p.email && !!ADVISOR.email && p.email.toLowerCase() === ADVISOR.email.toLowerCase()));
+const isBen = (p?: Person) => !!p && (isAdvisorName(p.name) || (!!p.email && !!ADVISOR.email && p.email.toLowerCase() === ADVISOR.email.toLowerCase()));
 const newId = () => `a${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
 /**
@@ -73,7 +73,7 @@ export function syncStepTasks(next: Project, prev: Project | undefined, actions:
   function closeOut(i: number) {
     const a = out[i];
     if (a.status === "completed") return;
-    // only Ben can delete; for everyone else the task is closed with a note
+    // only HR can delete; for everyone else the task is closed with a note
     if (by.advisor) out.splice(i, 1);
     else out[i] = { ...a, status: "completed", completedAt: now, history: [...a.history, log("Removed from the project")] };
   }
@@ -104,10 +104,10 @@ export function stepsFromTasks<S extends { projects: Project[]; actions: Action[
   return changed ? { ...s, projects } : s;
 }
 
-/** Who can change a project: Ben always; for a project the client started, an executive or the person who started it. */
+/** Who can change a project: HR always; for a project the client started, an executive or the person who started it. */
 export function canEditProject(p: Project, v: { advisor: boolean; access?: string; email?: string }): boolean {
   if (v.advisor) return true;
-  if (!p.createdBy) return false; // Ben's projects are his to change
+  if (!p.createdBy) return false; // HR's projects are his to change
   if (v.access === "exec") return true;
   return !!p.createdBy?.email && !!v.email && p.createdBy.email.toLowerCase() === v.email.toLowerCase();
 }

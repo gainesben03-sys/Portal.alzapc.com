@@ -220,7 +220,7 @@ function Ritual({ r, lang, token, demo }: { r: PauseRitual; lang: Lang; token: s
   );
 }
 
-/** One nudge per Thrive pillar, tied to the month's theme. The financial one books Ben's partner directly. */
+/** One nudge per Thrive pillar, tied to the month's theme. The financial one books HR's partner directly. */
 function ThriveStrip({ r, lang, token, demo, partner }: { r: PauseRitual; lang: Lang; token: string; demo: boolean; partner: PausePartner }) {
   const t = T[lang];
   const w = wordsFor(r, lang);

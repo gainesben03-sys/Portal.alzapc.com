@@ -6,6 +6,7 @@ import { buddyAskEmail, buddyIntroEmail, ExperienceSettings, HireXp, linkEmail, 
 import { forCompany, Hire, hireCompany, onboardingFor, OnboardingSettings, senderFor } from "./hires";
 import type { ClientConfig } from "./modules";
 import { PORTAL_URL, sendEmail } from "./server";
+import { isAdvisorName } from "./data";
 
 export type XpCtx = { db: SupabaseClient; id: string; clientId: string; h: Hire; company: string; cfg: Partial<ClientConfig>; s: OnboardingSettings; x: ExperienceSettings };
 
@@ -93,7 +94,7 @@ export async function buddyNo(c: XpCtx, by: string): Promise<Hire> {
   if (!b) return c.h;
   const h = await saveXp(c, (xp) => ({ ...xp, buddy: { ...xp.buddy!, status: "no", answeredAt: new Date().toISOString() } }), { by, text: `${b.name} can't be the buddy right now. Pick someone else.` });
   const { sender, hrEmail } = brandAndSender(c);
-  if (hrEmail && by !== "HR")
+  if (hrEmail && !isAdvisorName(by))
     await sendEmail({ to: [hrEmail], subject: `Pick another buddy for ${c.h.name}`, text: `${b.name} can't be ${c.h.name}'s onboarding buddy right now.\n\nPick someone else here:\n${PORTAL_URL}/c/${c.clientId}/hires/${c.id}`, ...sender }).catch(() => undefined);
   return h;
 }

@@ -201,7 +201,7 @@ export async function saveDiff(db: SupabaseClient, prev: State, next: State, me:
     if (me.advisor) for (const item of A) if (!B.some((x) => x.id === item.id)) run(db.from(t).delete().eq("id", item.id));
   }
 
-  // Ben's global content
+  // HR's global content
   if (me.advisor) {
     for (const t of GLOBAL) {
       const A = prev[t] as unknown as { id: string }[];

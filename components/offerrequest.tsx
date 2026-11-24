@@ -74,7 +74,7 @@ export function RequestForm({ token }: { token: string }) {
         <div className="orq-card orq-done">
           <div className="orq-check" aria-hidden="true">✓</div>
           <h1>Sent</h1>
-          <p>{done.approver ? `Your request for ${v.name} went to ${done.approver} to approve. Once it's approved, Ben writes the offer letter and sends it to you to look over before it goes out.` : `Ben has your request for ${v.name}. He'll write the offer letter and send it to you to look over before it goes out.`}</p>
+          <p>{done.approver ? `Your request for ${v.name} went to ${done.approver} to approve. Once it's approved, HR writes the offer letter and sends it to you to look over before it goes out.` : `HR has your request for ${v.name}. He'll write the offer letter and send it to you to look over before it goes out.`}</p>
           <p className="muted small">A copy is on its way to {v.requesterEmail}.</p>
           <button className="btn" onClick={() => { setDone(null); setTried(false); setV({ ...blankRequest(), requester: v.requester, requesterEmail: v.requesterEmail }); }}>Request another offer</button>
         </div>
@@ -86,7 +86,7 @@ export function RequestForm({ token }: { token: string }) {
     <Shell co={co}>
       <div className="orq-card">
         <h1>Request an offer</h1>
-        <p className="muted">Two minutes. {approver ? `It goes to ${approver} to approve, then Ben writes the offer letter.` : "Ben writes the offer letter and sends it back to you to approve before it goes out."}</p>
+        <p className="muted">Two minutes. {approver ? `It goes to ${approver} to approve, then HR writes the offer letter.` : "HR writes the offer letter and sends it back to you to approve before it goes out."}</p>
 
         <h2>You</h2>
         <div className="orq-two">
@@ -141,8 +141,8 @@ export function RequestForm({ token }: { token: string }) {
 
         {tried && problems.length > 0 && <p className="orq-err">Still need: {problems.join(", ")}.</p>}
         {err && <p className="orq-err">{err}</p>}
-        <button className="btn primary block orq-send" disabled={busy} onClick={send}>{busy ? "Sending…" : approver ? `Send to ${approver.split(" ")[0]} to approve` : "Send to Ben"}</button>
-        <p className="tiny muted" style={{ textAlign: "center", marginTop: 10 }}>🔒 Only you, the approver, your executives and Ben see pay.</p>
+        <button className="btn primary block orq-send" disabled={busy} onClick={send}>{busy ? "Sending…" : approver ? `Send to ${approver.split(" ")[0]} to approve` : "Send to HR"}</button>
+        <p className="tiny muted" style={{ textAlign: "center", marginTop: 10 }}>🔒 Only you, the approver, your executives and HR see pay.</p>
       </div>
     </Shell>
   );
@@ -183,7 +183,7 @@ export function ApprovePage({ token }: { token: string }) {
     setBusy(false);
   };
 
-  if (err) return <Shell co={v?.company ?? null}><div className="orq-card"><h1>{err === "expired" ? "This link has expired" : "This link isn't working"}</h1><p className="muted">{err === "offline" ? "Check your connection and try again." : "Reply to the email and Ben will send a fresh one."}</p></div></Shell>;
+  if (err) return <Shell co={v?.company ?? null}><div className="orq-card"><h1>{err === "expired" ? "This link has expired" : "This link isn't working"}</h1><p className="muted">{err === "offline" ? "Check your connection and try again." : "Reply to the email and HR will send a fresh one."}</p></div></Shell>;
   if (!v) return <Shell co={null}><div style={{ minHeight: 300 }} /></Shell>;
   const pre = v.kind === "pre";
   const name = v.rows.find((r) => r[0] === "New hire")?.[1] ?? "";
@@ -194,7 +194,7 @@ export function ApprovePage({ token }: { token: string }) {
         <div className="orq-card orq-done">
           <div className="orq-check" aria-hidden="true">{v.status === "approved" ? "✓" : "↩"}</div>
           <h1>{v.status === "approved" ? "Approved" : "Sent back"}</h1>
-          <p>{v.status === "approved" ? (pre ? `Thanks. Ben will write ${name}'s offer letter next.` : `Thanks. Ben will send the offer to ${v.first} to sign.`) : `Ben has your note${pre && v.requester ? `, and ${v.requester.split(" ")[0]} will hear back` : ""}.`}</p>
+          <p>{v.status === "approved" ? (pre ? `Thanks. HR will write ${name}'s offer letter next.` : `Thanks. HR will send the offer to ${v.first} to sign.`) : `HR has your note${pre && v.requester ? `, and ${v.requester.split(" ")[0]} will hear back` : ""}.`}</p>
           {v.note && <p className="muted small">&ldquo;{v.note}&rdquo;</p>}
         </div>
       </Shell>
@@ -205,7 +205,7 @@ export function ApprovePage({ token }: { token: string }) {
       <div className="orq-card">
         <div className="orq-k">{pre ? "Offer request" : "Offer letter"}</div>
         <h1>{pre ? `Approve an offer for ${name}?` : `Look over ${v.first}'s offer letter`}</h1>
-        <p className="muted">{pre ? `${v.requester || "A hiring manager"} wants to make this offer.` : `Ben wrote it from your request. Once you approve, he sends it to ${v.first} to sign.`}</p>
+        <p className="muted">{pre ? `${v.requester || "A hiring manager"} wants to make this offer.` : `HR wrote it from your request. Once you approve, HR sends it to ${v.first} to sign.`}</p>
         {v.letter && <a className="btn block orq-letter" href={v.letter.url} target="_blank" rel="noreferrer">Open the offer letter · {v.letter.name}</a>}
         <table className="orq-rows"><tbody>{v.rows.map(([k, val]) => <tr key={k}><td>{k}</td><td>{val}</td></tr>)}</tbody></table>
         {mode === "changes" ? (

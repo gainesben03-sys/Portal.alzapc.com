@@ -121,7 +121,7 @@ export interface LeaveSettings {
   remindDays?: number[]; // days before a deadline to remind, e.g. [7, 3, 1, 0]
   returnDays?: number; // remind this many days before an expected return
   followupDays?: number; // flag cases with no activity for this many days
-  notify?: string[]; // extra emails for reminders (HR admins and Ben always get them)
+  notify?: string[]; // extra emails for reminders (HR admins and HR always get them)
   retainYears?: number; // closed cases are flagged for deletion after this many years
 }
 export const DEFAULT_SETTINGS: Required<Omit<LeaveSettings, "categories" | "hidden" | "notify">> = { remindDays: [7, 3, 1, 0], returnDays: 14, followupDays: 21, retainYears: 5 };

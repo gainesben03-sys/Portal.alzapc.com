@@ -1,6 +1,6 @@
 "use client";
 
-// A company's Outbox: executives (and Ben) approve emails before they go out.
+// A company's Outbox: executives (and HR) approve emails before they go out.
 import { useParams } from "next/navigation";
 import { useMemo } from "react";
 import { ClientNav, ClientTopbar, Toast, useGuard, useToast } from "@/components/ui";

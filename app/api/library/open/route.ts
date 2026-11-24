@@ -1,5 +1,5 @@
 // Open a library item (training, guide, template): a short-lived link to the file, or its web link.
-// Ben can open anything; a client's people only what's been shared with their company.
+// HR can open anything; a client's people only what's been shared with their company.
 import { NextResponse } from "next/server";
 import { admin, caller, SERVER_LIVE } from "@/lib/server";
 import { viewKind } from "@/lib/viewkind";

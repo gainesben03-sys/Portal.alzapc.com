@@ -1,5 +1,5 @@
-// Sends an HR Huddle email from the console (Ben only).
-//   mode "test" -> only to Ben
+// Sends an HR Huddle email from the console (HR only).
+//   mode "test" -> only to HR
 //   mode "send" -> to that client's people who have the Huddle turned on
 // The daily job (/api/cron/daily) sends Huddles automatically on schedule.
 import { NextResponse } from "next/server";

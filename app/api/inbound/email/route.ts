@@ -1,5 +1,5 @@
 // Resend calls this when an email arrives at the Alza Hub's inbox address (the "email.received" webhook).
-// Only Ben's own addresses can create work. Anything else is dropped without a trace.
+// Only HR's own addresses can create work. Anything else is dropped without a trace.
 import { NextResponse } from "next/server";
 import { addr, allowedSenders, fetchReceived, htmlToText, intake, passedChecks, tableReady, tellBen, verifySignature } from "@/lib/inboxserver";
 import { admin, SERVER_LIVE } from "@/lib/server";
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
   const db = admin();
   if (!(await tableReady(db))) return NextResponse.json({ ok: false, reason: "setup" }, { status: 503 });
   const from = addr(ev.data.from ?? "");
-  if (!(await allowedSenders(db)).includes(from)) return ok(); // not Ben: ignore quietly
+  if (!(await allowedSenders(db)).includes(from)) return ok(); // not HR: ignore quietly
   // the same email can be delivered twice; skip one already taken in
   const { data: seen } = await db.from("inbox_items").select("id").eq("data->>emailId", ev.data.email_id).maybeSingle();
   if (seen) return ok();

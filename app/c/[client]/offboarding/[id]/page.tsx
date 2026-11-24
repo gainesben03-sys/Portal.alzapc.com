@@ -37,14 +37,14 @@ export default function DeparturePage() {
       <Toast msg={toast.msg} onDone={toast.clear} />
     </div>
   );
-  if (!allowed) return shell(<div className="card section small muted">Offboarding is for executives and Ben.</div>);
+  if (!allowed) return shell(<div className="card section small muted">Offboarding is for executives and HR.</div>);
   const d = list?.find((x) => x.id === id);
   if (!list) return shell(<p className="small muted">Loading…</p>);
   if (!d) return shell(<div className="card section small muted">Not found. <Link href={`/c/${clientId}/offboarding`}>Back to offboarding</Link></div>);
 
   const s = onboardingFor(cfg?.onboarding);
   const o = offboardFor(cfg?.offboarding);
-  const meName = viewer?.kind === "client" ? viewer.person.name : "Ben Gaines";
+  const meName = viewer?.kind === "client" ? viewer.person.name : "HR";
   const log = (text: string) => [...d.history, { at: new Date().toISOString(), by: meName, text }];
   const upd = async (p: Partial<Departure>, msg = "Saved", hist?: string) => {
     const e = await save({ ...d, ...p, history: hist ? log(hist) : p.history ?? d.history });
@@ -123,7 +123,7 @@ export default function DeparturePage() {
               <input className="f" placeholder="Add a step" value={newTask} onChange={(e) => setNewTask(e.target.value)} />
               <button className="btn sm" disabled={!newTask.trim()} onClick={async () => { await upd({ tasks: [...d.tasks, { id: `t${Date.now().toString(36)}`, title: newTask.trim().slice(0, 140), group: "before", due: d.lastDay, done: false }] }, "Added"); setNewTask(""); }}>Add</button>
             </div>
-            <p className="tiny muted">California reminders are there to check, not legal advice. Ask Ben if a situation is unclear.</p>
+            <p className="tiny muted">California reminders are there to check, not legal advice. Ask HR if a situation is unclear.</p>
           </div>
 
           <div className="card section">
@@ -132,7 +132,7 @@ export default function DeparturePage() {
               <p className="small muted">The exit survey is off. Turn it on under Email &amp; checklist.</p>
             ) : d.survey?.doneAt ? (
               <>
-                <p className="small muted" style={{ marginTop: 0 }}>Completed {fmtTime(d.survey.doneAt)}. Only executives and Ben can see this.</p>
+                <p className="small muted" style={{ marginTop: 0 }}>Completed {fmtTime(d.survey.doneAt)}. Only executives and HR can see this.</p>
                 {(d.survey.answers ?? []).map((a) => (
                   <div key={a.q} className="ob-ans">
                     <span className="lv-sub">{a.q}</span>

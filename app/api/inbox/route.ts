@@ -1,4 +1,4 @@
-// Ben's email inbox: what came in by forward or paste, and what it became. Advisors only.
+// HR's email inbox: what came in by forward or paste, and what it became. Advisors only.
 // POST { action, ... }:
 //   list                               everything, newest first
 //   paste { subject, text, clientId? } run an email through the same steps as a forward

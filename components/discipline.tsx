@@ -11,11 +11,11 @@ import type { TeamMember } from "@/lib/team";
 
 // ---------- shared bits ----------
 
-/** Executives at the company and Ben. Nobody else sees discipline records. */
+/** Executives at the company and HR. Nobody else sees discipline records. */
 export function useDiscAccess() {
   const { me, viewer } = useStore();
   const isBen = viewer?.kind === "advisor";
-  return { ok: isBen || me?.access === "exec", isBen, name: isBen ? "Ben Gaines" : me?.name ?? "" };
+  return { ok: isBen || me?.access === "exec", isBen, name: isBen ? "HR" : me?.name ?? "" };
 }
 
 const first = (n: string) => n.trim().split(/\s+/)[0] || n;
@@ -98,7 +98,7 @@ p{margin:0 0 6px}blockquote{margin:6px 0;padding:8px 12px;background:#f6f3ec;fon
 }
 
 export function AckPill({ r }: { r: DiscRecord }) {
-  if (r.status === "review") return <span className="pill amber">With Ben</span>;
+  if (r.status === "review") return <span className="pill amber">With HR</span>;
   if (r.ack === "pending") return <span className="pill amber">Needs signature</span>;
   if (r.ack === "signed") return <span className="pill green">Signed</span>;
   if (r.ack === "declined") return <span className="pill later">Declined to sign</span>;
@@ -163,14 +163,14 @@ export function NewIssue({ clientId, people, records, levels, start, onDrafted, 
   if (hold)
     return (
       <div className="card dc-hold">
-        <b className="dc-hold-h">Let&apos;s have Ben look at this first</b>
+        <b className="dc-hold-h">Let&apos;s have HR look at this first</b>
         <p className="small" style={{ margin: "6px 0 10px" }}>Before anything goes in writing, we check for things the law protects. Disciplining someone soon after one of these can look like retaliation, even when it isn&apos;t.</p>
         <ul className="small dc-hold-list">{hold.map((h) => <li key={h}>{h}</li>)}</ul>
         <div className="dc-actions-row">
-          <button className="btn primary" disabled={busy} onClick={sendBen}>{busy ? "Sending..." : "Send to Ben"}</button>
+          <button className="btn primary" disabled={busy} onClick={sendBen}>{busy ? "Sending..." : "Send to HR"}</button>
           <button className="btn" onClick={() => setHold(null)}>Edit the description</button>
         </div>
-        <p className="tiny muted" style={{ margin: "10px 0 0" }}>Ben gets a heads-up with no details in the email. He&apos;ll open it in the Alza Hub and get back to you.</p>
+        <p className="tiny muted" style={{ margin: "10px 0 0" }}>HR gets a heads-up with no details in the email. They&apos;ll open it in the Alza Hub and get back to you.</p>
       </div>
     );
 
@@ -219,7 +219,7 @@ export function NewIssue({ clientId, people, records, levels, start, onDrafted, 
           )}
           {(flags.length > 0 || firing) && (
             <div className="dc-flag blue">
-              {firing ? "Termination goes through Ben, not here." : `This mentions ${flags.join(" and ")}. It will go to Ben before anything is drafted.`}
+              {firing ? "Termination goes through HR, not here." : `This mentions ${flags.join(" and ")}. It will go to HR before anything is drafted.`}
             </div>
           )}
         </div>
@@ -285,8 +285,8 @@ export function NewIssue({ clientId, people, records, levels, start, onDrafted, 
           <ul className="tiny">
             <li>You choose the level. We word it, format it and quote your handbook.</li>
             <li>Opinions are left out, so it holds up.</li>
-            <li>We check first for complaints, leave, accommodations, injuries and reports. If one turns up, it goes to Ben.</li>
-            <li>Private to executives and Ben.</li>
+            <li>We check first for complaints, leave, accommodations, injuries and reports. If one turns up, it goes to HR.</li>
+            <li>Private to executives and HR.</li>
           </ul>
         </div>
       </aside>
@@ -300,7 +300,7 @@ const CHANGES: [string, string][] = [["shorter", "Shorter"], ["warmer", "Warmer"
 
 export function DraftView({ clientId, input, draft, saved, recordId, onSaved, toast }: {
   clientId: string;
-  recordId?: string; // a held record Ben cleared: saving fills it in
+  recordId?: string; // a held record HR cleared: saving fills it in
 
   input: DiscInput;
   draft: DiscDraft;
@@ -352,7 +352,7 @@ export function DraftView({ clientId, input, draft, saved, recordId, onSaved, to
     const rec = dirty ? await save() : saved!;
     if (!rec) return;
     const r = await discApi.ben(clientId, rec.id);
-    toast(r.ok ? "Sent to Ben. He'll take a look." : reasonText(r.reason));
+    toast(r.ok ? "Sent to HR. They'll take a look." : reasonText(r.reason));
   };
   const ack = async (a: DiscRecord["ack"]) => {
     if (!saved) return;
@@ -456,17 +456,17 @@ export function DraftView({ clientId, input, draft, saved, recordId, onSaved, to
             <button className="btn" onClick={() => printPdf(title, body, { img: letterhead, logo: client?.logo, name: client?.name })}>PDF</button>
           </div>
           {input.format === "email" && <button className="btn" onClick={() => navigator.clipboard?.writeText(body.replace(/^#.*\n+/, "").replace(/\*\*/g, "")).then(() => toast("Email copied"), () => toast("Couldn't copy"))}>Copy email text</button>}
-          {!acc.isBen && <button className="btn ghost sm" onClick={ben}>Ask Ben to look it over</button>}
-          <span className="tiny muted">Private to executives and Ben. {name} never sees this in the Alza Hub.</span>
+          {!acc.isBen && <button className="btn ghost sm" onClick={ben}>Ask HR to look it over</button>}
+          <span className="tiny muted">Private to executives and HR. {name} never sees this in the Alza Hub.</span>
         </div>
 
-        {!saved && <p className="tiny muted dc-term">Thinking about termination? Don&apos;t use this. Email Ben and he&apos;ll take it from there.</p>}
+        {!saved && <p className="tiny muted dc-term">Thinking about termination? Don&apos;t use this. Email HR and they&apos;ll take it from there.</p>}
       </aside>
     </div>
   );
 }
 
-/** Ben's view of something the fairness check paused. */
+/** HR's view of something the fairness check paused. */
 export function HeldView({ clientId, r, onDrafted, toast }: { clientId: string; r: DiscRecord; onDrafted: (input: DiscInput, draft: DiscDraft) => void; toast: (m: string) => void }) {
   const acc = useDiscAccess();
   const [busy, setBusy] = useState(false);
@@ -490,7 +490,7 @@ export function HeldView({ clientId, r, onDrafted, toast }: { clientId: string; 
               if (x.ok) onDrafted(r, x.draft); else toast(reasonText(x.reason));
             }}>{busy ? "Drafting..." : "Cleared. Draft it"}</button>
           ) : (
-            <p className="tiny muted" style={{ margin: 0 }}>Ben has it. He&apos;ll get back to you before anything goes in writing.</p>
+            <p className="tiny muted" style={{ margin: 0 }}>HR has it. They&apos;ll get back to you before anything goes in writing.</p>
           )}
         </div>
       </aside>
@@ -518,7 +518,7 @@ export function RecordRows({ records, showPerson, empty }: { records: DiscRecord
   );
 }
 
-/** The Documentation section on a person's page. Executives and Ben only. */
+/** The Documentation section on a person's page. Executives and HR only. */
 export function PersonDocs({ clientId, person }: { clientId: string; person: TeamMember }) {
   const acc = useDiscAccess();
   const [rs, setRs] = useState<DiscRecord[] | null>(null);
@@ -534,7 +534,7 @@ export function PersonDocs({ clientId, person }: { clientId: string; person: Tea
         <h2>Documentation</h2>
         <Link href={`${base}?person=${person.id}`} className="btn sm">Document an issue</Link>
       </div>
-      <p className="tiny muted" style={{ marginTop: -4 }}>🔒 Executives and Ben only. Not {first(person.name)}, and not their manager.</p>
+      <p className="tiny muted" style={{ marginTop: -4 }}>🔒 Executives and HR only. Not {first(person.name)}, and not their manager.</p>
       {rs === null ? <div className="card small muted">Loading...</div> : (
         rs.length === 0 ? <div className="card small muted">Nothing on file.</div> : (
           <div className="card dc-rows">

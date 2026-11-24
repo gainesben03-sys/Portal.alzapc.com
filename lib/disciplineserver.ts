@@ -33,7 +33,7 @@ export async function saveRecord(db: DB, r: DiscRecord) {
 export async function fairness(db: DB, clientId: string, input: DiscInput): Promise<{ hold: string[]; shown: string[] }> {
   const text = `${input.facts}\n${input.witnesses ?? ""}`;
   const shown = protectedHits(text).map((w) => `The description mentions ${w}.`);
-  if (TERMINATION.test(text)) shown.push("It sounds like termination may be on the table. That goes through Ben.");
+  if (TERMINATION.test(text)) shown.push("It sounds like termination may be on the table. That goes through HR.");
   const hold = [...shown];
   const since = monthsAgo(FAIRNESS_MONTHS);
   const { data: leaves } = await db.from("leave_cases").select("data, created_at").eq("client_id", clientId).gte("created_at", since + "T00:00:00Z").limit(500);
@@ -44,7 +44,7 @@ export async function fairness(db: DB, clientId: string, input: DiscInput): Prom
   });
   if (onLeave) {
     hold.push(`Leave center: a case for this person in the last ${FAIRNESS_MONTHS} months.`);
-    shown.push("Something on file for this person needs Ben's eyes first.");
+    shown.push("Something on file for this person needs HR's eyes first.");
   }
   return { hold, shown };
 }

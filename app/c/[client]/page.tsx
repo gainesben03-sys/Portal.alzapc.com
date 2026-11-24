@@ -18,7 +18,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { ClientNav, ClientTopbar, Sheet, Toast, UrgencyPill, useGuard, useToast } from "@/components/ui";
-import { ADVISOR, fmt, fmtTime, ownsOpenWork, parseDay, projectProgress, today, urgency } from "@/lib/data";
+import { ADVISOR, fmt, fmtTime, ownsOpenWork, parseDay, projectProgress, today, urgency, isAdvisorName } from "@/lib/data";
 import { canSee, daysSince, DEFAULT_TILES, Note, TILES } from "@/lib/modules";
 import { isRoadmap } from "@/lib/roadmap";
 import { RoadmapTile } from "@/components/roadmap";
@@ -96,7 +96,7 @@ export default function Home() {
   const forMe = meName ? openClient.filter((a) => a.owner.name === meName) : openClient;
   const overdue = openClient.filter((a) => ["overdue", "blocker"].includes(urgency(a, rules)));
   const dueToday = openClient.filter((a) => urgency(a, rules) === "today");
-  const firstName = meName?.split(" ")[0] ?? "Ben";
+  const firstName = meName?.split(" ")[0] ?? "HR";
 
   const sendChat = async () => {
     const text = msg.trim();
@@ -107,7 +107,7 @@ export default function Home() {
     const sent = isAdvisor ? false : await notifyBen(`${client.name}: message from ${author.name}`, `${author.name} (${author.role}) wrote:\n\n${text}\n\nReply: https://portal.alzapc.com/console/board`);
     patch({ notes: [{ ...n, emailed: sent }, ...notes] });
     if (!isAdvisor) notice({ clientId: client.id, kind: "note", text: `${author.name} sent a message`, href: "/console/board" });
-    toast.show(isAdvisor ? "Posted" : "Sent to Ben");
+    toast.show(isAdvisor ? "Posted" : "Sent to HR");
   };
 
   const tiles: Record<string, () => ReactNode> = {
@@ -128,7 +128,7 @@ export default function Home() {
               </Link>
               <UrgencyPill a={a} />
               {a.kind === "approval" && !a.subtasks?.some((x) => !x.done) && !isAdvisor && (
-                <button className="btn sm primary" onClick={() => { update(a.id, { status: "completed" }, "Approved"); toast.show("Approved. Ben has been notified."); }}>Approve</button>
+                <button className="btn sm primary" onClick={() => { update(a.id, { status: "completed" }, "Approved"); toast.show("Approved. HR has been notified."); }}>Approve</button>
               )}
             </div>
           ))}
@@ -137,9 +137,9 @@ export default function Home() {
       );
     },
     schedule: () => (
-      <Tile title="Ask Ben" tone="accent">
-        <p className="small" style={{ marginBottom: 12 }}>A document, a question, an employee situation: send it here and it&apos;s on Ben&apos;s list.</p>
-        <button className="btn primary block" disabled={isAdvisor} onClick={() => { setAskKind(undefined); setAsking(true); }}>Ask Ben for something</button>
+      <Tile title="Need something?" tone="accent">
+        <p className="small" style={{ marginBottom: 12 }}>A document, a question, an employee situation: send it here and it&apos;s on HR&apos;s list.</p>
+        <button className="btn primary block" disabled={isAdvisor} onClick={() => { setAskKind(undefined); setAsking(true); }}>Send a request to HR</button>
         {bookingUrl ? (
           <a className="btn block" style={{ marginTop: 8 }} href={bookingUrl} target="_blank" rel="noopener noreferrer">Book a call</a>
         ) : (
@@ -187,22 +187,22 @@ export default function Home() {
     chat: () => {
       const feed = notes
         .filter((n) => n.clientId === client.id)
-        .flatMap((n) => [{ by: n.author.name, text: n.text, at: n.at, ben: n.author.name === ADVISOR.name }, ...n.replies.map((r) => ({ by: r.by, text: r.text, at: r.at, ben: r.by === ADVISOR.name }))])
+        .flatMap((n) => [{ by: n.author.name, text: n.text, at: n.at, ben: isAdvisorName(n.author.name) }, ...n.replies.map((r) => ({ by: r.by, text: r.text, at: r.at, ben: r.by === ADVISOR.name }))])
         .sort((a, b) => a.at.localeCompare(b.at))
         .slice(-3);
       return (
-        <Tile title="Chat with Ben" href={`${base}/board`} linkLabel="Open board">
+        <Tile title="Chat with HR" href={`${base}/board`} linkLabel="Open board">
           <div className="chat">
             {feed.length === 0 && <p className="small muted">No messages yet. Say hi.</p>}
             {feed.map((m, i) => (
               <div key={i} className={`bubble ${m.ben ? "ben" : "them"}`}>
                 <div>{m.text}</div>
-                <div className="tiny muted">{m.ben ? "Ben" : m.by.split(" ")[0]} · {fmtTime(m.at)}</div>
+                <div className="tiny muted">{m.ben ? "HR" : m.by.split(" ")[0]} · {fmtTime(m.at)}</div>
               </div>
             ))}
           </div>
           <form style={{ display: "flex", gap: 8, marginTop: 10 }} onSubmit={(e) => { e.preventDefault(); sendChat(); }}>
-            <input className="f" placeholder="Message Ben" value={msg} onChange={(e) => setMsg(e.target.value)} />
+            <input className="f" placeholder="Message HR" value={msg} onChange={(e) => setMsg(e.target.value)} />
             <button className="btn primary" disabled={!msg.trim()}>Send</button>
           </form>
         </Tile>
@@ -221,7 +221,7 @@ export default function Home() {
           <p className="small muted" style={{ marginBottom: 10 }}>Send documents securely. No email attachments.</p>
           {reqs.slice(0, 2).map((r) => (
             <Link href={`${base}/share`} className="row" key={r.id}>
-              <div className="grow ellipsis small"><b>Ben asked for:</b> {r.title}</div>
+              <div className="grow ellipsis small"><b>HR asked for:</b> {r.title}</div>
               <span className="tiny muted">{fmt(r.due)}</span>
             </Link>
           ))}
@@ -433,7 +433,7 @@ export default function Home() {
           const sent = isAdvisor ? false : await notifyBen(`${client.name}: ${kind === "referral" ? "an introduction" : "a hiring need"} from ${author.name}`, `${author.name} (${author.role}) at ${client.name}:\n\n${text}`);
           patch({ notes: [{ ...n, emailed: sent }, ...notes] });
           if (!isAdvisor) notice({ clientId: client.id, kind: "note", text: `${author.name} ${kind === "referral" ? "sent an introduction" : "mentioned a hiring need"}`, href: "/console/board" });
-          toast.show(kind === "referral" ? "Thank you. Ben will take it from here." : "Sent. Ben will follow up.");
+          toast.show(kind === "referral" ? "Thank you. HR will take it from here." : "Sent. HR will follow up.");
         }} />}
         {!DEMO_SITE && <p className="demo-note">Fictional sample data for the prototype.</p>}
         {!isAdvisor && !DEMO_SITE && <ContactBenLine />}
@@ -586,34 +586,34 @@ function QuietAsks({ clientName, recruitingOn, onSend }: { clientName: string; r
     <>
       <div className="quiet">
         <div>
-          Know a company that could use a hand with HR? Introductions from people like you are how most of Ben's work starts.{" "}
+          Know a company that could use a hand with HR? Introductions from people like you are how most of our work starts.{" "}
           <button onClick={() => setOpen("referral")}>Make an intro</button>
         </div>
         {!recruitingOn && (
           <div>
-            Hiring soon? Ben can run the search too.{" "}
-            <button onClick={() => setOpen("hiring")}>Tell him about the role</button>
+            Hiring soon? We can run the search too.{" "}
+            <button onClick={() => setOpen("hiring")}>Tell us about the role</button>
           </div>
         )}
       </div>
       {open === "referral" && (
         <Sheet title="Make an introduction" onClose={close}>
-          <p className="small muted" style={{ marginTop: -4 }}>No pressure on them. Ben will reach out once, mention you, and keep it low key.</p>
+          <p className="small muted" style={{ marginTop: -4 }}>No pressure on them. We&apos;ll reach out once, mention you, and keep it low key.</p>
           <label className="f">Their name and company</label>
           <input className="f" value={a} onChange={(e) => setA(e.target.value)} placeholder="Jordan at Northwind Studio" />
           <label className="f">Best way to reach them (optional)</label>
           <input className="f" value={b} onChange={(e) => setB(e.target.value)} placeholder="Email or phone, or say you'll connect us" />
-          <label className="f">Anything Ben should know (optional)</label>
+          <label className="f">Anything HR should know (optional)</label>
           <textarea className="f" value={c} onChange={(e) => setC(e.target.value)} placeholder="Growing fast, no HR person yet" />
           <div className="sheet-actions">
             <button className="btn" onClick={close}>Cancel</button>
-            <button className="btn primary" disabled={!a.trim()} onClick={() => { onSend("referral", `Introduction: ${a.trim()}${b.trim() ? `\nReach: ${b.trim()}` : ""}${c.trim() ? `\nContext: ${c.trim()}` : ""}`); close(); }}>Send to Ben</button>
+            <button className="btn primary" disabled={!a.trim()} onClick={() => { onSend("referral", `Introduction: ${a.trim()}${b.trim() ? `\nReach: ${b.trim()}` : ""}${c.trim() ? `\nContext: ${c.trim()}` : ""}`); close(); }}>Send to HR</button>
           </div>
         </Sheet>
       )}
       {open === "hiring" && (
-        <Sheet title="Tell Ben about the role" onClose={close}>
-          <p className="small muted" style={{ marginTop: -4 }}>Just the basics. Ben will follow up with how a search would work for {clientName}.</p>
+        <Sheet title="Tell HR about the role" onClose={close}>
+          <p className="small muted" style={{ marginTop: -4 }}>Just the basics. HR will follow up with how a search would work for {clientName}.</p>
           <label className="f">Role</label>
           <input className="f" value={a} onChange={(e) => setA(e.target.value)} placeholder="Senior Producer" />
           <label className="f">When do you want them started?</label>
@@ -622,7 +622,7 @@ function QuietAsks({ clientName, recruitingOn, onSend }: { clientName: string; r
           <textarea className="f" value={c} onChange={(e) => setC(e.target.value)} />
           <div className="sheet-actions">
             <button className="btn" onClick={close}>Cancel</button>
-            <button className="btn primary" disabled={!a.trim()} onClick={() => { onSend("hiring", `Hiring need: ${a.trim()}${b.trim() ? `\nTiming: ${b.trim()}` : ""}${c.trim() ? `\nNotes: ${c.trim()}` : ""}`); close(); }}>Send to Ben</button>
+            <button className="btn primary" disabled={!a.trim()} onClick={() => { onSend("hiring", `Hiring need: ${a.trim()}${b.trim() ? `\nTiming: ${b.trim()}` : ""}${c.trim() ? `\nNotes: ${c.trim()}` : ""}`); close(); }}>Send to HR</button>
           </div>
         </Sheet>
       )}

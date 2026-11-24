@@ -176,7 +176,7 @@ export function ThemeToggle() {
 export function Bell() {
   const { notices, patch, getClient } = useStore();
   const [open, setOpen] = useState(false);
-  // the number counts only what needs Ben to do something; plain updates just get a dot
+  // the number counts only what needs HR to do something; plain updates just get a dot
   const ACT = ["request", "extension", "revision", "upload", "pitch", "note"];
   const needs = notices.filter((n) => !n.read && ACT.includes(n.kind)).length;
   const fyi = notices.filter((n) => !n.read && !ACT.includes(n.kind)).length;
@@ -357,7 +357,7 @@ export function ClientNav({ clientId }: { clientId: string }) {
     // Our Properties: its own tab when the module is on
     ...(cfg?.modules.properties && access !== "hiring" ? [{ key: "properties", label: "Our Properties", subs: [{ href: `${base}/properties`, label: "Our Properties", match: [`${base}/properties`] }] }] : []),
     {
-      // Manager Hub: anyone who has people reporting to them on the roster (Ben sees it when there's a roster)
+      // Manager Hub: anyone who has people reporting to them on the roster (HR sees it when there's a roster)
       key: "hub",
       label: "Team Hub",
       subs: [

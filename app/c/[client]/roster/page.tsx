@@ -1,6 +1,6 @@
 "use client";
 
-// The company's roster for executives (and Ben): who's here, who reports to whom, and departments.
+// The company's roster for executives (and HR): who's here, who reports to whom, and departments.
 import { useParams } from "next/navigation";
 import { ClientNav, ClientTopbar, Toast, useGuard, useToast } from "@/components/ui";
 import { RosterCard } from "@/components/roster";
@@ -23,7 +23,7 @@ export default function RosterPage() {
         <h1>Roster</h1>
         <p className="muted" style={{ marginTop: 6, marginBottom: 14 }}>Everyone at {client.name}, who they report to, and their department. Reviews, reminders and celebrations all use this list.</p>
         {allowed ? <RosterCard clientId={client.id} onToast={toast.show} limited={!advisor} /> : <div className="card small muted">The roster is for executives.</div>}
-        {allowed && !advisor && <p className="tiny muted" style={{ marginTop: 10 }}>To upload a full payroll file or remove someone, ask Ben.</p>}
+        {allowed && !advisor && <p className="tiny muted" style={{ marginTop: 10 }}>To upload a full payroll file or remove someone, ask HR.</p>}
       </main>
       <Toast msg={toast.msg} onDone={toast.clear} />
     </div>

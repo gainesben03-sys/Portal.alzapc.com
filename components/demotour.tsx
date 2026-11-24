@@ -73,7 +73,7 @@ export function DemoTour() {
           <button className="btn gold block" onClick={() => writeTour(null)}>Start playing</button>
           <div className="dt-row">
             <button className="btn block" onClick={() => { writeTour(null); router.push("/"); }}>See another view</button>
-            <a className="btn ghost block" href={CALENDLY} target="_blank" rel="noreferrer">Book a call with Ben</a>
+            <a className="btn ghost block" href={CALENDLY} target="_blank" rel="noreferrer">Book a call with HR</a>
           </div>
         </div>
       </div>

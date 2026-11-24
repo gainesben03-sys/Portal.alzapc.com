@@ -50,7 +50,7 @@ export default function Recruiting() {
         setOutside(m);
       });
   }, [ok, clientId]);
-  // AI resume summaries: write any that are missing when Ben or an executive opens the page
+  // AI resume summaries: write any that are missing when HR or an executive opens the page
   const [filter, setFilter] = useState<Record<string, string>>({});
   const [briefing, setBriefing] = useState("");
   const candRef = useRef(candidates);
@@ -132,7 +132,7 @@ export default function Recruiting() {
       `${client.name}: ${who.split(" ")[0]} ${said} ${c.name} (${role.title})`,
       `${who} ${said} ${c.name} for ${role.title}.${note ? `\n\nNote: ${note}` : ""}\n\n${typeof window !== "undefined" ? window.location.origin : ""}/c/${client.id}/recruiting`
     );
-    toast.show(`${DECISION_LABEL[decision] === "Yes" || DECISION_LABEL[decision] === "No" ? `${DECISION_LABEL[decision]} on ${first}` : "Saved"}.${sent ? " Ben's been told." : ""}`);
+    toast.show(`${DECISION_LABEL[decision] === "Yes" || DECISION_LABEL[decision] === "No" ? `${DECISION_LABEL[decision]} on ${first}` : "Saved"}.${sent ? " HR's been told." : ""}`);
   };
 
   return (
@@ -146,7 +146,7 @@ export default function Recruiting() {
         </div>
         {briefing && <div className="cc-status small">{briefing}</div>}
         {myRoles.length === 0 && (
-          <div className="card section small muted">No open roles yet.{canEdit ? " Add one with New role" + (cfg?.videoScreening ? ", then create a pitch link to share with candidates." : ".") : " Ben adds roles here when a search starts."}</div>
+          <div className="card section small muted">No open roles yet.{canEdit ? " Add one with New role" + (cfg?.videoScreening ? ", then create a pitch link to share with candidates." : ".") : " HR adds roles here when a search starts."}</div>
         )}
         {myRoles.map((role) => {
           const all = candidates.filter((c) => c.roleId === role.id);
@@ -154,7 +154,7 @@ export default function Recruiting() {
           const clearedCount = all.filter((c) => c.cleared).length;
           const list = all
             .filter((c) => (c.cleared ? isAdvisor && showCleared[role.id] : true))
-            // after the cutoff, the no's drop off the client's list; Ben still sees them until he clears them
+            // after the cutoff, the no's drop off the client's list; HR still sees them until he clears them
             .filter((c) => isAdvisor || !(closed && c.decision === "pass"))
             .filter((c) => !c.hidden || (isAdvisor && c.screened !== "passed") || (isAdvisor && showPassed[role.id]));
           const toScreen = all.filter((c) => c.hidden && !c.screened).length;
@@ -427,7 +427,7 @@ function FeedbackSheet({
           </button>
         ))}
       </div>
-      <label className="f">A note for Ben (optional)</label>
+      <label className="f">A note for HR (optional)</label>
       <textarea className="f" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Strong on budgets, want to check references" />
       <div className="sheet-actions">
         <button className="btn" onClick={onClose}>Cancel</button>

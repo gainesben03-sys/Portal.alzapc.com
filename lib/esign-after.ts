@@ -27,7 +27,7 @@ async function run(
   row: SigRow,
   o: { name: string; now: string; path: string; fileId: string; fileName: string; size: number; pdf: Uint8Array }
 ) {
-  // the signed PDF in Files (shows in Ben's inbox, and executives can open it)
+  // the signed PDF in Files (shows in HR's inbox, and executives can open it)
   await db.from("files").insert({
     id: o.fileId,
     client_id: c.client.id,
@@ -63,7 +63,7 @@ async function run(
   }
   await saveHire(db, h);
 
-  // copy to the signer, heads-up to Ben
+  // copy to the signer, heads-up to HR
   const m = signedCopyEmail(h, row.title, c.s, c.brand);
   await sendEmail({ to: [row.signer_email], subject: m.subject, html: m.html, text: m.text, ...c.sender, attachments: [{ filename: o.fileName, content: Buffer.from(o.pdf).toString("base64") }] });
   await notify(db, c, h, `${h.name} signed the ${row.title.toLowerCase()}`, `Signed as "${o.name}". The signed PDF is in Files and on the hire.`);

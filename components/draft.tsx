@@ -9,7 +9,7 @@ export type DraftMode = "reply" | "document" | "hire_doc";
 const REASONS: Record<string, string> = {
   no_key: "Drafting is off. Add ANTHROPIC_API_KEY in Vercel and redeploy to turn it on.",
   demo: "Drafting works once the Alza Hub is connected to Supabase.",
-  forbidden: "Only Ben can draft with Claude.",
+  forbidden: "Only HR can draft with Claude.",
   api_401: "The Anthropic API key was rejected. Check ANTHROPIC_API_KEY in Vercel.",
   api_400: "Claude couldn't take that request. Try shorter instructions.",
   api_429: "Claude is rate limited right now. Try again in a minute.",
@@ -36,7 +36,7 @@ async function requestDraft(body: Record<string, unknown>): Promise<{ draft: str
 const TWEAKS = ["Shorter", "Warmer", "More formal", "Simpler words"];
 
 /**
- * Claude drafts, Ben edits and approves. Nothing is sent or shared until Ben taps the primary button.
+ * Claude drafts, HR edits and approves. Nothing is sent or shared until HR taps the primary button.
  */
 export function DraftPanel({
   clientId,

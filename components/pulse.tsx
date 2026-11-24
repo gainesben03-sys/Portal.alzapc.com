@@ -25,7 +25,7 @@ export function usePulse() {
   const client = getClient(clientId);
   const cfg = config[clientId];
   const toast = useToast();
-  const demo = useMemo(() => ({ people, me: viewer?.kind === "client" ? me?.name || "HR" : "Ben" }), [people, viewer, me]);
+  const demo = useMemo(() => ({ people, me: viewer?.kind === "client" ? me?.name || "HR" : "HR" }), [people, viewer, me]);
   const call: Call = useCallback((body) => pulseApi(clientId, body, demo), [clientId, demo]);
   const [surveys, setSurveys] = useState<Survey[] | null>(null);
   const [err, setErr] = useState("");

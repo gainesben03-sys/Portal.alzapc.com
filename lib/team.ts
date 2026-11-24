@@ -1,5 +1,5 @@
 // Manager Hub: each client's team roster, and the check-ins and recognition managers log.
-// Check-in notes and recognition are documentation: only Ben and that person's manager can read them
+// Check-in notes and recognition are documentation: only HR and that person's manager can read them
 // (enforced by the database rules in supabase/009_manager_hub.sql, not just the screens).
 
 export interface TeamMember {
@@ -35,7 +35,7 @@ export interface TeamLog {
   id: string;
   clientId: string;
   personId: string;
-  managerEmail: string; // lowercase: who can see it, besides Ben
+  managerEmail: string; // lowercase: who can see it, besides HR
   kind: "checkin" | "recognition";
   date: string; // yyyy-mm-dd
   notes: string;

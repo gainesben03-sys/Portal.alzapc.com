@@ -57,7 +57,7 @@ export default function Tasks() {
             <button className="btn primary sm" onClick={() => setCreating(true)}>New request</button>
           ) : (
             <span style={{ display: "inline-flex", gap: 8 }}>
-              <button className="btn sm" onClick={() => setAsking(true)}>Ask Ben</button>
+              <button className="btn sm" onClick={() => setAsking(true)}>New request</button>
               <button className="btn primary sm" onClick={() => setTodo(true)}>Add a to-do</button>
             </span>
           )}
@@ -84,7 +84,7 @@ export default function Tasks() {
                   className="btn sm primary"
                   onClick={() => {
                     update(a.id, { status: "completed" }, "Approved");
-                    toast.show("Approved. Ben has been notified.");
+                    toast.show("Approved. HR has been notified.");
                   }}
                 >
                   Approve
@@ -99,7 +99,7 @@ export default function Tasks() {
         <p className="demo-note">Fictional sample data for the prototype.</p>
       </main>
       {creating && <NewTaskSheet clientId={client.id} onClose={() => setCreating(false)} onCreated={(m) => { setCreating(false); toast.show(m); }} />}
-      {todo && <TodoSheet clientId={client.id} onClose={() => setTodo(false)} onDone={(m) => { setTodo(false); setTab(m.startsWith("Added to your") ? "you" : m.startsWith("Sent to Ben") ? "alza" : "team"); toast.show(m); }} />}
+      {todo && <TodoSheet clientId={client.id} onClose={() => setTodo(false)} onDone={(m) => { setTodo(false); setTab(m.startsWith("Added to your") ? "you" : m.startsWith("Sent to HR") ? "alza" : "team"); toast.show(m); }} />}
       {asking && <AskBenSheet clientId={client.id} onClose={() => setAsking(false)} onDone={(m) => { setAsking(false); setTab("alza"); toast.show(m); }} />}
       <Toast msg={toast.msg} onDone={toast.clear} />
     </div>

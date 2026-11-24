@@ -59,7 +59,7 @@ export function NewsletterFrame({ html, frameRef, editable, title = "Email" }: {
       className="nl-iframe"
       title={title}
       srcDoc={withFit(html)}
-      // no scripts ever run inside; same-origin only so the page can size it (and edit it, for Ben)
+      // no scripts ever run inside; same-origin only so the page can size it (and edit it, for HR)
       sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
       data-editable={editable ? "1" : undefined}
     />

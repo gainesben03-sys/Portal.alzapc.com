@@ -1,16 +1,16 @@
-// Discipline documentation. Executives at the company and Ben only.
+// Discipline documentation. Executives at the company and HR only.
 // POST { clientId, action, ... }:
 //   list { personId? }                 records, newest first
-//   draft { input, override? }         fairness check, then the draft (override: Ben only, after a hold)
-//   hold { input }                     save the facts for Ben when the check stops the draft
+//   draft { input, override? }         fairness check, then the draft (override: HR only, after a hold)
+//   hold { input }                     save the facts for HR when the check stops the draft
 //   revise { body, how }               shorter | warmer | formal | free text
 //   spanish { body }
 //   save { record }                    create or update a record
 //   ack { id, ack }                    pending | signed | declined | none
 //   upload { id, fileName }            a one-time link to upload the signed copy
 //   file { id }                        a short-lived link to the signed copy
-//   ben { id }                         ask Ben to look (email, no details in it)
-//   delete { id }                      Ben only
+//   ben { id }                         ask HR to look (email, no details in it)
+//   delete { id }                      HR only
 import { NextResponse } from "next/server";
 import { ClientConfig } from "@/lib/modules";
 import { cleanDraft, cleanInput, DiscRecord, discFor, newDiscId } from "@/lib/discipline";
@@ -141,7 +141,7 @@ export async function POST(req: Request) {
   }
 }
 
-/** A heads-up to Ben. No names or details in the email; he opens the record in the Alza Hub. */
+/** A heads-up to HR. No names or details in the email; he opens the record in the Alza Hub. */
 async function tellBen(db: ReturnType<typeof admin>, clientId: string, company: string, from: string, rec: DiscRecord, why: "held" | "look") {
   const to = await advisorEmails(db);
   if (!to.length) return;

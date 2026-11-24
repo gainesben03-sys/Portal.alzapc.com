@@ -1,5 +1,5 @@
 // Runs once every morning (Vercel Cron, see vercel.json).
-//   1. Task reminders, overdue notices and escalations, following Ben's reminder rules.
+//   1. Task reminders, overdue notices and escalations, following HR's reminder rules.
 //   2. HR Huddle recap emails for clients whose Huddle day is today.
 // Each email is logged in email_log so a re-run never double-sends.
 import { allReviews, loadCtx, managerEmail as performManagerEmail, roster as performRoster, send, sendSelf, sync } from "@/lib/performserver";
@@ -149,7 +149,7 @@ async function daily(req: Request) {
           if (!ownerEmail) continue;
           const subj =
             step.label.startsWith("Friendly") ? `Coming up: ${a.title} (due ${fmt(a.due)})` : step.label.startsWith("Due-date") ? `Due today: ${a.title}` : `Overdue: ${a.title}`;
-          const body = `Hi ${first},\n\n${step.label.startsWith("Overdue") ? `"${a.title}" was due ${fmt(a.due)} and is still open.` : `Quick reminder: "${a.title}" is due ${fmt(a.due)}.`}${a.impact ? `\n\nWhy it matters: ${a.impact}` : ""}\n\nIt takes a minute from your phone: ${link}\n\nNeed more time? Tap "More time" on that page.\n\nBen`;
+          const body = `Hi ${first},\n\n${step.label.startsWith("Overdue") ? `"${a.title}" was due ${fmt(a.due)} and is still open.` : `Quick reminder: "${a.title}" is due ${fmt(a.due)}.`}${a.impact ? `\n\nWhy it matters: ${a.impact}` : ""}\n\nIt takes a minute from your phone: ${link}\n\nNeed more time? Tap "More time" on that page.\n\nHR`;
           if (!step.label.startsWith("Friendly")) await once(`push:${key}`, async () => {
             await pushTo(db, [ownerEmail], "reminders", { title: subj.replace(/:.*$/, ""), body: a.title, url: `/c/${c.id}/a/${a.id}`, tag: `rem-${a.id}` });
             return { ok: true };
@@ -158,7 +158,7 @@ async function daily(req: Request) {
         } else if (step.label === "Escalation") {
           const toEsc = client.escalation.email && client.escalation.email !== ownerEmail ? client.escalation.email : null;
           if (toEsc) {
-            const body = `Hi ${client.escalation.name.split(" ")[0]},\n\nHeads up: "${a.title}" (owned by ${a.owner.name}) was due ${fmt(a.due)} and is still open.${a.impact ? `\n\nWhy it matters: ${a.impact}` : ""}\n\nDetails: ${link}\n\nBen`;
+            const body = `Hi ${client.escalation.name.split(" ")[0]},\n\nHeads up: "${a.title}" (owned by ${a.owner.name}) was due ${fmt(a.due)} and is still open.${a.impact ? `\n\nWhy it matters: ${a.impact}` : ""}\n\nDetails: ${link}\n\nHR`;
             await once(`push:${key}`, async () => {
               await pushTo(db, [toEsc], "reminders", { title: "Needs a nudge", body: `${a.title} (${a.owner.name}) is past due`, url: `/c/${c.id}/a/${a.id}`, tag: `esc-${a.id}` });
               return { ok: true };
@@ -453,7 +453,7 @@ async function daily(req: Request) {
         changed = true;
       }
     }
-    // tracker steps with a day count (the 30-day check-in by default): remind HR and the manager, copy Ben
+    // tracker steps with a day count (the 30-day check-in by default): remind HR and the manager, copy HR
     for (const st of dueReminders(h, stepsFor(s0), day)) {
       if (st.id === "day30" && h.emails?.checkIn) continue; // sent by the older 30-day reminder
       if (h.emails?.[`step:${st.id}`]) continue;
@@ -472,7 +472,7 @@ async function daily(req: Request) {
         const r = await sendEmail({ to: toList.length ? toList : [ben], cc: toList.length ? cc : undefined, subject, text });
         if (r.ok) {
           data.emails = { ...(data.emails ?? {}), [`step:${st.id}`]: new Date().toISOString() };
-          note(`${st.label} reminder sent to ${toList.length ? toList.join(", ") : "Ben"}`);
+          note(`${st.label} reminder sent to ${toList.length ? toList.join(", ") : "HR"}`);
         }
         return r;
       });
@@ -496,7 +496,7 @@ async function daily(req: Request) {
     });
   }
 
-  // ---------- 4. Pitch videos: delete a week after the role's cutoff (30 days after sending if no cutoff), or when Ben clears them
+  // ---------- 4. Pitch videos: delete a week after the role's cutoff (30 days after sending if no cutoff), or when HR clears them
   const [candR, rolesR] = await Promise.all([db.from("candidates").select("id, client_id, data").eq("data->>source", "pitch"), db.from("roles").select("id, data")]);
   const cutoff = new Map((rolesR.data ?? []).map((r) => [r.id as string, (r.data as { pitch?: { closesAt?: string } })?.pitch?.closesAt]));
   for (const row of candR.data ?? []) {

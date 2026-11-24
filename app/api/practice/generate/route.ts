@@ -1,5 +1,5 @@
-// Ben only: build practice from a training's slides or notes. Nothing is saved here;
-// Ben reviews it in the library and publishes it himself.
+// HR only: build practice from a training's slides or notes. Nothing is saved here;
+// HR reviews it in the library and publishes it himself.
 //
 // POST { id, text?, notes?, spanish? } -> { content: { en, es? }, langs, notes }
 
@@ -12,7 +12,7 @@ import { SEED_PRACTICE } from "@/lib/practice";
 export const maxDuration = 300;
 type D = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
-const SYSTEM = `You turn a manager training (slides, speaker notes or a guide) into practice for the managers who took it. You work for Ben Gaines, a fractional HR consultant (AlzaHR). Managers will use this on their phones, alone, after the session.
+const SYSTEM = `You turn a manager training (slides, speaker notes or a guide) into practice for the managers who took it. You work for a fractional HR consulting team (AlzaHR). Managers will use this on their phones, alone, after the session.
 
 Build from the training itself: its framework, its words, its examples and its scenarios. Don't invent a different framework. Plain, warm, direct, short. Never use em dashes. Not corporate, not AI-sounding.
 
@@ -26,10 +26,10 @@ Return:
 - scenarios: role-play scenarios from the training (use its scenarios and names). For each: id (short slug), title, setup (what the manager reads, 2 to 4 sentences), name, role, persona (how the employee behaves, what they really feel, the hidden reason they share only if asked well, how they react to good vs poor handling, what they'll agree to), goal (what good looks like, tied to the framework), opener (the employee's first line). 2 to 4 scenarios. If the training has none, write 2 realistic ones for this audience.
 - pushback: 0 to 5 hard things employees say, each with a calm reply, from the training if it has them.
 - planner: the training's planning questions for a real conversation, or 4 to 6 good ones.
-- If the training is bilingual or Ben asks for Spanish, also return the same content in natural, warm Latin American Spanish under "es" (same ids, same order, same correct answers; use the training's own Spanish wording where it has it). Persona text can stay in English.
+- If the training is bilingual or HR asks for Spanish, also return the same content in natural, warm Latin American Spanish under "es" (same ids, same order, same correct answers; use the training's own Spanish wording where it has it). Persona text can stay in English.
 
 Answer with JSON only:
-{"bilingual":true,"en":{"title":"","intro":"","framework":"","ideas":[{"label":"","title":"","body":"","instead":"","tryThis":""}],"quiz":[{"q":"","options":["","","",""],"answer":0,"why":""}],"sort":{"prompt":"","buckets":["",""],"items":[{"text":"","bucket":0,"why":""}]},"scenarios":[{"id":"","title":"","setup":"","name":"","role":"","persona":"","goal":"","opener":""}],"pushback":[{"line":"","reply":""}],"planner":[""]},"es":{...same shape...},"notes":"2 to 4 short lines for Ben: what you built from, anything you made up because the training didn't have it"}`;
+{"bilingual":true,"en":{"title":"","intro":"","framework":"","ideas":[{"label":"","title":"","body":"","instead":"","tryThis":""}],"quiz":[{"q":"","options":["","","",""],"answer":0,"why":""}],"sort":{"prompt":"","buckets":["",""],"items":[{"text":"","bucket":0,"why":""}]},"scenarios":[{"id":"","title":"","setup":"","name":"","role":"","persona":"","goal":"","opener":""}],"pushback":[{"line":"","reply":""}],"planner":[""]},"es":{...same shape...},"notes":"2 to 4 short lines for HR: what you built from, anything you made up because the training didn't have it"}`;
 
 export async function POST(req: Request) {
   if (!SERVER_LIVE) return NextResponse.json({ ok: true, demo: true, content: SEED_PRACTICE.content, langs: SEED_PRACTICE.langs, notes: "Demo: this is the practice built from the sample training." });
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
   if (text.trim().length < 200) return NextResponse.json({ ok: false, reason: "no_text" });
 
   const user = `Training: ${r.title}${r.desc ? ` (${r.desc})` : ""}
-${b.spanish ? "Ben wants a Spanish version too." : ""}${b.notes ? `\nBen's notes: ${clip(b.notes, 1500)}` : ""}
+${b.spanish ? "HR wants a Spanish version too." : ""}${b.notes ? `\nHR's notes: ${clip(b.notes, 1500)}` : ""}
 
 <training>
 ${clip(text, 120_000)}

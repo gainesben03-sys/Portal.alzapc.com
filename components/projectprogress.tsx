@@ -13,7 +13,7 @@ export function projectHealth(p: Project, items: Action[], rules: Rules): Health
   const now = today().getTime();
   const due = parseDay(p.milestoneDue).getTime();
   const daysLeft = Math.round((due - now) / 864e5);
-  if (daysLeft < 0) return { label: "Behind", tone: "red", why: `The target was ${fmt(p.milestoneDue)}. Ben will confirm a new date.` };
+  if (daysLeft < 0) return { label: "Behind", tone: "red", why: `The target was ${fmt(p.milestoneDue)}. HR will confirm a new date.` };
   if (p.startedAt) {
     const start = parseDay(p.startedAt.slice(0, 10)).getTime();
     const expected = due > start ? Math.min(100, Math.max(0, ((now - start) / (due - start)) * 100)) : 0;

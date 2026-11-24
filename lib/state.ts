@@ -21,9 +21,9 @@ export interface State {
   notices: Notice[];
   hires: Hire[];
   people: TeamMember[]; // each client's team roster (Manager Hub)
-  checkins: TeamLog[]; // check-ins and recognition: only Ben and the person's manager can read them
+  checkins: TeamLog[]; // check-ins and recognition: only HR and the person's manager can read them
   helpful: Record<string, "up" | "down">;
-  bookingUrl: string; // Ben's scheduling link (Calendly)
+  bookingUrl: string; // HR's scheduling link (Calendly)
   layouts: Record<string, string[]>; // per-person dashboard tiles, key `${clientId}:${email}`
 }
 

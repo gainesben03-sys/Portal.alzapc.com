@@ -1,4 +1,4 @@
-// Documents Claude uses when drafting (Ben only).
+// Documents Claude uses when drafting (HR only).
 //   GET    ?clientId=<id>|alza        list documents (no text)
 //   POST   { id, clientId|null, kind, title, path, fileName, mime }  file already uploaded to storage; we read its text
 //   DELETE ?id=<id>                   remove document and its file

@@ -77,7 +77,7 @@ export async function pushTo(db: SupabaseClient, emails: string[], topic: PushTo
   }
 }
 
-/** Everyone on Ben's side (the advisors table). */
+/** Everyone on HR's side (the advisors table). */
 export async function advisorEmails(db: SupabaseClient): Promise<string[]> {
   const { data } = await db.from("advisors").select("email");
   const list = (data ?? []).map((r) => String(r.email));

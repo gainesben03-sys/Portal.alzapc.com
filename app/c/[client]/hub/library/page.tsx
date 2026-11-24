@@ -38,7 +38,7 @@ export default function HubLibrary() {
     .flatMap((r) => r.shares.filter((s) => s.clientId === clientId && MANAGER_FOLDERS.includes(s.folder) && !(trainingOn && s.folder === "Trainings")).map((s) => ({ r, s })))
     .sort((a, b) => (a.s.folder === "Trainings" ? -1 : 0) - (b.s.folder === "Trainings" ? -1 : 0) || b.s.at.localeCompare(a.s.at));
   const isAdvisor = viewer?.kind === "advisor";
-  // practice lives in the Training tab (a feature Ben turns on per client)
+  // practice lives in the Training tab (a feature HR turns on per client)
   const practice: typeof items = [];
   const folders = Array.from(new Set(items.map((x) => x.s.folder)));
   const shown = items.filter(({ r, s }) => (folder === "all" || s.folder === folder) && (!q || `${r.title} ${r.desc} ${r.category}`.toLowerCase().includes(q.toLowerCase())));
@@ -83,7 +83,7 @@ export default function HubLibrary() {
         )}
 
         {shown.length === 0 && minutes.length === 0 ? (
-          <div className="card section small muted">Nothing here yet. Ben adds trainings and tools as you go.</div>
+          <div className="card section small muted">Nothing here yet. HR adds trainings and tools as you go.</div>
         ) : (
           <div className="card section hub-lib">
             {shown.map(({ r, s }) => (

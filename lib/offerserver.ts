@@ -91,14 +91,14 @@ export async function emailRequester(co: Co, h: Hire, what: "received" | "sent_b
   const r = h.request;
   if (!r?.email) return;
   const m = what === "received"
-    ? mail(co, "Got it", [h.preApproval ? `Your offer request for ${h.name} went to ${h.preApproval.name} to approve. Once it's approved, Ben writes the offer letter and sends it to you to look over before it goes out.` : `Your offer request for ${h.name} is with Ben. He'll write the offer letter and send it to you to look over before it goes out.`], undefined, summaryRows(h))
+    ? mail(co, "Got it", [h.preApproval ? `Your offer request for ${h.name} went to ${h.preApproval.name} to approve. Once it's approved, HR writes the offer letter and sends it to you to look over before it goes out.` : `Your offer request for ${h.name} is with HR. He'll write the offer letter and send it to you to look over before it goes out.`], undefined, summaryRows(h))
     : mail(co, "Your offer request was sent back", [`${h.preApproval?.name} sent back the offer request for ${h.name}.`, h.preApproval?.note ? `Their note: "${h.preApproval.note}"` : "Check in with them, then send a new request."]);
   return sendEmail({ to: [r.email], subject: what === "received" ? `Offer request received: ${h.name}` : `Offer request sent back: ${h.name}`, ...m, clientId: co.id });
 }
 export async function emailLetterApproval(co: Co, h: Hire, base: string) {
   const a = h.letterApproval!;
   const url = approveUrl({ h: h.id, c: co.id, k: "letter", e: a.email }, base);
-  const m = mail(co, `Look over ${h.name}'s offer letter`, [`Ben wrote the offer letter for ${h.name}. Open it, then approve it or ask for changes. Once you approve, Ben sends it to ${h.name.split(" ")[0]} to sign.`], { label: "Review the offer letter", url }, summaryRows(h));
+  const m = mail(co, `Look over ${h.name}'s offer letter`, [`HR wrote the offer letter for ${h.name}. Open it, then approve it or ask for changes. Once you approve, HR sends it to ${h.name.split(" ")[0]} to sign.`], { label: "Review the offer letter", url }, summaryRows(h));
   return sendEmail({ to: [a.email], subject: `Approve the offer letter: ${h.name}`, ...m, clientId: co.id });
 }
 export async function emailBenDecision(co: Co, h: Hire, a: Approval, kind: "pre" | "letter", base: string) {

@@ -25,7 +25,7 @@ const KIND_LABEL: Record<Kind, string> = {
 
 /**
  * Documents Claude reads before drafting.
- * clientId = a client's own documents. clientId = null = Ben's default templates.
+ * clientId = a client's own documents. clientId = null = HR's default templates.
  */
 export function KnowledgePanel({ clientId, onToast }: { clientId: string | null; onToast: (m: string) => void }) {
   const folder = clientId ?? "alza";

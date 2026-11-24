@@ -1,4 +1,4 @@
-// Claude writes a new month's newsletter into an existing issue's design (Ben only).
+// Claude writes a new month's newsletter into an existing issue's design (HR only).
 // The email's layout, colors and code stay exactly as they are: Claude only returns new wording
 // for each numbered piece of text, and the server puts it back in place.
 //
@@ -22,7 +22,7 @@ const KIND: Record<string, string> = {
   other: "A newsletter.",
 };
 
-const SYSTEM = `You write monthly HR newsletters for Ben Gaines, a fractional HR consultant (AlzaHR). Each client gets the same newsletter design every month; you write the new month's words into it.
+const SYSTEM = `You write monthly HR newsletters for a fractional HR consulting team (AlzaHR). Each client gets the same newsletter design every month; you write the new month's words into it.
 
 You get the email as numbered pieces of text, in reading order, plus links marked (link). Write a fresh issue on a NEW topic for the new month, fitting the client.
 
@@ -37,7 +37,7 @@ Rules:
 - Don't change contact details (emails, names of the HR contacts) or the sign-off.
 
 Answer with JSON only:
-{"topic":"2 to 4 words","subject":"email subject line, same pattern as the original","preview":"inbox preview line","changes":{"<piece number>":"new text", "...": "..."},"notes":"2 to 5 short lines for Ben: what to double check (every stat, law and quote you used, with where it comes from), anything you left unchanged on purpose"}`;
+{"topic":"2 to 4 words","subject":"email subject line, same pattern as the original","preview":"inbox preview line","changes":{"<piece number>":"new text", "...": "..."},"notes":"2 to 5 short lines for HR: what to double check (every stat, law and quote you used, with where it comes from), anything you left unchanged on purpose"}`;
 
 export async function POST(req: Request) {
   const key = process.env.ANTHROPIC_API_KEY;
@@ -76,10 +76,10 @@ export async function POST(req: Request) {
 Newsletter: ${KIND[n.kind] ?? KIND.other}
 Language: ${String(n.lang).includes("es") ? "English with a full Spanish version below it" : "English"}
 New month: ${monthName}
-${ctx.data?.[0]?.text ? `\nWhat Ben knows about this client:\n${clip(ctx.data[0].text, 3000)}\n` : ""}
+${ctx.data?.[0]?.text ? `\nWhat HR knows about this client:\n${clip(ctx.data[0].text, 3000)}\n` : ""}
 Earlier issues for this client (don't repeat these topics):
 ${earlier.join("\n") || "- none"}
-${b.topic ? `\nBen wants this month's topic to be: ${clip(b.topic, 300)}` : "\nPick a topic that fits the season and this client's world."}${b.notes ? `\nBen's notes: ${clip(b.notes, 1500)}` : ""}
+${b.topic ? `\nHR wants this month's topic to be: ${clip(b.topic, 300)}` : "\nPick a topic that fits the season and this client's world."}${b.notes ? `\nHR's notes: ${clip(b.notes, 1500)}` : ""}
 
 The current email (last month's words, in this month's design):
 <email>

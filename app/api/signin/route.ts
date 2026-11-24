@@ -1,4 +1,4 @@
-// Sign-in links only go to people who have access: Ben, invited team members,
+// Sign-in links only go to people who have access: HR, invited team members,
 // or someone holding a valid invite code. Everyone gets the same reply, so the
 // page never reveals whether an email is registered.
 import { createClient } from "@supabase/supabase-js";

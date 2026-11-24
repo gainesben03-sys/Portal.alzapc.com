@@ -1,5 +1,5 @@
 // Practice built from a training: key ideas, a quick check, a sorting drill, role-play scenarios
-// and a planner for a real conversation. Ben generates it from the slides, reviews it, then publishes.
+// and a planner for a real conversation. HR generates it from the slides, reviews it, then publishes.
 
 export type Lang = "en" | "es";
 export const LANG_LABEL: Record<Lang, string> = { en: "English", es: "Español" };
@@ -49,7 +49,7 @@ export interface Practice {
   langs: Lang[];
   content: Partial<Record<Lang, PracticeContent>>;
   at: string;
-  notes?: string; // Claude's notes for Ben from the last generation
+  notes?: string; // Claude's notes for HR from the last generation
 }
 
 export const hasPractice = (r: { practice?: Practice }) => r.practice?.status === "published" && !!r.practice.content.en;
@@ -290,14 +290,14 @@ export function demoHandbook(q: string): HandbookAnswer {
     };
   if (/fire|terminat|let .* go|harass|discriminat|pregnan|disabil|accommodat|leave/.test(t))
     return {
-      answer: "This is one to run by Ben before you act. The handbook covers the basics, but every situation like this has details that matter, and getting the steps right protects you and the employee.",
+      answer: "This is one to run by HR before you act. The handbook covers the basics, but every situation like this has details that matter, and getting the steps right protects you and the employee.",
       cites: [{ doc: "Employee Handbook", section: "1.3 Equal Opportunity", quote: "Report concerns to your manager or HR right away." }],
       covered: true,
       callBen: true,
-      why: "Terminations, harassment, discrimination, leave and accommodation always go through Ben.",
+      why: "Terminations, harassment, discrimination, leave and accommodation always go through HR.",
     };
   return {
-    answer: "I couldn't find this in your handbook. Ben can give you a straight answer, usually the same day.",
+    answer: "I couldn't find this in your handbook. HR can give you a straight answer, usually the same day.",
     cites: [],
     covered: false,
     callBen: true,

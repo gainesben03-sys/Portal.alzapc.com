@@ -47,7 +47,7 @@ export default function ActionDetail() {
     left > 0 ? `${left} step${left === 1 ? "" : "s"} left` : a.kind === "approval" ? "Approve" : a.kind === "feedback" ? "Submit feedback" : a.kind === "todo" ? "Mark done" : "Mark as sent";
   const attachFile = async (f: File) => {
     if (f.size > 25e6) return toast.show("Files can be up to 25 MB");
-    const who = viewer?.kind === "client" ? viewer.person.name : "Ben Gaines";
+    const who = viewer?.kind === "client" ? viewer.person.name : "HR";
     const fid = `f${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
     let path: string | undefined;
     if (LIVE) {
@@ -63,14 +63,14 @@ export default function ActionDetail() {
       { attachments: [...a.attachments, { name: f.name, from: who, path }], status: a.side === "client" && !isAdvisor ? "submitted" : a.status },
       `Uploaded ${f.name}`
     );
-    // A files record lets the right people open it. Ben's files are marked so they stay out of his own inbox.
+    // A files record lets the right people open it. HR's files are marked so they stay out of his own inbox.
     patch({
       files: [
-        { id: fid, clientId: client.id, name: f.name, size: f.size, type: f.type, category: isAdvisor ? "From Ben" : "Other", note: `For: ${a.title}`, confidential: false, by: who, at: new Date().toISOString(), reviewed: isAdvisor, requestId: a.id, path, fromAdvisor: isAdvisor || undefined },
+        { id: fid, clientId: client.id, name: f.name, size: f.size, type: f.type, category: isAdvisor ? "From HR" : "Other", note: `For: ${a.title}`, confidential: false, by: who, at: new Date().toISOString(), reviewed: isAdvisor, requestId: a.id, path, fromAdvisor: isAdvisor || undefined },
         ...files,
       ],
     });
-    toast.show(isAdvisor ? "Shared on this task" : "File added. Ben has been notified.");
+    toast.show(isAdvisor ? "Shared on this task" : "File added. HR has been notified.");
   };
 
   const toggle = (sid: string) => {
@@ -180,9 +180,9 @@ export default function ActionDetail() {
             <div className="grow" style={{ flex: 1 }}>
               <b>Remind me</b>
               <div className="tiny muted">
-                {(a.reminders ?? []).filter((r) => r.by === (me?.name ?? "Ben Gaines")).length
+                {(a.reminders ?? []).filter((r) => r.by === (me?.name ?? "HR")).length
                   ? (a.reminders ?? [])
-                      .filter((r) => r.by === (me?.name ?? "Ben Gaines"))
+                      .filter((r) => r.by === (me?.name ?? "HR"))
                       .map((r) => `${r.label} (${fmtTime(r.sendAt)})${r.scheduled ? "" : ", not sent yet"}`)
                       .join(" · ")
                   : "Get an email before this is due"}
@@ -195,7 +195,7 @@ export default function ActionDetail() {
         <div className="card section">
           <dl className="kv" style={{ margin: 0 }}>
             <dt>Owner</dt>
-            <dd>{a.side === "alza" ? "Ben Gaines, Alza" : `${a.owner.name}, ${a.owner.role}`}</dd>
+            <dd>{a.side === "alza" ? "HR, Alza" : `${a.owner.name}, ${a.owner.role}`}</dd>
             {a.requestedBy && (<><dt>Asked by</dt><dd>{a.requestedBy.name}</dd></>)}
             <dt>Due</dt>
             <dd>{fmt(a.due)}</dd>
@@ -316,7 +316,7 @@ export default function ActionDetail() {
               disabled={left > 0}
               onClick={() => {
                 update(a.id, { status: "completed" }, a.kind === "approval" ? "Approved" : "Marked complete");
-                toast.show("Done. Ben has been notified.");
+                toast.show("Done. HR has been notified.");
               }}
             >
               {primaryLabel}
@@ -367,7 +367,7 @@ export default function ActionDetail() {
               onClick={() => {
                 update(a.id, { status: "completed" }, "Marked complete by Alza");
                 if (a.requestedBy?.email) {
-                  tellRequester(a.clientId, a.requestedBy.email, `Done: ${a.title}`, `Hi ${a.requestedBy.name.split(" ")[0]},\n\nWhat you asked for is done: "${a.title}".\n\nSee it here: ${window.location.origin}/c/${a.clientId}/a/${a.id}\n\nBen`, `/c/${a.clientId}/a/${a.id}`);
+                  tellRequester(a.clientId, a.requestedBy.email, `Done: ${a.title}`, `Hi ${a.requestedBy.name.split(" ")[0]},\n\nWhat you asked for is done: "${a.title}".\n\nSee it here: ${window.location.origin}/c/${a.clientId}/a/${a.id}\n\nHR`, `/c/${a.clientId}/a/${a.id}`);
                   toast.show(`Marked complete. ${a.requestedBy.name.split(" ")[0]} has been told.`);
                 } else toast.show("Marked complete");
               }}
@@ -381,7 +381,7 @@ export default function ActionDetail() {
       {sheet === "extension" && <ExtensionSheet onClose={() => setSheet(null)} onSubmit={(date, reason) => {
         update(a.id, { status: "extension_requested", extension: { requested: date, reason } }, `Asked to move due date to ${fmt(date)}: ${reason}`);
         setSheet(null);
-        toast.show("Request sent to Ben");
+        toast.show("Request sent to HR");
       }} />}
 
       {sheet === "remind" && (
@@ -408,10 +408,10 @@ export default function ActionDetail() {
               scheduled = !!j.scheduled;
               reason = j.reason ?? "";
             } catch {}
-            const by = me?.name ?? "Ben Gaines";
+            const by = me?.name ?? "HR";
             update(
               a.id,
-              { reminders: [...(a.reminders ?? []).filter((r) => !(r.by === by && r.label === label)), { sendAt: sendAt.toISOString(), label, to: isAdvisor ? "Ben" : to, by, scheduled }] },
+              { reminders: [...(a.reminders ?? []).filter((r) => !(r.by === by && r.label === label)), { sendAt: sendAt.toISOString(), label, to: isAdvisor ? "HR" : to, by, scheduled }] },
               `Reminder set: ${label}`
             );
             toast.show(
@@ -433,7 +433,7 @@ export default function ActionDetail() {
           onSubmit={(note) => {
             update(a.id, { status: "needs_revision", side: "alza", due: toISO(addBusinessDays(today(), 2)) }, `Requested changes: ${note}. Back with Alza for a revision.`);
             setSheet(null);
-            toast.show("Sent back to Ben with your notes");
+            toast.show("Sent back to HR with your notes");
           }}
         />
       )}
@@ -486,7 +486,7 @@ function RevisionSheet({ onClose, onSubmit }: { onClose: () => void; onSubmit: (
       <textarea className="f" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Comp language in JD #2 needs another look" />
       <div className="sheet-actions">
         <button className="btn" onClick={onClose}>Cancel</button>
-        <button className="btn primary" disabled={!note.trim()} onClick={() => onSubmit(note.trim())}>Send to Ben</button>
+        <button className="btn primary" disabled={!note.trim()} onClick={() => onSubmit(note.trim())}>Send to HR</button>
       </div>
     </Sheet>
   );
@@ -546,7 +546,7 @@ async function tellRequester(clientId: string, email: string, subject: string, t
     await fetch("/api/notify", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...(await authHeader()) },
-      body: JSON.stringify({ subject, text, toMember: { clientId, email }, push: { title: "Ben finished your request", url } }),
+      body: JSON.stringify({ subject, text, toMember: { clientId, email }, push: { title: "HR finished your request", url } }),
     });
   } catch {}
 }

@@ -1,4 +1,4 @@
-// Claude drafting for Ben (advisor only).
+// Claude drafting for HR (advisor only).
 // The app sends only IDs. Context is loaded here, on the server, from ONE client's
 // records, so nothing from another client can end up in a draft.
 //
@@ -11,9 +11,9 @@ export const maxDuration = 300;
 
 type Mode = "reply" | "document" | "hire_doc";
 
-const VOICE = `You draft for Ben Gaines, a fractional HR consultant who runs AlzaHR. His clients are small and growing companies, mostly in California.
+const VOICE = `You draft for HR, a fractional HR consulting team (AlzaHR). Their clients are small and growing companies, mostly in California.
 
-How Ben writes:
+How HR writes:
 - Short, plain, warm and direct. Sounds like a person, not a template.
 - No corporate filler ("I hope this finds you well", "please don't hesitate"), no exclamation-heavy enthusiasm.
 - Never use em dashes. Use commas, periods or colons instead.
@@ -21,16 +21,16 @@ How Ben writes:
 
 Rules:
 - Use only facts from the client context below or the request. Never invent names, dates, numbers, policy details or what the client has already done.
-- If something needed is missing, leave a clear placeholder in [square brackets] for Ben to fill in.
-- You are not giving legal advice. When the topic touches terminations, leaves of absence, discrimination, harassment, accommodations, wage and hour, or investigations, keep the client-facing text measured and add a caution for Ben.
-- When state law matters, assume California only if the context points there, and say so in the notes for Ben.
+- If something needed is missing, leave a clear placeholder in [square brackets] for HR to fill in.
+- You are not giving legal advice. When the topic touches terminations, leaves of absence, discrimination, harassment, accommodations, wage and hour, or investigations, keep the client-facing text measured and add a caution for HR.
+- When state law matters, assume California only if the context points there, and say so in the notes for HR.
 
 Output format, exactly:
 <draft>
-(the text Ben would send or share, ready to edit)
+(the text HR would send or share, ready to edit)
 </draft>
 <for_ben>
-(2 to 5 short bullet points only Ben sees: assumptions you made, what to double check, any risk flags. Write "None" if nothing.)
+(2 to 5 short bullet points only HR sees: assumptions you made, what to double check, any risk flags. Write "None" if nothing.)
 </for_ben>`;
 
 function clip(s: unknown, n: number) {
@@ -79,23 +79,23 @@ export async function POST(req: Request) {
     `Client: ${client.data.name}${client.data.engagement ? ` (engagement: ${client.data.engagement})` : ""}`,
     `Their people: ${(members.data ?? []).map((m) => `${m.name}, ${m.role}`).join("; ") || "none listed"}`,
     `Active projects: ${(projects.data ?? []).map((p) => p.data as D).filter((p) => p.status !== "done").map((p) => `${p.name} (${p.status}): ${clip(p.summary, 120)}`).join("; ") || "none"}`,
-    `Open tasks: ${A.filter((a) => a.status !== "completed").slice(0, 15).map((a) => `${a.title} [${a.side === "alza" ? "Ben owes" : `owner ${a.owner?.name}`}, due ${a.due}]`).join("; ") || "none"}`,
-    `Recent notes: ${N.slice(0, 8).map((n) => `${n.author?.name}: ${clip(n.text, 200)}${(n.replies ?? []).length ? ` / Ben replied: ${clip(n.replies[n.replies.length - 1].text, 150)}` : ""}`).join(" | ") || "none"}`,
+    `Open tasks: ${A.filter((a) => a.status !== "completed").slice(0, 15).map((a) => `${a.title} [${a.side === "alza" ? "HR owes" : `owner ${a.owner?.name}`}, due ${a.due}]`).join("; ") || "none"}`,
+    `Recent notes: ${N.slice(0, 8).map((n) => `${n.author?.name}: ${clip(n.text, 200)}${(n.replies ?? []).length ? ` / HR replied: ${clip(n.replies[n.replies.length - 1].text, 150)}` : ""}`).join(" | ") || "none"}`,
     `Files they've shared: ${(files.data ?? []).map((f) => (f.data as D).name).slice(0, 12).join(", ") || "none"}`,
-    `Resources Ben has shared with them: ${shared.join(", ") || "none"}`,
+    `Resources HR has shared with them: ${shared.join(", ") || "none"}`,
   ].join("\n");
 
   let task = "";
   if (mode === "reply") {
     const n = N.find((x) => x.id === b.noteId);
     if (!n) return NextResponse.json({ ok: false, reason: "no_note" }, { status: 404 });
-    task = `Draft Ben's reply on the client note board.
+    task = `Draft HR's reply on the client note board.
 
 Note from ${n.author?.name} (${n.author?.role}), type ${n.kind}${n.urgent ? ", marked time-sensitive" : ""}:
 "${clip(n.text, 2000)}"
 ${(n.replies ?? []).length ? `\nThread so far:\n${n.replies.map((r: D) => `${r.by}: ${clip(r.text, 400)}`).join("\n")}` : ""}
 
-Keep it to a few sentences unless the question truly needs more. Address them by first name. Sign off as "Ben".`;
+Keep it to a few sentences unless the question truly needs more. Address them by first name. Don't add a sign-off; the board shows who wrote it.`;
   } else if (mode === "hire_doc") {
     const { data: hr } = await db.from("hires").select("data, client_id").eq("id", String(b.hireId ?? "")).maybeSingle();
     if (!hr || hr.client_id !== clientId) return NextResponse.json({ ok: false, reason: "no_hire" }, { status: 404 });
@@ -118,23 +118,23 @@ Hire details (use exactly these, nothing invented):
 ${h.contingencies ? `- Contingencies: ${h.contingencies}\n` : ""}${h.jd ? `- Job description (use for any job description exhibit or attachment):\n${clip(h.jd, 4000)}\n` : ""}${h.notes ? `- Notes from HR: ${clip(h.notes, 800)}\n` : ""}
 How to do it:
 - If the client has a ${isOffer ? "offer letter" : "employment agreement or contract"} template, reproduce it in full and only change the hire-specific details (names, title, manager, pay, dates, bonus, classification, job description). Keep every other sentence exactly as written. Write amounts the way the template does (for example words and numerals).
-- If there is no client template but Ben has one, use Ben's.
-- If neither exists, write a clean, professional ${isOffer ? "offer letter (at-will, contingent on employment eligibility verification, with a signature block for the hire to accept)" : "employment agreement suitable for a small California employer"} and say so in the notes for Ben.
+- If there is no client template but HR has one, use HR's.
+- If neither exists, write a clean, professional ${isOffer ? "offer letter (at-will, contingent on employment eligibility verification, with a signature block for the hire to accept)" : "employment agreement suitable for a small California employer"} and say so in the notes for HR.
 - Leave anything unknown as a [bracketed placeholder].
 - Format with simple markdown: # for the title, ## for section headings, - for bullets. No letterhead text; the letterhead is added separately.
-- In the notes for Ben, list every value you filled in so he can check them, and flag anything that looks off (for example an exempt salary below the state minimum).`;
+- In the notes for HR, list every value you filled in so they can check them, and flag anything that looks off (for example an exempt salary below the state minimum).`;
   } else {
     const a = A.find((x) => x.id === b.actionId);
     task = `Draft a document or written deliverable for this client.
 ${a ? `\nIt's for this task: "${a.title}"${a.detail ? `\nDetails: ${clip(a.detail, 1000)}` : ""}${a.subtasks?.length ? `\nSteps: ${a.subtasks.map((s: D) => s.text).join("; ")}` : ""}` : ""}
-${b.instructions ? `\nBen's instructions: ${clip(b.instructions, 2000)}` : ""}
+${b.instructions ? `\nHR's instructions: ${clip(b.instructions, 2000)}` : ""}
 
 Write the complete document in clean, professional HR formatting: a title, short sections with plain headings, and simple language a small-company CEO can act on. No legalese unless the document type requires it.`;
   }
-  if (b.previous && b.instructions && mode === "reply") task += `\n\nBen's instructions for this version: ${clip(b.instructions, 1000)}`;
+  if (b.previous && b.instructions && mode === "reply") task += `\n\nHR's instructions for this version: ${clip(b.instructions, 1000)}`;
   if (b.previous) task += `\n\nPrevious draft to improve on:\n${clip(b.previous, 6000)}`;
 
-  // ---- pick the documents most relevant to this request (client's own first, then Ben's templates)
+  // ---- pick the documents most relevant to this request (client's own first, then HR's templates)
   const words = (task + " " + (b.instructions ?? "")).toLowerCase().match(/[a-z]{4,}/g) ?? [];
   const wanted = new Set(words);
   const docs = (kn.data ?? [])
@@ -160,8 +160,8 @@ Write the complete document in clean, professional HR formatting: a title, short
     docText.push(`<document title="${String(d.title).replace(/"/g, "'")}" source="${d.client_id ? "client" : "ben_template"}" type="${d.kind}">\n${t}${String(d.text).length > cap ? "\n[truncated]" : ""}\n</document>`);
   }
   const docRules = docText.length
-    ? `\n\nDocuments you have (client documents override Ben's templates):\n- If one of the CLIENT's documents covers the topic, follow it exactly: its policies, numbers, defined terms, structure and tone. Cite the section in the notes for Ben. Never contradict it; if it seems outdated or noncompliant, draft per the document and flag it for Ben.\n- If only one of BEN's templates applies, follow its structure and wording, adapted to this client.\n- If nothing applies, use current best practice and say so.\n- In the notes for Ben, always start with a line "Based on: ..." naming the documents you used, or "Based on: best practice (no matching document)".`
-    : `\n\nThere are no uploaded documents for this client yet. Draft from current best practice, and start the notes for Ben with "Based on: best practice (no client documents uploaded)".`;
+    ? `\n\nDocuments you have (client documents override HR's templates):\n- If one of the CLIENT's documents covers the topic, follow it exactly: its policies, numbers, defined terms, structure and tone. Cite the section in the notes for HR. Never contradict it; if it seems outdated or noncompliant, draft per the document and flag it for HR.\n- If only one of BEN's templates applies, follow its structure and wording, adapted to this client.\n- If nothing applies, use current best practice and say so.\n- In the notes for HR, always start with a line "Based on: ..." naming the documents you used, or "Based on: best practice (no matching document)".`
+    : `\n\nThere are no uploaded documents for this client yet. Draft from current best practice, and start the notes for HR with "Based on: best practice (no client documents uploaded)".`;
 
   const system: { type: "text"; text: string; cache_control?: { type: "ephemeral" } }[] = [
     { type: "text", text: VOICE + docRules },

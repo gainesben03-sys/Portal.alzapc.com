@@ -1,6 +1,6 @@
 // Our Properties: a card per property showing who leads it and who handles what.
 // Cards fill themselves from the team roster (the census upload): each person's Location is their
-// property, and their title says what they handle. Ben or an executive can override any slot.
+// property, and their title says what they handle. HR or an executive can override any slot.
 // Pure functions, used in the browser (demo, previews) and on the server (live directory).
 import type { TeamMember } from "./team";
 

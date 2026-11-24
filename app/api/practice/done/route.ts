@@ -1,5 +1,5 @@
 // A manager finished a piece of practice. Records only who, which training, what and the score,
-// so Ben can see who's practicing. POST { clientId, resourceId, kind: "quiz" | "sort", score, total }
+// so HR can see who's practicing. POST { clientId, resourceId, kind: "quiz" | "sort", score, total }
 import { NextResponse } from "next/server";
 import { admin, caller, SERVER_LIVE } from "@/lib/server";
 import { logUsage } from "@/lib/ai";

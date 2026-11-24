@@ -1,6 +1,6 @@
 // The Pause: a five-minute monthly ritual. One page design, new words each month.
 // Employees open it from The Pause newsletter. No sign-in, nothing to fill out.
-// Ben writes each month once; every company's link shows it with their name.
+// HR writes each month once; every company's link shows it with their name.
 
 export interface PauseWords {
   theme: string; // "Gratitude"
@@ -24,7 +24,7 @@ export const PILLAR_DEFAULT: Record<"en" | "es", Record<Pillar, string>> = {
   es: { physical: "Muévete cinco minutos hoy. Caminar cuenta.", financial: "Una llamada 1:1 gratis y privada con un asesor financiero. Cualquier pregunta de dinero.", connection: "Reconoce a alguien esta semana." },
 };
 
-/** The financial coach employees can book directly. Ben sets it once in the console. */
+/** The financial coach employees can book directly. HR sets it once in the console. */
 export interface PausePartner { name: string; firm: string; url: string }
 export const DEFAULT_PARTNER: PausePartner = { name: "Chris", firm: "Wood Financial", url: "" };
 export function cleanPartner(x: unknown): PausePartner {
@@ -106,7 +106,7 @@ export function cleanRituals(input: unknown): PauseRitual[] {
 
 export const blankRitual = (month: string): PauseRitual => ({ month, publishOn: `${month}-01`, active: false, minutes: 5, theme: "", title: "", intro: "", prompt: "", steps: [], closing: "" });
 
-/** The months written so far. Used until Ben saves his own in the console. */
+/** The months written so far. Used until HR saves his own in the console. */
 export const PAUSE_SEED: PauseRitual[] = [
   {
     month: "2026-12",

@@ -8,7 +8,7 @@ import { Sheet } from "./ui";
 
 const MGR_KEY = "alza-hub-manager";
 
-/** The manager whose team we're showing: the signed-in manager, or (for Ben) one he picks. */
+/** The manager whose team we're showing: the signed-in manager, or (for HR) one he picks. */
 export function useHub(clientId: string) {
   const { me, viewer, people, checkins, config } = useStore();
   const isAdvisor = viewer?.kind === "advisor";
@@ -35,7 +35,7 @@ export function useHub(clientId: string) {
   return { isAdvisor, managers, managerEmail, managerName, pick, team, logs, cfg, me };
 }
 
-/** Top of every Hub page: the title and, for Ben, whose team he's looking at. */
+/** Top of every Hub page: the title and, for HR, whose team he's looking at. */
 export function HubHeader({ clientId, title, sub, action }: { clientId: string; title: string; sub?: string; action?: import("react").ReactNode }) {
   const h = useHub(clientId);
   return (
@@ -97,7 +97,7 @@ export function LogSheet({ clientId, person, kind, team, onClose, onSaved }: { c
           <textarea className="f" style={{ minHeight: 60 }} value={commits} onChange={(e) => setCommits(e.target.value)} placeholder={`e.g. Get ${first} on the forklift training list`} />
         </label>
       )}
-      <p className="tiny muted" style={{ margin: "6px 0 0" }}>🔒 Only you and Ben can see this. Keep it factual: it&apos;s part of {first}&apos;s record.</p>
+      <p className="tiny muted" style={{ margin: "6px 0 0" }}>🔒 Only you and HR can see this. Keep it factual: it&apos;s part of {first}&apos;s record.</p>
       <div className="sheet-actions">
         <button className="btn ghost sm" onClick={onClose}>Cancel</button>
         <button
@@ -115,7 +115,7 @@ export function LogSheet({ clientId, person, kind, team, onClose, onSaved }: { c
               date,
               notes: notes.trim(),
               commitments: k === "checkin" ? commitments : undefined,
-              by: viewer?.kind === "advisor" ? "Ben Gaines" : me?.name ?? who,
+              by: viewer?.kind === "advisor" ? "HR" : me?.name ?? who,
               at: new Date().toISOString(),
             };
             patch({ checkins: [...checkins, log] });
@@ -145,7 +145,7 @@ export function NoTeam({ clientId }: { clientId: string }) {
       {viewer?.kind === "advisor" ? (
         <>No team roster yet. Upload one in <Link href={`/console/clients/${clientId}#team`} style={{ color: "var(--blue)" }}>client setup</Link>.</>
       ) : (
-        "No one is listed as reporting to you yet. Ben will add your team."
+        "No one is listed as reporting to you yet. HR will add your team."
       )}
     </div>
   );

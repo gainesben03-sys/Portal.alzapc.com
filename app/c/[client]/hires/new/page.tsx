@@ -38,7 +38,7 @@ function NewHireInner() {
       <div>
         <ClientTopbar client={client} />
         <ClientNav clientId={client.id} />
-        <main className="wrap"><div className="card">Only executives can start a new hire. Ask your CEO or Ben.</div></main>
+        <main className="wrap"><div className="card">Only executives can start a new hire. Ask your CEO or HR.</div></main>
       </div>
     );
 
@@ -78,14 +78,14 @@ function NewHireInner() {
         <p className="small muted" style={{ marginTop: -4 }}>
           {isAdvisor
             ? "Everything the offer letter, agreement and welcome emails need. Fill in what you have; the checks show what's still missing."
-            : "Tell Ben who you're hiring. He prepares the offer letter and agreement for you to approve, then handles the welcome and first-day emails."}
+            : "Tell HR who you're hiring. HR prepares the offer letter and agreement for you to approve, then handles the welcome and first-day emails."}
         </p>
         <div className="hire-new">
           <div className="card"><HireForm value={v} onChange={setV} s={s} people={cfg.users} clientName={client?.name} /></div>
           <div className="hire-side">
             <Checks h={v} s={s} />
             {err && <p className="small" style={{ color: "var(--red)" }}>{err}</p>}
-            <button className="btn primary block" onClick={save}>{isAdvisor ? "Save hire" : "Send to Ben"}</button>
+            <button className="btn primary block" onClick={save}>{isAdvisor ? "Save hire" : "Send to HR"}</button>
           </div>
         </div>
       </main>

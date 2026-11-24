@@ -4,7 +4,7 @@ import { useState } from "react";
 import { fmtTime } from "@/lib/data";
 import { Note } from "@/lib/modules";
 
-export const NOTE_STATUS = { new: "New", seen: "Seen by Ben", done: "Done" } as const;
+export const NOTE_STATUS = { new: "New", seen: "Seen by HR", done: "Done" } as const;
 
 export function NoteCard({
   n,
@@ -38,7 +38,7 @@ export function NoteCard({
       <p style={{ marginTop: 8 }}>{n.text}</p>
       <div className="tiny muted" style={{ marginTop: 4 }}>
         {fmtTime(n.at)}
-        {n.emailed && " · emailed to Ben"}
+        {n.emailed && " · emailed to HR"}
       </div>
       {n.replies.map((r, i) => (
         <div className="reply" key={i}>

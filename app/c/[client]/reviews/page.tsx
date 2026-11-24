@@ -1,7 +1,7 @@
 "use client";
 
 // Reviews (Alza Perform): managers see who needs them, HR sees everyone, executives see how teams are doing.
-// Templates and settings live here too, for Ben and the review admins.
+// Templates and settings live here too, for HR and the review admins.
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -670,7 +670,7 @@ function SettingsEditor({ s, users, lang, onSave }: { s: PerformSettings; users:
 
       <section className="card">
         <h2 className="pf-h2">{es ? "Administradores de evaluaciones" : "Review admins"}</h2>
-        <p className="tiny muted" style={{ marginTop: 0 }}>{es ? "Ven y administran todas las evaluaciones, como RR. HH. Ben siempre tiene acceso." : "They see and manage every review, like HR. Ben always has access. Managers only see their own team."}</p>
+        <p className="tiny muted" style={{ marginTop: 0 }}>{es ? "Ven y administran todas las evaluaciones, como RR. HH. Alza HR siempre tiene acceso." : "They see and manage every review. Alza HR always has access. Managers only see their own team."}</p>
         {users.length ? users.map((u) => (
           <label key={u.email} className="check"><input type="checkbox" checked={v.admins.includes(u.email)} onChange={(e) => setV({ ...v, admins: e.target.checked ? [...v.admins, u.email] : v.admins.filter((x) => x !== u.email) })} /> {u.name} <span className="tiny muted">{u.email}</span></label>
         )) : <p className="small muted">{es ? "Agregue personas con acceso en los ajustes del cliente." : "Add people with access in the client's settings first."}</p>}

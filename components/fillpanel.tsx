@@ -7,7 +7,7 @@ import { DOCX_MIME } from "@/lib/docx";
 const REASONS: Record<string, string> = {
   no_key: "Claude is off. Add ANTHROPIC_API_KEY in Vercel and redeploy.",
   demo: "This works once the Alza Hub is connected to Supabase.",
-  forbidden: "Only Ben can do this.",
+  forbidden: "Only HR can do this.",
   not_docx: "That one isn't a Word file. To keep the formatting, upload the .docx version (PDFs can't be edited this way).",
   too_big: "That file is over 3 MB. Save it without large images, or upload it under Client setup and pick it from the list.",
   not_found: "Couldn't find that file. It may have been removed.",
@@ -66,7 +66,7 @@ const toB64 = (f: File) =>
 
 /**
  * Pick a past letter (offer, termination, promotion...), Claude finds the details that change,
- * Ben checks them, and the original Word file comes back with only those words swapped.
+ * HR checks them, and the original Word file comes back with only those words swapped.
  */
 export function FillPanel({
   clientId,

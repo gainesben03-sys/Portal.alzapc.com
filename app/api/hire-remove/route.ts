@@ -1,5 +1,5 @@
 // Remove a new hire from the tracker for good (added by mistake, a duplicate, or never moving forward).
-// Ben, or an executive at the client. Signed documents already saved to Files stay there.
+// HR, or an executive at the client. Signed documents already saved to Files stay there.
 // POST { clientId, id }
 import { NextResponse } from "next/server";
 import { admin, caller, SERVER_LIVE } from "@/lib/server";

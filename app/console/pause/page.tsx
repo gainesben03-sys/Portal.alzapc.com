@@ -1,6 +1,6 @@
 "use client";
 
-// Ben writes The Pause once a month here. Every company's link shows it with their name.
+// HR writes The Pause once a month here. Every company's link shows it with their name.
 import { useEffect, useMemo, useState } from "react";
 import { AlzaNav, AlzaTopbar, Toast, useGuard, useToast } from "@/components/ui";
 import { blankRitual, cleanPartner, cleanRituals, DEFAULT_PARTNER, monthSlug, PAUSE_SEED, pauseMonthLabel, PausePartner, PauseRitual, PauseWords, PILLAR_DEFAULT, PILLAR_NAME, PILLARS } from "@/lib/pause";

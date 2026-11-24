@@ -54,7 +54,7 @@ export async function loadClient(db: SupabaseClient, clientId: string, base: str
   const { data: mem } = await db.from("members").select("email, name, role, access").eq("client_id", clientId);
   const users = (mem ?? []) as { email: string; name: string; role: string; access: string }[];
   const esc = users.find((u) => u.email.toLowerCase() === (cfg.escalationEmail || "").toLowerCase()) ?? users.find((u) => u.access === "exec");
-  const escalation: Person = esc ? { name: esc.name, role: esc.role, email: esc.email } : { name: "Ben Gaines", role: "Alza advisor" };
+  const escalation: Person = esc ? { name: esc.name, role: esc.role, email: esc.email } : { name: "HR", role: "Alza advisor" };
   const client: Client = { id: c.id, name: c.name, accent: cfg.accent || "#19283c", logo: cfg.logo, pilot: !!c.pilot, engagement: c.engagement ?? "", escalation, contacts: users };
   const fullCfg: ClientConfig = { ...cfg, users: users.map((u) => ({ ...u, access: u.access as "exec" })), codes: [] };
   const s: OnboardingSettings = onboardingFor(cfg.onboarding);
@@ -81,7 +81,7 @@ export async function saveHire(db: SupabaseClient, h: Hire) {
   return db.from("hires").update({ data: rest }).eq("id", id);
 }
 
-/** Header image for the PDF: the client's letterhead if Ben uploaded one, else their logo. */
+/** Header image for the PDF: the client's letterhead if HR uploaded one, else their logo. */
 export async function headerImage(db: SupabaseClient, clientId: string, logo?: string, logoOnly = false): Promise<{ data: Uint8Array; png: boolean } | null> {
   if (!logoOnly) try {
     const { data: k } = await db.from("knowledge").select("path, mime, file_name").eq("client_id", clientId).eq("kind", "letterhead").order("created_at", { ascending: false }).limit(1);

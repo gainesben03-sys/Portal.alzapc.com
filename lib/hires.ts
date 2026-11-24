@@ -83,9 +83,9 @@ export interface Hire {
   xp?: import("./experience").HireXp;
   /** Came in through the hiring manager's offer request form. */
   request?: { name: string; email: string; at: string; employment?: string; approvedBy?: string };
-  /** The company's approver signs off before Ben writes the offer (only if the company set one up). */
+  /** The company's approver signs off before HR writes the offer (only if the company set one up). */
   preApproval?: Approval;
-  /** The hiring manager approves the offer letter Ben drafted, before it goes out. */
+  /** The hiring manager approves the offer letter HR drafted, before it goes out. */
   letterApproval?: Approval;
 }
 
@@ -117,7 +117,7 @@ export const FILL_INS = ["{first name}", "{manager}", "{company}", "{start date}
 export const BUILT_IN_TEMPLATES: Record<"welcome" | "firstDay", Required<EmailEdits>> = {
   welcome: {
     subject: "Welcome to {company}, {first name}!",
-    message: "Hi {first name},\n\nI'm {HR name}, and I'm part of the HR team. We're excited to have you joining us and look forward to welcoming you on your first day.\n\nYour manager, {manager}, is looking forward to working with you. Here's what happens between now and then.",
+    message: "Hi {first name},\n\nWelcome from all of us at {company}. We're excited to have you joining us and look forward to welcoming you on your first day.\n\nYour manager, {manager}, is looking forward to working with you. Here's what happens between now and then.",
     closing: "We're excited to have you on the team.",
   },
   firstDay: {
@@ -280,7 +280,7 @@ export function defaultOnboarding(): OnboardingSettings {
     payroll: "your payroll system",
     hqAddress: "",
     defaultArrival: "9:00 AM",
-    hrName: "Ben",
+    hrName: "The HR team",
     hrEmail: "ben@alzapc.com",
     hrPhone: "",
     benefitsNote: "Your benefits information will come from your payroll and benefits portal.",
@@ -542,7 +542,7 @@ ${section("#F4F1EC", `<table role="presentation" width="100%" cellpadding="0" ce
   return { html: frame(brand, inner), text: `${headline}\n\n${intro}\n\n${items.map((it, i) => `${i + 1}. ${it.title} (${it.why})`).join("\n")}\n\n${cta.label}: ${cta.url}` };
 }
 
-/** Managers and hiring managers see only the new hires they manage; executives and Ben see everyone. */
+/** Managers and hiring managers see only the new hires they manage; executives and HR see everyone. */
 export function canSeeHire(h: Pick<Hire, "managerName">, viewer: { advisor?: boolean; access?: string; name?: string } ): boolean {
   if (viewer.advisor || !viewer.access || viewer.access === "exec") return true;
   const a = (h.managerName || "").trim().toLowerCase();

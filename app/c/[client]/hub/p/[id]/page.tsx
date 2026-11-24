@@ -24,9 +24,9 @@ export default function HubPerson() {
   if (!ok || !client) return null;
 
   const p = people.find((x) => x.id === id && x.clientId === clientId);
-  // managers only see their own people; Ben sees everyone
+  // managers only see their own people; HR sees everyone
   const manages = !!p && (viewer?.kind === "advisor" || (!!me?.email && p.managerEmail.toLowerCase() === me.email.toLowerCase()));
-  // executives can open anyone, for the Documentation section; check-in notes stay with the manager and Ben
+  // executives can open anyone, for the Documentation section; check-in notes stay with the manager and HR
   const allowed = !!p && (manages || disc.ok);
   if (!p || !allowed)
     return (
@@ -96,7 +96,7 @@ export default function HubPerson() {
             ))}
           </div>
         </div>
-        <p className="tiny muted" style={{ marginTop: -4 }}>🔒 Only you and Ben can see these notes.</p>
+        <p className="tiny muted" style={{ marginTop: -4 }}>🔒 Only you and HR can see these notes.</p>
         {shown.length === 0 ? (
           <div className="card small muted">Nothing logged yet. Start with a quick check-in.</div>
         ) : (

@@ -6,7 +6,7 @@ import { demoFeedback, demoReply, Feedback, KeyIdea, Lang, PracticeContent, Quiz
 
 const REASON: Record<string, string> = {
   limit: "That's today's practice limit. Try again tomorrow.",
-  no_key: "Practice isn't switched on yet. Ben is on it.",
+  no_key: "Practice isn't switched on yet. HR is on it.",
   forbidden: "This practice isn't available to you.",
   not_found: "This practice isn't available any more.",
   signed_out: "Sign in again to keep practicing.",

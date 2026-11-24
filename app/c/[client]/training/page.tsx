@@ -9,7 +9,7 @@ import { fmt } from "@/lib/data";
 import { canView, openResource } from "@/lib/library";
 import { hasPractice, MyProgress, myProgress, progressSteps } from "@/lib/practice";
 
-/** Training: every training Ben has run for this company, to view again and practice. */
+/** Training: every training HR has run for this company, to view again and practice. */
 export default function TrainingHome() {
   const { client: clientId } = useParams<{ client: string }>();
   const ok = useGuard("client", clientId);
@@ -34,7 +34,7 @@ export default function TrainingHome() {
       <ClientNav clientId={client.id} />
       <main className="wrap">
         <h1 style={{ margin: 0 }}>Training</h1>
-        <p className="muted" style={{ margin: "4px 0 0" }}>Your trainings with Ben, and a place to practice what you learned. Five minutes at a time.</p>
+        <p className="muted" style={{ margin: "4px 0 0" }}>Your trainings with HR, and a place to practice what you learned. Five minutes at a time.</p>
         {!on && isAdvisor && <div className="pr-draft tiny">Training is off for {client.name}. Turn it on in their settings under Modules.</div>}
 
         {withPractice.length > 0 && (
@@ -92,7 +92,7 @@ export default function TrainingHome() {
           </>
         )}
 
-        {list.length === 0 && <div className="card section small muted">No trainings yet. After a session with Ben, the slides and practice show up here.</div>}
+        {list.length === 0 && <div className="card section small muted">No trainings yet. After a session with HR, the slides and practice show up here.</div>}
         {withPractice.length > 0 && <p className="tiny muted section">🔒 Practice is private. Role-play conversations aren&apos;t saved. {me?.access === "exec" || isAdvisor ? "You can see who has practiced, not what they said." : "Your company sees that you practiced, not what you said."}</p>}
       </main>
       <Toast msg={toast.msg} onDone={toast.clear} />

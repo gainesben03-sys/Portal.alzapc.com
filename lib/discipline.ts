@@ -1,7 +1,7 @@
-// Discipline documentation: an executive (or Ben) describes what happened, picks the level,
+// Discipline documentation: an executive (or HR) describes what happened, picks the level,
 // and the Alza Hub words it as a write-up, email recap or file note from the company's handbook.
 // The AI only words, formats and quotes policy. It never picks the level and never suggests termination.
-// Records are private to executives and Ben. Employees and their managers never see them in the Alza Hub.
+// Records are private to executives and HR. Employees and their managers never see them in the Alza Hub.
 
 export const DEFAULT_LEVELS = ["Documented conversation", "Verbal warning", "Written warning", "Final written warning"];
 export const ISSUES = ["Attendance", "Performance", "Conduct", "Policy", "Safety", "Other"] as const;
@@ -45,7 +45,7 @@ export interface DiscDraft {
 export interface DiscRecord extends DiscInput {
   id: string;
   clientId: string;
-  status: "review" | "saved"; // review = held for Ben before drafting
+  status: "review" | "saved"; // review = held for HR before drafting
   hold?: string[]; // why it was held (shown to whoever can see the record)
   draft?: DiscDraft;
   ack: Ack;
@@ -88,7 +88,7 @@ export function suggestLevel(levels: string[], history: DiscRecord[], issue: Iss
   if (!same.length) return { level: levels[0], why: `No ${issue.toLowerCase()} records in the last ${SUGGEST_MONTHS} months, so this would be the first step.` };
   const top = same.reduce((a, r) => (Math.max(levels.indexOf(r.level), 0) > Math.max(levels.indexOf(a.level), 0) ? r : a));
   const i = Math.max(levels.indexOf(top.level), 0);
-  if (i >= levels.length - 1) return { level: levels[levels.length - 1], why: `There's already a ${top.level.toLowerCase()} for ${issue.toLowerCase()} (${fmtDay(top.date)}). Talk to Ben before going further.` };
+  if (i >= levels.length - 1) return { level: levels[levels.length - 1], why: `There's already a ${top.level.toLowerCase()} for ${issue.toLowerCase()} (${fmtDay(top.date)}). Talk to HR before going further.` };
   return { level: levels[i + 1], why: `Same issue as the ${top.level.toLowerCase()} on ${fmtDay(top.date)}, so the next step is a ${levels[i + 1].toLowerCase()}.` };
 }
 
@@ -116,7 +116,7 @@ export function loadedWords(t: string): string[] {
 }
 
 /**
- * Things in the description that call for Ben before anything is drafted: the employee may have
+ * Things in the description that call for HR before anything is drafted: the employee may have
  * done something the law protects, so discipline now could look like retaliation.
  */
 const PROTECTED: [RegExp, string][] = [
@@ -136,7 +136,7 @@ export function protectedHits(t: string): string[] {
   for (const [re, why] of PROTECTED) if (re.test(t) && !out.includes(why)) out.push(why);
   return out;
 }
-/** Termination is out of scope here: it goes to Ben. */
+/** Termination is out of scope here: it goes to HR. */
 export const TERMINATION = /\b(terminat\w*|fire[ds]?|firing|let (him|her|them) go|let go|separat\w*|lay ?off|dismiss\w*)\b/i;
 
 // ---------- the document ----------

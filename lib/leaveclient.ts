@@ -28,7 +28,7 @@ export async function leaveApi(clientId: string, body: object): Promise<Record<s
   return r.json().catch(() => ({ ok: false, reason: "error" }));
 }
 
-/** Is the signed-in person an HR admin for this client? Ben always is. */
+/** Is the signed-in person an HR admin for this client? HR always is. */
 export function useLeaveAccess(clientId: string) {
   const { viewer, me, config } = useStore();
   const on = !!config[clientId]?.modules.leave;

@@ -1,4 +1,4 @@
-// Save the new hire tracker's steps for one company. Ben, or an executive at the client.
+// Save the new hire tracker's steps for one company. HR, or an executive at the client.
 // POST { clientId, steps: [{ id, label, days? }] }  (an empty list goes back to the defaults)
 import { NextResponse } from "next/server";
 import { admin, caller, SERVER_LIVE } from "@/lib/server";

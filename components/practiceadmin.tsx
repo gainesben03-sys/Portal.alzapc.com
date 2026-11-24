@@ -14,7 +14,7 @@ const WHY: Record<string, string> = {
   forbidden: "Only you can do this.",
 };
 
-/** Ben builds, reviews and publishes practice for a training. Managers see it only once it's published. */
+/** HR builds, reviews and publishes practice for a training. Managers see it only once it's published. */
 export function PracticeSheet({ r, onSave, onClose }: { r: Resource; onSave: (p: Practice | undefined, msg: string) => void; onClose: () => void }) {
   const [p, setP] = useState<Practice | undefined>(r.practice);
   const [lang, setLang] = useState<Lang>("en");

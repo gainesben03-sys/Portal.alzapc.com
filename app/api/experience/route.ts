@@ -1,4 +1,4 @@
-// Employee experience, for Ben and executives (and the hire's own manager, for their playbook).
+// Employee experience, for HR and executives (and the hire's own manager, for their playbook).
 // GET  ?clientId=&hireId=       -> the hire's latest journey and a short-lived photo link
 // POST { clientId, action, ... }:
 //   settings { experience }     save the company's setup (questions, wording, nudges, playbook)

@@ -106,7 +106,7 @@ export interface MailOpts {
   fromBox?: string;
   /** Which company this is for, when the caller knows. Otherwise worked out from links and recipients. */
   clientId?: string;
-  /** Leave, write-ups: only Ben sees these in the Outbox. */
+  /** Leave, write-ups: only HR sees these in the Outbox. */
   sensitive?: boolean;
   /** Always send now (sign-in codes, released Outbox emails). */
   bypassHold?: boolean;

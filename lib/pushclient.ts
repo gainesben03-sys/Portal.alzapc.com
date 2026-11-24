@@ -94,13 +94,13 @@ export const getPushPrefs = (): Promise<{ ok: boolean; topics?: Partial<Record<P
 export const savePushPrefs = (topics: Partial<Record<PushTopic, boolean>>) => api({ action: "prefs", topics }).catch(() => ({ ok: false }));
 export const testPush = () => api({ action: "test" }).catch(() => ({ ok: false }));
 
-/** Heads-up to Ben from something a client did (fire and forget). */
+/** Heads-up to HR from something a client did (fire and forget). */
 export function pingBen(title: string, body: string, url: string, topic: "activity" | "hires" = "activity") {
   if (!LIVE) return;
   api({ action: "ben", title, body, url, topic }).catch(() => {});
 }
 
-/** Alert a client that Ben assigned something (after it has saved). */
+/** Alert a client that HR assigned something (after it has saved). */
 export function pingTask(actionId: string) {
   if (!LIVE) return;
   setTimeout(async () => {

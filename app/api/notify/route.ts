@@ -1,7 +1,7 @@
 // Portal notifications.
-//   Default: an email to Ben (NOTIFY_TO). Any signed-in portal user can trigger it.
-//   toMember: Ben emails one person at a client (for example a reply on the note board).
-// In demo mode (no Supabase keys) it behaves like before: email to Ben if Resend is set up.
+//   Default: an email to HR (NOTIFY_TO). Any signed-in portal user can trigger it.
+//   toMember: HR emails one person at a client (for example a reply on the note board).
+// In demo mode (no Supabase keys) it behaves like before: email to HR if Resend is set up.
 import { NextResponse } from "next/server";
 import { admin, caller, sendEmail, SERVER_LIVE } from "@/lib/server";
 import { pushTo } from "@/lib/push";
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     const r = await sendEmail({ to: [email], subject, text });
     const pushUrl = String(b.push?.url ?? "");
     await pushTo(admin(), [email], "replies", {
-      title: String(b.push?.title ?? "Ben replied").slice(0, 80),
+      title: String(b.push?.title ?? "HR replied").slice(0, 80),
       body: subject,
       url: pushUrl.startsWith(`/c/${String(b.toMember.clientId ?? "")}/`) ? pushUrl : `/c/${String(b.toMember.clientId ?? "")}/board`,
       tag: b.push ? undefined : "reply",

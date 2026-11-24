@@ -1,5 +1,5 @@
 // Push notifications: sign a device up, change what you get, send a test,
-// and two triggers from the browser (a heads-up to Ben, a new request for a client).
+// and two triggers from the browser (a heads-up to HR, a new request for a client).
 // Recipients are always worked out here on the server.
 import { NextResponse } from "next/server";
 import { advisorEmails, PUSH_PROBLEM, pushReady, pushTo } from "@/lib/push";
@@ -59,22 +59,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: n > 0, sent: n, reason: pushReady() ? (n ? undefined : "no_device") : PUSH_PROBLEM || "not_configured" });
     }
     case "ben": {
-      // any signed-in portal user can give Ben a heads-up; the text comes from the app's own events
+      // any signed-in portal user can give HR a heads-up; the text comes from the app's own events
       const topic: PushTopic = b.topic === "hires" ? "hires" : "activity";
-      if (me.advisor) return NextResponse.json({ ok: true, skipped: true }); // Ben doesn't alert himself
+      if (me.advisor) return NextResponse.json({ ok: true, skipped: true }); // HR doesn't alert himself
       const url = s(b.url, 300);
       const n = await pushTo(db, await advisorEmails(db), topic, { title: s(b.title, 120) || "Alza Hub activity", body: s(b.body, 300), url: url.startsWith("/") ? url : "/console", tag: s(b.tag, 80) || undefined });
       return NextResponse.json({ ok: true, sent: n });
     }
     case "task": {
-      // Ben assigned something: alert the owner
+      // HR assigned something: alert the owner
       if (!me.advisor) return NextResponse.json({ ok: false, reason: "forbidden" }, { status: 403 });
       const { data: a } = await db.from("actions").select("id, client_id, data").eq("id", s(b.actionId, 80)).maybeSingle();
       if (!a) return NextResponse.json({ ok: false, reason: "not_found" });
       const d = a.data as { title?: string; kind?: string; side?: string; owner?: { email?: string; name?: string }; due?: string };
       if (d.side !== "client" || !d.owner?.email) return NextResponse.json({ ok: true, skipped: true });
       const n = await pushTo(db, [d.owner.email], "requests", {
-        title: d.kind === "approval" ? "Ben needs your approval" : "New request from Ben",
+        title: d.kind === "approval" ? "HR needs your approval" : "New request from HR",
         body: `${d.title ?? "A new item"}${d.due ? ` · due ${fmt(d.due)}` : ""}`,
         url: `/c/${a.client_id}/a/${a.id}`,
         tag: `task-${a.id}`,

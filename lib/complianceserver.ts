@@ -26,7 +26,7 @@ export async function loadCtx(db: DB, clientId: string): Promise<Ctx | null> {
   };
 }
 
-/** Admins check certificates, answer questions and change settings: Ben, executives, and anyone HR adds. */
+/** Admins check certificates, answer questions and change settings: HR, executives, and anyone HR adds. */
 export function roleOf(who: Caller, x: Ctx) {
   const email = who.email.toLowerCase();
   const adminRole = who.advisor || who.execOf.includes(x.clientId) || x.s.admins.includes(email);
@@ -179,7 +179,7 @@ export async function send(x: Ctx, to: string | undefined, m: { subject: string;
   return sendEmail({ to: [to], subject: m.subject, html: m.html, text: m.text, ...x.sender });
 }
 
-/** Who gets HR copies and questions: the admins picked in settings, or Ben if none. */
+/** Who gets HR copies and questions: the admins picked in settings, or HR if none. */
 export const hrInbox = (x: Ctx) => (x.s.admins.length ? x.s.admins : [BEN]);
 
 /** Send assignment emails for anything not yet sent, one email per person. Only once HR has launched. */

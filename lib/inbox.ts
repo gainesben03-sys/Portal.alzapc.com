@@ -1,5 +1,5 @@
-// Email to work: Ben forwards a client's email to the Alza Hub and it becomes a task or a project.
-// Shared by the server and Ben's console. No secrets here.
+// Email to work: HR forwards a client's email to the Alza Hub and it becomes a task or a project.
+// Shared by the server and HR's console. No secrets here.
 import { Action, ADVISOR, Project, Subtask } from "./data";
 import { syncStepTasks } from "./projecttasks";
 
@@ -12,11 +12,11 @@ export interface InboxItem {
   clientId?: string;
   receivedAt: string;
   via: "email" | "paste";
-  from: string; // who forwarded it (Ben)
+  from: string; // who forwarded it (HR)
   origFrom?: string; // the client person who wrote it, when the forward shows it
   subject: string;
   text: string; // the email as plain text, trimmed
-  note?: string; // what Ben typed above the forward
+  note?: string; // what HR typed above the forward
   attachments: { name: string; path?: string; size?: number; type?: string }[];
   type: WorkType;
   sensitive: boolean;
@@ -36,7 +36,7 @@ export const TYPE_LABEL: Record<WorkType, string> = {
   offer: "Offer letter", termination: "Termination", newhire: "New hire", jd: "Job description",
   investigation: "Investigation", leave: "Leave of absence", policy: "Policy or handbook", other: "Task",
 };
-/** Kept between Ben and HR only: never written where client staff can see it. */
+/** Kept between HR and HR only: never written where client staff can see it. */
 export const SENSITIVE: WorkType[] = ["termination", "investigation", "leave"];
 
 type S = [string, "ben" | "client"];
@@ -61,7 +61,7 @@ export const stepsFor = (t: WorkType): InboxStep[] =>
 
 export const STATUS_LABEL: Record<InboxStatus, string> = { created: "Added", private: "Private", review: "Needs your OK", unsorted: "Pick a client", dismissed: "Dismissed" };
 
-/** Business days back from a date, for spacing Ben's steps before the due date. */
+/** Business days back from a date, for spacing HR's steps before the due date. */
 export function spreadDue(due: string, n: number): string[] {
   const out: string[] = [];
   const d = new Date(`${due}T12:00:00`);
@@ -86,7 +86,7 @@ export function defaultDue(): string {
 }
 const nid = (p: string) => `${p}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
 
-/** The project (with Ben's steps on his list) or the single task an item becomes. */
+/** The project (with HR's steps on his list) or the single task an item becomes. */
 export function buildWork(item: InboxItem): { project?: Project; actions: Action[] } {
   const clientId = item.clientId as string;
   const now = new Date().toISOString();

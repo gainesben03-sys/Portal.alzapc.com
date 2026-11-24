@@ -1,7 +1,7 @@
 "use client";
 
 // The Outbox: every email waiting for an OK, previewed exactly as it will look, then sent or skipped.
-// Used in Ben's console (all companies) and on each company's portal (executives, their company only).
+// Used in HR's console (all companies) and on each company's portal (executives, their company only).
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Sheet } from "@/components/ui";
 import { ageText, MODE_LABEL, OutboxMode, OutRow } from "@/lib/outbox";
@@ -180,7 +180,7 @@ export function OutboxView({ viewer, names, toast, readOnly }: { viewer: Viewer;
               </div>
             </div>
           ))}
-          {data.hiddenCount > 0 && <p className="small muted" style={{ marginTop: 12 }}>{data.hiddenCount} private email{data.hiddenCount === 1 ? "" : "s"} about leave or a write-up {data.hiddenCount === 1 ? "is" : "are"} waiting for Ben.</p>}
+          {data.hiddenCount > 0 && <p className="small muted" style={{ marginTop: 12 }}>{data.hiddenCount} private email{data.hiddenCount === 1 ? "" : "s"} about leave or a write-up {data.hiddenCount === 1 ? "is" : "are"} waiting for HR.</p>}
         </>
       )}
 

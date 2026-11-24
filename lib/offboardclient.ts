@@ -1,6 +1,6 @@
 "use client";
 
-// Offboarding in the browser: Ben and executives only. The public demo keeps everything in this browser.
+// Offboarding in the browser: HR and executives only. The public demo keeps everything in this browser.
 import { useCallback, useEffect, useState } from "react";
 import { Departure, newToken, tasksFor } from "./offboard";
 import { authHeader, LIVE, sb } from "./supabase";
@@ -13,10 +13,10 @@ const iso = (n: number) => {
 };
 function demo(): Departure[] {
   const now = new Date().toISOString();
-  const a: Departure = { id: "demo-off-1", clientId: "blueprint", status: "planned", personId: "pp4", name: "Chris Wu", title: "Warehouse Associate", department: "Warehouse", managerName: "Dana Ortiz", type: "resignation", noticeDate: iso(-6), lastDay: iso(8), personalEmail: "chris.wu@example.com", rehire: "yes", reason: "Moving to Portland for family.", tasks: [], email: { auto: true }, notes: [], history: [{ at: now, by: "Ben Gaines", text: "Offboarding started" }], createdAt: now, createdBy: "Ben Gaines" };
-  a.tasks = tasksFor(a, "Rippling").map((t, i) => (i < 2 ? { ...t, done: true, doneAt: iso(-5), doneBy: "Ben Gaines" } : t));
-  const b: Departure = { id: "demo-off-2", clientId: "blueprint", status: "departed", name: "Riley Park", title: "Driver", department: "Logistics", managerName: "Dana Ortiz", type: "resignation", noticeDate: iso(-30), lastDay: iso(-16), personalEmail: "riley@example.com", rehire: "yes", tasks: [], email: { auto: true, sentAt: `${iso(-18)}T16:00:00Z`, to: "riley@example.com" }, survey: { token: newToken(), sentAt: `${iso(-18)}T16:00:00Z`, doneAt: `${iso(-15)}T19:00:00Z`, answers: [{ q: "Overall, how was your experience working here?", a: "4" }, { q: "How supported did you feel by your manager?", a: "5" }, { q: "What's the main reason you're leaving?", a: "Growth or career path" }, { q: "What did you like most about working here?", a: "The crew. Everyone has each other's back on install days." }, { q: "What's one thing we should change?", a: "More notice on weekend shifts." }, { q: "Would you recommend us as a place to work?", a: "Yes" }] }, rosterRemovedAt: `${iso(-15)}T14:00:00Z`, notes: [], history: [{ at: `${iso(-30)}T16:00:00Z`, by: "Ben Gaines", text: "Offboarding started" }], createdAt: `${iso(-30)}T16:00:00Z`, createdBy: "Ben Gaines" };
-  b.tasks = tasksFor(b, "Rippling").map((t) => ({ ...t, done: true, doneAt: b.lastDay, doneBy: "Ben Gaines" }));
+  const a: Departure = { id: "demo-off-1", clientId: "blueprint", status: "planned", personId: "pp4", name: "Chris Wu", title: "Warehouse Associate", department: "Warehouse", managerName: "Dana Ortiz", type: "resignation", noticeDate: iso(-6), lastDay: iso(8), personalEmail: "chris.wu@example.com", rehire: "yes", reason: "Moving to Portland for family.", tasks: [], email: { auto: true }, notes: [], history: [{ at: now, by: "HR", text: "Offboarding started" }], createdAt: now, createdBy: "HR" };
+  a.tasks = tasksFor(a, "Rippling").map((t, i) => (i < 2 ? { ...t, done: true, doneAt: iso(-5), doneBy: "HR" } : t));
+  const b: Departure = { id: "demo-off-2", clientId: "blueprint", status: "departed", name: "Riley Park", title: "Driver", department: "Logistics", managerName: "Dana Ortiz", type: "resignation", noticeDate: iso(-30), lastDay: iso(-16), personalEmail: "riley@example.com", rehire: "yes", tasks: [], email: { auto: true, sentAt: `${iso(-18)}T16:00:00Z`, to: "riley@example.com" }, survey: { token: newToken(), sentAt: `${iso(-18)}T16:00:00Z`, doneAt: `${iso(-15)}T19:00:00Z`, answers: [{ q: "Overall, how was your experience working here?", a: "4" }, { q: "How supported did you feel by your manager?", a: "5" }, { q: "What's the main reason you're leaving?", a: "Growth or career path" }, { q: "What did you like most about working here?", a: "The crew. Everyone has each other's back on install days." }, { q: "What's one thing we should change?", a: "More notice on weekend shifts." }, { q: "Would you recommend us as a place to work?", a: "Yes" }] }, rosterRemovedAt: `${iso(-15)}T14:00:00Z`, notes: [], history: [{ at: `${iso(-30)}T16:00:00Z`, by: "HR", text: "Offboarding started" }], createdAt: `${iso(-30)}T16:00:00Z`, createdBy: "HR" };
+  b.tasks = tasksFor(b, "Rippling").map((t) => ({ ...t, done: true, doneAt: b.lastDay, doneBy: "HR" }));
   return [a, b];
 }
 function demoGet(): Departure[] {

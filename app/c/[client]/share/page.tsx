@@ -95,7 +95,7 @@ export default function ShareWithHR() {
     setConfidential(false);
     setRequestId("");
     setBusy(false);
-    toast.show(sent ? "Shared. Ben has been notified." : "Shared with Ben.");
+    toast.show(sent ? "Shared. HR has been notified." : "Shared with HR.");
   };
 
   return (
@@ -103,18 +103,18 @@ export default function ShareWithHR() {
       <ClientTopbar client={client} />
       <ClientNav clientId={client.id} />
       <main className="wrap">
-        <h1>Send files to Ben</h1>
-        <p className="muted" style={{ marginTop: 6 }}>Send documents to Ben securely instead of over email. He's notified as soon as they land.</p>
+        <h1>Send files to HR</h1>
+        <p className="muted" style={{ marginTop: 6 }}>Send documents to HR securely instead of over email. They're notified as soon as they land.</p>
 
         {requests.length > 0 && (
           <>
-            <div className="section-head section"><h2>Ben has asked for</h2></div>
+            <div className="section-head section"><h2>HR has asked for</h2></div>
             <div className="card">
               {requests.map((r) => (
                 <div className="row" key={r.id}>
                   <div className="grow">
                     <div className="title">{r.title}</div>
-                    <div className="tiny muted">{r.owner.name} · due {fmt(r.due)}{r.status === "submitted" ? " · sent, Ben is reviewing" : ""}</div>
+                    <div className="tiny muted">{r.owner.name} · due {fmt(r.due)}{r.status === "submitted" ? " · sent, HR is reviewing" : ""}</div>
                   </div>
                   <button className="btn sm" onClick={() => { setRequestId(r.id); input.current?.click(); }}>Upload</button>
                 </div>
@@ -162,14 +162,14 @@ export default function ShareWithHR() {
               <select className="f" value={category} onChange={(e) => setCategory(e.target.value)}>
                 {FILE_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
               </select>
-              <label className="f">Note for Ben (optional)</label>
+              <label className="f">Note for HR (optional)</label>
               <textarea className="f" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Signed copies for the personnel file" />
               <label className="rule" style={{ marginTop: 12, cursor: "pointer" }}>
                 <span className="switch"><input type="checkbox" checked={confidential} onChange={(e) => setConfidential(e.target.checked)} /><span /></span>
-                <div><b>Confidential</b><div className="tiny muted">Only Ben can open it. Not shown to the rest of your team.</div></div>
+                <div><b>Confidential</b><div className="tiny muted">Only HR can open it. Not shown to the rest of your team.</div></div>
               </label>
               <button className="btn primary block" style={{ marginTop: 14 }} disabled={busy} onClick={submit}>
-                {busy ? "Sending..." : `Send ${picked.length} file${picked.length === 1 ? "" : "s"} to Ben`}
+                {busy ? "Sending..." : `Send ${picked.length} file${picked.length === 1 ? "" : "s"} to HR`}
               </button>
             </>
           )}

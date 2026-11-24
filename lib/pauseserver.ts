@@ -1,4 +1,4 @@
-// The Pause, server side: each company's no-sign-in link, the months Ben has written, and counts.
+// The Pause, server side: each company's no-sign-in link, the months HR has written, and counts.
 import { createHmac } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { cleanPartner, cleanRituals, PAUSE_EVENTS, PAUSE_SEED, PauseEvent, PausePartner, PauseRitual } from "./pause";
@@ -23,7 +23,7 @@ export async function clientByPauseToken(db: SupabaseClient, token: string): Pro
   return { id: data.id, name: data.name, accent: (cfg.accent as string) || "#0d1a2e", logo: (cfg.logoEmail as string) || (cfg.logo as string) || null, spanish: true };
 }
 
-/** Saved months (or the starting set until Ben saves his own) and the financial coach. */
+/** Saved months (or the starting set until HR saves his own) and the financial coach. */
 export async function readPause(db: SupabaseClient): Promise<{ rituals: PauseRitual[]; partner: PausePartner }> {
   const { data } = await db.from("app_settings").select("data").eq("key", "pause").maybeSingle();
   const d = (data?.data ?? {}) as { rituals?: unknown; partner?: unknown };

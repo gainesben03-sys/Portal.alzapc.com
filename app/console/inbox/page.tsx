@@ -1,6 +1,6 @@
 "use client";
 
-// Email to work: what Ben forwarded (or pasted) and what each became.
+// Email to work: what HR forwarded (or pasted) and what each became.
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlzaNav, AlzaTopbar, Toast, useGuard, useToast } from "@/components/ui";

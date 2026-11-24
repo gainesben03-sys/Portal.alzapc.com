@@ -1,6 +1,6 @@
 "use client";
 
-// Ben's Outbox: emails from every company that are waiting for an OK.
+// HR's Outbox: emails from every company that are waiting for an OK.
 import { useMemo } from "react";
 import { AlzaNav, AlzaTopbar, Toast, useGuard, useToast } from "@/components/ui";
 import { OutboxView } from "@/components/outbox";
@@ -11,7 +11,7 @@ export default function ConsoleOutbox() {
   const { clients, who } = useStore();
   const toast = useToast();
   const names = useMemo(() => clients.map((c) => ({ id: c.id, name: c.name })), [clients]);
-  const viewer = useMemo(() => ({ advisor: true, name: who || "Ben" }), [who]);
+  const viewer = useMemo(() => ({ advisor: true, name: who || "HR" }), [who]);
   if (!ok) return null;
   return (
     <>

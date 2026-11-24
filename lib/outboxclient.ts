@@ -64,7 +64,7 @@ function seed(): Demo {
       { ...base, id: "obd8", clientId: "bayside", to: ["avery@example.com"], subject: "Jules Carter's 30-day check-in is coming up", audience: "leader", auto: true, createdAt: ago(9), fromName: "Bayside Residential",
         text: "Jules Carter's 30-day check-in is Thursday.", html: mailHtml("Bayside Residential", "#1d4f7a", "A 30-day check-in is coming up", ["Jules Carter's 30-day check-in is <b>Thursday</b>. Three questions, ten minutes."], "Open the check-in") },
       // already decided
-      { ...base, id: "obd9", to: ["dana@example.com"], subject: "Reminder: 2 reviews due this month", audience: "leader", auto: true, createdAt: ago(50), status: "sent", doneAt: ago(46), doneBy: "Ben Gaines", text: "Two reviews are due this month.", html: mailHtml(H, a, "2 reviews due this month", ["Chris Wu and Priya Nair."]) },
+      { ...base, id: "obd9", to: ["dana@example.com"], subject: "Reminder: 2 reviews due this month", audience: "leader", auto: true, createdAt: ago(50), status: "sent", doneAt: ago(46), doneBy: "HR", text: "Two reviews are due this month.", html: mailHtml(H, a, "2 reviews due this month", ["Chris Wu and Priya Nair."]) },
       { ...base, id: "obd10", to: ["team@example.com"], subject: "Happy birthday, Morgan!", audience: "employee", auto: true, createdAt: ago(70), status: "skipped", doneAt: ago(66), doneBy: "Alex Rivera", text: "Happy birthday!", html: mailHtml(H, a, "Happy birthday, Morgan", ["Wishing you a great day."]) },
     ],
   };
@@ -86,7 +86,7 @@ const toRow = (m: OutMail): OutRow => {
   return { ...rest, html: undefined, attachments: attachments?.map((a) => a.filename) };
 };
 
-/** Demo: who is looking. Ben sees all; an executive sees their company, minus Ben-only emails. */
+/** Demo: who is looking. HR sees all; an executive sees their company, minus HR-only emails. */
 interface Viewer { advisor: boolean; clientId?: string; name: string }
 const may = (v: Viewer, m: OutMail) => v.advisor || (m.clientId === v.clientId && !m.sensitive && m.audience !== "ben");
 

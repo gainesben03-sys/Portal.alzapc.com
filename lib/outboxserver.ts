@@ -62,7 +62,7 @@ const SENSITIVE = /\/(leave|hub\/ask\/document)\b|leave case|leave of absence|im
 
 /**
  * Keep the email instead of sending it, when the company's Outbox setting says so,
- * or when it's a note to Ben and he asked for one daily summary. Returns null to send now.
+ * or when it's a note to HR and he asked for one daily summary. Returns null to send now.
  */
 export async function maybeHold(db: DB, o: MailOpts): Promise<{ ok: true; id: string; held: true } | null> {
   if (/^\[Test\]/.test(o.subject)) return null; // test sends go to the person who asked, right away
@@ -124,7 +124,7 @@ export async function release(db: DB, ms: OutMail[], by: string, deliver: (o: Ma
 }
 
 /**
- * Daily: skip what's gone stale, send Ben his one summary of notes, and tell whoever approves
+ * Daily: skip what's gone stale, send HR his one summary of notes, and tell whoever approves
  * that emails are waiting. Runs inside the cron; its own emails skip the Outbox.
  */
 export async function outboxCron(db: DB, deliver: (o: MailOpts) => Promise<{ ok: boolean }>, portal: string, log: string[]) {
@@ -135,7 +135,7 @@ export async function outboxCron(db: DB, deliver: (o: MailOpts) => Promise<{ ok:
   for (const r of old ?? []) await setStatus(db, { ...(r.data as OutMail), id: r.id as string, clientId: r.client_id as string }, "skipped", `Skipped after ${HOLD_DAYS} days`);
   if (old?.length) log.push(`outbox: skipped ${old.length} stale`);
 
-  // Ben's one daily summary
+  // HR's one daily summary
   const { data: dig } = await db.from("outbox").select("id, client_id, status, data").eq("status", "digest").order("created_at").limit(200);
   if (dig?.length) {
     const ms = dig.map((r) => ({ ...(r.data as OutMail), id: r.id as string, clientId: r.client_id as string }));
@@ -145,10 +145,10 @@ export async function outboxCron(db: DB, deliver: (o: MailOpts) => Promise<{ ok:
     const to = [...new Set(ms.flatMap((m) => m.to))];
     const r = await deliver({ to, subject: `Alza Hub summary: ${ms.length} update${ms.length === 1 ? "" : "s"}`, text, html, bypassHold: true });
     if (r.ok) for (const m of ms) await setStatus(db, m, "sent", "Daily summary");
-    log.push(`outbox: Ben's summary with ${ms.length}`);
+    log.push(`outbox: HR's summary with ${ms.length}`);
   }
 
-  // waiting for approval: one note to Ben across all companies
+  // waiting for approval: one note to HR across all companies
   const { data: held } = await db.from("outbox").select("client_id").eq("status", "held").limit(2000);
   if (held?.length) {
     const by = new Map<string, number>();

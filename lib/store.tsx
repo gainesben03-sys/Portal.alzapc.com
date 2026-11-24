@@ -33,15 +33,15 @@ interface Store extends State {
   patch: (p: Partial<State>) => void;
   /** Change one new hire (always against the latest state) and log it. */
   updateHire: (id: string, change: Partial<Hire> | ((h: Hire) => Partial<Hire>), log?: string) => void;
-  /** Add an item to Ben's notification bell. */
+  /** Add an item to HR's notification bell. */
   notice: (n: Omit<Notice, "id" | "at" | "read">) => void;
   getClient: (id: string) => Client | undefined;
-  /** The signed-in client user's record (null for Ben). */
+  /** The signed-in client user's record (null for HR). */
   me: PortalUser | null;
   reset: () => void;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
-  /** Ben looking at the Alza Hub as one of a client's people. Read-only. */
+  /** HR looking at the Alza Hub as one of a client's people. Read-only. */
   preview: Preview | null;
   setPreview: (p: Preview | null) => void;
 }
@@ -49,7 +49,7 @@ interface Store extends State {
 export type Preview = { clientId: string; email: string; name: string; role: string; access: PortalUser["access"] };
 const PREVIEW_KEY = "alza-preview";
 
-/** While previewing, nothing may be written: block any non-read request except keeping Ben signed in. */
+/** While previewing, nothing may be written: block any non-read request except keeping HR signed in. */
 let realFetch: typeof fetch | null = null;
 function guardWrites(on: boolean) {
   if (typeof window === "undefined") return;
@@ -237,7 +237,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setSaveError(
           missingTable
             ? "That didn't save because a database update hasn't been run yet. Run supabase/all_updates.sql in the Supabase SQL Editor, then try again."
-            : `That didn't save, so the page reloaded the last saved version. Try again; if it keeps happening, send Ben this: ${why}`
+            : `That didn't save, so the page reloaded the last saved version. Try again; if it keeps happening, send HR this: ${why}`
         );
         try {
           await load();
@@ -415,7 +415,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         files: state.files.filter((f) => !f.confidential || f.by === p.name),
         // roster: executives see their whole team list, everyone else only the people they manage
         people: state.people.filter((x) => x.clientId === p.clientId && (p.access === "exec" || (!!p.email && x.managerEmail.toLowerCase() === p.email.toLowerCase()))),
-        // check-ins and recognition: only the person's manager (and Ben)
+        // check-ins and recognition: only the person's manager (and HR)
         checkins: state.checkins.filter((x) => x.clientId === p.clientId && !!p.email && x.managerEmail.toLowerCase() === p.email.toLowerCase()),
         live: LIVE,
         me: meUser,
@@ -466,7 +466,7 @@ export function useStore() {
 
 export { toISO };
 
-/** Send an email notification to Ben via the server route. Never throws. */
+/** Send an email notification to HR via the server route. Never throws. */
 export async function notifyBen(subject: string, text: string): Promise<boolean> {
   try {
     const r = await fetch("/api/notify", {

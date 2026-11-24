@@ -13,7 +13,7 @@ const KINDS: { k: Kind; label: string; hint: string }[] = [
   { k: "feedback", label: "Feedback", hint: "Their take on candidates or drafts" },
 ];
 
-/** Ben creates a request for a client, or logs something he owes them. */
+/** HR creates a request for a client, or logs something he owes them. */
 export function NewTaskSheet({ clientId, onClose, onCreated }: { clientId?: string; onClose: () => void; onCreated: (msg: string) => void }) {
   const { clients, getClient, config, projects, patch, actions } = useStore();
   const [cid, setCid] = useState(clientId ?? clients[0]?.id ?? "");
@@ -52,7 +52,7 @@ export function NewTaskSheet({ clientId, onClose, onCreated }: { clientId?: stri
         .map((x) => x.trim())
         .filter(Boolean)
         .map((text, i) => ({ id: `s${i + 1}`, text, done: false })),
-      history: [{ at: now, by: ADVISOR.name, text: who === "alza" ? "Added to Ben's list" : `Request created and assigned to ${owner.name}` }],
+      history: [{ at: now, by: ADVISOR.name, text: who === "alza" ? "Added to HR's list" : `Request created and assigned to ${owner.name}` }],
     };
     patch({ actions: [...actions, a] });
     if (a.side === "client") pingTask(a.id);
@@ -73,7 +73,7 @@ export function NewTaskSheet({ clientId, onClose, onCreated }: { clientId?: stri
         <label className="f" style={clientId ? { marginTop: 0 } : undefined}>Who owes it</label>
         <select className="f" value={who} onChange={(e) => setWho(e.target.value)}>
           {people.map((p) => <option key={p.email} value={p.email}>{p.name}, {p.role}</option>)}
-          <option value="alza">Me (Ben owes this)</option>
+          <option value="alza">Me (HR owes this)</option>
         </select>
         {people.length === 0 && <p className="tiny muted" style={{ marginTop: 6 }}>Invite their team in Client setup to assign requests to them.</p>}
 

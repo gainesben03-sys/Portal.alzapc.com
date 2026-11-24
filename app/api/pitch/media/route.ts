@@ -1,5 +1,5 @@
 // Opens a candidate's pitch video or resume through a short-lived private link.
-// Ben always; client team members only once Ben has shared the candidate.
+// HR always; client team members only once HR has shared the candidate.
 import { NextResponse } from "next/server";
 import { Candidate } from "@/lib/modules";
 import { admin, caller, SERVER_LIVE } from "@/lib/server";
@@ -24,7 +24,7 @@ export async function GET(req: Request) {
   return NextResponse.json({ ok: true, url: s.signedUrl });
 }
 
-/** Ben removes a candidate: delete everything stored for their pitch. */
+/** HR removes a candidate: delete everything stored for their pitch. */
 export async function DELETE(req: Request) {
   if (!SERVER_LIVE) return NextResponse.json({ ok: false, reason: "demo" });
   const me = await caller(req);

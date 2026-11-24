@@ -14,7 +14,7 @@ import { weekLine } from "./quotes";
 import { bucket, stepDone } from "./tracker";
 
 const PORTAL = "https://portal.alzapc.com";
-/** Who the Brief comes from: The People Brief <peoplebrief@alzapc.com>. Replies go to Ben. */
+/** Who the Brief comes from: The People Brief <peoplebrief@alzapc.com>. Replies go to HR. */
 export const BRIEF_SENDER = { fromName: "The People Brief", fromBox: "peoplebrief", replyTo: process.env.NOTIFY_TO || "ben@alzapc.com" };
 const MAX = { attention: 5, people: 6, priorities: 5, upcoming: 6, wins: 4 };
 
@@ -267,7 +267,7 @@ export function buildHuddle({ client, settings, actions, projects, rules, sinceD
 <div style="${SUBHEAD};padding-top:4px">Your weekly view of what&rsquo;s happening across your people and priorities.</div>
 <div style="font:15px/1.5 Arial,sans-serif;color:#16213a;padding-top:14px">${esc(lede)}</div>
 </td></tr>
-${note ? `<tr><td style="padding:14px 28px 0"><div style="border-left:3px solid #d9c9a3;padding:2px 0 2px 12px;font:14px/1.55 Arial,sans-serif;color:#16213a">${esc(note).replace(/\n/g, "<br>")}<div style="${SUBHEAD}">Ben Gaines</div></div></td></tr>` : ""}
+${note ? `<tr><td style="padding:14px 28px 0"><div style="border-left:3px solid #d9c9a3;padding:2px 0 2px 12px;font:14px/1.55 Arial,sans-serif;color:#16213a">${esc(note).replace(/\n/g, "<br>")}<div style="${SUBHEAD}">HR</div></div></td></tr>` : ""}
 ${section("Needs your attention", attHtml, { n: att.length - attShown.length, href: `${base}/projects`, label: `See ${att.length - attShown.length} more` })}
 ${section("Your people", lineHtml(pplShown), { n: ppl.length - pplShown.length, href: `${base}/hires`, label: "See everyone" })}
 ${section("HR priorities", prioHtml, { n: prios.length - prioShown.length, href: `${base}/projects`, label: `View all ${prios.length} projects` })}
@@ -281,7 +281,7 @@ ${section("Wins &amp; progress", lineHtml(winsShown))}
   const block = (title: string, rows: string[]) => (rows.length ? `\n${title.toUpperCase()}\n${rows.map((r) => `- ${r}`).join("\n")}\n` : "");
   const text =
     `The People Brief | ${client.name} | ${dateLong}\n\n${lede}\n` +
-    (note ? `\n${note}\n- Ben Gaines\n` : "") +
+    (note ? `\n${note}\n- HR\n` : "") +
     block("Needs your attention", attShown.map((a) => `${a.title} (${a.who}, ${a.when}). ${a.why} ${a.href}`)) +
     block("Your people", pplShown.map((x) => x.text)) +
     block("HR priorities", prioShown.map((x) => `${x.p.name}: ${x.status}${x.pct !== null ? `, ${x.pct}%` : ""}${x.next ? `. Next: ${x.next}` : ""}${x.target ? `. Target ${day(x.target)}` : ""}${x.blocker ? `. Stuck: ${x.blocker}` : ""}`)) +

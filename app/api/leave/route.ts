@@ -1,9 +1,9 @@
-// Leave center. HR admins only (Ben, plus the people Ben names for a client).
+// Leave center. HR admins only (HR, plus the people HR names for a client).
 // Every read of the case list, every change, document open and email is checked here and
 // written to leave_audit. Medical documents open only for HR admins with medical access.
 //
 // POST { clientId, action, ... }
-//   list                      -> { cases, me: { medical }, admins? (Ben) }
+//   list                      -> { cases, me: { medical }, admins? (HR) }
 //   save    { case }          -> creates or updates one case
 //   uploadUrl { caseId, name }-> signed upload into <client>/leave/<case>/
 //   addDoc  { caseId, doc }   -> records the uploaded document on the case
@@ -11,8 +11,8 @@
 //   removeDoc { caseId, docId }
 //   email   { caseId, to, subject, body, copyMe, docIds }
 //   audit   { caseId }        -> the case history
-//   admins  { admins? }       -> Ben: read or set the HR admin list
-//   remove  { caseId }        -> Ben: delete a case and its documents (retention)
+//   admins  { admins? }       -> HR: read or set the HR admin list
+//   remove  { caseId }        -> HR: delete a case and its documents (retention)
 
 import { NextResponse } from "next/server";
 import { caller, admin, sendEmail, SERVER_LIVE, siteUrl } from "@/lib/server";
@@ -98,7 +98,7 @@ export async function POST(req: Request) {
       const { error } = await db.from("leave_cases").insert({ id: c.id, client_id: clientId, data: next, created_by: who.email });
       if (error) return json({ ok: false, reason: "save" }, 500);
       await audit(c.id, "opened the case", `${next.number}, status ${STATUS_LABEL[next.status]}`);
-      // new request alert: Ben and the other HR admins, with no medical details
+      // new request alert: HR and the other HR admins, with no medical details
       const site = siteUrl(req);
       const href = `/c/${clientId}/leave/${c.id}`;
       const text = `New leave case ${next.number} (${short(next.employee.name)}) opened by ${who.name || who.email}`;

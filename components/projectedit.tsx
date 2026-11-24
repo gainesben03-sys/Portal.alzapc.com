@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { ADVISOR, addBusinessDays, fmt, Person, Project, Subtask, toISO, today } from "@/lib/data";
+import { ADVISOR, addBusinessDays, fmt, Person, Project, Subtask, toISO, today, isAdvisorName } from "@/lib/data";
 import { notifyBen, useStore } from "@/lib/store";
 import { pingTask } from "@/lib/pushclient";
 import { syncStepTasks } from "@/lib/projecttasks";
 import { Sheet } from "./ui";
 
-/** Who a step can go to: Ben, or anyone at the client who isn't hiring-only. */
+/** Who a step can go to: HR, or anyone at the client who isn't hiring-only. */
 export function useAssignees(clientId: string): Person[] {
   const { config } = useStore();
   const users = (config[clientId]?.users ?? []).filter((u) => u.access !== "hiring");
@@ -109,7 +109,7 @@ export function EditProjectSheet({ p, onClose, onSave, people, isNew }: { p: Pro
                 <div className="step-assign">
                   <select className="f" aria-label={`Who does step ${i + 1}`} value={s.owner ? people.find((x) => x.name === s.owner!.name)?.name ?? "" : ""} onChange={(e) => { const o = people.find((x) => x.name === e.target.value); setStep(i, { owner: o, due: o ? s.due ?? toISO(addBusinessDays(today(), 5)) : s.due }); }}>
                     <option value="">No one yet</option>
-                    {people.map((x) => <option key={x.name} value={x.name}>{x.name === ADVISOR.name ? "Ben (Alza)" : x.name}</option>)}
+                    {people.map((x) => <option key={x.name} value={x.name}>{isAdvisorName(x.name) ? "HR (Alza)" : x.name}</option>)}
                   </select>
                   <input className="f" type="date" aria-label={`Due date for step ${i + 1}`} value={s.due ?? ""} onChange={(e) => setStep(i, { due: e.target.value || undefined })} />
                 </div>

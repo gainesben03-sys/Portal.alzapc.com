@@ -1,7 +1,7 @@
 "use client";
 
 // Our Properties: a card for each property with who leads it and who handles what.
-// Cards fill from the team roster (Location + Title). Ben and executives can fix any slot,
+// Cards fill from the team roster (Location + Title). HR and executives can fix any slot,
 // set a property's area for the map, hide locations that aren't properties, and pick the
 // "still stuck" contacts. Directory by default, Map view on request.
 import { useParams } from "next/navigation";
@@ -48,7 +48,7 @@ function useProperties(clientId: string) {
     return {
       cards: propertyCards(people, settings, clientId),
       hq: hqCard(people, settings, clientId),
-      contacts: settings.contacts?.length ? settings.contacts : [...(esc?.name ? [{ name: esc.name, title: esc.role, email: esc.email ?? "", what: "Operations and anything else" }] : []), { name: "Ben Gaines", title: "HR", email: "ben@alzapc.com", what: "Employee questions and issues" }],
+      contacts: settings.contacts?.length ? settings.contacts : [...(esc?.name ? [{ name: esc.name, title: esc.role, email: esc.email ?? "", what: "Operations and anything else" }] : []), { name: "HR", title: "HR", email: "ben@alzapc.com", what: "Employee questions and issues" }],
       canEdit,
       settings,
       people: people.filter((p) => p.clientId === clientId && p.active !== false).map((p) => ({ id: p.id, name: p.name, title: p.title, location: p.location || "" })).sort((a, b) => a.name.localeCompare(b.name)),

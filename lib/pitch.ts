@@ -12,7 +12,7 @@ export interface PitchSettings {
   allowWritten: boolean; // retired: candidates send video or audio only
   askResume: boolean;
   askLinkedin: boolean;
-  review: "ben" | "client"; // Ben screens first, or straight to the client
+  review: "ben" | "client"; // HR screens first, or straight to the client
   closesAt?: string; // yyyy-mm-dd
   createdAt: string;
   questions?: ScreenQ[]; // optional questions the candidate answers before recording
@@ -121,7 +121,7 @@ export interface PitchSubmission {
   answers?: ScreenA[];
 }
 
-/** A private link Ben sends to someone outside the Alza Hub so they can watch pitches and say yes or no. */
+/** A private link HR sends to someone outside the Alza Hub so they can watch pitches and say yes or no. */
 export interface ReviewLink {
   id: string;
   token: string; // long random; the link is /review/<token>
@@ -130,7 +130,7 @@ export interface ReviewLink {
   createdAt: string;
   expiresAt?: string; // yyyy-mm-dd, last day it works
   revoked?: boolean;
-  scope?: "all" | "shared"; // all pitches except ones Ben passed or cleared (default), or only ones shared with the client
+  scope?: "all" | "shared"; // all pitches except ones HR passed or cleared (default), or only ones shared with the client
 }
 /** Who a reviewer link shows. */
 export const reviewerSees = (c: { hidden?: boolean; cleared?: boolean; screened?: string }, scope: ReviewLink["scope"]) => !c.cleared && c.screened !== "passed" && (scope !== "shared" || !c.hidden);
@@ -179,7 +179,7 @@ export const MAX_UPLOAD_MB = 50;
 export const DELETE_AFTER_CUTOFF_DAYS = 7;
 /** Without a cutoff date, videos are deleted this long after they were sent. */
 export const DELETE_NO_CUTOFF_DAYS = 30;
-/** Pitches Ben passed on before sharing go a week after he passed. */
+/** Pitches HR passed on before sharing go a week after he passed. */
 export const DELETE_AFTER_PASS_DAYS = 7;
 
 /** When this candidate's pitch video will be (or was due to be) deleted. Clearing a candidate deletes it right away. */

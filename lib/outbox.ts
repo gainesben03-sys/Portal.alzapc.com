@@ -1,5 +1,5 @@
 // Outbox: during the early days with a company, outgoing email can wait for a person's OK.
-// Each company picks a mode; held emails wait in the Outbox until Ben or an executive sends or skips them.
+// Each company picks a mode; held emails wait in the Outbox until HR or an executive sends or skips them.
 
 export type OutboxMode = "off" | "auto" | "all";
 export const MODE_LABEL: Record<OutboxMode, { title: string; blurb: string }> = {
@@ -27,7 +27,7 @@ export interface OutMail {
   fromBox?: string;
   auto: boolean; // the Alza Hub sent it on its own (a schedule), not a person clicking a button
   audience: Audience;
-  sensitive: boolean; // leave, write-ups: only Ben sees these in the Outbox
+  sensitive: boolean; // leave, write-ups: only HR sees these in the Outbox
   status: OutStatus;
   createdAt: string;
   doneAt?: string;

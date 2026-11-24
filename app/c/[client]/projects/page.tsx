@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ClientNav, ClientTopbar, Sheet, Toast, useGuard, useToast } from "@/components/ui";
-import { addBusinessDays, fmt, parseDay, Project, projectProgress, toISO, today } from "@/lib/data";
+import { addBusinessDays, fmt, parseDay, Project, projectProgress, toISO, today, isAdvisorName } from "@/lib/data";
 import { useStore } from "@/lib/store";
 import { AskBenSheet } from "@/components/askben";
 import { blankProject, EditProjectSheet, useAssignees, useSaveProject } from "@/components/projectedit";
@@ -118,7 +118,7 @@ export default function Projects() {
                           checked={s.done}
                           onChange={() => setP(p.id, { steps: p.steps.map((x) => (x.id === s.id ? { ...x, done: !x.done, doneAt: !x.done ? new Date().toISOString() : undefined } : x)) })}
                         />
-                        <span>{s.text}{s.owner && <span className="step-who">{s.owner.name === "Ben Gaines" ? "Ben" : s.owner.name.split(" ")[0]}{s.due ? ` · ${fmt(s.due)}` : ""}</span>}</span>
+                        <span>{s.text}{s.owner && <span className="step-who">{isAdvisorName(s.owner.name) ? "HR" : s.owner.name.split(" ")[0]}{s.due ? ` · ${fmt(s.due)}` : ""}</span>}</span>
                       </label>
                     ))}
                   </div>

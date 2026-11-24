@@ -28,7 +28,7 @@ export interface Departure {
   personalEmail?: string; // for the goodbye email, which arrives after work access ends
   workEmail?: string;
   rehire?: "yes" | "no" | "unsure";
-  reason?: string; // private: Ben and executives only
+  reason?: string; // private: HR and executives only
   tasks: DepartureTask[];
   email: { auto: boolean; sentAt?: string; to?: string; extra?: string }; // extra: a personal note just for them
   survey?: { token: string; sentAt?: string; doneAt?: string; answers?: SurveyAnswer[] };

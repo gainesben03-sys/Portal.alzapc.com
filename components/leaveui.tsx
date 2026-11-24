@@ -9,7 +9,7 @@ import { backDate, daysBetween, outNow, startingSoon, categoriesFor, CaseDoc, da
 import { useLeaveAccess, useLeaveCases } from "@/lib/leaveclient";
 import type { HrAdmin } from "@/lib/leaveclient";
 
-export const NOT_LEGAL = "This helps you track deadlines and paperwork. It doesn't approve or deny leave or decide what the law requires. HR makes those calls, with Ben or counsel when it's unclear.";
+export const NOT_LEGAL = "This helps you track deadlines and paperwork. It doesn't approve or deny leave or decide what the law requires. HR makes those calls, with HR or counsel when it's unclear.";
 
 const TONE: Record<LeaveStatus, string> = { requested: "soon", pending_docs: "today", approved: "alza", active: "alza", extended: "today", returned: "done", closed: "later", denied: "later", withdrawn: "later" };
 export function StatusPill({ s }: { s: LeaveStatus }) {
@@ -24,11 +24,11 @@ export function dueLabel(days: number) {
   return `In ${days} days`;
 }
 
-/** People who can own a case: Ben and the client's HR admins. */
+/** People who can own a case: HR and the client's HR admins. */
 export function useAssignees(clientId: string, admins: HrAdmin[]) {
   const { config } = useStore();
   const users = config[clientId]?.users ?? [];
-  return useMemo(() => [{ name: "Ben Gaines", email: "ben@alzapc.com" }, ...admins.map((a) => ({ email: a.email, name: users.find((u) => u.email.toLowerCase() === a.email)?.name ?? a.email }))], [admins, users]);
+  return useMemo(() => [{ name: "HR", email: "ben@alzapc.com" }, ...admins.map((a) => ({ email: a.email, name: users.find((u) => u.email.toLowerCase() === a.email)?.name ?? a.email }))], [admins, users]);
 }
 
 /** Home dashboard tile: HR admins only. */

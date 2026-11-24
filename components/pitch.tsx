@@ -12,7 +12,7 @@ import { Sheet } from "./ui";
 
 const fmtSec = (s?: number) => (s ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : "");
 
-/** Ben removes a pitch candidate: delete their stored video and resume first. */
+/** HR removes a pitch candidate: delete their stored video and resume first. */
 export async function deletePitchFiles(candidateId: string) {
   try {
     await fetch(`/api/pitch/media?c=${encodeURIComponent(candidateId)}`, { method: "DELETE", headers: await authHeader() });
@@ -139,7 +139,7 @@ export function PitchLinkCard({ role, canEdit, toScreen, onToast }: { role: Role
         <button className="btn ghost sm" onClick={() => navigator.clipboard?.writeText(url).then(() => onToast("Link copied"))}>Copy</button>
         <a className="btn ghost sm" href={`/pitch/${p.slug}`} target="_blank" rel="noopener">Preview</a>
       </div>
-      <div className="tiny muted">{fmtSec(p.maxSeconds)} max · {p.prompts.length} prompts · {p.questions?.length ? `${p.questions.length} question${p.questions.length === 1 ? "" : "s"} · ` : ""}{p.review === "ben" ? "Ben screens first" : "Goes straight to your team"}</div>
+      <div className="tiny muted">{fmtSec(p.maxSeconds)} max · {p.prompts.length} prompts · {p.questions?.length ? `${p.questions.length} question${p.questions.length === 1 ? "" : "s"} · ` : ""}{p.review === "ben" ? "HR screens first" : "Goes straight to your team"}</div>
       {canEdit && (
         <div className="chips" style={{ marginTop: 8 }}>
           <button className="btn ghost sm" onClick={() => setEditing(true)}>Settings</button>
@@ -151,9 +151,9 @@ export function PitchLinkCard({ role, canEdit, toScreen, onToast }: { role: Role
   );
 }
 
-// ------------------------------------------------------------------ reviewer links (Ben only)
+// ------------------------------------------------------------------ reviewer links (HR only)
 
-/** Ben's private links for people who aren't on the Alza Hub: they watch the pitches and say yes or no. */
+/** HR's private links for people who aren't on the Alza Hub: they watch the pitches and say yes or no. */
 export function ReviewerLinks({ role, reviews, onToast }: { role: Role; reviews: OutsideReview[]; onToast: (m: string) => void }) {
   const { roles, candidates, patch } = useStore();
   const [adding, setAdding] = useState(false);
@@ -175,7 +175,7 @@ export function ReviewerLinks({ role, reviews, onToast }: { role: Role; reviews:
   const copy = (l: ReviewLink) => navigator.clipboard?.writeText(urlFor(l)).then(() => onToast(`Link for ${l.name.split(" ")[0]} copied`));
   const m = useMail();
   const mail = (l: ReviewLink) =>
-    m(l.email ?? "", `Candidates for ${role.title}`, `Hi ${l.name.split(" ")[0]},\n\nHere are the candidates for ${role.title}. Watch each pitch and tap Yes or No. No sign-in needed.\n\n${urlFor(l)}\n\nThis link is just for you${l.expiresAt ? ` and works through ${new Date(l.expiresAt + "T12:00").toLocaleDateString("en-US", { month: "long", day: "numeric" })}` : ""}.\n\nThanks,\nBen`);
+    m(l.email ?? "", `Candidates for ${role.title}`, `Hi ${l.name.split(" ")[0]},\n\nHere are the candidates for ${role.title}. Watch each pitch and tap Yes or No. No sign-in needed.\n\n${urlFor(l)}\n\nThis link is just for you${l.expiresAt ? ` and works through ${new Date(l.expiresAt + "T12:00").toLocaleDateString("en-US", { month: "long", day: "numeric" })}` : ""}.\n\nThanks,\nHR`);
 
   return (
     <div className="pitch-link reviewer-links">
@@ -269,7 +269,7 @@ function PitchSettingsSheet({ p, onClose, onSave }: { p: PitchSettings; onClose:
       </div>
       <label className="f">Who reviews pitches first
         <select className="f" value={v.review} onChange={(e) => setV({ ...v, review: e.target.value as PitchSettings["review"] })}>
-          <option value="ben">Ben screens first, then shares the best</option>
+          <option value="ben">HR screens first, then shares the best</option>
           <option value="client">Straight to the hiring team</option>
         </select>
       </label>
@@ -454,7 +454,7 @@ export function PitchMedia({ c }: { c: Candidate }) {
     try {
       const r = await fetch(`/api/pitch/media?c=${encodeURIComponent(c.id)}&f=media`, { headers: await authHeader() });
       const j = await r.json().catch(() => ({ ok: false, reason: "network" }));
-      if (!j.ok) setErr(j.reason === "forbidden" ? "You don't have access to this pitch yet. Ask Ben." : j.reason === "none" || j.reason === "not_found" ? "The recording isn't there anymore." : j.reason === "signed_out" ? "Sign in again to play it." : "Couldn't open it. Try again.");
+      if (!j.ok) setErr(j.reason === "forbidden" ? "You don't have access to this pitch yet. Ask HR." : j.reason === "none" || j.reason === "not_found" ? "The recording isn't there anymore." : j.reason === "signed_out" ? "Sign in again to play it." : "Couldn't open it. Try again.");
       else setSrc(j.url);
     } catch {
       setErr("Couldn't open it. Try again.");
@@ -544,7 +544,7 @@ export function BriefBlock({ b, pending }: { b?: CandidateBrief; pending?: boole
   );
 }
 
-// ------------------------------------------------------------------ Ben shares a pitch with the hiring team
+// ------------------------------------------------------------------ HR shares a pitch with the hiring team
 
 export function ShareSheet({ c, role, onClose, onDone }: { c: Candidate; role: Role; onClose: () => void; onDone: (m: string) => void }) {
   const { candidates, roles, actions, patch, notice, viewer } = useStore();
@@ -567,7 +567,7 @@ export function ShareSheet({ c, role, onClose, onDone }: { c: Candidate; role: R
     const open = actions.find((a) => a.id === role.feedbackActionId && a.status !== "completed");
     let taskId = open?.id;
     if (open) {
-      nextA = actions.map((a) => (a.id === open.id ? { ...a, subtasks: [...(a.subtasks ?? []), { id: `s${Date.now().toString(36)}`, text: `Feedback on ${first}`, done: false }], history: [...a.history, { at: now, by: "Ben Gaines", text: `Added ${c.name}` }] } : a));
+      nextA = actions.map((a) => (a.id === open.id ? { ...a, subtasks: [...(a.subtasks ?? []), { id: `s${Date.now().toString(36)}`, text: `Feedback on ${first}`, done: false }], history: [...a.history, { at: now, by: "HR", text: `Added ${c.name}` }] } : a));
     } else if (role.hiringManager.email) {
       const a: Action = {
         id: `a${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
@@ -575,14 +575,14 @@ export function ShareSheet({ c, role, onClose, onDone }: { c: Candidate; role: R
         side: "client",
         kind: "feedback",
         title: `Feedback on ${role.title} candidates`,
-        detail: "Watch each pitch and choose Advance, Hold, Pass or Offer. A sentence on why helps Ben tune the search.",
+        detail: "Watch each pitch and choose Advance, Hold, Pass or Offer. A sentence on why helps HR tune the search.",
         impact: "Good candidates take other offers when feedback is slow.",
         owner: role.hiringManager,
         due: toISO(addBusinessDays(today(), 2)),
         status: "not_started",
         attachments: [],
         subtasks: [{ id: "s1", text: `Feedback on ${first}`, done: false }],
-        history: [{ at: now, by: "Ben Gaines", text: "Candidates shared" }],
+        history: [{ at: now, by: "HR", text: "Candidates shared" }],
       };
       nextA = [...actions, a];
       nextR = roles.map((r) => (r.id === role.id ? { ...r, feedbackActionId: a.id } : r));

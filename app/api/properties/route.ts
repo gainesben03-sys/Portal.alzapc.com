@@ -1,8 +1,8 @@
 // Our Properties.
 // GET  ?clientId=  -> the cards for anyone in the workspace (work info only: name, title, work email),
-//                     plus the "still stuck" contacts. Ben and executives also get what they need to edit.
+//                     plus the "still stuck" contacts. HR and executives also get what they need to edit.
 // POST { clientId, settings } -> save property details, slot overrides, hidden locations, contacts.
-//                     Ben or an executive at the client.
+//                     HR or an executive at the client.
 import { NextResponse } from "next/server";
 import { admin, caller, SERVER_LIVE } from "@/lib/server";
 import { cleanSettings, hqCard, keyOf, PHOTO_PATH, propertyCards, rosterLocations, type Contact, type PropertySettings } from "@/lib/properties";
@@ -38,7 +38,7 @@ export async function GET(req: Request) {
     ? settings.contacts
     : [
         ...(esc ? [{ name: esc.name, title: esc.role || "", email: esc.email.toLowerCase(), what: "Operations and anything else" }] : []),
-        { name: "Ben Gaines", title: "HR", email: "ben@alzapc.com", what: "Employee questions and issues" },
+        { name: "HR team", title: "HR", email: "ben@alzapc.com", what: "Employee questions and issues" },
       ];
   // photos are private files: hand out short-lived links
   const cards = propertyCards(people, settings, clientId);

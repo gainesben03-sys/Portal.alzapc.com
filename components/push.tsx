@@ -89,7 +89,7 @@ export function PushPrompt() {
       <p className="small">
         {isBen
           ? "A quick alert when a client posts a note, uploads a document, approves something, or a new hire signs. Email still comes too."
-          : "Turn on alerts and your phone lets you know when Ben needs your approval or something is due. Only the things that need you. You can change this any time."}
+          : "Turn on alerts and your phone lets you know when HR needs your approval or something is due. Only the things that need you. You can change this any time."}
       </p>
       {open === "ios" && (
         <>
@@ -116,7 +116,7 @@ export function PushPrompt() {
             disabled={busy}
             onClick={async () => {
               if (!PUSH_CONFIGURED) {
-                setMsg(LIVE ? "Alerts aren't switched on for the Alza Hub yet. Ben is setting them up." : "Demo mode: alerts work once the Alza Hub is live.");
+                setMsg(LIVE ? "Alerts aren't switched on for the Alza Hub yet. HR is setting them up." : "Demo mode: alerts work once the Alza Hub is live.");
                 writeAsk(who, { n: 1, until: Date.now() + SNOOZE_DAYS * 864e5 });
                 return;
               }

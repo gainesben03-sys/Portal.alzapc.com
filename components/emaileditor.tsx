@@ -49,7 +49,7 @@ export function EmailEditor({
   onClose: () => void;
   onSave: (changes: Partial<Hire>) => void;
   onSend: (test: boolean, f: EmailEditFields) => Promise<boolean>;
-  /** Ben only: make this wording the standard for every hire at this company. */
+  /** HR only: make this wording the standard for every hire at this company. */
   onSaveTemplate?: (t: Required<EmailEdits>) => void;
 }) {
   const start = (): EmailEditFields => {

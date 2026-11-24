@@ -17,7 +17,7 @@ export function tourSeen(email: string) {
 function stepsFor(kind: "exec" | "manager" | "hiring", company: string, first: string): Step[] {
   const hello: Step = { title: `Welcome, ${first}`, body: `This is ${company}'s Alza Hub. Here's a one-minute look around. Skip anytime.` };
   const phone: Step = { target: "push", title: "Take it with you", body: "Add the Alza Hub to your phone's home screen and turn on alerts, so the important stuff finds you." };
-  const replay: Step = { target: "help", title: "That's it", body: "Tap ? up here anytime to see this again. Questions? Ben is a message away." };
+  const replay: Step = { target: "help", title: "That's it", body: "Tap ? up here anytime to see this again. Questions? HR is a message away." };
   const ask: Step = { target: "nav-library", title: "Ask HR and resources", body: "Templates, newsletters and Ask HR, which answers from your own handbook and policies." };
   if (kind === "manager")
     return [
@@ -43,7 +43,7 @@ function stepsFor(kind: "exec" | "manager" | "hiring", company: string, first: s
     { target: "customize", title: "Make it yours", body: "Add, remove or reorder what's on your dashboard. It only changes your view." },
     { target: "nav-hub", title: "Team Hub", body: "For anyone who leads a team: this week's to-dos, your team and recognition." },
     { target: "nav-people", title: "People", body: "New hires from offer to day one, recruiting, performance reviews, and who has access to the Alza Hub." },
-    { target: "nav-todo", title: "Projects with Ben", body: "What Ben is working on for you, what's moving, and anything waiting on your side." },
+    { target: "nav-todo", title: "Projects with HR", body: "What HR is working on for you, what's moving, and anything waiting on your side." },
     ask,
     phone,
     replay,

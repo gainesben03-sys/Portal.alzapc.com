@@ -11,7 +11,7 @@ function ownerFor(h: Hire, cfg: ClientConfig, client: Client): Person {
   return client.escalation;
 }
 
-/** Once an offer is signed: Ben adds them to payroll; the client gets ready for day one. */
+/** Once an offer is signed: HR adds them to payroll; the client gets ready for day one. */
 export function signedTasks(h: Hire, cfg: ClientConfig, client: Client): Action[] {
   const s = onboardingFor(cfg.onboarding);
   const now = new Date().toISOString();
@@ -29,7 +29,7 @@ export function signedTasks(h: Hire, cfg: ClientConfig, client: Client): Action[
       side: "alza",
       kind: "document",
       title: `Add ${h.name} to ${s.payroll}`,
-      detail: `${h.name} starts ${h.startDate || "soon"} as ${h.title}. Ben sets them up in ${s.payroll} so they're paid on the first payroll and can enroll in benefits.`,
+      detail: `${h.name} starts ${h.startDate || "soon"} as ${h.title}. HR sets them up in ${s.payroll} so they're paid on the first payroll and can enroll in benefits.`,
       impact: "If this slips, their first paycheck and benefits enrollment slip with it.",
       owner: ADVISOR,
       due: toISO(payDue),
@@ -66,7 +66,7 @@ export function signedTasks(h: Hire, cfg: ClientConfig, client: Client): Action[
   ];
 }
 
-/** Ask the client's executive to approve an offer letter Ben drafted. */
+/** Ask the client's executive to approve an offer letter HR drafted. */
 export function approvalTask(h: Hire, client: Client, doc: { name: string; path?: string }): Action {
   const now = new Date().toISOString();
   return {
@@ -75,7 +75,7 @@ export function approvalTask(h: Hire, client: Client, doc: { name: string; path?
     side: "client",
     kind: "approval",
     title: `Approve ${h.name}'s offer letter`,
-    detail: `${h.title}, ${payLine(h)}, starting ${h.startDate || "TBD"}. Open the attached letter, then approve or request changes. Once approved, Ben sends it.`,
+    detail: `${h.title}, ${payLine(h)}, starting ${h.startDate || "TBD"}. Open the attached letter, then approve or request changes. Once approved, HR sends it.`,
     impact: h.respondBy ? `The offer says to respond by ${h.respondBy}, so it needs to go out soon.` : undefined,
     owner: client.escalation,
     due: toISO(addBusinessDays(today(), 1)),

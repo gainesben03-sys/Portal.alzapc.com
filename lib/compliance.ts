@@ -40,7 +40,7 @@ export interface ComplianceSettings {
   overdueWeekly: boolean;
   /** clean certificates are approved without waiting for HR */
   autoApprove: boolean;
-  /** who checks certificates and answers questions (besides Ben and executives) */
+  /** who checks certificates and answers questions (besides HR and executives) */
   admins: string[];
   /** people added to or taken off the supervisor list by hand (roster ids) */
   supAdd: string[];

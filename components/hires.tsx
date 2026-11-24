@@ -40,11 +40,11 @@ export function hireNext(h: Hire, tasks: Action[], s: OnboardingSettings, escala
   switch (stageIndex(h.status)) {
     case 0:
       if (clientTask && clientTask.kind === "approval") return `Waiting on ${clientTask.owner.name.split(" ")[0]} to approve the offer`;
-      return (h.docs ?? []).some((d) => d.kind === "offer") ? `Offer letter ready to send` : `Ben is preparing the offer letter`;
+      return (h.docs ?? []).some((d) => d.kind === "offer") ? `Offer letter ready to send` : `HR is preparing the offer letter`;
     case 1:
       return h.esign?.offer?.status === "viewed" ? `${first} opened the offer, not signed yet` : `Waiting on ${first} to sign the offer`;
     case 2:
-      return clientTask ? `${clientTask.title} (${clientTask.owner.name.split(" ")[0]})` : `Ben is setting up payroll and paperwork`;
+      return clientTask ? `${clientTask.title} (${clientTask.owner.name.split(" ")[0]})` : `HR is setting up payroll and paperwork`;
     case 3:
       if (clientTask) return `${clientTask.title} (${clientTask.owner.name.split(" ")[0]})`;
       return h.startDate && s.autoSend ? `First-day email goes out ${shortDate(addDaysISO(h.startDate, -s.firstDayDaysBefore))}` : `First-day email is next`;
@@ -310,7 +310,7 @@ export function HireForm({
         <label className="f full">Action items for the new hire <span className="tiny muted">(one per line, optional)</span>
           <textarea className="f" style={{ minHeight: 70 }} value={value.actionItems ?? ""} onChange={(e) => set("actionItems", e.target.value)} placeholder="e.g. Reply with your cell phone number" />
         </label>
-        <label className="f full">Notes for HR <span className="tiny muted">(only you and Ben see these)</span>
+        <label className="f full">Notes for HR <span className="tiny muted">(only you and HR see these)</span>
           <textarea className="f" style={{ minHeight: 60 }} value={value.notes ?? ""} onChange={(e) => set("notes", e.target.value)} />
         </label>
       </fieldset>

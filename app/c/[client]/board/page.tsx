@@ -61,7 +61,7 @@ export default function Board() {
     setText("");
     setUrgent(false);
     setBusy(false);
-    toast.show(sent ? "Posted. Ben has been emailed." : "Posted. Email alerts aren't connected yet.");
+    toast.show(sent ? "Posted. HR has been emailed." : "Posted. Email alerts aren't connected yet.");
   };
 
   const reply = async (n: Note, t: string) => {
@@ -80,7 +80,7 @@ export default function Board() {
       <ClientNav clientId={client.id} />
       <main className="wrap">
         <h1>Messages</h1>
-        <p className="muted" style={{ marginTop: 6 }}>Quick questions and FYIs. Need something done? Use <b>Ask Ben for something</b> so it&apos;s tracked with a due date.</p>
+        <p className="muted" style={{ marginTop: 6 }}>Quick questions and FYIs. Need something done? Use <b>Send a request to HR</b> so it&apos;s tracked with a due date.</p>
 
         <div className="card section" style={{ marginTop: 16 }}>
           <div className="seg" style={{ gridTemplateColumns: "repeat(2, 1fr)", marginTop: 0 }}>
@@ -107,11 +107,11 @@ export default function Board() {
               <span className="small">Time-sensitive</span>
             </label>
             <button className="btn primary" disabled={!text.trim() || busy} onClick={post}>
-              {busy ? "Posting..." : "Post to Ben"}
+              {busy ? "Posting..." : "Post to HR"}
             </button>
           </div>
           <p className="tiny muted" style={{ marginTop: 10 }}>
-            Not for confidential employee complaints. For those, call or email Ben directly.
+            Not for confidential employee complaints. For those, call or email HR directly.
           </p>
         </div>
 

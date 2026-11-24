@@ -8,7 +8,7 @@ import { authHeader, LIVE, uploadToStorage } from "@/lib/supabase";
 
 const EMAIL_REASONS: Record<string, string> = {
   no_email: "There's no personal email on file for this hire yet.",
-  forbidden: "Only Ben or an executive can send this.",
+  forbidden: "Only HR or an executive can send this.",
   not_found: "This hire hasn't finished saving yet. Try again in a few seconds.",
   signed_out: "You're signed out. Sign in again and retry.",
   no_key: "Email isn't connected yet (RESEND_API_KEY in Vercel).",
@@ -46,7 +46,7 @@ const SIGN_REASONS: Record<string, string> = {
   file_missing: "Couldn't find the stored file. Draft or upload it again.",
   unreadable: "Couldn't read text from that file. Use the Word version Claude drafted, or upload a .docx or text-based PDF.",
   no_table: "E-signature isn't set up yet: run supabase/004_esign.sql in the Supabase SQL Editor.",
-  forbidden: "Only Ben or an executive can send this.",
+  forbidden: "Only HR or an executive can send this.",
   not_found: "This hire hasn't finished saving yet. Try again in a few seconds.",
 };
 
@@ -71,7 +71,7 @@ export function afterSend(h: Hire, kind: "welcome" | "firstDay", at: string): Pa
   return { emails: { ...(h.emails ?? {}), [kind]: at }, status };
 }
 
-/** Store a hire document privately and return the file record (clients can open it; it stays out of Ben's inbox when he adds it). */
+/** Store a hire document privately and return the file record (clients can open it; it stays out of HR's inbox when he adds it). */
 export async function storeHireFile(h: Hire, file: File, by: string, fromAdvisor: boolean, note: string): Promise<SharedFile> {
   const id = newId("f");
   let path: string | undefined;
@@ -82,7 +82,7 @@ export async function storeHireFile(h: Hire, file: File, by: string, fromAdvisor
     name: file.name,
     size: file.size,
     type: file.type,
-    category: fromAdvisor ? "From Ben" : "Other",
+    category: fromAdvisor ? "From HR" : "Other",
     note,
     confidential: false,
     by,

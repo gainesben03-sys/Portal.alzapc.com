@@ -1,8 +1,8 @@
-// Signed in: give a shoutout from the Alza Hub, react, and (Ben and executives) review held ones.
+// Signed in: give a shoutout from the Alza Hub, react, and (HR and executives) review held ones.
 // POST { clientId, action: "give", to, value?, message }
 // POST { clientId, action: "react", id, emoji }
-// POST { clientId, action: "review", id, approve }   Ben or an executive
-// POST { clientId, action: "remove", id }            Ben, an executive, or the person's manager
+// POST { clientId, action: "review", id, approve }   HR or an executive
+// POST { clientId, action: "remove", id }            HR, an executive, or the person's manager
 
 import { NextResponse } from "next/server";
 import { REACTIONS, RecognitionSettings, Shoutout } from "@/lib/recognition";
@@ -38,10 +38,10 @@ export async function POST(req: Request) {
   const c: ShoutClient = { id: cl.id, name: cl.name, config: cfg, rec: cfg.recognition };
   const { data: mem } = await db.from("members").select("name, access").eq("client_id", clientId).eq("email", me.email).maybeSingle();
   const exec = me.advisor || mem?.access === "exec";
-  const myName = me.advisor ? "Ben Gaines" : (mem?.name as string) || me.email.split("@")[0];
+  const myName = me.advisor ? "HR" : (mem?.name as string) || me.email.split("@")[0];
   const roster = await rosterFor(db, clientId);
 
-  // Ben: send himself a sample celebration email with the settings on screen (saved or not)
+  // HR: send himself a sample celebration email with the settings on screen (saved or not)
   if (b.action === "testEmail") {
     if (!me.advisor) return NextResponse.json({ ok: false, reason: "forbidden" }, { status: 403 });
     const kind = b.kind === "anniversary" ? "anniversary" : "birthday";
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
     return poll ? NextResponse.json({ ok: true, poll }) : NextResponse.json({ ok: false, reason: "bad_request" }, { status: 400 });
   }
 
-  // Team Wall settings an executive can change (Ben saves everything through the Alza Hub itself)
+  // Team Wall settings an executive can change (HR saves everything through the Alza Hub itself)
   if (b.action === "settings") {
     if (!exec) return NextResponse.json({ ok: false, reason: "forbidden" }, { status: 403 });
     const r = (b.rec ?? {}) as Partial<RecognitionSettings>;
@@ -86,7 +86,7 @@ export async function POST(req: Request) {
     if (b.pass) {
       const ck = await checkChainPass(db, clientId, String(b.pass), to.id);
       if (!ck.ok) return NextResponse.json({ ok: false, reason: ck.reason }, { status: 400 });
-      // only the person holding the baton (or Ben) passes it on
+      // only the person holding the baton (or HR) passes it on
       if (!me.advisor && ck.parent.to.personId !== mine?.id) return NextResponse.json({ ok: false, reason: "not_yours" }, { status: 403 });
       chain = { challengeId: ck.challenge.id, parentId: ck.parent.id, depth: ck.depth };
     }
@@ -94,7 +94,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, status: s.status, shout: s });
   }
 
-  // start a challenge: Ben, an executive, or anyone who manages people on the roster
+  // start a challenge: HR, an executive, or anyone who manages people on the roster
   if (b.action === "startChallenge") {
     if (!exec && !manages) return NextResponse.json({ ok: false, reason: "forbidden" }, { status: 403 });
     const kind = b.kind === "goal" ? "goal" : b.kind === "welcome" ? "welcome" : "chain";

@@ -153,7 +153,7 @@ export default function Console() {
       <main className="wrap wide">
         <div className="hero row" style={{ alignItems: "flex-start" }}>
           <div>
-            <h1>Good {greeting()}, Ben</h1>
+            <h1>Good {greeting()}</h1>
             <p>
               {focus.length ? (
                 <>Start with <b>{focus[0].title}</b>{focus[0].clientId && only === "all" ? ` (${name(focus[0].clientId)})` : ""}. </>

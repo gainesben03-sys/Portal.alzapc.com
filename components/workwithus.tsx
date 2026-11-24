@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { DEFAULT_BOOKING_URL } from "@/lib/state";
 
-/** For people who land on the Alza Hub but aren't clients: a calm, non-salesy way to reach Ben. */
+/** For people who land on the Alza Hub but aren't clients: a calm, non-salesy way to reach HR. */
 export function WorkWithUs({ compact }: { compact?: boolean }) {
   const { bookingUrl: saved } = useStore();
   const bookingUrl = saved || DEFAULT_BOOKING_URL;
@@ -36,11 +36,11 @@ export function WorkWithUs({ compact }: { compact?: boolean }) {
         Alza provides growing companies with the HR expertise, practical support, and technology they need: from hiring and onboarding to policies, employee support, and the Alza Hub.
       </p>
       {done ? (
-        <p className="small" style={{ color: "var(--green)" }}>Thanks. Ben will be in touch within a business day.</p>
+        <p className="small" style={{ color: "var(--green)" }}>Thanks. We'll be in touch within a business day.</p>
       ) : !open ? (
         <div className="chips" style={{ marginTop: 0 }}>
           {bookingUrl && <a className="btn sm primary" href={bookingUrl} target="_blank" rel="noopener noreferrer">Book a free call</a>}
-          <button className="btn sm" onClick={() => setOpen(true)}>Contact Ben</button>
+          <button className="btn sm" onClick={() => setOpen(true)}>Contact us</button>
           <a className="btn ghost sm" href="https://www.alzapc.com" target="_blank" rel="noopener">alzapc.com</a>
         </div>
       ) : (
@@ -61,7 +61,7 @@ export function WorkWithUs({ compact }: { compact?: boolean }) {
           {err && <p className="small" style={{ color: "var(--red)" }}>{err}</p>}
           <div className="sheet-actions" style={{ marginTop: 8 }}>
             <button className="btn ghost sm" onClick={() => setOpen(false)}>Cancel</button>
-            <button className="btn primary sm" disabled={busy} onClick={send}>{busy ? "Sending..." : "Send to Ben"}</button>
+            <button className="btn primary sm" disabled={busy} onClick={send}>{busy ? "Sending..." : "Send"}</button>
           </div>
         </div>
       )}

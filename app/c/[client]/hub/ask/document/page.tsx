@@ -11,7 +11,7 @@ import { useStore } from "@/lib/store";
 
 type View = { k: "new" } | { k: "draft"; input: DiscInput; draft: DiscDraft; id?: string } | { k: "list" };
 
-/** Document an issue: describe it, pick the level, get a clean write-up on letterhead. Executives and Ben only. */
+/** Document an issue: describe it, pick the level, get a clean write-up on letterhead. Executives and HR only. */
 export default function Page() {
   return <Suspense fallback={null}><DocumentIssue /></Suspense>;
 }
@@ -51,7 +51,7 @@ function DocumentIssue() {
       <Toast msg={toast.msg} onDone={toast.clear} />
     </div>
   );
-  if (!acc.ok) return shell(<div className="card">Only executives and Ben can document issues. <Link href={`/c/${clientId}/hub/ask`}>Back to Ask HR</Link></div>);
+  if (!acc.ok) return shell(<div className="card">Only executives and HR can document issues. <Link href={`/c/${clientId}/hub/ask`}>Back to Ask HR</Link></div>);
 
   const levels = discFor(config[clientId]?.discipline).levels;
   const team = people.filter((p) => p.clientId === clientId && p.active).sort((a, b) => a.name.localeCompare(b.name));
@@ -76,12 +76,12 @@ function DocumentIssue() {
     if (!opened) return shell(<div className="card">That record isn&apos;t here anymore. <Link href={base}>Back</Link></div>);
     if (view.k === "draft" && view.id === opened.id)
       return shell(<>
-        {head(`${opened.level} for ${opened.personName}`, "Ben cleared it. Look it over and save.", { label: "Back", on: () => setView({ k: "list" }) })}
+        {head(`${opened.level} for ${opened.personName}`, "HR cleared it. Look it over and save.", { label: "Back", on: () => setView({ k: "list" }) })}
         <DraftView clientId={clientId} input={view.input} draft={view.draft} recordId={opened.id} onSaved={(r) => { upsert(r); setView({ k: "list" }); toast.show("Saved to the record"); }} toast={toast.show} />
       </>);
     if (opened.status === "review" || !opened.draft)
       return shell(<>
-        {head(`${opened.personName}`, "Paused by the fairness check, waiting on Ben.", { label: "All records", href: `${base}?all=1` })}
+        {head(`${opened.personName}`, "Paused by the fairness check, waiting on HR.", { label: "All records", href: `${base}?all=1` })}
         <HeldView clientId={clientId} r={opened} toast={toast.show} onDrafted={(input, draft) => setView({ k: "draft", input, draft, id: opened.id })} />
       </>);
     return shell(<>
@@ -93,7 +93,7 @@ function DocumentIssue() {
   // every record
   if (sp.get("all"))
     return shell(<>
-      {head("Records", "Everything documented, newest first. Private to executives and Ben.", { label: "Document an issue", href: base })}
+      {head("Records", "Everything documented, newest first. Private to executives and HR.", { label: "Document an issue", href: base })}
       {records === null ? <div className="card small muted">Loading...</div> : <RecordRows records={records} showPerson empty="Nothing documented yet." />}
     </>);
 
@@ -127,7 +127,7 @@ function DocumentIssue() {
       levels={levels}
       start={kept ?? (startPerson ? { personId: startPerson } : undefined)}
       onDrafted={(input, draft) => setView({ k: "draft", input, draft })}
-      onHeld={(r) => { upsert(r); toast.show("Sent to Ben. He'll get back to you."); fresh(); }}
+      onHeld={(r) => { upsert(r); toast.show("Sent to HR. They'll get back to you."); fresh(); }}
       toast={toast.show}
     />
   </>);

@@ -1,5 +1,5 @@
-// Outbox: emails waiting for an OK. Ben sees every company; executives see their own company.
-// Leave and write-up emails are Ben-only: executives see how many, not what.
+// Outbox: emails waiting for an OK. HR sees every company; executives see their own company.
+// Leave and write-up emails are HR-only: executives see how many, not what.
 // POST { action, clientId?, ... }:
 //   count                    how many are waiting (nav badge)
 //   list                     held emails, recent history, and the settings this person can change
@@ -7,7 +7,7 @@
 //   send { ids }             send now
 //   skip { ids }             don't send
 //   mode { clientId, mode }  off | auto | all
-//   digest { on }            Ben only: his own notifications as one daily summary
+//   digest { on }            HR only: his own notifications as one daily summary
 import { NextResponse } from "next/server";
 import { admin, caller, deliver, SERVER_LIVE } from "@/lib/server";
 import { loadMail, readSettings, release, setStatus, writeSettings } from "@/lib/outboxserver";
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
   if (probe.error) return json({ ok: false, reason: "setup" }, 503);
   const clientId = b.clientId ? String(b.clientId) : "";
   if (!who.advisor && (!clientId || !who.execOf.includes(clientId))) return json({ ok: false, reason: "forbidden" }, 403);
-  // what this person may see: Ben everything, an executive their company's non-sensitive emails
+  // what this person may see: HR everything, an executive their company's non-sensitive emails
   const mayAct = (m: OutMail) => who.advisor || (m.clientId === clientId && who.execOf.includes(clientId) && !m.sensitive && m.audience !== "ben");
   const action = String(b.action ?? "");
 
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
     return json({
       ok: true,
       held: mine.map(row),
-      hiddenCount: held.length - mine.length, // leave and write-up emails only Ben can open
+      hiddenCount: held.length - mine.length, // leave and write-up emails only HR can open
       digest: who.advisor ? all.filter((m) => m.status === "digest").map(row) : [],
       history: (histR ?? []).map(toMail).filter(mayAct).map(row),
       companies,

@@ -1,6 +1,6 @@
 "use client";
 
-// Leave center: HR admins only. Overview, cases, calendar, compliance tasks, reports and (Ben) settings.
+// Leave center: HR admins only. Overview, cases, calendar, compliance tasks, reports and (HR) settings.
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -35,7 +35,7 @@ export default function LeaveCenter() {
 
   const settings: LeaveSettings = cfg?.leave ?? {};
   const cats = categoriesFor(settings);
-  const meP = { name: viewer?.kind === "client" ? viewer.person.name : "Ben Gaines", email: (me?.email ?? "ben@alzapc.com").toLowerCase() };
+  const meP = { name: viewer?.kind === "client" ? viewer.person.name : "HR", email: (me?.email ?? "ben@alzapc.com").toLowerCase() };
   const roster = people.filter((p) => p.clientId === clientId);
   const go = (t: Tab) => {
     setTab(t);
@@ -55,7 +55,7 @@ export default function LeaveCenter() {
     return shell(
       <div className="card section">
         <h1 style={{ marginTop: 0 }}>Leave center</h1>
-        <p className="small muted">This area is for HR administrators only. If you need access, ask Ben.</p>
+        <p className="small muted">This area is for HR administrators only. If you need access, ask HR.</p>
       </div>
     );
 
@@ -478,7 +478,7 @@ function Reports({ cases, cats, company }: { cases: LeaveCase[]; cats: LeaveCate
   );
 }
 
-// ---------- settings (Ben) ----------
+// ---------- settings (HR) ----------
 function Settings({ settings, admins, users, cases, onSave, onAdmins, onDelete }: { clientId?: string; settings: LeaveSettings; admins: HrAdmin[]; users: { email: string; name: string }[]; cases: LeaveCase[]; onSave: (s: LeaveSettings) => void; onAdmins: (l: HrAdmin[]) => void; onDelete: (c: LeaveCase) => void }) {
   const [list, setList] = useState<HrAdmin[]>(admins);
   const [add, setAdd] = useState("");

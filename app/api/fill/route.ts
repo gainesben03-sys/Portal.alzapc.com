@@ -1,4 +1,4 @@
-// Fill a past document (Ben only). Keeps the original Word file exactly as it is
+// Fill a past document (HR only). Keeps the original Word file exactly as it is
 // (letterhead, fonts, spacing, tables, footers) and swaps only the details that change.
 //
 //   POST { step: "propose", clientId, knowledgeId | file(base64), fileName?, hireId?, actionId?, instructions? }
@@ -6,7 +6,7 @@
 //   POST { step: "apply", clientId, knowledgeId | file(base64), fileName?, changes: [{find, replace}] }
 //        -> { file(base64), fileName, applied: [{find, replace, count}] }
 //
-// Nothing is saved here. The app saves the result to the hire or task after Ben checks it.
+// Nothing is saved here. The app saves the result to the hire or task after HR checks it.
 
 import { NextResponse } from "next/server";
 import { admin, caller, SERVER_LIVE } from "@/lib/server";
@@ -26,23 +26,23 @@ const clip = (s: unknown, n: number) => {
 };
 const norm = (s: string) => s.replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/ /g, " ");
 
-const SYSTEM = `You update a past HR document (offer letter, termination letter, promotion letter, warning, agreement) for a new person or situation, for Ben Gaines, a fractional HR consultant.
+const SYSTEM = `You update a past HR document (offer letter, termination letter, promotion letter, warning, agreement) for a new person or situation, for a fractional HR consulting team.
 
 The document's formatting must stay exactly as it is, so you do NOT rewrite it. You only list find-and-replace pairs.
 
 Rules:
-- Change only details that belong to the old person or situation: names (full, first, last, Mr./Ms. forms), job title, department, manager and their title, pay and how it is written (words and numerals), bonus, dates (letter date, start date, last day, response deadline, effective date), location, address, reasons or facts specific to the old situation, and anything the new details or Ben's instructions say to change.
-- Never change policy language, legal language, benefits descriptions, at-will language, signature blocks, or company boilerplate, unless Ben's instructions say to.
+- Change only details that belong to the old person or situation: names (full, first, last, Mr./Ms. forms), job title, department, manager and their title, pay and how it is written (words and numerals), bonus, dates (letter date, start date, last day, response deadline, effective date), location, address, reasons or facts specific to the old situation, and anything the new details or HR's instructions say to change.
+- Never change policy language, legal language, benefits descriptions, at-will language, signature blocks, or company boilerplate, unless HR's instructions say to.
 - Each "find" must be copied character for character from ONE paragraph of the document as given (same spelling, capitalization, punctuation). Keep it as short as possible while still unique enough not to hit unrelated text. Prefer whole phrases like "Jordan Kim" or "$68,000" over single common words.
 - Every occurrence of a "find" in the document is replaced, so one pair covers repeats. List a full name before the first name alone.
 - Match the document's style: if it writes "Sixty-Eight Thousand Dollars ($68,000.00)", the replacement does too. Keep date formats the same.
-- Use only facts from the new details or Ben's instructions. If the document needs a value you don't have, do not guess: put the find in with replace "[NEW VALUE NEEDED: what]" and add it to "missing".
+- Use only facts from the new details or HR's instructions. If the document needs a value you don't have, do not guess: put the find in with replace "[NEW VALUE NEEDED: what]" and add it to "missing".
 - If a whole sentence only made sense for the old situation (for example a relocation bonus the new person isn't getting), replace that sentence's text with the corrected sentence or with "" to remove it, and explain in "why".
 - "why" is a 1 to 3 word label for the field being changed (for example "Full name", "First name", "Start date", "Salary", "Manager"). Never include the old person's name or old values in it.
 - Never use em dashes.
 
 Answer with JSON only, no other text:
-{"changes":[{"find":"...","replace":"...","why":"Full name"}],"notes":"1 to 4 short lines for Ben: what kind of document this is, what to double check, any risk (for example a final pay timing rule in a termination letter). Empty string if nothing.","missing":["values you need from Ben"]}`;
+{"changes":[{"find":"...","replace":"...","why":"Full name"}],"notes":"1 to 4 short lines for HR: what kind of document this is, what to double check, any risk (for example a final pay timing rule in a termination letter). Empty string if nothing.","missing":["values you need from HR"]}`;
 
 async function loadFile(db: ReturnType<typeof admin>, clientId: string, b: D): Promise<{ buf: Buffer; name: string } | { error: string }> {
   if (b.knowledgeId) {
@@ -123,7 +123,7 @@ export async function POST(req: Request) {
   }
   if (!paras.length) return NextResponse.json({ ok: false, reason: "empty" });
 
-  // ---------- apply: no Claude, just Ben's checked list
+  // ---------- apply: no Claude, just HR's checked list
   if (b.step === "apply") {
     const reps: Replacement[] = (Array.isArray(b.changes) ? b.changes : [])
       .map((c: D) => ({ find: String(c.find ?? ""), replace: String(c.replace ?? "").replace(/—/g, ", ") }))

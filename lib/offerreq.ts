@@ -1,6 +1,6 @@
 // Offer requests: a hiring manager fills out a short form (no sign-in). If the company set up an
-// approver, it goes to them first; then to Ben, who writes the offer letter. The manager approves
-// the letter by email, and Ben sends it. Shared by the browser and the server.
+// approver, it goes to them first; then to HR, who writes the offer letter. The manager approves
+// the letter by email, and HR sends it. Shared by the browser and the server.
 import type { Hire } from "./hires";
 
 export interface OfferRequest {
@@ -65,7 +65,7 @@ export function hireFromRequest(r: OfferRequest, clientId: string, id: string, a
     startDate: r.startDate, notes, requestedBy: r.requester, createdAt: now,
     request: { name: r.requester, email: r.requesterEmail, at: now, employment: r.employment, approvedBy: approver ? undefined : r.approvedBy },
     preApproval: approver ? { status: "waiting", name: approver.name, email: approver.email.toLowerCase(), at: now } : undefined,
-    history: [{ at: now, by: r.requester, text: approver ? `${r.requester} requested an offer. Waiting on ${approver.name} to approve.` : `${r.requester} requested an offer (approved by ${r.approvedBy}). Next: Ben writes the offer letter.` }],
+    history: [{ at: now, by: r.requester, text: approver ? `${r.requester} requested an offer. Waiting on ${approver.name} to approve.` : `${r.requester} requested an offer (approved by ${r.approvedBy}). Next: HR writes the offer letter.` }],
   };
 }
 

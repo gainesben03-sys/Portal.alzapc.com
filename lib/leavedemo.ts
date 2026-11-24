@@ -1,13 +1,13 @@
 // Sample leave cases for the public demo. All people are fictional; no medical details.
 import { addDays, CaseTask, DEFAULT_CATEGORIES, LeaveCase, tasksFor, today } from "./leave";
 
-const ben = { name: "Ben Gaines", email: "ben@alzapc.com" };
+const ben = { name: "HR", email: "ben@alzapc.com" };
 const dana = { name: "Dana Ortiz", email: "dana@example.com" };
 
 function make(n: number, p: Partial<LeaveCase> & Pick<LeaveCase, "employee" | "categories" | "requestedAt" | "status">, doneKeys: string[] = []): LeaveCase {
   const t = today();
   const base: LeaveCase = { id: `demo-loa-${n}`, clientId: "blueprint", number: `LOA-${String(n).padStart(4, "0")}`, schedule: "continuous", assignedTo: ben, eligibility: {}, entitlement: {}, tasks: [], rtw: {}, docs: [], notes: [], intermittent: [], extensions: [], emails: [], createdAt: `${p.requestedAt}T16:00:00.000Z`, updatedAt: `${addDays(t, -2)}T16:00:00.000Z`, ...p };
-  const tasks: CaseTask[] = (p.tasks ?? tasksFor(base, DEFAULT_CATEGORIES)).map((x) => (x.key && doneKeys.includes(x.key) ? { ...x, done: true, doneAt: x.due, doneBy: "Ben Gaines" } : x));
+  const tasks: CaseTask[] = (p.tasks ?? tasksFor(base, DEFAULT_CATEGORIES)).map((x) => (x.key && doneKeys.includes(x.key) ? { ...x, done: true, doneAt: x.due, doneBy: "HR" } : x));
   return { ...base, tasks };
 }
 
@@ -27,12 +27,12 @@ export function demoLeave(): LeaveCase[] {
       entitlement: { fmla: { available: 12, used: 4.3 }, cfra: { available: 12, used: 4.3 } },
       benefits: { continuing: true, premiums: "Payroll deduction continues (PTO running concurrently)" },
       docs: [
-        { id: "dd1", name: "Leave request form.pdf", path: "", kind: "request", medical: false, at: `${d(-40)}T17:00:00Z`, by: "Ben Gaines" },
-        { id: "dd2", name: "Eligibility and rights notice.pdf", path: "", kind: "notice", medical: false, at: `${d(-38)}T17:00:00Z`, by: "Ben Gaines" },
-        { id: "dd3", name: "Provider certification.pdf", path: "", kind: "medical", medical: true, at: `${d(-27)}T17:00:00Z`, by: "Ben Gaines" },
+        { id: "dd1", name: "Leave request form.pdf", path: "", kind: "request", medical: false, at: `${d(-40)}T17:00:00Z`, by: "HR" },
+        { id: "dd2", name: "Eligibility and rights notice.pdf", path: "", kind: "notice", medical: false, at: `${d(-38)}T17:00:00Z`, by: "HR" },
+        { id: "dd3", name: "Provider certification.pdf", path: "", kind: "medical", medical: true, at: `${d(-27)}T17:00:00Z`, by: "HR" },
       ],
-      notes: [{ id: "n1", at: `${d(-27)}T18:00:00Z`, by: "Ben Gaines", text: "Certification received and complete. Designation notice drafted." }],
-      emails: [{ at: `${d(-40)}T17:30:00Z`, by: "Ben Gaines", to: "jamie@example.com", subject: "We received your leave request" }],
+      notes: [{ id: "n1", at: `${d(-27)}T18:00:00Z`, by: "HR", text: "Certification received and complete. Designation notice drafted." }],
+      emails: [{ at: `${d(-40)}T17:30:00Z`, by: "HR", to: "jamie@example.com", subject: "We received your leave request" }],
     }, ["notice", "certSent", "certDue", "designation", "benefits"]),
     make(2, {
       status: "pending_docs",
@@ -72,7 +72,7 @@ export function demoLeave(): LeaveCase[] {
         { id: "x2", requestedAt: d(-1), newEnd: d(18), status: "requested" },
       ],
       accommodation: { considered: true, note: "Light duty options discussed with Dana: no lifting over 25 lbs." },
-      notes: [{ id: "n2", at: `${d(-6)}T18:00:00Z`, by: "Ben Gaines", text: "Carrier claim number on file. Interactive process meeting held." }],
+      notes: [{ id: "n2", at: `${d(-6)}T18:00:00Z`, by: "HR", text: "Carrier claim number on file. Interactive process meeting held." }],
     }, ["dwc1", "carrier", "duty", "meet", "medinfo", "decision"]),
     make(5, {
       status: "closed",

@@ -1,6 +1,6 @@
 // Public, link-only: someone outside the Alza Hub reviews the candidates for one role.
-// The long random token in the link is the only key. Ben creates, and can turn off, each link.
-// They see every pitch for the role except ones Ben passed on or cleared (or, if Ben set the link
+// The long random token in the link is the only key. HR creates, and can turn off, each link.
+// They see every pitch for the role except ones HR passed on or cleared (or, if HR set the link
 // that way, only ones he's shared with the client). They play each pitch and say yes or no.
 //
 // GET  -> the role, the candidates, and this reviewer's calls so far
@@ -110,7 +110,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
     const { error } = await x.db.from("outside_reviews").upsert({ id: rid, client_id: x.role.clientId, candidate_id: id, data: mine, updated_at: now }, { onConflict: "id" });
     if (error) return json({ ok: false, reason: "save_failed" }, 500);
 
-    // tell Ben, unless they only changed the note
+    // tell HR, unless they only changed the note
     if (prev?.decision !== decision || (note && note !== prev?.note)) {
       const said = decision === "yes" ? "Yes" : "No";
       const href = `/c/${x.role.clientId}/recruiting`;

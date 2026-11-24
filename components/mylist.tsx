@@ -1,7 +1,7 @@
 "use client";
 
 // My list: a private checklist on the dashboard, with due dates and email reminders.
-// Only the person themselves can see it (the database enforces that, Ben included).
+// Only the person themselves can see it (the database enforces that, HR included).
 import { useCallback, useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
 import { authHeader, LIVE, sb } from "@/lib/supabase";

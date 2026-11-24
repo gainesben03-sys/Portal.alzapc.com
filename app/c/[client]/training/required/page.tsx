@@ -403,7 +403,7 @@ function Setup({ data, clientId, call, toast, reload }: Props & { clientId: stri
         </div>
         <div>
           <b>Who checks certificates and answers questions</b>
-          <p className="tiny muted" style={{ margin: "4px 0 8px" }}>Executives and Ben can always. Add HR people by email; questions go to them (or Ben if nobody is listed).</p>
+          <p className="tiny muted" style={{ margin: "4px 0 8px" }}>Executives and HR can always. Add HR people by email; questions go to them (or to Alza HR if nobody is listed).</p>
           <input className="f" value={admins} onChange={(e) => setAdmins(e.target.value)} onBlur={() => save({ ...s, admins: admins.split(/[,\s]+/).filter(Boolean) })} placeholder="hr@company.com" />
         </div>
         <div>
@@ -470,7 +470,7 @@ function CourseSheet({ c, clientId, call, toast, onClose, onSave }: { c: Course;
               <span className="small">{d.planName || "No file yet"}</span>
               <label className="btn sm" style={{ cursor: "pointer" }}>{uploading ? "Uploading…" : d.planName ? "Replace" : "Upload"}<input type="file" accept=".pdf,.docx,image/*" hidden onChange={(e) => e.target.files?.[0] && uploadPlan(e.target.files[0])} /></label>
             </div>
-            <span className="tiny muted">Ben can write this for you.</span>
+            <span className="tiny muted">HR can write this for you.</span>
           </div>
           <label className="f">Training video link (optional)<input className="f" value={d.videoUrl ?? ""} onChange={(e) => up({ videoUrl: e.target.value })} placeholder="https://" /></label>
           <label className="f">Live Q&amp;A (optional)<input className="f" value={d.qa ?? ""} onChange={(e) => up({ qa: e.target.value })} placeholder="Thursday, Jan 8 at 12:00 on Zoom" /></label>

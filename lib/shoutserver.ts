@@ -181,7 +181,7 @@ export async function celebrateMail(c: ShoutClient, site: string, person: { id: 
   return { subject, ...m, ...celebrateSender(c.rec, c.name) };
 }
 
-/** Something's waiting for review: tell Ben (and the bell). */
+/** Something's waiting for review: tell HR (and the bell). */
 export async function tellReviewers(db: SupabaseClient, site: string, c: ShoutClient, s: Shoutout) {
   const href = `/c/${c.id}/recognition?review=1`;
   const text = `A shoutout to ${s.to.name} is waiting for review (${s.heldReason ?? "flagged"})`;

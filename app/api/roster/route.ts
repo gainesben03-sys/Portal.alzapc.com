@@ -1,6 +1,6 @@
 // The roster, for executives: add people, edit details, and set managers and departments.
-// The people table stays Ben-only; this route checks the caller is an executive at that company.
-// Uploading the payroll file and removing people stay with Ben (console).
+// The people table stays HR-only; this route checks the caller is an executive at that company.
+// Uploading the payroll file and removing people stay with HR (console).
 // POST { clientId, people: TeamMember[] }  create or update, up to 500 at a time
 import { NextResponse } from "next/server";
 import { admin, caller, SERVER_LIVE } from "@/lib/server";
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
       cell: p.cell ? cleanCell(str(p.cell, 30)) : undefined,
       celebrate: p.celebrate === false ? false : undefined,
       isManager: p.isManager ? true : undefined,
-      // only Ben marks people as gone (offboarding or the console)
+      // only HR marks people as gone (offboarding or the console)
       active: old ? old.active : true,
     };
     const { id: _id, ...data } = next; // eslint-disable-line @typescript-eslint/no-unused-vars

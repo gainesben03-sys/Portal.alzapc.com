@@ -45,7 +45,7 @@ export default function LeaveCasePage() {
         ...c.notes.map((n) => ({ who: n.by, what: "added a note", detail: null, at: n.at })),
         ...c.emails.map((e) => ({ who: e.by, what: "sent an email", detail: `"${e.subject}" to ${e.to}`, at: e.at })),
         ...c.docs.map((d) => ({ who: d.by, what: "uploaded a document", detail: `${d.name}${d.medical ? " (medical, restricted)" : ""}`, at: d.at })),
-        { who: c.assignedTo?.name ?? "Ben Gaines", what: "opened the case", detail: c.number, at: c.createdAt },
+        { who: c.assignedTo?.name ?? "HR", what: "opened the case", detail: c.number, at: c.createdAt },
       ].sort((a, b) => (b.at > a.at ? 1 : -1)));
       return;
     }
@@ -70,7 +70,7 @@ export default function LeaveCasePage() {
   if (!c) return shell(<div className="card section small muted">Case not found. <Link href={`/c/${clientId}/leave`}>Back to the leave center</Link></div>);
 
   const cats = categoriesFor(cfg?.leave);
-  const meP = { name: viewer?.kind === "client" ? viewer.person.name : "Ben Gaines", email: (me?.email ?? "ben@alzapc.com").toLowerCase() };
+  const meP = { name: viewer?.kind === "client" ? viewer.person.name : "HR", email: (me?.email ?? "ben@alzapc.com").toLowerCase() };
   const upd = async (p: Partial<LeaveCase>, msg = "Saved") => {
     const r = await save({ ...c, ...p });
     toast.show(typeof r === "string" ? r : msg);
@@ -178,7 +178,7 @@ export default function LeaveCasePage() {
                 {(Object.keys(SCHEDULE_LABEL) as Schedule[]).map((s) => <option key={s} value={s}>{SCHEDULE_LABEL[s]}</option>)}
               </select>
             </label>
-            {c.status === "denied" && <p className="tiny muted lv-full">Record the reason and the notice you sent in the notes. The decision is HR&apos;s, made with Ben or counsel.</p>}
+            {c.status === "denied" && <p className="tiny muted lv-full">Record the reason and the notice you sent in the notes. The decision is HR&apos;s, made with HR or counsel.</p>}
           </div>
 
           {/* tasks */}

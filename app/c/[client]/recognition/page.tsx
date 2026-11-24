@@ -139,7 +139,7 @@ export default function Recognition() {
   };
 
   const on = !!cfg?.modules.recognition;
-  // Ben saves through the Alza Hub; an executive's changes go through the server (they can't write settings directly)
+  // HR saves through the Alza Hub; an executive's changes go through the server (they can't write settings directly)
   const saveRec = async (r: RecognitionSettings, msg = "Saved") => {
     if (isAdvisor) {
       setRec(r);

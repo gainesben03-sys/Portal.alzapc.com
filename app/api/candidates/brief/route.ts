@@ -1,7 +1,7 @@
 // Write (or rewrite) the AI resume summaries on candidate cards.
 // POST { clientId, ids?: string[] }  -> those candidates
 // POST { clientId, missing: true }   -> pitch candidates that don't have one yet (up to 24 per call)
-// Ben, or an executive at the client.
+// HR, or an executive at the client.
 import { NextResponse } from "next/server";
 import { writeBriefs } from "@/lib/candidatebrief";
 import type { Candidate } from "@/lib/modules";

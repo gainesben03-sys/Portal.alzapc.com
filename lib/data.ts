@@ -59,7 +59,7 @@ export interface Action {
   completedAt?: string;
   subtasks?: Subtask[];
   reminders?: PersonalReminder[];
-  requestedBy?: Person; // a client asked Ben for this
+  requestedBy?: Person; // a client asked HR for this
 }
 
 export interface Subtask {
@@ -67,7 +67,7 @@ export interface Subtask {
   text: string;
   done: boolean;
   doneAt?: string; // when it was checked off (drives the project progress chart)
-  owner?: Person; // project steps: who's doing it (Ben or someone at the client)
+  owner?: Person; // project steps: who's doing it (HR or someone at the client)
   due?: string; // project steps: yyyy-mm-dd
   actionId?: string; // the task this step created, so it shows on that person's list
 }
@@ -96,10 +96,10 @@ export interface Project {
   nextMilestone: string;
   milestoneDue: string; // target date (planned: start target, done: completion date)
   startedAt?: string; // when it moved to In progress
-  createdBy?: Person; // set when someone at the client started it (not Ben)
+  createdBy?: Person; // set when someone at the client started it (not HR)
 }
 
-/** Managers only see Projects when something there is theirs to do. Executives and Ben always see it. */
+/** Managers only see Projects when something there is theirs to do. Executives and HR always see it. */
 export function ownsOpenWork(actions: { clientId: string; side: string; status: string; owner: { name: string } }[], clientId: string, name?: string | null): boolean {
   if (!name) return false;
   const n = name.trim().toLowerCase();
@@ -128,7 +128,9 @@ export const DEFAULT_RULES: Rules = {
   blockerAfter: 7,
 };
 
-export const ADVISOR: Person = { name: "Ben Gaines", role: "Alza advisor" };
+export const ADVISOR: Person = { name: "HR", role: "Alza advisor" };
+/** True for the HR advisor, including records saved before the advisor was shown as "HR". */
+export const isAdvisorName = (n?: string | null) => !!n && (n === ADVISOR.name || n === "Ben Gaines");
 
 // ---------- date helpers (business days, local time) ----------
 
@@ -234,7 +236,7 @@ export function reminderPlan(a: Action, client: Client, rules: Rules, bundled = 
       date: addBusinessDays(due, rules.escalateAfter),
       to: escalationTarget(a, client),
     },
-    { label: "Flagged as blocker on Alza console", date: addBusinessDays(due, rules.blockerAfter), to: "Ben" }
+    { label: "Flagged as blocker on Alza console", date: addBusinessDays(due, rules.blockerAfter), to: "HR" }
   );
   let nextMarked = false;
   return steps.map((s) => {
@@ -258,10 +260,10 @@ export function reminderStage(a: Action, client: Client, rules: Rules): string {
   return "";
 }
 
-/** Escalate to the client's escalation contact, or to a personal check-in from Ben when the owner IS that contact. */
+/** Escalate to the client's escalation contact, or to a personal check-in from HR when the owner IS that contact. */
 export function escalationTarget(a: Action, client: Client): string {
   return a.owner.name === client.escalation.name
-    ? "Ben (personal check-in call)"
+    ? "HR (personal check-in call)"
     : `${client.escalation.name} (${client.escalation.role})`;
 }
 
@@ -365,12 +367,12 @@ export function seed(): { actions: Action[]; projects: Project[] } {
         { id: "s4", text: "Review JD: Warehouse Lead", done: false },
       ],
       attachments: [
-        { name: "Production JDs v3.pdf", from: "Ben Gaines" },
-        { name: "JD change summary.pdf", from: "Ben Gaines" },
+        { name: "Production JDs v3.pdf", from: "HR" },
+        { name: "JD change summary.pdf", from: "HR" },
       ],
       history: [
-        { at: at(-9), by: "Ben Gaines", text: "Request created and assigned to Alex Rivera" },
-        { at: at(-7), by: "Ben Gaines", text: "Shared Production JDs v3.pdf" },
+        { at: at(-9), by: "HR", text: "Request created and assigned to Alex Rivera" },
+        { at: at(-7), by: "HR", text: "Shared Production JDs v3.pdf" },
         { at: at(-1, 9), by: "Alza", text: "Overdue notice sent to Alex Rivera" },
       ],
     },
@@ -392,9 +394,9 @@ export function seed(): { actions: Action[]; projects: Project[] } {
         { id: "s2", text: "Feedback on Morgan", done: true },
         { id: "s3", text: "Feedback on Chris", done: false },
       ],
-      attachments: [{ name: "Finalist summaries.pdf", from: "Ben Gaines" }],
+      attachments: [{ name: "Finalist summaries.pdf", from: "HR" }],
       history: [
-        { at: at(-5), by: "Ben Gaines", text: "Request created and assigned to Marcus Cole" },
+        { at: at(-5), by: "HR", text: "Request created and assigned to Marcus Cole" },
         { at: at(-2, 14), by: "Marcus Cole", text: "Feedback started for candidate 1 of 3" },
         { at: at(0, 8), by: "Alza", text: "Due-date reminder sent to Marcus Cole" },
       ],
@@ -417,7 +419,7 @@ export function seed(): { actions: Action[]; projects: Project[] } {
         { id: "s3", text: "Upload the file here", done: false },
       ],
       attachments: [],
-      history: [{ at: at(-3), by: "Ben Gaines", text: "Request created and assigned to Dana Ortiz" }],
+      history: [{ at: at(-3), by: "HR", text: "Request created and assigned to Dana Ortiz" }],
     },
     {
       id: "bp-4",
@@ -429,8 +431,8 @@ export function seed(): { actions: Action[]; projects: Project[] } {
       owner: bp[1],
       due: due(6),
       status: "not_started",
-      attachments: [{ name: "Training outline.pdf", from: "Ben Gaines" }],
-      history: [{ at: at(-1), by: "Ben Gaines", text: "Request created and assigned to Priya Shah" }],
+      attachments: [{ name: "Training outline.pdf", from: "HR" }],
+      history: [{ at: at(-1), by: "HR", text: "Request created and assigned to Priya Shah" }],
     },
     {
       id: "bp-5",
@@ -443,9 +445,9 @@ export function seed(): { actions: Action[]; projects: Project[] } {
       due: due(-6),
       status: "completed",
       completedAt: at(-6, 16),
-      attachments: [{ name: "Offer letter template.docx", from: "Ben Gaines" }],
+      attachments: [{ name: "Offer letter template.docx", from: "HR" }],
       history: [
-        { at: at(-10), by: "Ben Gaines", text: "Request created and assigned to Priya Shah" },
+        { at: at(-10), by: "HR", text: "Request created and assigned to Priya Shah" },
         { at: at(-6, 16), by: "Priya Shah", text: "Approved" },
       ],
     },
@@ -455,7 +457,7 @@ export function seed(): { actions: Action[]; projects: Project[] } {
       side: "alza",
       kind: "document",
       title: "Draft new PTO policy",
-      detail: "Ben drafts the updated PTO policy for leadership review.",
+      detail: "HR drafts the updated PTO policy for leadership review.",
       owner: ADVISOR,
       due: due(4),
       status: "in_progress",
@@ -466,7 +468,7 @@ export function seed(): { actions: Action[]; projects: Project[] } {
         { id: "s3", text: "Leadership review", done: false },
       ],
       attachments: [],
-      history: [{ at: at(-3), by: "Ben Gaines", text: "Started drafting" }],
+      history: [{ at: at(-3), by: "HR", text: "Started drafting" }],
     },
     {
       id: "bp-a2",
@@ -474,13 +476,13 @@ export function seed(): { actions: Action[]; projects: Project[] } {
       side: "alza",
       kind: "document",
       title: "Senior Producer offer recommendation",
-      detail: "Ben sends a recommendation and comp range once interview feedback is in.",
+      detail: "HR sends a recommendation and comp range once interview feedback is in.",
       owner: ADVISOR,
       due: due(3),
       status: "blocked",
       projectId: "bp-p2",
       attachments: [],
-      history: [{ at: at(-2), by: "Ben Gaines", text: "Waiting on interview feedback" }],
+      history: [{ at: at(-2), by: "HR", text: "Waiting on interview feedback" }],
     },
     // other clients (fictional)
     {

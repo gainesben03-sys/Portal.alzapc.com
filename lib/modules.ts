@@ -17,9 +17,9 @@ export const MODULES: { key: ModuleKey; label: string; blurb: string }[] = [
   { key: "recruiting", label: "Recruiting", blurb: "Open roles, candidates and hiring feedback" },
   { key: "resources", label: "Resources", blurb: "Templates, guides and deliverables shared by Alza" },
   { key: "wellness", label: "Wellness", blurb: "Benefits and wellbeing programs by pillar" },
-  { key: "board", label: "Messages", blurb: "A message thread with Ben, under Ask Ben" },
+  { key: "board", label: "Messages", blurb: "A message thread with HR, under Ask HR" },
   { key: "recognition", label: "Team Wall", blurb: "Shoutouts by QR code, text or the Alza Hub, plus birthdays, work anniversaries and new starters, on one wall everyone can react to. Every shoutout is screened first" },
-  { key: "leave", label: "Leave center", blurb: "Leave of absence tracking for HR admins only: cases, deadlines, documents, reminders and return to work. Ben picks who the HR admins are" },
+  { key: "leave", label: "Leave center", blurb: "Leave of absence tracking for HR admins only: cases, deadlines, documents, reminders and return to work. HR picks who the HR admins are" },
   { key: "properties", label: "Our Properties", blurb: "A card for each property: who leads it and who handles leasing, maintenance, facilities and accounting, with a map view. Fills itself from the roster's Location and Title columns" },
   { key: "offboarding", label: "Offboarding", blurb: "When someone leaves: a checklist, a thank-you email with what they need to know, an exit survey, and they come off the roster on their last day. Executives only" },
   { key: "compliance", label: "Required training", blurb: "California harassment and workplace violence training, plus any other required course: assigns it, collects certificates, keeps the record and reminds people when it's due" },
@@ -104,7 +104,7 @@ export interface SharedFile {
   reviewed: boolean;
   requestId?: string; // the document request it answers
   path?: string; // where the file lives in private storage
-  fromAdvisor?: boolean; // Ben shared it on a task (not part of his inbox)
+  fromAdvisor?: boolean; // HR shared it on a task (not part of his inbox)
 }
 export const FILE_CATEGORIES = ["Signed document", "Employee file", "Payroll or benefits", "Policy or handbook", "Other"];
 
@@ -137,12 +137,12 @@ export const TILES: { id: string; label: string; blurb: string; module?: ModuleK
   { id: "leave", label: "Leave of absence", blurb: "Who's out, who's coming back, and what's due (HR admins only)", module: "leave" },
   { id: "huddle", label: "The People Brief", blurb: "Your weekly email on people and priorities" },
 ];
-/** A busy executive's Home: what needs me, people in motion, what Ben is on, and one way to reach him. The rest is opt-in under Customize. */
+/** A busy executive's Home: what needs me, people in motion, what HR is on, and one way to reach him. The rest is opt-in under Customize. */
 export const DEFAULT_TILES = ["projects", "askhr", "roadmap", "mylist", "hires", "celebrate", "recruiting", "reviews", "compliance"];
 
 export interface ClientConfig {
   onboarding?: Partial<import("./hires").OnboardingSettings>;
-  tiles?: string[]; // default dashboard for everyone at this client (set by Ben)
+  tiles?: string[]; // default dashboard for everyone at this client (set by HR)
   rosterColumns?: Record<string, string>; // the last roster upload's column matches, reused next time
   softAsks?: boolean; // show the quiet referral / add-on lines (default on)
   videoScreening?: boolean; // add-on: pitch links on Recruiting roles
@@ -162,7 +162,7 @@ export interface ClientConfig {
   logo?: string; // URL or data URL
   logoEmail?: string; // PNG copy of an SVG logo, for email apps
   escalationEmail: string;
-  /** Optional: who approves an offer request before Ben writes the letter. Blank means requests come straight to Ben. */
+  /** Optional: who approves an offer request before HR writes the letter. Blank means requests come straight to HR. */
   offerApprover?: { name: string; email: string };
   users: PortalUser[];
   codes: InviteCode[];
@@ -200,7 +200,7 @@ export interface Role {
   criteria: string[];
   feedbackActionId?: string;
   pitch?: import("./pitch").PitchSettings; // video screening link
-  reviewers?: import("./pitch").ReviewLink[]; // Ben's private links for people outside the Alza Hub
+  reviewers?: import("./pitch").ReviewLink[]; // HR's private links for people outside the Alza Hub
   description?: string; // the job description; the AI resume summaries compare against it
 }
 
@@ -232,10 +232,10 @@ export interface Candidate {
   feedbackAt?: string;
   source?: "pitch";
   pitch?: import("./pitch").PitchSubmission;
-  hidden?: boolean; // a pitch Ben hasn't shared with the client yet
+  hidden?: boolean; // a pitch HR hasn't shared with the client yet
   screened?: "shared" | "passed";
   decidedAt?: string; // when they said yes / no / offer
-  cleared?: boolean; // Ben cleared them: off the client's list, video deleted
+  cleared?: boolean; // HR cleared them: off the client's list, video deleted
   clearedAt?: string;
   mediaDeletedAt?: string;
   reviews?: import("./pitch").OutsideReview[]; // yes/no from reviewer links
@@ -480,7 +480,7 @@ export function seedModules() {
     { id: "res-t1", title: "Session 1: Job requisitions and the ideal candidate", type: "Training", category: "Manager training", desc: "Define what you need before you post. 45 minutes, with the worksheet.", updated: d(-12), url: "https://www.example.com/training-1", shares: [{ clientId: "blueprint", folder: "Trainings", at: at(-12) }] },
     { id: "res-t2", title: "Session 2: Reviewing resumes fast and fairly", type: "Training", category: "Manager training", desc: "A 10-minute screen that keeps bias out. Slides and recording.", updated: d(-5), url: "https://www.example.com/training-2", shares: [{ clientId: "blueprint", folder: "Trainings", at: at(-5) }] },
     { id: "res-t0", title: "Manager Essentials: Say it. Don't avoid it.", type: "Training", category: "Manager training", desc: "Difficult conversations with the CLEAR framework. Bilingual slides, with practice.", updated: d(-2), url: "/demo/say-it-slides.pdf", practice: SEED_PRACTICE, shares: [{ clientId: "blueprint", folder: "Trainings", at: at(-2) }] },
-    { id: "res-t3", title: "Hard conversations: a one-page guide", type: "Guide", category: "Manager toolkit", desc: "What to say, what to write down, when to call Ben.", updated: d(-20), url: "https://www.example.com/guide", shares: [{ clientId: "blueprint", folder: "Manager toolkit", at: at(-20) }] },
+    { id: "res-t3", title: "Hard conversations: a one-page guide", type: "Guide", category: "Manager toolkit", desc: "What to say, what to write down, when to call HR.", updated: d(-20), url: "https://www.example.com/guide", shares: [{ clientId: "blueprint", folder: "Manager toolkit", at: at(-20) }] },
     { id: "res7", title: "Feedback conversations (12 min video)", type: "Video", category: "Leadership", desc: "How to give feedback that lands without drama.", updated: d(-18), shares: [] },
     { id: "res8", title: "Org structure refresh: proposal v2", type: "Template", category: "Deliverable", desc: "Proposed reporting lines and role changes.", updated: d(-7), clientOnly: "blueprint", shares: [{ clientId: "blueprint", folder: "Project deliverables", at: at(-7) }] },
   ];
@@ -511,7 +511,7 @@ export function seedModules() {
       urgent: false,
       at: at(-2, 16),
       status: "done",
-      replies: [{ by: "Ben Gaines", text: "Added one to your Manager toolkit folder. Happy to walk through it.", at: at(-1, 9) }],
+      replies: [{ by: "HR", text: "Added one to your Manager toolkit folder. Happy to walk through it.", at: at(-1, 9) }],
     },
     {
       id: "n2",
@@ -536,13 +536,13 @@ export function seedModules() {
 
   const now = new Date().toISOString();
   const hires: Hire[] = [
-    { id: "h1", clientId: "blueprint", status: "Offer signed", title: "Senior Producer", managerName: "Marcus Cole", managerTitle: "Production Manager", name: "Morgan Lee", personalEmail: "morgan.lee@example.com", cell: "", payType: "salary", payAmount: 128000, bonus: 10, exempt: "exempt", startDate: d(9), arrivalTime: "9:00 AM", location: "", jd: "Lead production on large corporate events\nOwn event budgets", emails: { welcome: at(-1, 10) }, createdAt: now, history: [{ at: at(-4), by: "Ben Gaines", text: "Hire started" }, { at: at(-1, 10), by: "Alex Rivera", text: "Offer signed" }] },
-    { id: "h2", clientId: "blueprint", status: "Offer sent", title: "Warehouse Coordinator", managerName: "Dana Ortiz", managerTitle: "Office Manager", name: "Jordan Kim", personalEmail: "jordan@example.com", payType: "hourly", payAmount: 30, exempt: "nonexempt", startDate: d(15), arrivalTime: "7:30 AM", location: "", docs: [{ kind: "offer", name: "Offer Letter - Jordan Kim.docx", at: at(-2) }], createdAt: now, history: [{ at: at(-2), by: "Ben Gaines", text: "Hire started" }] },
-    { id: "h3", clientId: "blueprint", status: "Started", title: "CAD Designer", managerName: "Priya Shah", managerTitle: "COO", name: "Kevin Tran", personalEmail: "kevin.t@example.com", payType: "hourly", payAmount: 38, exempt: "nonexempt", startDate: d(-3), location: "LV", track: { bg: d(-12), drug: d(-10), payroll: d(-5) }, remarks: [{ at: d(-3), by: "Priya Shah", text: "Started. Orientation Friday" }], emails: { welcome: at(-14), firstDay: at(-8) }, createdAt: now, history: [{ at: at(-20), by: "Ben Gaines", text: "Hire started" }] },
-    { id: "h4", clientId: "blueprint", status: "Offer signed", title: "Shipping Associate", managerName: "Dana Ortiz", managerTitle: "Office Manager", name: "Andrea Molina", personalEmail: "andrea.m@example.com", payType: "hourly", payAmount: 24, exempt: "nonexempt", startDate: d(4), location: "LV", track: { bg: d(-6), payroll: d(-2) }, remarks: [{ at: d(-6), by: "Dana Ortiz", text: "Pending drug test" }], emails: { welcome: at(-10) }, xp: { token: "demo", linkSentAt: at(-9), submittedAt: at(-8), approvedAt: at(-8), preferred: "Andi", share: ["from", "outside", "fact", "coffee"], answers: { from: "Henderson. Most recently three years in warehouse logistics.", excited: "Learning how the big event builds come together.", outside: "Softball on Sundays and cooking for way too many people.", fact: "I've driven a forklift in four states.", coffee: "Iced coffee, lots of ice", feedback: "Straight to the point, in person. I'd rather know early.", easier: "A walkthrough of the shipping software before my first big order." } }, createdAt: now, history: [{ at: at(-12), by: "Ben Gaines", text: "Hire started" }, { at: at(-8), by: "Andrea Molina", text: "Approved their company intro" }] },
-    { id: "h5", clientId: "blueprint", status: "Started", title: "Production Associate", managerName: "Marcus Cole", managerTitle: "Production Manager", name: "Riley Chen", personalEmail: "riley.c@example.com", payType: "hourly", payAmount: 26, exempt: "nonexempt", startDate: d(-29), location: "SF", track: { bg: d(-40), drug: d(-38), payroll: d(-31), orient: d(-27) }, remarks: [{ at: d(-27), by: "Marcus Cole", text: "Orientation done, settling in well" }], emails: { welcome: at(-45), firstDay: at(-36) }, createdAt: now, history: [{ at: at(-50), by: "Ben Gaines", text: "Hire started" }] },
-    { id: "h6", clientId: "blueprint", status: "Offer signed", title: "Field Ops Driver/Installer", managerName: "Marcus Cole", managerTitle: "Production Manager", name: "Tyler Brooks", personalEmail: "tyler.b@example.com", payType: "hourly", payAmount: 25, exempt: "nonexempt", startDate: d(2), location: "SF", outcome: "declined", remarks: [{ at: d(-4), by: "Dana Ortiz", text: "Declined, took another offer" }], createdAt: now, history: [{ at: at(-15), by: "Ben Gaines", text: "Hire started" }] },
-    { id: "h7", clientId: "blueprint", status: "Started", title: "Upholsterer", managerName: "Marcus Cole", managerTitle: "Production Manager", name: "Sofia Ramos", personalEmail: "sofia.r@example.com", payType: "hourly", payAmount: 29, exempt: "nonexempt", startDate: d(-40), location: "SF", track: { bg: d(-52), drug: d(-50), payroll: d(-42), orient: d(-38), day30: d(-9) }, remarks: [{ at: d(-9), by: "Marcus Cole", text: "30-day check-in done. Doing great" }], emails: { welcome: at(-55), firstDay: at(-47) }, createdAt: now, history: [{ at: at(-60), by: "Ben Gaines", text: "Hire started" }] },
+    { id: "h1", clientId: "blueprint", status: "Offer signed", title: "Senior Producer", managerName: "Marcus Cole", managerTitle: "Production Manager", name: "Morgan Lee", personalEmail: "morgan.lee@example.com", cell: "", payType: "salary", payAmount: 128000, bonus: 10, exempt: "exempt", startDate: d(9), arrivalTime: "9:00 AM", location: "", jd: "Lead production on large corporate events\nOwn event budgets", emails: { welcome: at(-1, 10) }, createdAt: now, history: [{ at: at(-4), by: "HR", text: "Hire started" }, { at: at(-1, 10), by: "Alex Rivera", text: "Offer signed" }] },
+    { id: "h2", clientId: "blueprint", status: "Offer sent", title: "Warehouse Coordinator", managerName: "Dana Ortiz", managerTitle: "Office Manager", name: "Jordan Kim", personalEmail: "jordan@example.com", payType: "hourly", payAmount: 30, exempt: "nonexempt", startDate: d(15), arrivalTime: "7:30 AM", location: "", docs: [{ kind: "offer", name: "Offer Letter - Jordan Kim.docx", at: at(-2) }], createdAt: now, history: [{ at: at(-2), by: "HR", text: "Hire started" }] },
+    { id: "h3", clientId: "blueprint", status: "Started", title: "CAD Designer", managerName: "Priya Shah", managerTitle: "COO", name: "Kevin Tran", personalEmail: "kevin.t@example.com", payType: "hourly", payAmount: 38, exempt: "nonexempt", startDate: d(-3), location: "LV", track: { bg: d(-12), drug: d(-10), payroll: d(-5) }, remarks: [{ at: d(-3), by: "Priya Shah", text: "Started. Orientation Friday" }], emails: { welcome: at(-14), firstDay: at(-8) }, createdAt: now, history: [{ at: at(-20), by: "HR", text: "Hire started" }] },
+    { id: "h4", clientId: "blueprint", status: "Offer signed", title: "Shipping Associate", managerName: "Dana Ortiz", managerTitle: "Office Manager", name: "Andrea Molina", personalEmail: "andrea.m@example.com", payType: "hourly", payAmount: 24, exempt: "nonexempt", startDate: d(4), location: "LV", track: { bg: d(-6), payroll: d(-2) }, remarks: [{ at: d(-6), by: "Dana Ortiz", text: "Pending drug test" }], emails: { welcome: at(-10) }, xp: { token: "demo", linkSentAt: at(-9), submittedAt: at(-8), approvedAt: at(-8), preferred: "Andi", share: ["from", "outside", "fact", "coffee"], answers: { from: "Henderson. Most recently three years in warehouse logistics.", excited: "Learning how the big event builds come together.", outside: "Softball on Sundays and cooking for way too many people.", fact: "I've driven a forklift in four states.", coffee: "Iced coffee, lots of ice", feedback: "Straight to the point, in person. I'd rather know early.", easier: "A walkthrough of the shipping software before my first big order." } }, createdAt: now, history: [{ at: at(-12), by: "HR", text: "Hire started" }, { at: at(-8), by: "Andrea Molina", text: "Approved their company intro" }] },
+    { id: "h5", clientId: "blueprint", status: "Started", title: "Production Associate", managerName: "Marcus Cole", managerTitle: "Production Manager", name: "Riley Chen", personalEmail: "riley.c@example.com", payType: "hourly", payAmount: 26, exempt: "nonexempt", startDate: d(-29), location: "SF", track: { bg: d(-40), drug: d(-38), payroll: d(-31), orient: d(-27) }, remarks: [{ at: d(-27), by: "Marcus Cole", text: "Orientation done, settling in well" }], emails: { welcome: at(-45), firstDay: at(-36) }, createdAt: now, history: [{ at: at(-50), by: "HR", text: "Hire started" }] },
+    { id: "h6", clientId: "blueprint", status: "Offer signed", title: "Field Ops Driver/Installer", managerName: "Marcus Cole", managerTitle: "Production Manager", name: "Tyler Brooks", personalEmail: "tyler.b@example.com", payType: "hourly", payAmount: 25, exempt: "nonexempt", startDate: d(2), location: "SF", outcome: "declined", remarks: [{ at: d(-4), by: "Dana Ortiz", text: "Declined, took another offer" }], createdAt: now, history: [{ at: at(-15), by: "HR", text: "Hire started" }] },
+    { id: "h7", clientId: "blueprint", status: "Started", title: "Upholsterer", managerName: "Marcus Cole", managerTitle: "Production Manager", name: "Sofia Ramos", personalEmail: "sofia.r@example.com", payType: "hourly", payAmount: 29, exempt: "nonexempt", startDate: d(-40), location: "SF", track: { bg: d(-52), drug: d(-50), payroll: d(-42), orient: d(-38), day30: d(-9) }, remarks: [{ at: d(-9), by: "Marcus Cole", text: "30-day check-in done. Doing great" }], emails: { welcome: at(-55), firstDay: at(-47) }, createdAt: now, history: [{ at: at(-60), by: "HR", text: "Hire started" }] },
   ];
   config.blueprint.onboarding = { experience: { on: true }, payroll: "Rippling", hqAddress: "1500 Folsom St, San Francisco, CA 94103", hrPhone: "(415) 555-0142", benefitsNote: "Your medical, dental and vision benefits start on the first of the month after your start date.", leaderQuote: "We make big moments happen. That starts with the people on our team.", leaderNames: "Alex Rivera, CEO" };
 

@@ -115,7 +115,7 @@ export interface PerformSettings {
   ai: boolean;
   talk: boolean; // "Talk it through" on phones
   execRead: boolean; // executives can open full reviews (they always see team summaries)
-  admins: string[]; // emails who see and manage every review, besides Ben
+  admins: string[]; // emails who see and manage every review, besides HR
   remind: number[]; // days before the due date
   overdueWeekly: boolean;
   pipAfter: number; // below-expectations reviews before suggesting a plan
@@ -215,7 +215,7 @@ export interface Pip {
   length: 30 | 60 | 90;
   checkins: { date: string; note?: string; done?: boolean }[];
   outcome: string;
-  hrReviewed?: boolean; // Ben or a review admin looked it over before it's shared
+  hrReviewed?: boolean; // HR or a review admin looked it over before it's shared
 }
 export const DEFAULT_PIP_OUTCOME = "If these expectations aren't met by the end of the plan, further action may follow, up to and including termination. Meeting them closes the plan.";
 

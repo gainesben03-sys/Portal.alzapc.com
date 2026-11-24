@@ -1,4 +1,4 @@
-// Sends an offer letter or agreement for e-signature. Ben or a client executive can send.
+// Sends an offer letter or agreement for e-signature. HR or a client executive can send.
 // The text signed is read from the stored file on the server, and the link goes only to
 // the hire's personal email on file.
 import { NextResponse } from "next/server";

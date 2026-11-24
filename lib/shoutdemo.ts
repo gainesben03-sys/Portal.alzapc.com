@@ -75,7 +75,7 @@ const start = new Date(Date.now() - 72 * 3600e3).toISOString();
 const inDays = (n: number) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
 export const DEMO_CHALLENGES: Challenge[] = [
   { id: "ch-demo", clientId: "blueprint", kind: "chain", title: "November Appreciation Chain", status: "active", startedAt: start, endsAt: inDays(20), createdBy: { name: "Sam Whitaker" }, chain: { windowDays: 3, rootId: "c1" } },
-  { id: "ch-goal", clientId: "blueprint", kind: "goal", title: "20 shoutouts by Thanksgiving", status: "active", startedAt: new Date(Date.now() - 6 * 864e5).toISOString(), endsAt: inDays(16), createdBy: { name: "Ben Gaines" }, goal: { target: 20, reward: "Team taco lunch 🌮" } },
-  { id: "ch-wel", clientId: "blueprint", kind: "welcome", title: "Welcome Wagon", status: "active", startedAt: start, createdBy: { name: "Ben Gaines" }, welcome: { target: 5, days: 30 } },
+  { id: "ch-goal", clientId: "blueprint", kind: "goal", title: "20 shoutouts by Thanksgiving", status: "active", startedAt: new Date(Date.now() - 6 * 864e5).toISOString(), endsAt: inDays(16), createdBy: { name: "HR" }, goal: { target: 20, reward: "Team taco lunch 🌮" } },
+  { id: "ch-wel", clientId: "blueprint", kind: "welcome", title: "Welcome Wagon", status: "active", startedAt: start, createdBy: { name: "HR" }, welcome: { target: 5, days: 30 } },
 ];
 export const DEMO_ROSTER = DEMO_PEOPLE.map((p, i) => ({ id: p.id, name: p.name, department: p.team, hireDate: i === 5 ? new Date(Date.now() - 2 * 864e5).toISOString().slice(0, 10) : i === 1 ? new Date(Date.now() - 12 * 864e5).toISOString().slice(0, 10) : "2022-03-01", active: true }));

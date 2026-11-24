@@ -8,7 +8,7 @@ import { EditProjectSheet, useAssignees, useSaveProject } from "@/components/pro
 import { canEditProject } from "@/lib/projecttasks";
 import { ClientNav, ClientTopbar, Toast, useGuard, useToast } from "@/components/ui";
 import { currentStep, HealthChip, ProgressChart, ProgressRing, projectHealth, StepTrack } from "@/components/projectprogress";
-import { dueLabel, fmt, Project, projectProgress, toISO, today } from "@/lib/data";
+import { dueLabel, fmt, Project, projectProgress, toISO, today, isAdvisorName } from "@/lib/data";
 import { useStore } from "@/lib/store";
 
 /** One project's progress: how far along, what's happening now, and whether it'll land on time. */
@@ -81,7 +81,7 @@ export default function ProjectProgressPage() {
                     <div className="pizza-title">{s.text}</div>
                     <div className="tiny muted">
                       {s.done ? (s.doneAt ? `Done ${fmt(s.doneAt.slice(0, 10))}` : "Done") : i === cur ? "In progress now" : i === cur + 1 ? "Up next" : "Coming up"}
-                      {s.owner && <> · {s.owner.name === "Ben Gaines" ? "Ben" : s.owner.name}{s.due && !s.done ? `, due ${fmt(s.due)}` : ""}</>}
+                      {s.owner && <> · {isAdvisorName(s.owner.name) ? "HR" : s.owner.name}{s.due && !s.done ? `, due ${fmt(s.due)}` : ""}</>}
                     </div>
                   </div>
                   {can && p.status !== "planned" && (
@@ -96,7 +96,7 @@ export default function ProjectProgressPage() {
               );
             })}
           </ol>
-          {p.steps.length === 0 && <p className="small muted">{can ? "No steps yet. Tap Edit project to add them, with who and when." : "Ben will add the steps when this kicks off."}</p>}
+          {p.steps.length === 0 && <p className="small muted">{can ? "No steps yet. Tap Edit project to add them, with who and when." : "HR will add the steps when this kicks off."}</p>}
           {can && p.status === "active" && pct === 100 && (
             <div className="action-foot">
               <button className="btn sm primary" style={{ marginLeft: "auto" }} onClick={() => { setP({ status: "done", milestoneDue: toISO(today()) }); toast.show("Marked complete"); }}>Mark project complete</button>
@@ -124,9 +124,9 @@ export default function ProjectProgressPage() {
               <Link className="row" key={a.id} href={`/c/${clientId}/a/${a.id}`}>
                 <div className="grow" style={{ minWidth: 0 }}>
                   <div className="title ellipsis">{a.title}</div>
-                  <div className="tiny muted">{a.side === "alza" ? "Ben" : a.owner.name} · {dueLabel(a)}</div>
+                  <div className="tiny muted">{a.side === "alza" ? "HR" : a.owner.name} · {dueLabel(a)}</div>
                 </div>
-                <span className={`pill ${a.side === "alza" ? "alza" : "soon"}`}>{a.side === "alza" ? "Ben's" : isAdvisor ? "Client" : mineEmail && a.owner.email?.toLowerCase() === mineEmail ? "Yours" : a.owner.name.split(" ")[0]}</span>
+                <span className={`pill ${a.side === "alza" ? "alza" : "soon"}`}>{a.side === "alza" ? "HR's" : isAdvisor ? "Client" : mineEmail && a.owner.email?.toLowerCase() === mineEmail ? "Yours" : a.owner.name.split(" ")[0]}</span>
               </Link>
             ))}
           </div>

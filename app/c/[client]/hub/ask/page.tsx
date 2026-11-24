@@ -21,10 +21,10 @@ const EXAMPLES: Record<Mode, string[]> = {
   situation: ["Someone on my team keeps showing up 10 minutes late", "Two people on my crew aren't getting along", "My best performer is rude to coworkers", "Someone got defensive when I gave feedback"],
 };
 const REASON: Record<string, string> = {
-  no_handbook: "Ben hasn't loaded your handbook yet. Email or text Ben for now.",
-  limit: "That's today's limit for Ask HR. Email or text Ben, or try again tomorrow.",
+  no_handbook: "HR hasn't loaded your handbook yet. Email or text HR for now.",
+  limit: "That's today's limit for Ask HR. Email or text HR, or try again tomorrow.",
   off: "Ask HR isn't turned on for your company.",
-  no_key: "Ask HR isn't switched on yet. Ben is on it.",
+  no_key: "Ask HR isn't switched on yet. It's coming soon.",
   forbidden: "Ask HR isn't available to you.",
   signed_out: "Sign in again to keep going.",
 };
@@ -166,7 +166,7 @@ export default function AskHr() {
               <button className="btn primary" disabled={!draft.trim() || busy} onClick={() => ask(draft)}>Ask</button>
             </div>
             <div className="row tiny muted" style={{ gap: 10 }}>
-              <span className="grow">🔒 Questions aren&apos;t saved. Not legal advice. Firing, leave, harassment or discrimination: talk to Ben first.</span>
+              <span className="grow">🔒 Questions aren&apos;t saved. Not legal advice. Firing, leave, harassment or discrimination: talk to HR first.</span>
               {thread.length > 0 && <button className="linklike tiny" onClick={() => setThreads((x) => ({ ...x, [mode]: [] }))}>Clear</button>}
             </div>
           </section>
@@ -206,7 +206,7 @@ function HandbookCard({ a, onBen }: { a: HandbookAnswer; onBen: () => void }) {
   const [open, setOpen] = useState<number | null>(null);
   return (
     <div className="card ask-a">
-      {a.callBen && <div className="ask-flag small">⚠️ Talk to Ben before you act on this.{a.why ? ` ${a.why}` : ""}</div>}
+      {a.callBen && <div className="ask-flag small">⚠️ Talk to HR before you act on this.{a.why ? ` ${a.why}` : ""}</div>}
       <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{a.answer}</p>
       {a.cites?.length > 0 && (
         <div className="ask-cites">
@@ -228,7 +228,7 @@ function SituationCard({ a, onBen, onPractice }: { a: SituationAnswer; onBen: ()
   void onBen;
   return (
     <div className="card ask-a">
-      {a.callBen && <div className="ask-flag small">⚠️ Talk to Ben before you act.{a.why ? ` ${a.why}` : ""}</div>}
+      {a.callBen && <div className="ask-flag small">⚠️ Talk to HR before you act.{a.why ? ` ${a.why}` : ""}</div>}
       <p style={{ margin: 0 }}>{a.read}</p>
       {a.steps?.length > 0 && (
         <>
@@ -257,7 +257,7 @@ function SituationCard({ a, onBen, onPractice }: { a: SituationAnswer; onBen: ()
   );
 }
 
-/** The way into discipline documentation, for executives and Ben. */
+/** The way into discipline documentation, for executives and HR. */
 function DocCard({ clientId }: { clientId: string }) {
   const [open, setOpen] = useState<number | null>(null);
   useEffect(() => {
@@ -277,7 +277,7 @@ function DocCard({ clientId }: { clientId: string }) {
         <span>Records</span>
         {open ? <span className="pill amber">{open} open</span> : <span className="muted">›</span>}
       </Link>
-      <span className="tiny muted">🔒 Executives and Ben only</span>
+      <span className="tiny muted">🔒 Executives and HR only</span>
     </section>
   );
 }

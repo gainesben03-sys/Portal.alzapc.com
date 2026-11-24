@@ -215,7 +215,7 @@ function HireInner() {
         ? { text: `${h.letterApproval.name} approved the letter. Send it for e-signature below.` }
         : isAdvisor
         ? { text: "Draft the offer letter below, get it approved, then send it for e-signature. Sent it another way? Mark it sent.", buttons: <button className="btn sm" onClick={() => setStage("Offer sent", "Offer sent")}>Mark offer sent</button> }
-        : { text: "Ben is preparing the offer letter. You'll get it here to approve before it goes out." };
+        : { text: "HR is preparing the offer letter. You'll get it here to approve before it goes out." };
       break;
     case "Offer sent":
       next = {
@@ -255,7 +255,7 @@ function HireInner() {
           ? {
               text: (
                 <>
-                  The report needs a closer look. Don&apos;t withdraw the offer yet: talk with Ben first. In California the offer can only be pulled after an individual assessment, a written pre-adverse action notice with a copy of the report, and at least 5 business days for {first} to respond.
+                  The report needs a closer look. Don&apos;t withdraw the offer yet: talk with HR first. In California the offer can only be pulled after an individual assessment, a written pre-adverse action notice with a copy of the report, and at least 5 business days for {first} to respond.
                 </>
               ),
               buttons: canManage && <button className="btn primary sm" onClick={() => bg("clear", "Background check", "Background check reviewed and cleared")}>Cleared after review</button>,
@@ -283,7 +283,7 @@ function HireInner() {
       };
       break;
     case "Started":
-      next = { text: `${first} is on the team. Ben checks in at 30 days.` };
+      next = { text: `${first} is on the team. HR checks in at 30 days.` };
   }
 
   const docs = h.docs ?? [];
@@ -322,7 +322,7 @@ function HireInner() {
         )}
 
         {q.get("new") && !isAdvisor && (
-          <div className="card section small" style={{ borderLeft: "3px solid var(--green)" }}>Sent to Ben. He'll draft the offer letter and send it to you to approve.</div>
+          <div className="card section small" style={{ borderLeft: "3px solid var(--green)" }}>Sent to HR. They'll draft the offer letter and send it to you to approve.</div>
         )}
 
         <div className="card section hire-hero">
@@ -365,7 +365,7 @@ function HireInner() {
           <div>
             <div className="section-head section"><h2>Documents</h2></div>
             <div className="card">
-              {docs.length === 0 && <div className="small muted">{isAdvisor ? "No documents yet. Draft the offer letter and agreement from this hire's details." : "Ben adds the offer letter and agreement here."}</div>}
+              {docs.length === 0 && <div className="small muted">{isAdvisor ? "No documents yet. Draft the offer letter and agreement from this hire's details." : "HR adds the offer letter and agreement here."}</div>}
               {docs.map((d, i) => (
                 <div className="email-row" key={i}>
                   <div className="grow" style={{ minWidth: 0 }}>

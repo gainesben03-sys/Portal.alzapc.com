@@ -51,7 +51,7 @@ const DEMO: Info = {
 const fmtSec = (s: number | null) => (s ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : "");
 const day = (iso: string) => new Date(iso.length === 10 ? iso + "T12:00" : iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-/** The page an outside reviewer opens from Ben's link: watch each pitch, say yes or no. */
+/** The page an outside reviewer opens from HR's link: watch each pitch, say yes or no. */
 export default function ReviewPage() {
   const { token } = useParams<{ token: string }>();
   const [info, setInfo] = useState<Info | null>(null);
@@ -201,7 +201,7 @@ function CandidateCard({ c, n, call, demo, onSaved }: { c: Cand; n: number; call
       </div>
       {showNote ? (
         <div className="rv-note">
-          <textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000} placeholder="Why? (optional, goes to Ben)" rows={2} />
+          <textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000} placeholder="Why? (optional, goes to HR)" rows={2} />
           {c.mine && note !== (c.mine.note ?? "") && <button className="rv-link" onClick={() => decide(c.mine!.decision, note)}>Save note</button>}
         </div>
       ) : (

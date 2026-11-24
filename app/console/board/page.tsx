@@ -6,6 +6,7 @@ import { NoteCard } from "@/components/notes";
 import { DraftPanel } from "@/components/draft";
 import { useStore } from "@/lib/store";
 import { authHeader } from "@/lib/supabase";
+import { isAdvisorName } from "@/lib/data";
 
 async function replyEmail(clientId: string, email: string, clientName: string, text: string) {
   try {
@@ -13,7 +14,7 @@ async function replyEmail(clientId: string, email: string, clientName: string, t
       method: "POST",
       headers: { "Content-Type": "application/json", ...(await authHeader()) },
       body: JSON.stringify({
-        subject: `Ben replied to your note`,
+        subject: `HR replied to your note`,
         text: `${text}\n\nSee the conversation in your ${clientName} Alza Hub: ${window.location.origin}/c/${clientId}/board`,
         toMember: { clientId, email },
       }),
@@ -60,7 +61,7 @@ export default function ConsoleBoard() {
               patch({
                 notes: notes.map((x) =>
                   x.id === n.id
-                    ? { ...x, status: x.status === "new" ? "seen" : x.status, replies: [...x.replies, { by: "Ben Gaines", text, at: new Date().toISOString() }] }
+                    ? { ...x, status: x.status === "new" ? "seen" : x.status, replies: [...x.replies, { by: "HR", text, at: new Date().toISOString() }] }
                     : x
                 ),
               });
@@ -78,7 +79,7 @@ export default function ConsoleBoard() {
                   clientName={getClient(n.clientId)?.name}
                   onStatus={(status) => patch({ notes: notes.map((x) => (x.id === n.id ? { ...x, status } : x)) })}
                   onReply={reply}
-                  onDraft={live && n.author.name !== "Ben Gaines" ? () => setDrafting(drafting === n.id ? null : n.id) : undefined}
+                  onDraft={live && !isAdvisorName(n.author.name) ? () => setDrafting(drafting === n.id ? null : n.id) : undefined}
                 />
                 {drafting === n.id && (
                   <DraftPanel

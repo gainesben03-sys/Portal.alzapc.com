@@ -1,13 +1,13 @@
 "use client";
 
 // HR Roadmap screens: the dashboard tile, the full roadmap (Timeline, Calendar, List), setup, an item, and settings.
-// Executives and Ben only.
+// Executives and HR only.
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ReactNode, useMemo, useState } from "react";
 import { useSaveProject, useAssignees } from "@/components/projectedit";
 import { ClientNav, ClientTopbar, Sheet, Toast, useGuard, useToast } from "@/components/ui";
-import { Person, Project } from "@/lib/data";
+import { Person, Project, isAdvisorName } from "@/lib/data";
 import {
   addDays, Ans, buildYear, catOf, CATS, daysUntil, fmtRange, fmtShort, isRoadmap, iso, makeItem, nextCopy, nextDate, Phase, PHASE_LABEL, phaseOf,
   REMIND_CHOICES, Repeat, RoadmapProject, roadmapFor, RoadmapSettings, STEPS, TEMPLATES, todayISO, tplById,
@@ -294,7 +294,7 @@ function ItemSheet({ clientId, p, R, onClose, toast }: { clientId: string; p: Ro
   const meta = (m: Partial<RoadmapProject["roadmap"]>) => setV((x) => ({ ...x, roadmap: { ...x.roadmap, ...m }, milestoneDue: x.status === "planned" ? m.start ?? x.roadmap.start : m.end ?? x.roadmap.end }));
   const save = () => { R.saveItem(v, p); toast("Saved"); };
   const s = R.settings;
-  const to = [s.toOwner && (v.roadmap.owner?.name ?? "the owner"), s.toBen && "Ben", s.toExecs && "all executives", ...s.extra].filter(Boolean).join(", ");
+  const to = [s.toOwner && (v.roadmap.owner?.name ?? "the owner"), s.toBen && "HR", s.toExecs && "all executives", ...s.extra].filter(Boolean).join(", ");
   const sched = [...s.remind.map((n) => ({ k: String(n), label: `${n} days before`, at: addDays(v.roadmap.start, -n) })), ...(s.dueDay ? [{ k: "due", label: "Due date", at: v.roadmap.end }] : [])];
   return (
     <Sheet title={v.name} onClose={() => { if (dirty) save(); onClose(); }}>
@@ -396,7 +396,7 @@ function Setup({ clientId }: { clientId: string }) {
   const people = useAssignees(clientId);
   const [ans, setAns] = useState<Record<string, Ans>>(() => ({ ...R.settings.answers }));
   const [step, setStep] = useState(0);
-  const [owner, setOwner] = useState<string>(R.meP?.name ?? people.find((x) => x.name !== "Ben Gaines")?.name ?? "");
+  const [owner, setOwner] = useState<string>(R.meP?.name ?? people.find((x) => !isAdvisorName(x.name))?.name ?? "");
   const [busy, setBusy] = useState(false);
   const compliance = !!config[clientId]?.modules?.compliance;
   const last = step === STEPS.length;
@@ -406,7 +406,7 @@ function Setup({ clientId }: { clientId: string }) {
     setBusy(true);
     const ownerP = people.find((x) => x.name === owner);
     const items = buildYear({ ...R.settings, answers: ans }, clientId, R.items, ownerP, R.meP, { compliance });
-    const ok = await R.saveSettings({ ...R.settings, answers: ans, setupAt: new Date().toISOString(), setupBy: R.meP?.name ?? "Ben" });
+    const ok = await R.saveSettings({ ...R.settings, answers: ans, setupAt: new Date().toISOString(), setupBy: R.meP?.name ?? "HR" });
     R.addItems(items);
     setBusy(false);
     if (ok) router.push(`/c/${clientId}/roadmap`);
@@ -455,7 +455,7 @@ function Setup({ clientId }: { clientId: string }) {
                 <select className="f" value={owner} onChange={(e) => setOwner(e.target.value)} style={{ maxWidth: 320 }}>
                   {people.map((x) => <option key={x.name} value={x.name}>{x.name}</option>)}
                 </select>
-                <span className="tiny muted">You can give any item its own owner later. Reminders go to the owner and Ben unless you change it in Settings.</span>
+                <span className="tiny muted">You can give any item its own owner later. Reminders go to the owner and HR unless you change it in Settings.</span>
               </div>
             </>
           )}
@@ -519,7 +519,7 @@ function Settings({ clientId }: { clientId: string }) {
         <div className="grow">
           <Link href={`/c/${clientId}/roadmap`} className="tiny" style={{ fontWeight: 600 }}>HR Roadmap</Link>
           <h1 className="pl-title">Roadmap settings</h1>
-          <p className="small muted" style={{ margin: "4px 0 0" }}>Executives and Ben can change these.</p>
+          <p className="small muted" style={{ margin: "4px 0 0" }}>Executives and HR can change these.</p>
         </div>
         <button className="btn primary sm" disabled={!dirty} onClick={async () => { const ok = await R.saveSettings(s); toast.show(ok ? "Saved" : "Couldn't save. Try again."); }}>{dirty ? "Save" : "Saved"}</button>
       </div>
@@ -532,7 +532,7 @@ function Settings({ clientId }: { clientId: string }) {
           <label className="pl-radio"><input type="checkbox" checked={s.overdueWeekly} onChange={(e) => setS({ ...s, overdueWeekly: e.target.checked })} /><span>Weekly while overdue</span></label>
           <b style={{ display: "block", marginTop: 14 }}>Who gets them</b>
           <label className="pl-radio"><input type="checkbox" checked={s.toOwner} onChange={(e) => setS({ ...s, toOwner: e.target.checked })} /><span>The item&apos;s owner</span></label>
-          <label className="pl-radio"><input type="checkbox" checked={s.toBen} onChange={(e) => setS({ ...s, toBen: e.target.checked })} /><span>Ben (a copy)</span></label>
+          <label className="pl-radio"><input type="checkbox" checked={s.toBen} onChange={(e) => setS({ ...s, toBen: e.target.checked })} /><span>HR (a copy)</span></label>
           <label className="pl-radio"><input type="checkbox" checked={s.toExecs} onChange={(e) => setS({ ...s, toExecs: e.target.checked })} /><span>All executives</span></label>
           <div className="row" style={{ gap: 6, marginTop: 6, flexWrap: "wrap" }}>
             {s.extra.map((e) => <span key={e} className="chip">{e} <button className="linklike tiny" aria-label={`Remove ${e}`} onClick={() => setS({ ...s, extra: s.extra.filter((x) => x !== e) })}>✕</button></span>)}

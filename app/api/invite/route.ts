@@ -1,5 +1,5 @@
 // Emails someone their invitation to a client workspace.
-// Only Ben or an executive at that client can send one.
+// Only HR or an executive at that client can send one.
 import { NextResponse } from "next/server";
 import { admin, caller, sendEmail, SERVER_LIVE, siteUrl } from "@/lib/server";
 
@@ -34,24 +34,24 @@ ${client.name} is giving you the Manager Hub: a few minutes a week to stay on to
 
 What you'll find:
 - This week: birthdays, work anniversaries, new starters and check-ins that are due
-- One tap to log a check-in or recognize someone (only you and Ben see your notes)
+- One tap to log a check-in or recognize someone (only you and HR see your notes)
 - Trainings and quick guides, built for your phone
 
 Open it at ${base} and sign in with ${email}. When it asks, turn on alerts so the reminders come to your phone. On iPhone, add it to your Home Screen first.
 
-Ben Gaines, AlzaHR`;
+Your HR team`;
     const e = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
     const mhtml = `<div style="font:15px/1.55 Arial,sans-serif;color:#16213a;max-width:520px">
 <p>Hi ${e(first)},</p>
 <p><b>${e(client.name)}</b> is giving you the <b>Manager Hub</b>: a few minutes a week to stay on top of your team (${e(who)}).</p>
-<ul style="padding-left:18px"><li><b>This week:</b> birthdays, work anniversaries, new starters and check-ins that are due</li><li><b>One tap</b> to log a check-in or recognize someone. Only you and Ben see your notes.</li><li><b>Trainings and quick guides</b>, built for your phone</li></ul>
+<ul style="padding-left:18px"><li><b>This week:</b> birthdays, work anniversaries, new starters and check-ins that are due</li><li><b>One tap</b> to log a check-in or recognize someone. Only you and HR see your notes.</li><li><b>Trainings and quick guides</b>, built for your phone</li></ul>
 <p><a href="${base}" style="display:inline-block;background:#19283c;color:#fff;padding:11px 18px;border-radius:10px;text-decoration:none;font-weight:700">Open your Manager Hub</a></p>
 <p style="color:#5b6b85;font-size:13px">Sign in with ${e(email)} (we email you a code, no password). When it asks, turn on alerts so reminders come to your phone. On iPhone, add it to your Home Screen first.</p>
 <p style="font-family:Georgia,serif;font-weight:700">Alza<span style="color:#d9a046">HR</span></p></div>`;
     const r = await sendEmail({ to: [email], subject: `Your Manager Hub at ${client.name}`, text: mtext, html: mhtml, bypassHold: true });
     return NextResponse.json({ sent: r.ok, reason: r.reason });
   }
-  const inviter = me.advisor ? "Ben Gaines at AlzaHR" : me.name;
+  const inviter = me.advisor ? "HR" : me.name;
   const text = `Hi ${first},
 
 ${inviter} added you to the ${client.name} Alza Hub. It's where you'll see anything that needs your sign-off, where projects stand, and everything AlzaHR shares with your team.

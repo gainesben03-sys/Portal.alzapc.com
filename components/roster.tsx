@@ -17,7 +17,7 @@ const mdLabel = (md?: string) => {
 };
 const newPersonId = () => `pp${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
-/** Save roster changes. Ben writes directly; executives go through /api/roster, which checks access. */
+/** Save roster changes. HR writes directly; executives go through /api/roster, which checks access. */
 export function useRosterSave(clientId: string) {
   const { people, patch, viewer } = useStore();
   return async (changed: TeamMember[]): Promise<TeamMember[] | null> => {

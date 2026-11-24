@@ -7,7 +7,7 @@ import { NewsletterFrame } from "@/components/newsletter";
 import { copyRich, getNewsletter, KIND_AUDIENCE, KIND_LABEL, loadNewsletters, monthLabel, Newsletter, NlKind } from "@/lib/newsletters";
 import { useStore } from "@/lib/store";
 
-/** The client's archive of Manager Minute and The Pause issues Ben has saved to their Library. */
+/** The client's archive of Manager Minute and The Pause issues HR has saved to their Library. */
 export default function ClientNewsletters() {
   const { client: clientId } = useParams<{ client: string }>();
   const ok = useGuard("client", clientId);

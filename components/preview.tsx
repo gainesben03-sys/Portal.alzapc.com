@@ -9,7 +9,7 @@ import { Sheet } from "./ui";
 const landing = (p: Preview) => (p.access === "hiring" ? `/c/${p.clientId}/recruiting` : `/c/${p.clientId}`);
 const ACCESS_SHORT: Record<Access, string> = { exec: "Executive", manager: "Manager", hiring: "Hiring manager" };
 
-/** Sticky bar while Ben is looking at the Alza Hub as a client person. */
+/** Sticky bar while HR is looking at the Alza Hub as a client person. */
 export function PreviewBar() {
   const { preview, setPreview, config, getClient } = useStore();
   const router = useRouter();

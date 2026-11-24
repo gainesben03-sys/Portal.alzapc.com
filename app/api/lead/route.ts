@@ -1,4 +1,4 @@
-// "Work with Alza": a short form for people who aren't clients yet. Emails Ben and alerts his phone.
+// "Work with Alza": a short form for people who aren't clients yet. Emails HR and alerts his phone.
 import { NextResponse } from "next/server";
 import { advisorEmails, pushTo } from "@/lib/push";
 import { admin, sendEmail, SERVER_LIVE } from "@/lib/server";
