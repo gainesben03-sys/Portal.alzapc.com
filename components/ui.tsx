@@ -277,12 +277,11 @@ export function ClientTopbar({ client }: { client: Client }) {
     )}
     <header className="topbar client">
       <Link href={`/c/${client.id}`} style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-        <span className="ph-mark"><PeopleHubMark size={30} /></span>
         {client.logo ? <img src={client.logo} alt={client.name} className="client-logo" /> : <b className="client-name">{client.name}</b>}
         <span className="ph-lock hide-sm"><PeopleHubWordmark size={client.logo ? 20 : 19} /></span>
       </Link>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span className="ph-by hide-sm">by Alza</span>
+        <span className="ph-by hide-sm"><PeopleHubMark size={22} />by Alza</span>
         {!isAdvisor && <span data-tour="push" style={{ display: "inline-flex" }}><PushButton /></span>}
         {!isAdvisor && <TourButton />}
         <ThemeToggle />

@@ -3599,3 +3599,5 @@ body.org-dragging, body.org-dragging * { cursor: grabbing !important; user-selec
 @media (min-width: 760px) {
   .so-wallbox { width: min(1180px, calc(100vw - 48px)); left: 50%; transform: translateX(-50%); }
 }
+.ph-by { display: inline-flex; align-items: center; gap: 6px; }
+.ph-lock { margin-left: 4px; }
