@@ -5,13 +5,14 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { DEFAULT_STAGES } from "@/lib/experience";
+import { DEMO_ACCENT, DEMO_COMPANY } from "@/lib/state";
 
 type Stage = { id: string; label: string; on: string; items: { text: string; done: boolean }[]; asks: string[] };
 type Info = { company: string; accent: string; manager: string; name: string; first: string; title: string; start: string; buddy: string; current: string; stages: Stage[]; answers: { q: string; a: string }[]; notes: string };
 
 const SAMPLE: Info = {
-  company: "Bayside Residential", accent: "#1d4f7a", manager: "Jordan Ellis", name: "Maya Torres", first: "Maya", title: "Leasing Manager", start: "Monday, December 1st", buddy: "Sam Okafor", current: "prep",
-  stages: DEFAULT_STAGES.map((s) => ({ id: s.id, label: s.label, on: "", items: s.items.map((t, i) => ({ text: t.replace(/they|them|their/g, (w) => ({ they: "Maya", them: "Maya", their: "Maya's" })[w] ?? w), done: s.id === "prep" && i < 2 })), asks: s.asks })),
+  company: DEMO_COMPANY, accent: DEMO_ACCENT, manager: "Dana Ortiz", name: "Jordan Lee", first: "Jordan", title: "Warehouse Associate", start: new Date(Date.now() + 9 * 864e5).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }), buddy: "Sam Okafor", current: "prep",
+  stages: DEFAULT_STAGES.map((s) => ({ id: s.id, label: s.label, on: "", items: s.items.map((t, i) => ({ text: t.replace(/they|them|their/g, (w) => ({ they: "Jordan", them: "Jordan", their: "Jordan's" })[w] ?? w), done: s.id === "prep" && i < 2 })), asks: s.asks })),
   answers: [{ q: "How do you like to get feedback or recognition?", a: "Quick and direct, in person. Public shoutouts make me a little shy." }, { q: "Anything that would make your first weeks easier?", a: "A walkthrough of the leasing software before I meet residents." }],
   notes: "",
 };
