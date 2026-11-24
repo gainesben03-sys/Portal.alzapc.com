@@ -5,7 +5,7 @@
 // pins on cork, magnets (and some chalk) on the chalkboard, nails on brick, spray paint and stickers on graffiti.
 import type { ReactNode } from "react";
 
-export type WallStyle = "clean" | "cork" | "chalk" | "brick" | "graffiti";
+export type WallStyle = "clean" | "cork" | "chalk" | "brick" | "graffiti" | "whiteboard" | "wood";
 
 export const WALLS: { id: WallStyle; name: string; blurb: string }[] = [
   { id: "clean", name: "Clean", blurb: "Simple cards. The look you have now." },
@@ -13,11 +13,13 @@ export const WALLS: { id: WallStyle; name: string; blurb: string }[] = [
   { id: "chalk", name: "Chalkboard", blurb: "Some notes chalked on the board, the rest on magnets. SAVE in the corner." },
   { id: "brick", name: "Brick wall", blurb: "Notes hung on masonry nails." },
   { id: "graffiti", name: "Graffiti wall", blurb: "Shoutouts spray-painted on. Birthdays and welcomes are stickers and flyers." },
+  { id: "whiteboard", name: "Whiteboard", blurb: "Sticky notes and magnets on the office whiteboard, title in dry-erase marker." },
+  { id: "wood", name: "Wood and twine", blurb: "Notes clipped with clothespins on a warm wood wall." },
 ];
 
 export const WALL_FONTS = "https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Kalam:wght@400;700&family=Permanent+Marker&family=Sedgwick+Ave+Display&family=Anton&display=swap";
 
-const TITLE: Record<Exclude<WallStyle, "clean">, string> = { cork: "Team Wall", chalk: "Team Wall", brick: "TEAM WALL", graffiti: "Team Wall" };
+const TITLE: Record<Exclude<WallStyle, "clean">, string> = { cork: "Team Wall", chalk: "Team Wall", brick: "TEAM WALL", graffiti: "Team Wall", whiteboard: "Team Wall!", wood: "Team Wall" };
 
 /** The wall itself: background, title, and everything pinned to it. */
 export function Wall({ style, children }: { style: Exclude<WallStyle, "clean">; children: ReactNode }) {
@@ -26,6 +28,7 @@ export function Wall({ style, children }: { style: Exclude<WallStyle, "clean">; 
       <link rel="stylesheet" href={WALL_FONTS} precedence="default" />
       <Backdrop style={style} />
       {style === "chalk" && <div className="wall-save" aria-hidden="true">SAVE</div>}
+      {style === "whiteboard" && <div className="wall-tray" aria-hidden="true"><i /><i /><i /></div>}
       <div className="wall-in">
         <h2 className="wall-title">{TITLE[style]}</h2>
         {children}
@@ -99,6 +102,38 @@ export function WallMoment({ m, style, onAct }: { m: WallMomentData; style: Excl
 }
 
 function Backdrop({ style }: { style: Exclude<WallStyle, "clean"> }) {
+  if (style === "whiteboard")
+    return (
+      <svg className="wall-bg" aria-hidden="true">
+        <defs>
+          <linearGradient id="w-wb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#ffffff" /><stop offset=".55" stopColor="#f3f5f7" /><stop offset="1" stopColor="#e6eaee" /></linearGradient>
+          <linearGradient id="w-wb-g" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#fff" stopOpacity="0" /><stop offset=".5" stopColor="#fff" stopOpacity=".8" /><stop offset="1" stopColor="#fff" stopOpacity="0" /></linearGradient>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#w-wb)" />
+        <rect x="-20%" y="-10%" width="30%" height="140%" fill="url(#w-wb-g)" transform="rotate(18)" opacity=".7" />
+        <g fill="none" stroke="#9fb1c4" strokeOpacity=".22" strokeWidth="3" strokeLinecap="round">
+          <path d="M60 470 q60 -30 120 0 t120 0" /><path d="M78% 85% l60 -40 l20 30" /><circle cx="86%" cy="22%" r="28" />
+        </g>
+      </svg>
+    );
+  if (style === "wood")
+    return (
+      <svg className="wall-bg" aria-hidden="true">
+        <defs>
+          <pattern id="w-wood" width="100%" height="64" patternUnits="userSpaceOnUse">
+            <rect width="100%" height="64" fill="#b8865a" />
+            <rect y="62" width="100%" height="2" fill="#7a5233" fillOpacity=".55" />
+            <path d="M0 18 C 200 10, 400 28, 900 16 S 1600 26, 2400 14" stroke="#9d6d43" strokeOpacity=".45" fill="none" strokeWidth="1.5" />
+            <path d="M0 40 C 300 46, 600 32, 1100 44 S 1800 36, 2400 46" stroke="#cf9d6e" strokeOpacity=".4" fill="none" strokeWidth="1.2" />
+          </pattern>
+          <pattern id="w-wood2" width="100%" height="192" patternUnits="userSpaceOnUse">
+            <rect y="0" width="100%" height="64" fill="#000" fillOpacity=".06" /><rect y="128" width="100%" height="64" fill="#fff" fillOpacity=".05" />
+          </pattern>
+          <radialGradient id="w-wood-l" cx="50%" cy="30%" r="80%"><stop offset="0" stopColor="#ffd9a0" stopOpacity=".18" /><stop offset="1" stopColor="#2a160a" stopOpacity=".3" /></radialGradient>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#w-wood)" /><rect width="100%" height="100%" fill="url(#w-wood2)" /><rect width="100%" height="100%" fill="url(#w-wood-l)" />
+      </svg>
+    );
   if (style === "cork")
     return (
       <svg className="wall-bg" aria-hidden="true">

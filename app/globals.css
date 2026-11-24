@@ -3552,3 +3552,45 @@ body.org-dragging, body.org-dragging * { cursor: grabbing !important; user-selec
 .ff-ends span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
 .ff-ends span:first-child { transform: none; left: 0; }
 .ff-ends span:last-child { transform: none; right: 0; left: auto !important; }
+
+/* ---------- whiteboard: magnets and sticky notes ---------- */
+.wall-whiteboard { border: 14px solid #c7ccd2; box-shadow: inset 0 0 0 2px #aab1b9, 0 2px 0 #9aa1a9; border-radius: 6px; padding-bottom: 26px; }
+.wall-whiteboard .wall-title { font-family: "Permanent Marker", cursive; font-size: 46px; color: #1f5fbf; transform: rotate(-2deg); }
+.wall-whiteboard .wall-grid > * { background-color: #fff27a !important; border-radius: 0; box-shadow: 0 8px 12px -6px rgba(0,0,0,.25), 0 1px 1px rgba(0,0,0,.08); }
+.wall-whiteboard .wall-grid > :nth-child(5n+2) { background-color: #ffb3c7 !important; }
+.wall-whiteboard .wall-grid > :nth-child(5n+3) { background-color: #a8e6ff !important; }
+.wall-whiteboard .wall-grid > :nth-child(5n+4) { background-color: #b7f0a1 !important; }
+.wall-whiteboard .wall-grid > :nth-child(5n) { background-color: #ffd08a !important; }
+.wall-whiteboard .wn::before, .wall-whiteboard .so-card::before { top: -7px; width: 22px; height: 14px; margin-left: -11px; border-radius: 7px; background: linear-gradient(#ff6b5b, #d63c2c); box-shadow: 0 2px 2px rgba(0,0,0,.3); }
+.wall-whiteboard .wall-grid > :nth-child(3n+2)::before { background: linear-gradient(#4f8df5, #2a62c9); }
+.wall-whiteboard .wall-grid > :nth-child(3n)::before { background: linear-gradient(#3ccf8e, #1f9e66); }
+.wall-whiteboard .wm-polaroid, .wall-whiteboard .wm-sticker { background-color: #fff !important; }
+.wall-tray { position: absolute; left: 6%; right: 6%; bottom: 0; height: 14px; background: linear-gradient(#d4d8dd, #a9b0b8); border-radius: 0 0 6px 6px; z-index: 2; display: flex; gap: 14px; justify-content: flex-end; padding: 0 30px; }
+.wall-tray i { width: 64px; height: 10px; margin-top: -6px; border-radius: 5px; background: #1f5fbf; }
+.wall-tray i:nth-child(2) { background: #d63c2c; width: 56px; } .wall-tray i:nth-child(3) { background: #1f1f1f; width: 60px; }
+
+/* ---------- wood and twine: notes clipped with clothespins ---------- */
+.wall-wood { border: 0; }
+.wall-wood .wall-title { font-family: Caveat, cursive; font-weight: 700; font-size: 60px; color: #fff7ea; text-align: center; text-shadow: 0 2px 3px rgba(60,30,10,.5); }
+.wall-wood .wall-grid { background: linear-gradient(transparent 0 6px, rgba(232,214,180,.95) 6px 8px, transparent 8px) 0 0 / 100% 100% no-repeat; row-gap: 52px; }
+.wall-wood .wall-grid > * { margin-top: 10px; }
+.wall-wood .wn::before, .wall-wood .so-card::before { top: -16px; width: 12px; height: 34px; margin-left: -6px; border-radius: 3px; background: linear-gradient(90deg, #e9cfa2, #d7b583 50%, #c9a36d); box-shadow: 1px 2px 2px rgba(0,0,0,.35); }
+.wall-wood .wall-grid > * { background-image: linear-gradient(rgba(255,255,255,0), rgba(255,255,255,0)); }
+.wall-wood .wall-grid > :nth-child(6n+2) { background-color: #fff4dd; }
+.wall-wood .wall-grid > :nth-child(6n+3) { background-color: #e9f1e4; }
+.wall-wood .wall-grid > :nth-child(6n+4) { background-color: #fbe6df; }
+.wall-wood .wall-grid > :nth-child(6n+5) { background-color: #fffdf7; }
+
+.sw-whiteboard { background: linear-gradient(135deg, #fff, #e6eaee); border: 4px solid #c7ccd2; position: relative; }
+.sw-whiteboard::after { content: ""; position: absolute; left: 10px; top: 10px; width: 18px; height: 18px; background: #fff27a; box-shadow: 24px 6px 0 #a8e6ff, 48px -2px 0 #ffb3c7; }
+.sw-wood { background: repeating-linear-gradient(#b8865a 0 14px, #8a5c37 14px 15px); position: relative; }
+.sw-wood::after { content: ""; position: absolute; left: 0; right: 0; top: 16px; height: 2px; background: #efdcb6; }
+
+/* demo: try a different wall */
+.wall-try { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 10px; margin-bottom: 6px; scrollbar-width: none; }
+.wall-try::-webkit-scrollbar { display: none; }
+.wall-try-k { flex: none; align-self: center; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted, #6a7282); margin-right: 2px; }
+.wall-try button { flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px; border: 2px solid transparent; background: none; border-radius: 10px; padding: 3px; cursor: pointer; font: 600 11.5px Inter, sans-serif; color: inherit; }
+.wall-try button.on { border-color: var(--accent, #192A43); }
+.wall-try .wall-swatch { width: 64px; height: 40px; border-radius: 6px; }
+.wall-try .wall-swatch, .wall-pick .wall-swatch { overflow: hidden; }

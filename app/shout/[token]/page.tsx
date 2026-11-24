@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { ChallengeCards, Pick, PersonSearch, Scoreboard, ShoutCard, WallItem, ReasonChips } from "@/components/shoutui";
 import { demoPoll, demoVote, PollCard } from "@/components/poll";
-import { Wall, WallStyle } from "@/components/wall";
+import { Wall, WALLS, WallStyle } from "@/components/wall";
 import type { PollView } from "@/lib/polls";
 import { PublicChallenge, publicChallenge } from "@/lib/challenges";
 import { Board, Celebration, celebrateLine, DEFAULT_HEADLINE, MAX_MESSAGE, shortName, ShoutTheme, STARTERS, themeVars } from "@/lib/recognition";
@@ -39,6 +39,7 @@ function deviceId() {
 export default function ShoutPage() {
   const { token } = useParams<{ token: string }>();
   const [info, setInfo] = useState<Info | null>(null);
+  const [demoMode, setDemoMode] = useState(false);
   const [state, setState] = useState<"loading" | "ok" | "gone">("loading");
   const [demo, setDemo] = useState(false);
   const [tab, setTab] = useState<"give" | "celebrate" | "wall">("give");
@@ -61,6 +62,7 @@ export default function ShoutPage() {
       setInfo(r);
       setState("ok");
     } else if (r.reason === "demo") {
+      setDemoMode(true);
       setDemo(true);
       setInfo({
         company: DEMO_COMPANY,
@@ -265,6 +267,17 @@ export default function ShoutPage() {
         </>
       ) : (
         <>
+          {demoMode && (
+            <div className="wall-try" role="group" aria-label="Try a different wall">
+              <span className="wall-try-k">{lang === "es" ? "Prueba otro muro" : "Try a wall"}</span>
+              {WALLS.map((w) => (
+                <button key={w.id} className={(info.theme?.wall ?? "clean") === w.id ? "on" : ""} aria-pressed={(info.theme?.wall ?? "clean") === w.id}
+                  onClick={() => { const theme = { ...(info.theme ?? {}), wall: w.id }; setInfo({ ...info, theme }); try { localStorage.setItem("alza-demo-shout-theme", JSON.stringify(theme)); } catch {} }}>
+                  <span className={`wall-swatch sw-${w.id}`} />{w.name}
+                </button>
+              ))}
+            </div>
+          )}
           {!themed && <ChallengeCards list={info.challenges} lang={lang} />}
           {!themed && info.board && <Scoreboard b={info.board} />}
           {themed ? (
