@@ -258,7 +258,7 @@ export default function Recruiting() {
                             </div>
                             {c.hidden && <div className="tiny" style={{ color: "var(--amber)" }}>Only you can see this pitch until you share it.</div>}
                             {c.pitch ? (
-                              <BriefBlock b={c.brief} pending={!!briefing && !c.brief} />
+                              <BriefBlock b={c.brief} pending={!!briefing && !c.brief} showWhy={isAdvisor} />
                             ) : (
                               <>
                                 {c.summary && <p className="small" style={{ margin: 0 }}>{c.summary}</p>}

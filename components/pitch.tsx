@@ -519,11 +519,11 @@ export function PitchContact({ c }: { c: Candidate }) {
 }
 
 /** The AI resume summary on a card. */
-export function BriefBlock({ b, pending }: { b?: CandidateBrief; pending?: boolean }) {
+export function BriefBlock({ b, pending, showWhy }: { b?: CandidateBrief; pending?: boolean; showWhy?: boolean }) {
   if (!b) return pending ? <p className="small muted cc-pending">Writing a summary from the resume…</p> : null;
   if (b.status === "no_resume") return <p className="small muted cc-none">No résumé available.</p>;
   if (b.status === "unreadable") return <p className="small muted cc-none">The résumé couldn&apos;t be read. Open it to review.</p>;
-  if (b.status === "error") return <p className="small muted cc-none">Couldn&apos;t write a summary this time.</p>;
+  if (b.status === "error") return <p className="small muted cc-none">Couldn&apos;t write a summary this time.{showWhy && b.why && <span className="tiny" style={{ display: "block", marginTop: 4 }}>Why: {b.why}</span>}</p>;
   return (
     <div className="cc-brief">
       {b.summary && <p className="cc-sum">{b.summary}</p>}

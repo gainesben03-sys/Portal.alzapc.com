@@ -213,6 +213,7 @@ export interface CandidateBrief {
   summary?: string; // two sentences
   points?: string[]; // experience related to this job
   gap?: string; // something the job needs that the resume doesn't show
+  why?: string; // on an error: what went wrong, for HR
   at: string;
 }
 

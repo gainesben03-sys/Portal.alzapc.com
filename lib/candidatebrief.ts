@@ -65,9 +65,9 @@ export async function briefFor(db: SupabaseClient, c: Candidate, role: Role): Pr
 
   const r = await claude({ system: SYSTEM, messages: [{ role: "user", content }], maxTokens: 600 });
   await logUsage(db, { email: "pitch@portal", clientId: role.clientId, kind: "brief", ref: c.id });
-  if (!r.ok) return { status: "error", at };
+  if (!r.ok) return { status: "error", why: clip(`${r.reason}${r.detail ? `: ${r.detail}` : ""}`, 200), at };
   const j = parseJson<{ now?: string; summary?: string; points?: string[]; gap?: string }>(r.text);
-  if (!j?.summary) return { status: "error", at };
+  if (!j?.summary) return { status: "error", why: "the AI reply wasn't in the expected shape", at };
   return {
     status: "ok",
     now: clip(noDash(j.now ?? ""), 80) || undefined,
