@@ -266,7 +266,7 @@ export default function ShoutPage() {
         <Celebrate list={info.celebrate} t={t} lang={lang} onShout={(c) => { reset(); setTo({ id: c.personId, name: c.name, team: c.team }); setMsg(celebrateLine(c, lang)); setTab("give"); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
         </>
       ) : (
-        <>
+        <div className="so-wallbox">
           {demoMode && (
             <div className="wall-try" role="group" aria-label="Try a different wall">
               <span className="wall-try-k">{lang === "es" ? "Prueba otro muro" : "Try a wall"}</span>
@@ -327,7 +327,7 @@ export default function ShoutPage() {
           )}
             </>
           )}
-        </>
+        </div>
       )}
       {toast && <div className="so-toast" role="status">{toast}</div>}
     </div>

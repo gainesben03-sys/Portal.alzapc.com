@@ -3594,3 +3594,8 @@ body.org-dragging, body.org-dragging * { cursor: grabbing !important; user-selec
 .wall-try button.on { border-color: var(--accent, #192A43); }
 .wall-try .wall-swatch { width: 64px; height: 40px; border-radius: 6px; }
 .wall-try .wall-swatch, .wall-pick .wall-swatch { overflow: hidden; }
+/* the wall tab breaks out wider than the form on big screens */
+.so-wallbox { position: relative; }
+@media (min-width: 760px) {
+  .so-wallbox { width: min(1180px, calc(100vw - 48px)); left: 50%; transform: translateX(-50%); }
+}
