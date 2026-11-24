@@ -139,7 +139,7 @@ export default function Recognition() {
   };
 
   const on = !!cfg?.modules.recognition;
-  // HR saves through the Alza Hub; an executive's changes go through the server (they can't write settings directly)
+  // HR saves through the People Hub; an executive's changes go through the server (they can't write settings directly)
   const saveRec = async (r: RecognitionSettings, msg = "Saved") => {
     if (isAdvisor) {
       setRec(r);
@@ -334,7 +334,7 @@ export default function Recognition() {
                 <div className="card so-review" key={s.id}>
                   <div className="tiny" style={{ color: "var(--amber)", fontWeight: 600 }}>{s.heldReason ?? "Held"}</div>
                   <p style={{ margin: "6px 0" }}>&ldquo;{s.message}&rdquo;</p>
-                  <div className="tiny muted">To {s.to.name} · from {s.from.name}{s.from.verified ? "" : s.from.personId ? " (picked from the list)" : " (typed their own name)"} · {s.channel === "sms" ? "text" : s.channel === "qr" ? "QR code" : "Alza Hub"} · {new Date(s.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</div>
+                  <div className="tiny muted">To {s.to.name} · from {s.from.name}{s.from.verified ? "" : s.from.personId ? " (picked from the list)" : " (typed their own name)"} · {s.channel === "sms" ? "text" : s.channel === "qr" ? "QR code" : "People Hub"} · {new Date(s.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</div>
                   <div className="sheet-actions">
                     <button className="btn sm" style={{ color: "var(--red)" }} onClick={() => review(s, false)}>Remove</button>
                     <button className="btn primary sm" onClick={() => review(s, true)}>Post it</button>
@@ -349,7 +349,7 @@ export default function Recognition() {
       {sheet === "settings" && exec && rec && (
         <Sheet title="Team Wall settings" onClose={() => setSheet(null)}>
           <div className="tw-scroll">
-            <p className="small muted" style={{ marginTop: 0 }}>Only you{isAdvisor ? " and the client's executives" : " and AlzaHR"} see this.</p>
+            <p className="small muted" style={{ marginTop: 0 }}>Only you{isAdvisor ? " and the client's executives" : " and HR"} see this.</p>
             <Setup
               advisor={isAdvisor}
               rec={rec}
@@ -357,7 +357,7 @@ export default function Recognition() {
               clientName={client.name}
               accent={client.accent}
               onTest={isAdvisor ? async (kind, draft) => {
-                if (!LIVE) return toast.show("Demo: test emails send from the live Alza Hub");
+                if (!LIVE) return toast.show("Demo: test emails send from the live People Hub");
                 const j = await api({ action: "testEmail", kind, rec: draft });
                 toast.show(j.ok ? `Test sent to ${j.to}` : `Couldn't send the test (${j.reason ?? "error"})`);
               } : undefined}

@@ -73,7 +73,7 @@ export default function HuddleSetup() {
     if (reason === "forbidden") return "You need to be signed in as HR to send People Briefs.";
     if (/resend_401|resend_403.*(api key|invalid)/i.test(reason)) return "Resend rejected the API key. Put your current Resend key in Vercel as RESEND_API_KEY, then redeploy.";
     if (/resend_403/i.test(reason)) return `Resend refused the sender. Check that alzapc.com is verified in Resend and NOTIFY_FROM uses it. (${reason})`;
-    if (/resend_422/i.test(reason)) return `Resend didn't accept the sender format. NOTIFY_FROM should look like: Alza Hub <portal@alzapc.com>. (${reason})`;
+    if (/resend_422/i.test(reason)) return `Resend didn't accept the sender format. NOTIFY_FROM should look like: People Hub <portal@alzapc.com>. (${reason})`;
     if (/resend_429/i.test(reason)) return "Too many emails at once. Wait a minute and try again.";
     return `Email failed: ${reason}`;
   };

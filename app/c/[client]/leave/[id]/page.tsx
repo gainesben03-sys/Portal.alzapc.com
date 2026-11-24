@@ -112,7 +112,7 @@ export default function LeaveCasePage() {
   };
   const openDoc = async (d: CaseDoc) => {
     if (d.medical && !acc.medical) return toast.show("Medical documents are restricted");
-    if (!LIVE) return toast.show("Demo: documents open in the live Alza Hub (and the opening is logged)");
+    if (!LIVE) return toast.show("Demo: documents open in the live People Hub (and the opening is logged)");
     const w = window.open("", "_blank");
     const j = await leaveApi(clientId, { action: "openDoc", caseId: c.id, docId: d.id });
     if (!j.ok) {

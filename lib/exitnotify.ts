@@ -9,5 +9,5 @@ export async function notifyAdvisors(db: SupabaseClient, clientId: string, compa
   const to = Array.from(new Set([...(await advisorEmails(db).catch(() => [])), ...(execs ?? []).map((m) => String(m.email).toLowerCase())]));
   if (!to.length) return;
   const url = `${PORTAL_URL}/c/${clientId}/offboarding/${d.id}`;
-  await sendEmail({ to, subject: `${company}: exit survey from ${d.name.split(" ")[0]}`, text: `${d.name} completed their exit survey. Read it in the Alza Hub (executives and HR only):\n\n${url}` });
+  await sendEmail({ to, subject: `${company}: exit survey from ${d.name.split(" ")[0]}`, text: `${d.name} completed their exit survey. Read it in the People Hub (executives and HR only):\n\n${url}` });
 }

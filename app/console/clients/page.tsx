@@ -48,7 +48,7 @@ export default function Clients() {
         </div>
         <div className="section-head section"><h2>Your default templates</h2></div>
         <p className="small muted" style={{ marginTop: -4, marginBottom: 10 }}>Claude uses these for any client that doesn't have its own version.</p>
-        {live ? <KnowledgePanel clientId={null} onToast={setToast} /> : <div className="card small muted">Available once the Alza Hub is live.</div>}
+        {live ? <KnowledgePanel clientId={null} onToast={setToast} /> : <div className="card small muted">Available once the People Hub is live.</div>}
         {toast && <p className="small" style={{ marginTop: 8, color: "var(--green)" }}>{toast}</p>}
 
         <div className="card section">

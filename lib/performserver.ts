@@ -96,7 +96,7 @@ export async function sync(x: Ctx, today = iso(new Date())) {
 
 /**
  * Managers need Hub access to open a review. Anyone a review is assigned to who isn't on the
- * company's Alza Hub yet gets Manager access (their own team only). Returns the names added.
+ * company's People Hub yet gets Manager access (their own team only). Returns the names added.
  */
 export async function ensureManagerAccess(db: DB, clientId: string, mgrs: { email: string; name: string }[]): Promise<string[]> {
   const want = new Map<string, string>();
@@ -280,7 +280,7 @@ export function shareEmail(x: Ctx, r: Review, token: string) {
 
 export async function send(x: Ctx, to: string, m: { subject: string; html: string; text: string }) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return { ok: false, reason: "no_email" };
-  // links into the Alza Hub become one-click links for this person: tap and they're in
+  // links into the People Hub become one-click links for this person: tap and they're in
   const one = withOneClick(to, m);
   return sendEmail({ to: [to], subject: m.subject, html: one.html, text: one.text, ...x.sender });
 }

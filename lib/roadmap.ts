@@ -36,7 +36,7 @@ export interface Tpl {
   days: number; // how long it runs
   repeat: Repeat;
   steps: [string, number][]; // text, days from the start (negative = before it starts)
-  link?: { label: string; path: string }; // a part of the Alza Hub it opens
+  link?: { label: string; path: string }; // a part of the People Hub it opens
   must?: boolean; // a California must-do Alza adds by default
 }
 

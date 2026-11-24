@@ -17,7 +17,7 @@ function Shell({ co, children }: { co: Co | null; children: React.ReactNode }) {
         {co?.logo ? <img src={co.logo} alt={co.name} /> : <b>{co?.name ?? ""}</b>}
       </header>
       <main className="orq-main">{children}</main>
-      <footer className="orq-foot">{co ? `${co.name} · ` : ""}Alza Hub</footer>
+      <footer className="orq-foot">{co ? `${co.name} · ` : ""}People Hub</footer>
     </div>
   );
 }

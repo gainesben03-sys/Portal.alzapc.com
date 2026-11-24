@@ -59,7 +59,7 @@ export function dominantColor(px: Uint8ClampedArray): string | null {
   return best ? toHex(best.r / best.n, best.g / best.n, best.b / best.n) : null;
 }
 
-/** Where emails load the logo from. Email apps can't show logos stored inside the page, so those are served from the Alza Hub. */
+/** Where emails load the logo from. Email apps can't show logos stored inside the page, so those are served from the People Hub. */
 export function emailLogoUrl(clientId: string, logo: string | undefined, logoEmail: string | undefined, portalUrl: string, companyId?: string) {
   if (logoEmail || (logo && logo.startsWith("data:image/") && !logo.startsWith("data:image/svg"))) {
     const src = logoEmail || logo!;

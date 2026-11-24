@@ -59,7 +59,7 @@ export default function DeparturePage() {
   const send = async (test: boolean) => {
     if (!test && !d.personalEmail && !d.workEmail) return toast.show("Add a personal email first.");
     if (!LIVE) {
-      if (test) return toast.show("Demo: test emails go out in the live Alza Hub.");
+      if (test) return toast.show("Demo: test emails go out in the live People Hub.");
       const at = new Date().toISOString();
       await save({ ...d, email: { ...d.email, sentAt: at, to: d.personalEmail }, survey: d.survey ? { ...d.survey, sentAt: at } : d.survey, history: log(`Goodbye email sent to ${d.personalEmail} (demo, not really sent)`) });
       setPreview(false);

@@ -55,7 +55,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: !error });
     }
     case "test": {
-      const n = await pushTo(db, [email], (me.advisor ? "activity" : "requests") as PushTopic, { title: "Alerts are on", body: "This is what an Alza Hub alert looks like. You can change what you get any time.", url: "/", tag: "test" });
+      const n = await pushTo(db, [email], (me.advisor ? "activity" : "requests") as PushTopic, { title: "Alerts are on", body: "This is what an People Hub alert looks like. You can change what you get any time.", url: "/", tag: "test" });
       return NextResponse.json({ ok: n > 0, sent: n, reason: pushReady() ? (n ? undefined : "no_device") : PUSH_PROBLEM || "not_configured" });
     }
     case "ben": {
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
       const topic: PushTopic = b.topic === "hires" ? "hires" : "activity";
       if (me.advisor) return NextResponse.json({ ok: true, skipped: true }); // HR doesn't alert himself
       const url = s(b.url, 300);
-      const n = await pushTo(db, await advisorEmails(db), topic, { title: s(b.title, 120) || "Alza Hub activity", body: s(b.body, 300), url: url.startsWith("/") ? url : "/console", tag: s(b.tag, 80) || undefined });
+      const n = await pushTo(db, await advisorEmails(db), topic, { title: s(b.title, 120) || "People Hub activity", body: s(b.body, 300), url: url.startsWith("/") ? url : "/console", tag: s(b.tag, 80) || undefined });
       return NextResponse.json({ ok: true, sent: n });
     }
     case "task": {

@@ -7,9 +7,9 @@ import { DemoBar } from "@/components/demobar";
 import { PreviewBar } from "@/components/preview";
 
 export const metadata: Metadata = {
-  title: "Alza Hub",
-  description: "Alza Hub: the people and operations workspace for AlzaHR clients.",
-  appleWebApp: { capable: true, title: "Alza Hub", statusBarStyle: "default" },
+  title: "People Hub",
+  description: "People Hub by Alza: your people and operations, in one place.",
+  appleWebApp: { capable: true, title: "People Hub", statusBarStyle: "default" },
   icons: { icon: "/icon-192.png", apple: "/apple-touch-icon.png" },
 };
 

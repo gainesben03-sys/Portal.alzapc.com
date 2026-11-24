@@ -6,7 +6,7 @@ import { DOCX_MIME } from "@/lib/docx";
 
 const REASONS: Record<string, string> = {
   no_key: "Claude is off. Add ANTHROPIC_API_KEY in Vercel and redeploy.",
-  demo: "This works once the Alza Hub is connected to Supabase.",
+  demo: "This works once the People Hub is connected to Supabase.",
   forbidden: "Only HR can do this.",
   not_docx: "That one isn't a Word file. To keep the formatting, upload the .docx version (PDFs can't be edited this way).",
   too_big: "That file is over 3 MB. Save it without large images, or upload it under Client setup and pick it from the list.",
@@ -30,7 +30,7 @@ async function call(body: Record<string, unknown>) {
     if (/credit|balance/i.test(j.detail ?? "")) return { error: "Your Anthropic account is out of credit. Add credit at console.anthropic.com." };
     return { error: REASONS[j.reason] ?? `That didn't work (${j.reason ?? r.status}). Try again.` };
   } catch {
-    return { error: "Couldn't reach the Alza Hub. Check your connection and try again." };
+    return { error: "Couldn't reach the People Hub. Check your connection and try again." };
   }
 }
 

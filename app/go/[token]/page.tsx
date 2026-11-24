@@ -40,9 +40,9 @@ export default function OneClick() {
     opening: ["Opening…", "One moment.", false],
     used: ["This link was already used", "Links in emails work once, to keep your team's information safe.", true],
     expired: ["This link has expired", "Links in emails last 14 days.", true],
-    no_access: ["No access", "This email doesn't have access to the Alza Hub anymore. Ask HR if that's a mistake.", false],
+    no_access: ["No access", "This email doesn't have access to the People Hub anymore. Ask HR if that's a mistake.", false],
     bad: ["That link didn't work", "It may have been cut off. Tap the button in the email again, or ask for a new one.", true],
-    offline: ["Can't reach the Alza Hub", "Check your connection and try again.", false],
+    offline: ["Can't reach the People Hub", "Check your connection and try again.", false],
     sending: ["Sending…", "", false],
     sent: ["Check your email", "A new link is on its way. It opens right where you left off.", false],
   };

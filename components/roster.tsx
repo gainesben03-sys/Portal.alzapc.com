@@ -160,7 +160,7 @@ export function RosterCard({ clientId, onToast, limited }: { clientId: string; o
 
       {!limited && notOnPortal.length > 0 && (
         <div className="for-ben" style={{ marginTop: 12 }}>
-          <b>Managers not on the Alza Hub yet</b>
+          <b>Managers not on the People Hub yet</b>
           <div style={{ marginTop: 6, display: "grid", gap: 6 }}>
             {notOnPortal.map((m) => (
               <div key={m.email} className="row" style={{ alignItems: "center", gap: 8 }}>
@@ -183,7 +183,7 @@ export function RosterCard({ clientId, onToast, limited }: { clientId: string; o
               Invite all {notOnPortal.length}
             </button>
           )}
-          <div className="tiny muted" style={{ marginTop: 6 }}>They get the sign-in email, and the Alza Hub opens to their Manager Hub with their team.</div>
+          <div className="tiny muted" style={{ marginTop: 6 }}>They get the sign-in email, and the People Hub opens to their Manager Hub with their team.</div>
         </div>
       )}
 
@@ -355,8 +355,8 @@ function PersonSheet({ p, users, team, limited, onClose, onSave, onRemove }: { p
   const [bm, setBm] = useState(p.birthday ? Number(p.birthday.slice(0, 2)) : 0);
   const [bd, setBd] = useState(p.birthday ? Number(p.birthday.slice(3)) : 0);
   const [confirm, setConfirm] = useState(false);
-  // a manager who isn't on the Alza Hub yet can be typed in
-  // anyone on the Alza Hub, plus anyone on the roster with a work email, can be picked as a manager
+  // a manager who isn't on the People Hub yet can be typed in
+  // anyone on the People Hub, plus anyone on the roster with a work email, can be picked as a manager
   const staff = team.filter((x) => x.id !== p.id && x.active !== false && x.email && !users.some((u) => sameEmail(u.email, x.email!))).sort((a, b) => Number(leadsTeam(b, team)) - Number(leadsTeam(a, team)) || a.name.localeCompare(b.name));
   const pick = [...users.map((u) => ({ email: u.email, name: u.name })), ...staff.map((x) => ({ email: x.email!, name: x.name }))];
   const onPortal = (e: string) => pick.some((u) => sameEmail(u.email, e));
@@ -384,7 +384,7 @@ function PersonSheet({ p, users, team, limited, onClose, onSave, onRemove }: { p
               <option value="">No manager (an owner or executive)</option>
               {staff.length ? (
                 <>
-                  <optgroup label="On the Alza Hub">{users.map((u) => <option key={u.email} value={u.email}>{u.name}</option>)}</optgroup>
+                  <optgroup label="On the People Hub">{users.map((u) => <option key={u.email} value={u.email}>{u.name}</option>)}</optgroup>
                   {staff.some((x) => leadsTeam(x, team)) && <optgroup label="Managers">{staff.filter((x) => leadsTeam(x, team)).map((x) => <option key={x.id} value={x.email}>{x.name}</option>)}</optgroup>}
                   {staff.some((x) => !leadsTeam(x, team)) && <optgroup label="Everyone else">{staff.filter((x) => !leadsTeam(x, team)).map((x) => <option key={x.id} value={x.email}>{x.name}</option>)}</optgroup>}
                 </>

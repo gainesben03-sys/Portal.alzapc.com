@@ -25,7 +25,7 @@ export default function Files() {
       <AlzaNav />
       <main className="wrap">
         <h1>Shared with HR</h1>
-        <p className="muted" style={{ marginTop: 6 }}>Everything clients have sent you through the Alza Hub.</p>
+        <p className="muted" style={{ marginTop: 6 }}>Everything clients have sent you through the People Hub.</p>
         <div className="tabs section" style={{ marginTop: 14 }}>
           <button className={`tab ${f === "new" ? "on" : ""}`} onClick={() => setF("new")}>To review<span className="count">{inbox.filter((x) => !x.reviewed).length}</span></button>
           <button className={`tab ${f === "all" ? "on" : ""}`} onClick={() => setF("all")}>All<span className="count">{inbox.length}</span></button>

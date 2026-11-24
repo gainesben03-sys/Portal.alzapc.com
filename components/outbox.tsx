@@ -95,7 +95,7 @@ export function OutboxView({ viewer, names, toast, readOnly }: { viewer: Viewer;
             <div className="ob-set-row">
               <div>
                 <b>My notifications</b>
-                <p className="small muted">Alza Hub updates to you: one at a time, or one summary each morning. Write-ups and leave always come right away.</p>
+                <p className="small muted">People Hub updates to you: one at a time, or one summary each morning. Write-ups and leave always come right away.</p>
               </div>
               <div className="dc-seg">
                 <button className={!data.benDigest ? "on" : ""} onClick={() => setDigest(false)}>As they happen</button>

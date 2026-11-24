@@ -21,7 +21,7 @@ export default function IntroOk() {
       .catch(() => setMissing(true));
   }, [token]);
 
-  if (missing) return <div className="ex-page"><div className="ex-card"><h1>This link isn&apos;t working</h1><p className="ex-sub">The intro may have been closed or changed. Open the hire in the Alza Hub to send it from there.</p></div></div>;
+  if (missing) return <div className="ex-page"><div className="ex-card"><h1>This link isn&apos;t working</h1><p className="ex-sub">The intro may have been closed or changed. Open the hire in the People Hub to send it from there.</p></div></div>;
   if (!info) return <div className="ex-page" />;
 
   const send = async () => {
@@ -30,7 +30,7 @@ export default function IntroOk() {
     const r = await fetch(`/api/intro-ok/${encodeURIComponent(token)}`, { method: "POST" }).then((x) => x.json()).catch(() => ({ ok: false }));
     setBusy(false);
     if (r.ok) setInfo({ ...info, sent: new Date().toISOString(), sentTo: r.sent ?? info.count });
-    else setErr(r.reason === "not_approved" ? `${info.name.split(" ")[0]} pulled back their approval, so it can't go out.` : r.reason === "no_recipients" ? "No one on the roster has an email yet, so there's no one to send it to." : "Couldn't send. Try again, or send it from the Alza Hub.");
+    else setErr(r.reason === "not_approved" ? `${info.name.split(" ")[0]} pulled back their approval, so it can't go out.` : r.reason === "no_recipients" ? "No one on the roster has an email yet, so there's no one to send it to." : "Couldn't send. Try again, or send it from the People Hub.");
   };
 
   return (

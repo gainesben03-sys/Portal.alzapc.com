@@ -1,7 +1,7 @@
 // Discipline documentation: an executive (or HR) describes what happened, picks the level,
-// and the Alza Hub words it as a write-up, email recap or file note from the company's handbook.
+// and the People Hub words it as a write-up, email recap or file note from the company's handbook.
 // The AI only words, formats and quotes policy. It never picks the level and never suggests termination.
-// Records are private to executives and HR. Employees and their managers never see them in the Alza Hub.
+// Records are private to executives and HR. Employees and their managers never see them in the People Hub.
 
 export const DEFAULT_LEVELS = ["Documented conversation", "Verbal warning", "Written warning", "Final written warning"];
 export const ISSUES = ["Attendance", "Performance", "Conduct", "Policy", "Safety", "Other"] as const;

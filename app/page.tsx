@@ -1,5 +1,6 @@
 "use client";
 
+import { PeopleHubMark, PeopleHubWordmark } from "@/components/phmark";
 import { TOUR, TOUR_ROLES, TourRole, writeTour } from "@/lib/demotour";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -134,7 +135,7 @@ export default function Login() {
             <div className="wordmark">Alza<span className="hr">HR</span><span className="tag hide-sm">People Collective</span></div>
             <span className="login-theme"><ThemeToggle /></span>
           </div>
-          <h1 style={{ marginTop: 18 }}>Try the Alza Hub</h1>
+          <h1 style={{ marginTop: 18 }}>Try the People Hub</h1>
           <p className="muted" style={{ marginTop: 6 }}>
             Go ahead, try it out. Give a shoutout, add a new hire, launch a review.
           </p>
@@ -155,7 +156,7 @@ export default function Login() {
           </div>
           <button className="btn ghost block tiny" style={{ marginTop: 8 }} onClick={reset}>Start the demo over</button>
           <WorkWithUs />
-          <p className="demo-note">Already a client? <a href="https://portal.alzapc.com">Sign in to your Alza Hub</a></p>
+          <p className="demo-note">Already a client? <a href="https://portal.alzapc.com">Sign in to your People Hub</a></p>
         </div>
       </main>
     );
@@ -164,11 +165,10 @@ export default function Login() {
     <main className="login">
       <div className="card">
         <div className="row" style={{ alignItems: "center" }}>
-          <div className="wordmark">Alza<span className="hr">HR</span><span className="tag hide-sm">People Collective</span></div>
+          <div className="login-brand"><PeopleHubMark size={48} /><div><PeopleHubWordmark size={30} /><div className="login-by">by Alza</div></div></div>
           <span className="login-theme"><ThemeToggle /></span>
         </div>
-        <h1 style={{ marginTop: 18 }}>Alza Hub</h1>
-        <p className="small" style={{ margin: "2px 0 0", fontWeight: 600 }}>Your people and operations workspace</p>
+        <p className="small" style={{ margin: "16px 0 0", fontWeight: 600 }}>Your people and operations, in one place</p>
 
         {LIVE && noAccess ? (
           <>
@@ -181,7 +181,7 @@ export default function Login() {
           </>
         ) : (
           <p className="muted" style={{ marginTop: 6 }}>
-            Sign in to see what's in motion, what needs your sign-off, and everything AlzaHR has shared with your team.
+            Sign in to see what's in motion, what needs your sign-off, and everything HR has shared with your team.
           </p>
         )}
 

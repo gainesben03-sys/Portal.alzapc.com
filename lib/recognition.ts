@@ -1,4 +1,4 @@
-// Shoutouts: one recognition engine with three ways in (QR code form, text message, the Alza Hub),
+// Shoutouts: one recognition engine with three ways in (QR code form, text message, the People Hub),
 // and email / text to let people know. Turning off texts never turns off recognition.
 
 export type ShoutChannel = "qr" | "sms" | "portal" | "email";
@@ -136,7 +136,7 @@ export function randomToken(n: number) {
   return Array.from(crypto.getRandomValues(new Uint8Array(n)), (b) => abc[b % abc.length]).join("");
 }
 
-/** "Maria Lopez" -> "Maria L." Used anywhere outside the signed-in Alza Hub. */
+/** "Maria Lopez" -> "Maria L." Used anywhere outside the signed-in People Hub. */
 export const shortName = (n: string) => {
   const p = n.trim().split(/\s+/);
   return p.length > 1 ? `${p[0]} ${p[p.length - 1][0]}.` : p[0] ?? "";

@@ -31,7 +31,7 @@ function seed(people: TeamMember[], clientId: string): Store {
       const v: Variant | undefined = c.kind === "crd" ? (sup ? "supervisor" : "employee") : undefined;
       const r = newRecord(p, clientId, c, { due: addDays(today, 200), reason: "start", variant: v }, token);
       const k = (i + (c.kind === "plan" ? 2 : 0)) % 7;
-      const done = (d: string): TrainingRecord => ({ ...r, status: "approved", completedAt: d, approvedAt: d + "T18:00:00Z", approvedBy: "Alza Hub (certificate checked)", due: d, attest: true, sentAt: d + "T10:00:00Z" });
+      const done = (d: string): TrainingRecord => ({ ...r, status: "approved", completedAt: d, approvedAt: d + "T18:00:00Z", approvedBy: "People Hub (certificate checked)", due: d, attest: true, sentAt: d + "T10:00:00Z" });
       if (k === 0 || k === 3 || k === 5) records.push(done(addDays(today, -120 - i * 9)));
       else if (k === 1) records.push(done(c.everyMonths ? addDays(addMonths(today, -c.everyMonths), 40) : addDays(today, -60)));
       else if (k === 2) records.push({ ...r, due: addDays(today, -12), sentAt: addDays(today, -70) + "T10:00:00Z" });

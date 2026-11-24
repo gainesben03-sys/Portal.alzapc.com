@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { videoEmbed, ViewKind } from "@/lib/viewkind";
 
-/** Shows a training inside the Alza Hub: our own PDF reader, Microsoft's viewer for PowerPoint/Word, or a video player. */
+/** Shows a training inside the People Hub: our own PDF reader, Microsoft's viewer for PowerPoint/Word, or a video player. */
 export function DocViewer({ url, kind, title }: { url: string; kind: ViewKind; title: string }) {
   const [full, setFull] = useState(false);
   useEffect(() => {

@@ -9,7 +9,7 @@ import { Sheet } from "./ui";
 const landing = (p: Preview) => (p.access === "hiring" ? `/c/${p.clientId}/recruiting` : `/c/${p.clientId}`);
 const ACCESS_SHORT: Record<Access, string> = { exec: "Executive", manager: "Manager", hiring: "Hiring manager" };
 
-/** Sticky bar while HR is looking at the Alza Hub as a client person. */
+/** Sticky bar while HR is looking at the People Hub as a client person. */
 export function PreviewBar() {
   const { preview, setPreview, config, getClient } = useStore();
   const router = useRouter();
@@ -64,7 +64,7 @@ export function PreviewBar() {
   );
 }
 
-/** Pick a client and one of their people to see the Alza Hub as. */
+/** Pick a client and one of their people to see the People Hub as. */
 export function ViewAsSheet({ initialClient, lockClient, onClose, onPick }: { initialClient?: string; lockClient?: boolean; onClose: () => void; onPick: (p: Preview) => void }) {
   const { clients, config, people } = useStore();
   const [clientId, setClientId] = useState(initialClient && clients.some((c) => c.id === initialClient) ? initialClient : clients[0]?.id ?? "");
@@ -79,7 +79,7 @@ export function ViewAsSheet({ initialClient, lockClient, onClose, onPick }: { in
 
   return (
     <Sheet title="View as client" onClose={onClose}>
-      <p className="small muted" style={{ marginTop: 0 }}>See the Alza Hub exactly as one of their people does: same menus, same access, only what they can see. It&apos;s read-only, so nothing you click is saved or sent.</p>
+      <p className="small muted" style={{ marginTop: 0 }}>See the People Hub exactly as one of their people does: same menus, same access, only what they can see. It&apos;s read-only, so nothing you click is saved or sent.</p>
       {!lockClient && (
         <label className="f">Client
           <select className="f" value={clientId} onChange={(e) => { setClientId(e.target.value); setWho(""); }}>
@@ -106,7 +106,7 @@ export function ViewAsSheet({ initialClient, lockClient, onClose, onPick }: { in
             )
           }
         >
-          View the Alza Hub
+          View the People Hub
         </button>
       </div>
     </Sheet>

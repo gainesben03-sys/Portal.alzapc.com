@@ -94,14 +94,14 @@ export async function sync(x: Ctx): Promise<{ records: TrainingRecord[]; people:
       const live = p.active !== false && c.on && appliesTo(c, sups.has(p.id));
       const o = forCourse.find(open);
       if (!live) {
-        if (o && o.status !== "submitted") changed.push(logRec({ ...o, status: "cancelled" }, "Alza Hub", p.active === false ? "Closed: no longer on the roster" : "Closed: course turned off or doesn't apply"));
+        if (o && o.status !== "submitted") changed.push(logRec({ ...o, status: "cancelled" }, "People Hub", p.active === false ? "Closed: no longer on the roster" : "Closed: course turned off or doesn't apply"));
         continue;
       }
       if (o) {
         // keep the person's details fresh; a new supervisor still on the employee version moves up
         const v = c.kind === "crd" ? (sups.has(p.id) ? "supervisor" : "employee") : undefined;
         const upd = { ...o, name: p.name, email: p.email?.toLowerCase(), title: p.title, managerEmail: (p.managerEmail || "").toLowerCase(), managerName: p.managerName || "", courseName: c.name };
-        if (o.status === "assigned" && v && o.variant !== v) changed.push(logRec({ ...upd, variant: v }, "Alza Hub", `Switched to the ${variantLabel(v)} course`));
+        if (o.status === "assigned" && v && o.variant !== v) changed.push(logRec({ ...upd, variant: v }, "People Hub", `Switched to the ${variantLabel(v)} course`));
         else if (JSON.stringify(upd) !== JSON.stringify(o)) changed.push(upd);
         continue;
       }
@@ -167,7 +167,7 @@ export function sentBackEmail(x: Ctx, r: TrainingRecord) {
 }
 export function questionEmail(x: Ctx, r: TrainingRecord, q: string, anon: boolean) {
   const subject = `Training question: ${r.courseName}`;
-  return { subject, ...mail(x.brand, subject, [`${anon ? "Someone" : r.name} asked a question during ${r.courseName}:`, `"${q}"`, "Answer it from the Alza Hub. They'll get your answer by email."], { label: "Answer", url: `${PORTAL_URL}/c/${x.clientId}/training/required?tab=questions` }) };
+  return { subject, ...mail(x.brand, subject, [`${anon ? "Someone" : r.name} asked a question during ${r.courseName}:`, `"${q}"`, "Answer it from the People Hub. They'll get your answer by email."], { label: "Answer", url: `${PORTAL_URL}/c/${x.clientId}/training/required?tab=questions` }) };
 }
 export function answerEmail(x: Ctx, r: TrainingRecord, q: string, a: string) {
   const subject = `Answer to your ${r.courseName} question`;
@@ -199,7 +199,7 @@ export async function sendAssignments(x: Ctx, recs: TrainingRecord[]) {
     if (!m.ok) continue;
     n++;
     const at = new Date().toISOString();
-    for (const r of ready) await putRecord(x.db, logRec({ ...r, sentAt: at }, "Alza Hub", `Emailed ${r.email}`));
+    for (const r of ready) await putRecord(x.db, logRec({ ...r, sentAt: at }, "People Hub", `Emailed ${r.email}`));
   }
   return n;
 }

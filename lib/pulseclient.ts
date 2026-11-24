@@ -221,7 +221,7 @@ export async function pulseApi(clientId: string, body: Res, demo?: PulseDemo): P
   if (a === "delete") { st.surveys = st.surveys.filter((x) => x !== s); st.responses = st.responses.filter((r) => r.surveyId !== s.id); return done({}); }
   if (a === "launch") {
     const who = s.audience.all ? people : people.filter((p) => s.audience.personIds?.includes(p.id));
-    // the live Alza Hub writes the Spanish version with AI at launch; the demo only has it for surveys that ship with it
+    // the live People Hub writes the Spanish version with AI at launch; the demo only has it for surveys that ship with it
     Object.assign(s, { status: "open", launchedAt: new Date().toISOString(), invited: who.length });
     return done({ survey: s, sent: who.filter((p) => p.email).length, noEmail: who.filter((p) => !p.email).length });
   }

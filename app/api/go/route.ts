@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     if (!(await hasAccess(v.e))) return json({ ok: true }); // same reply either way
     const url = oneClickUrl(v.e, v.p);
     const html = `<div style="font-family:Arial,sans-serif;color:#19283c;font-size:15px;line-height:1.5"><p>Here's a fresh link. It opens right where you left off and works once, for ${LINK_DAYS} days.</p><p><a href="${url}" style="display:inline-block;background:#19283c;color:#fff;text-decoration:none;padding:11px 20px;border-radius:8px;font-weight:bold">Open it</a></p><p style="color:#5b6b85;font-size:13px">Didn't ask for this? You can ignore it.</p></div>`;
-    await sendEmail({ to: [v.e], subject: "Your link to the Alza Hub", html, text: `Here's a fresh link. It works once, for ${LINK_DAYS} days.\n\n${url}`, fromName: "AlzaHR", bypassHold: true });
+    await sendEmail({ to: [v.e], subject: "Your link to the People Hub", html, text: `Here's a fresh link. It works once, for ${LINK_DAYS} days.\n\n${url}`, fromName: "AlzaHR", bypassHold: true });
     return json({ ok: true });
   }
 

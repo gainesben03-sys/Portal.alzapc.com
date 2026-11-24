@@ -38,7 +38,7 @@ function HomeScreenSteps() {
     <ol className="push-steps">
       <li>Tap <b>Share</b> <ShareIcon /> at the bottom of Safari.</li>
       <li>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</li>
-      <li>Open <b>AlzaHR</b> from your Home Screen and turn alerts on.</li>
+      <li>Open <b>People Hub</b> from your Home Screen and turn alerts on.</li>
     </ol>
   );
 }
@@ -93,7 +93,7 @@ export function PushPrompt() {
       </p>
       {open === "ios" && (
         <>
-          <p className="small" style={{ marginTop: 10 }}>On iPhone, alerts work once the Alza Hub is on your Home Screen. It takes ten seconds:</p>
+          <p className="small" style={{ marginTop: 10 }}>On iPhone, alerts work once the People Hub is on your Home Screen. It takes ten seconds:</p>
           <HomeScreenSteps />
         </>
       )}
@@ -116,7 +116,7 @@ export function PushPrompt() {
             disabled={busy}
             onClick={async () => {
               if (!PUSH_CONFIGURED) {
-                setMsg(LIVE ? "Alerts aren't switched on for the Alza Hub yet. HR is setting them up." : "Demo mode: alerts work once the Alza Hub is live.");
+                setMsg(LIVE ? "Alerts aren't switched on for the People Hub yet. HR is setting them up." : "Demo mode: alerts work once the People Hub is live.");
                 writeAsk(who, { n: 1, until: Date.now() + SNOOZE_DAYS * 864e5 });
                 return;
               }
@@ -161,7 +161,7 @@ export function PushSettings({ onClose }: { onClose: () => void }) {
 
   const toggleDevice = async () => {
     setMsg("");
-    if (!PUSH_CONFIGURED) return setMsg(LIVE ? "Alerts aren't switched on for the Alza Hub yet." : "Demo mode: alerts work once the Alza Hub is live.");
+    if (!PUSH_CONFIGURED) return setMsg(LIVE ? "Alerts aren't switched on for the People Hub yet." : "Demo mode: alerts work once the People Hub is live.");
     setBusy(true);
     if (on) {
       await disablePush();
@@ -181,7 +181,7 @@ export function PushSettings({ onClose }: { onClose: () => void }) {
     <Sheet title="Alerts" onClose={onClose}>
       {sup === "ios-home" ? (
         <>
-          <p className="small">On iPhone and iPad, alerts work once the Alza Hub is on your Home Screen:</p>
+          <p className="small">On iPhone and iPad, alerts work once the People Hub is on your Home Screen:</p>
           <HomeScreenSteps />
         </>
       ) : sup === "unsupported" ? (

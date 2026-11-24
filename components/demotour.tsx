@@ -65,9 +65,9 @@ export function DemoTour() {
 
   if (t.done)
     return (
-      <div className="dt-scrim" role="dialog" aria-label="That's the Alza Hub">
+      <div className="dt-scrim" role="dialog" aria-label="That's the People Hub">
         <div className="dt-finish">
-          <p className="dt-kicker">The Alza Hub</p>
+          <p className="dt-kicker">The People Hub</p>
           <h2>Now it&apos;s yours.</h2>
           <p>Give a shoutout, add a new hire, launch a review. Go ahead, try it out.</p>
           <button className="btn gold block" onClick={() => writeTour(null)}>Start playing</button>

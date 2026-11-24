@@ -192,7 +192,7 @@ function paras(t: string, style = "margin:0 0 14px 0") {
 export interface HireCompany {
   id: string;
   name: string;
-  logo?: string; // data URL shown in the Alza Hub
+  logo?: string; // data URL shown in the People Hub
   logoEmail?: string; // PNG copy for email apps
   color?: string;
   hrName?: string;

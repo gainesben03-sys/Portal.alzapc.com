@@ -1,5 +1,6 @@
 "use client";
 
+import { PeopleHubMark, PeopleHubWordmark } from "./phmark";
 import { Tour, TourButton } from "@/components/tour";
 import { ContactBen } from "./contactben";
 import { useLeaveAccess } from "@/lib/leaveclient";
@@ -57,7 +58,7 @@ export function ActionCard({
             )}
             <h3>{a.title}</h3>
             <div className="action-meta">
-              {a.side === "alza" ? (a.requestedBy ? `Asked by ${a.requestedBy.name}` : "Owner: AlzaHR") : `Owner: ${a.owner.name}, ${a.owner.role}`}
+              {a.side === "alza" ? (a.requestedBy ? `Asked by ${a.requestedBy.name}` : "Owner: HR") : `Owner: ${a.owner.name}, ${a.owner.role}`}
               {project && <> · Part of {project.name}</>}
             </div>
           </div>
@@ -118,7 +119,7 @@ export function useGuard(kind: "advisor" | "client", clientId?: string) {
         localStorage.setItem(RETURN_KEY, JSON.stringify({ path: window.location.pathname + window.location.search, at: Date.now() }));
       } catch {}
     }
-    // while previewing as a client, anything outside their Alza Hub goes to their home page
+    // while previewing as a client, anything outside their People Hub goes to their home page
     router.replace(preview ? (preview.access === "hiring" ? `/c/${preview.clientId}/recruiting` : `/c/${preview.clientId}`) : "/");
   }, [ready, ok, router, preview, viewer]);
   return ready && ok;
@@ -260,6 +261,7 @@ export function ClientTopbar({ client }: { client: Client }) {
   const { viewer, setViewer } = useStore();
   const router = useRouter();
   const isAdvisor = viewer?.kind === "advisor";
+  useEffect(() => { document.title = `${client.name} People Hub`; }, [client.name]);
   return (
     <>
     {isAdvisor && (
@@ -275,12 +277,12 @@ export function ClientTopbar({ client }: { client: Client }) {
     )}
     <header className="topbar client">
       <Link href={`/c/${client.id}`} style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-        {client.logo ? <img src={client.logo} alt={client.name} className="client-logo" /> : <b>{client.name}</b>}
+        <span className="ph-mark"><PeopleHubMark size={30} /></span>
+        {client.logo ? <img src={client.logo} alt={client.name} className="client-logo" /> : <b className="client-name">{client.name}</b>}
+        <span className="ph-lock hide-sm"><PeopleHubWordmark size={client.logo ? 20 : 19} /></span>
       </Link>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span className="powered hide-sm">
-          powered by <span className="wordmark">Alza<span className="hr">HR</span></span>
-        </span>
+        <span className="ph-by hide-sm">by Alza</span>
         {!isAdvisor && <span data-tour="push" style={{ display: "inline-flex" }}><PushButton /></span>}
         {!isAdvisor && <TourButton />}
         <ThemeToggle />

@@ -54,17 +54,17 @@ Your HR team`;
   const inviter = me.advisor ? "HR" : me.name;
   const text = `Hi ${first},
 
-${inviter} added you to the ${client.name} Alza Hub. It's where you'll see anything that needs your sign-off, where projects stand, and everything AlzaHR shares with your team.
+${inviter} added you to the ${client.name} People Hub. It's where you'll see anything that needs your sign-off, where projects stand, and everything AlzaHR shares with your team.
 
 To get in, go to ${base} and enter ${email}. We'll email you a one-time sign-in link, no password needed.
 
 AlzaHR`;
   const html = `<div style="font:15px/1.55 Arial,sans-serif;color:#16213a;max-width:520px">
 <p>Hi ${first.replace(/</g, "&lt;")},</p>
-<p>${inviter.replace(/</g, "&lt;")} added you to the <b>${client.name.replace(/</g, "&lt;")}</b> Alza Hub. It's where you'll see anything that needs your sign-off, where projects stand, and everything AlzaHR shares with your team.</p>
-<p><a href="${base}" style="display:inline-block;background:#19283c;color:#fff;padding:11px 18px;border-radius:10px;text-decoration:none;font-weight:700">Open the Alza Hub</a></p>
+<p>${inviter.replace(/</g, "&lt;")} added you to the <b>${client.name.replace(/</g, "&lt;")}</b> People Hub. It's where you'll see anything that needs your sign-off, where projects stand, and everything AlzaHR shares with your team.</p>
+<p><a href="${base}" style="display:inline-block;background:#19283c;color:#fff;padding:11px 18px;border-radius:10px;text-decoration:none;font-weight:700">Open the People Hub</a></p>
 <p style="color:#5b6b85;font-size:13px">Sign in with ${email}. We'll email you a one-time link, no password needed.</p>
 <p style="font-family:Georgia,serif;font-weight:700">Alza<span style="color:#d9a046">HR</span></p></div>`;
-  const r = await sendEmail({ to: [email], subject: `You're invited to the ${client.name} Alza Hub`, text, html, bypassHold: true });
+  const r = await sendEmail({ to: [email], subject: `You're invited to the ${client.name} People Hub`, text, html, bypassHold: true });
   return NextResponse.json({ sent: r.ok, reason: r.reason });
 }

@@ -119,7 +119,7 @@ export default function LeaveCenter() {
               }}
               onDelete={async (c) => {
                 if (!confirm(`Permanently delete ${c.number} (${c.employee.name}) and its ${c.docs.length} document(s)? This can't be undone.`)) return;
-                if (!LIVE) return toast.show("Demo: deleting happens in the live Alza Hub");
+                if (!LIVE) return toast.show("Demo: deleting happens in the live People Hub");
                 const j = await leaveApi(clientId, { action: "remove", caseId: c.id });
                 toast.show(j.ok ? "Deleted" : "Couldn't delete it");
                 if (j.ok) window.location.reload();

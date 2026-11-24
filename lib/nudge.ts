@@ -1,4 +1,4 @@
-// "Recognize someone" nudges. Pure helpers shared by the Alza Hub (preview) and the server (send).
+// "Recognize someone" nudges. Pure helpers shared by the People Hub (preview) and the server (send).
 import type { PublicChallenge } from "./challenges";
 
 export type NudgeAudience = "everyone" | "managers" | "mine" | `team:${string}`;

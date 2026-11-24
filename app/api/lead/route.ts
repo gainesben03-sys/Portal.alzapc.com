@@ -23,8 +23,8 @@ export async function POST(req: Request) {
   const r = await sendEmail({
     to: [ben],
     replyTo: email,
-    subject: `[Alza Hub] New inquiry: ${name}${company ? `, ${company}` : ""}`,
-    text: `Someone reached out from the Alza Hub sign-in page.\n\nName: ${name}\nEmail: ${email}\nCompany: ${company || "-"}\nTeam size: ${size || "-"}\n\nWhat they need:\n${need || "(not filled in)"}\n\nReply to this email to answer them directly.`,
+    subject: `[People Hub] New inquiry: ${name}${company ? `, ${company}` : ""}`,
+    text: `Someone reached out from the People Hub sign-in page.\n\nName: ${name}\nEmail: ${email}\nCompany: ${company || "-"}\nTeam size: ${size || "-"}\n\nWhat they need:\n${need || "(not filled in)"}\n\nReply to this email to answer them directly.`,
   });
   if (SERVER_LIVE) {
     const db = admin();

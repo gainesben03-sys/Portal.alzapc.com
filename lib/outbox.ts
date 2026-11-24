@@ -4,8 +4,8 @@
 export type OutboxMode = "off" | "auto" | "all";
 export const MODE_LABEL: Record<OutboxMode, { title: string; blurb: string }> = {
   off: { title: "Send automatically", blurb: "Emails go out as soon as they're ready." },
-  auto: { title: "Hold automatic emails", blurb: "Reminders, welcome emails, celebrations and other emails the Alza Hub sends on its own wait for your OK. Emails someone sends by clicking a button still go right away." },
-  all: { title: "Hold everything", blurb: "Every email waits for your OK, except sign-in codes and Alza Hub invites." },
+  auto: { title: "Hold automatic emails", blurb: "Reminders, welcome emails, celebrations and other emails the People Hub sends on its own wait for your OK. Emails someone sends by clicking a button still go right away." },
+  all: { title: "Hold everything", blurb: "Every email waits for your OK, except sign-in codes and People Hub invites." },
 };
 export const outboxMode = (m?: string): OutboxMode => (m === "auto" || m === "all" ? m : "off");
 
@@ -25,7 +25,7 @@ export interface OutMail {
   replyTo?: string | string[];
   fromName?: string;
   fromBox?: string;
-  auto: boolean; // the Alza Hub sent it on its own (a schedule), not a person clicking a button
+  auto: boolean; // the People Hub sent it on its own (a schedule), not a person clicking a button
   audience: Audience;
   sensitive: boolean; // leave, write-ups: only HR sees these in the Outbox
   status: OutStatus;

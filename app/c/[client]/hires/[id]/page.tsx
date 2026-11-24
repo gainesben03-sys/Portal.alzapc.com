@@ -77,7 +77,7 @@ function HireInner() {
     }
     if (!LIVE) {
       if (test) {
-        toast.show("Demo mode: test emails go out once the Alza Hub is live.");
+        toast.show("Demo mode: test emails go out once the People Hub is live.");
         return false;
       }
       const at = new Date().toISOString();

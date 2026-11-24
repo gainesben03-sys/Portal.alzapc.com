@@ -54,7 +54,7 @@ export default function Inbox() {
           </div>
           <button className="btn ghost sm" onClick={() => setPaste((v) => !v)}>{paste ? "Close" : "Paste an email"}</button>
         </div>
-        {paste && <PasteBox clients={clients} call={call} onDone={(it) => { setItems((l) => [it, ...(l ?? [])]); setOpen(it.id); setPaste(false); if (LIVE) refresh?.(); toast.show(it.status === "created" ? "Added to the Alza Hub" : STATUS_LABEL[it.status]); }} onErr={(m) => toast.show(m)} />}
+        {paste && <PasteBox clients={clients} call={call} onDone={(it) => { setItems((l) => [it, ...(l ?? [])]); setOpen(it.id); setPaste(false); if (LIVE) refresh?.(); toast.show(it.status === "created" ? "Added to the People Hub" : STATUS_LABEL[it.status]); }} onErr={(m) => toast.show(m)} />}
 
         <div className="tabs section" style={{ marginTop: 14 }}>
           <button className={`tab ${tab === "todo" ? "on" : ""}`} onClick={() => setTab("todo")}>Needs you<span className="count">{todo.length}</span></button>
@@ -86,7 +86,7 @@ function PasteBox({ clients, call, onDone, onErr }: { clients: { id: string; nam
   return (
     <div className="card section" style={{ marginTop: 14 }}>
       <b>Paste an email</b>
-      <p className="tiny muted" style={{ margin: "2px 0 8px" }}>Same as forwarding: the Alza Hub reads it, picks the client and starts the work.</p>
+      <p className="tiny muted" style={{ margin: "2px 0 8px" }}>Same as forwarding: the People Hub reads it, picks the client and starts the work.</p>
       <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
         <input className="f grow" placeholder="Subject (optional)" value={subject} onChange={(e) => setSubject(e.target.value)} style={{ minWidth: 220 }} />
         <select className="f" value={clientId} onChange={(e) => setClientId(e.target.value)} style={{ width: "auto" }} aria-label="Client">
@@ -174,8 +174,8 @@ function Row({ it, open, onToggle, clients, call, onChange, onGone, toast }: { i
               <>{projHref && <Link className="btn ghost sm" href={projHref}>{it.made?.projectId ? "Open project" : "Open task"}</Link>}<span className="tiny muted">On your list{it.made?.actionIds.length ? ` (${it.made.actionIds.length} task${it.made.actionIds.length === 1 ? "" : "s"})` : ""}.</span></>
             ) : (
               <>
-                {it.status !== "private" && <button className="btn primary sm" disabled={!!busy || !it.clientId} onClick={() => run({ action: "add" }, "Added to the Alza Hub")}>{busy === "add" ? "Adding…" : it.type === "other" ? "Add to my list" : "Start the project"}</button>}
-                {it.status === "private" && <button className="btn ghost sm" disabled={!!busy || !it.clientId} onClick={() => run({ action: "add" }, "Added to the Alza Hub")} title="The client's executives and managers can see projects">Put it in the Alza Hub</button>}
+                {it.status !== "private" && <button className="btn primary sm" disabled={!!busy || !it.clientId} onClick={() => run({ action: "add" }, "Added to the People Hub")}>{busy === "add" ? "Adding…" : it.type === "other" ? "Add to my list" : "Start the project"}</button>}
+                {it.status === "private" && <button className="btn ghost sm" disabled={!!busy || !it.clientId} onClick={() => run({ action: "add" }, "Added to the People Hub")} title="The client's executives and managers can see projects">Put it in the People Hub</button>}
                 {it.status !== "dismissed" && <button className="btn ghost sm" disabled={!!busy} onClick={() => run({ action: "dismiss" }, "Dismissed")}>Dismiss</button>}
               </>
             )}

@@ -12,7 +12,7 @@ const sign = (body: string) => b64(createHmac("sha256", secret()).update(body).d
 
 export interface LinkBody { e: string; p: string; x: number; n: string }
 
-/** A one-click link for this person to this page of the Alza Hub. */
+/** A one-click link for this person to this page of the People Hub. */
 export function oneClickUrl(email: string, path: string, days = LINK_DAYS) {
   if (!secret()) return PORTAL_URL + path;
   const body = b64(JSON.stringify({ e: email.trim().toLowerCase(), p: path, x: Date.now() + days * 864e5, n: randomBytes(9).toString("base64url") } satisfies LinkBody));
@@ -34,7 +34,7 @@ export function readLink(token: string): LinkBody | null {
   }
 }
 
-/** Swap every Alza Hub page link in an email for a one-click link for this recipient. */
+/** Swap every People Hub page link in an email for a one-click link for this recipient. */
 export function withOneClick(to: string, m: { html?: string; text: string }) {
   const base = PORTAL_URL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const re = new RegExp(`${base}(/c/[A-Za-z0-9_\\-/?=&%.]+)`, "g");

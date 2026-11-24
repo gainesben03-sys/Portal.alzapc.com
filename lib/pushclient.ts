@@ -54,9 +54,9 @@ export async function registerSW() {
 
 /** Asks for permission (must be called from a tap) and signs this device up. */
 export async function enablePush(): Promise<{ ok: boolean; msg?: string }> {
-  if (!PUSH_CONFIGURED) return { ok: false, msg: "Alerts aren't switched on for the Alza Hub yet." };
+  if (!PUSH_CONFIGURED) return { ok: false, msg: "Alerts aren't switched on for the People Hub yet." };
   const support = pushSupport();
-  if (support === "ios-home") return { ok: false, msg: "On iPhone, add the Alza Hub to your Home Screen first, then turn alerts on from there." };
+  if (support === "ios-home") return { ok: false, msg: "On iPhone, add the People Hub to your Home Screen first, then turn alerts on from there." };
   if (support === "unsupported") return { ok: false, msg: "This browser can't show alerts. Try Chrome, Edge, Firefox or Safari." };
   const p = await Notification.requestPermission();
   if (p !== "granted") return { ok: false, msg: p === "denied" ? "Alerts are blocked for this site. Allow them in your browser or phone settings, then try again." : "No problem. You can turn alerts on later." };

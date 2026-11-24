@@ -14,8 +14,8 @@ export async function sendInvite(clientId: string, email: string, name: string):
     });
     const j = await r.json();
     if (j.sent) return `Invite emailed to ${email}`;
-    if (j.reason === "not_configured") return "Added. Invite email isn't connected yet, so let them know to sign in at the Alza Hub.";
-    return "Added, but the invite email didn't send. Let them know to sign in at the Alza Hub.";
+    if (j.reason === "not_configured") return "Added. Invite email isn't connected yet, so let them know to sign in at the People Hub.";
+    return "Added, but the invite email didn't send. Let them know to sign in at the People Hub.";
   } catch {
     return "Added, but the invite email didn't send.";
   }

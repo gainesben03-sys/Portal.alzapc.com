@@ -69,7 +69,7 @@ export function OnboardingSettingsCard({ value, onChange, clientName }: { value?
               <span className="small muted">@{domain}</span>
             </span>
           </label>
-          <p className="tiny muted full" style={{ margin: "4px 0 0" }}>Replies go to the HR email above, not this address. Leave blank to use {suggestBox(clientName) || "the Alza Hub address"}{suggestBox(clientName) ? `@${domain}` : ""}.</p>
+          <p className="tiny muted full" style={{ margin: "4px 0 0" }}>Replies go to the HR email above, not this address. Leave blank to use {suggestBox(clientName) || "the People Hub address"}{suggestBox(clientName) ? `@${domain}` : ""}.</p>
         </fieldset>
         <Companies list={value?.companies ?? []} clientName={clientName} onChange={(companies) => set("companies", companies.length ? companies : (undefined as never))} />
         <fieldset>

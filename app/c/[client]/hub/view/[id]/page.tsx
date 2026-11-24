@@ -10,7 +10,7 @@ import { hasPractice } from "@/lib/practice";
 import { viewUrl } from "@/lib/library";
 import { ViewKind } from "@/lib/viewkind";
 
-/** A training or tool shown right in the Alza Hub. */
+/** A training or tool shown right in the People Hub. */
 export default function ViewPage() {
   return (
     <Suspense>

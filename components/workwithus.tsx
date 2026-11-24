@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { DEFAULT_BOOKING_URL } from "@/lib/state";
 
-/** For people who land on the Alza Hub but aren't clients: a calm, non-salesy way to reach HR. */
+/** For people who land on the People Hub but aren't clients: a calm, non-salesy way to reach HR. */
 export function WorkWithUs({ compact }: { compact?: boolean }) {
   const { bookingUrl: saved } = useStore();
   const bookingUrl = saved || DEFAULT_BOOKING_URL;
@@ -33,7 +33,7 @@ export function WorkWithUs({ compact }: { compact?: boolean }) {
     <div className={`work-with ${compact ? "compact" : ""}`}>
       <b>Your people. Your operations. One place.</b>
       <p className="small muted" style={{ margin: "4px 0 10px" }}>
-        Alza provides growing companies with the HR expertise, practical support, and technology they need: from hiring and onboarding to policies, employee support, and the Alza Hub.
+        Alza provides growing companies with the HR expertise, practical support, and technology they need: from hiring and onboarding to policies, employee support, and the People Hub.
       </p>
       {done ? (
         <p className="small" style={{ color: "var(--green)" }}>Thanks. We'll be in touch within a business day.</p>

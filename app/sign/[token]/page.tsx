@@ -193,7 +193,7 @@ export default function SignPage() {
           </div>
         )}
       </div>
-      <p className="tiny muted" style={{ textAlign: "center", margin: "18px 0 40px" }}>Secure signing by the Alza Hub</p>
+      <p className="tiny muted" style={{ textAlign: "center", margin: "18px 0 40px" }}>Secure signing by the People Hub</p>
     </main>
   );
 }

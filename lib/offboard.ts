@@ -81,7 +81,7 @@ export function tasksFor(d: Pick<Departure, "type" | "lastDay" | "noticeDate">, 
     ...(vol ? [] : [t('Give the EDD "For Your Benefit" pamphlet (DE 2320)', "lastDay", d.lastDay, "California: required when someone is discharged or laid off.")]),
     t("Give written notice of the change in employment status", "lastDay", d.lastDay, "California: required at separation. Include the date it takes effect."),
     t("Send the COBRA / Cal-COBRA and HIPP notices (or confirm the benefits provider does)", "after", addDaysISO(d.lastDay, 14)),
-    t("Remove them from the Alza Hub and shared drives", "after", addDaysISO(d.lastDay, 1)),
+    t("Remove them from the People Hub and shared drives", "after", addDaysISO(d.lastDay, 1)),
     t("Review the exit survey", "after", addDaysISO(d.lastDay, 7)),
     ...extra.filter((x) => x.trim()).map((x) => t(x.trim(), "before" as const, before)),
   ];

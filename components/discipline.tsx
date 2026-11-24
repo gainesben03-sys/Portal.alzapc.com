@@ -170,7 +170,7 @@ export function NewIssue({ clientId, people, records, levels, start, onDrafted, 
           <button className="btn primary" disabled={busy} onClick={sendBen}>{busy ? "Sending..." : "Send to HR"}</button>
           <button className="btn" onClick={() => setHold(null)}>Edit the description</button>
         </div>
-        <p className="tiny muted" style={{ margin: "10px 0 0" }}>HR gets a heads-up with no details in the email. They&apos;ll open it in the Alza Hub and get back to you.</p>
+        <p className="tiny muted" style={{ margin: "10px 0 0" }}>HR gets a heads-up with no details in the email. They&apos;ll open it in the People Hub and get back to you.</p>
       </div>
     );
 
@@ -369,7 +369,7 @@ export function DraftView({ clientId, input, draft, saved, recordId, onSaved, to
   const view = async () => {
     if (!saved) return;
     const u = await discApi.fileUrl(clientId, saved.id);
-    if (u) window.open(u, "_blank", "noopener"); else toast("The signed copy opens once the Alza Hub is live.");
+    if (u) window.open(u, "_blank", "noopener"); else toast("The signed copy opens once the People Hub is live.");
   };
   const fileName = `${title}${lang === "es" ? " (ES)" : ""}`;
 
@@ -457,7 +457,7 @@ export function DraftView({ clientId, input, draft, saved, recordId, onSaved, to
           </div>
           {input.format === "email" && <button className="btn" onClick={() => navigator.clipboard?.writeText(body.replace(/^#.*\n+/, "").replace(/\*\*/g, "")).then(() => toast("Email copied"), () => toast("Couldn't copy"))}>Copy email text</button>}
           {!acc.isBen && <button className="btn ghost sm" onClick={ben}>Ask HR to look it over</button>}
-          <span className="tiny muted">Private to executives and HR. {name} never sees this in the Alza Hub.</span>
+          <span className="tiny muted">Private to executives and HR. {name} never sees this in the People Hub.</span>
         </div>
 
         {!saved && <p className="tiny muted dc-term">Thinking about termination? Don&apos;t use this. Email HR and they&apos;ll take it from there.</p>}

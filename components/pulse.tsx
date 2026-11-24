@@ -111,7 +111,7 @@ export function Overview() {
       <Head title="Pulse" sub="What your people are telling you, and what to do about it." right={<Link href={`${P.base}/library`} className="btn primary">New survey</Link>} />
       {recos.length > 0 && (
         <div className="card section pl-recos">
-          <div className="row" style={{ gap: 10, alignItems: "center" }}><span className="pl-tag gold">Alza recommends</span><span className="tiny muted">Based on your calendar and what&apos;s happening in the Alza Hub</span></div>
+          <div className="row" style={{ gap: 10, alignItems: "center" }}><span className="pl-tag gold">Alza recommends</span><span className="tiny muted">Based on your calendar and what&apos;s happening in the People Hub</span></div>
           <div className="pl-grid3">
             {recos.map((r) => (
               <div key={r.id} className="pl-reco">

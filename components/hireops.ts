@@ -25,7 +25,7 @@ export function explainEmail(reason: string) {
 }
 
 export async function sendHireEmail(hireId: string, kind: "welcome" | "firstDay", test: boolean, edits?: Record<string, string>): Promise<{ sent: boolean; to?: string; msg: string; xp?: import("@/lib/experience").HireXp }> {
-  if (!LIVE) return { sent: false, msg: "Demo mode: emails go out once the Alza Hub is live." };
+  if (!LIVE) return { sent: false, msg: "Demo mode: emails go out once the People Hub is live." };
   try {
     const r = await fetch("/api/hire-email", {
       method: "POST",

@@ -1,5 +1,5 @@
 // One short line for the day, under the dashboard greeting. Motivation and a little mindfulness
-// for people who lead people, written for the Alza Hub (no famous-quote misattributions).
+// for people who lead people, written for the People Hub (no famous-quote misattributions).
 export const DAILY_LINES: string[] = [
   "You can't pour from an empty cup. Take care of you, too.",
   "Lead with curiosity. Most problems look different after one more question.",

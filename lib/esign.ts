@@ -158,7 +158,7 @@ export async function buildSignedPdf(o: {
   const pdf = await PDFDocument.create();
   pdf.setTitle(`${o.row.title} (signed)`);
   pdf.setAuthor(o.company);
-  pdf.setProducer("Alza Hub");
+  pdf.setProducer("People Hub");
   pdf.setCreationDate(new Date(o.signedAt));
   const reg = await pdf.embedFont(StandardFonts.TimesRoman);
   const bold = await pdf.embedFont(StandardFonts.TimesRomanBold);

@@ -53,7 +53,7 @@ export default function Board() {
     };
     const sent = await notifyBen(
       `${urgent ? "URGENT: " : ""}${client.name} ${kind.toLowerCase()} from ${author.name}`,
-      `${author.name} (${author.role}) at ${client.name} posted a ${kind.toLowerCase()} on the note board:\n\n${n.text}\n\nOpen the Alza Hub: https://portal.alzapc.com/console/board`
+      `${author.name} (${author.role}) at ${client.name} posted a ${kind.toLowerCase()} on the note board:\n\n${n.text}\n\nOpen the People Hub: https://portal.alzapc.com/console/board`
     );
     patch({ notes: [{ ...n, emailed: sent }, ...notes] });
     if (viewer?.kind === "client")

@@ -164,7 +164,7 @@ export default function PropertiesPage() {
                 <b>No properties yet.</b>
                 <p className="small muted" style={{ margin: "6px 0 0" }}>
                   The cards fill themselves from the team roster: each person&apos;s Location (or Property) column is where they work, and their title says what they handle.
-                  {isAdvisor ? " Upload the census on this client's page in your console." : data.canEdit ? " Send AlzaHR your latest census, or add a property by hand under Manage." : ""}
+                  {isAdvisor ? " Upload the census on this client's page in your console." : data.canEdit ? " Send HR your latest census, or add a property by hand under Manage." : ""}
                 </p>
               </div>
             ) : view === "map" ? (

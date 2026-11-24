@@ -39,7 +39,7 @@ export default function Team() {
       <ClientNav clientId={client.id} />
       <main className="wrap">
         <h1>Team access</h1>
-        <p className="muted" style={{ marginTop: 6 }}>Choose who from {client.name} can use the Alza Hub and what they see.</p>
+        <p className="muted" style={{ marginTop: 6 }}>Choose who from {client.name} can use the People Hub and what they see.</p>
 
         <div className="section-head section"><h2>People</h2></div>
         <div className="card">
