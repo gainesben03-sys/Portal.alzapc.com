@@ -8,6 +8,7 @@
 //
 // Nothing is saved here. The app saves the result to the hire or task after HR checks it.
 
+import { asksHousing } from "@/lib/offerreq";
 import { NextResponse } from "next/server";
 import { admin, caller, SERVER_LIVE } from "@/lib/server";
 import { docxParagraphs, fillDocx, Replacement } from "@/lib/docxfill";
@@ -37,6 +38,7 @@ Rules:
 - Every occurrence of a "find" in the document is replaced, so one pair covers repeats. List a full name before the first name alone.
 - Match the document's style: if it writes "Sixty-Eight Thousand Dollars ($68,000.00)", the replacement does too. Keep date formats the same.
 - Use only facts from the new details or HR's instructions. If the document needs a value you don't have, do not guess: put the find in with replace "[NEW VALUE NEEDED: what]" and add it to "missing".
+- To remove a whole paragraph or section, list each paragraph (headings too) as its own find, copied in full, with replace "". A paragraph emptied completely is deleted from the document.
 - If a whole sentence only made sense for the old situation (for example a relocation bonus the new person isn't getting), replace that sentence's text with the corrected sentence or with "" to remove it, and explain in "why".
 - "why" is a 1 to 3 word label for the field being changed (for example "Full name", "First name", "Start date", "Salary", "Manager"). Never include the old person's name or old values in it.
 - Never use em dashes.
@@ -66,6 +68,7 @@ async function loadFile(db: ReturnType<typeof admin>, clientId: string, b: D): P
 async function newDetails(db: ReturnType<typeof admin>, clientId: string, b: D): Promise<string> {
   const lines: string[] = [];
   const { data: c } = await db.from("clients").select("name, config").eq("id", clientId).maybeSingle();
+  const housingCo = c ? asksHousing((c.config ?? {}) as D, clientId, c.name) : false;
   const ob = ((c?.config ?? {}) as D).onboarding as { hqAddress?: string; companies?: { id: string; name: string }[] } | undefined;
   if (c) lines.push(`Company: ${c.name}`);
   lines.push(`Today: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "America/Los_Angeles" })}`);
@@ -85,6 +88,7 @@ async function newDetails(db: ReturnType<typeof admin>, clientId: string, b: D):
         `- Start date: ${h.startDate || ""}`,
         (h.companyId && ob?.companies?.find((x) => x.id === h.companyId)?.name) ? `- Hiring company: ${ob?.companies?.find((x) => x.id === h.companyId)?.name}` : "",
         (h.location || ob?.hqAddress) ? `- Work location: ${h.location || ob?.hqAddress}` : "",
+        housingCo ? (h.housing ? "- Housing discount: eligible. Keep any housing discount section as it is." : "- Housing discount: NOT eligible. Remove the whole housing discount section (for example \"Housing Discounts for Eligible Employees\"): its heading and every paragraph in it.") : "",
         h.letterDate && `- Letter date: ${h.letterDate}`,
         h.respondBy && `- Respond by: ${h.respondBy}`,
         h.contingencies && `- Contingencies: ${h.contingencies}`,

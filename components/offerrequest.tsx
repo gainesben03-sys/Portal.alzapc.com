@@ -29,6 +29,7 @@ export function RequestForm({ token }: { token: string }) {
   const [approver, setApprover] = useState<string | null>(null);
   const [locs, setLocs] = useState<string[]>([]);
   const [askPto, setAskPto] = useState(false);
+  const [askHousing, setAskHousing] = useState(false);
   const [typeLoc, setTypeLoc] = useState(false);
   const [missing, setMissing] = useState(false);
   const [v, setV] = useState<OfferRequest>(blankRequest);
@@ -40,7 +41,7 @@ export function RequestForm({ token }: { token: string }) {
   useEffect(() => {
     try { const me = JSON.parse(localStorage.getItem("alza-request-me") ?? "null"); if (me?.requester) setV((x) => ({ ...x, requester: me.requester, requesterEmail: me.requesterEmail })); } catch {}
     if (demo) { setCo({ name: DEMO_COMPANY, accent: DEMO_ACCENT, logo: null }); setApprover("Alex Rivera"); setLocs(["Harborlight HQ, 200 Pier Way", "Harborlight warehouse, Bay 3"]); return; }
-    fetch(`/api/request/${encodeURIComponent(token)}`).then((r) => r.json()).then((j) => (j.ok ? (setCo(j.company), setApprover(j.approver), setLocs(j.locations ?? []), setAskPto(!!j.pto)) : setMissing(true))).catch(() => setMissing(true));
+    fetch(`/api/request/${encodeURIComponent(token)}`).then((r) => r.json()).then((j) => (j.ok ? (setCo(j.company), setApprover(j.approver), setLocs(j.locations ?? []), setAskPto(!!j.pto), setAskHousing(!!j.housing)) : setMissing(true))).catch(() => setMissing(true));
   }, [token, demo]);
 
   const set = <K extends keyof OfferRequest>(k: K, val: OfferRequest[K]) => setV((x) => ({ ...x, [k]: val }));
@@ -150,6 +151,12 @@ export function RequestForm({ token }: { token: string }) {
               <option value="Accrued">Accrued PTO</option>
               <option value="DTO">DTO (discretionary time off)</option>
             </select>
+          </label>
+        )}
+        {askHousing && (
+          <label className="row small" style={{ gap: 8, alignItems: "center", margin: "12px 0 4px" }}>
+            <input type="checkbox" checked={v.housing} onChange={(e) => set("housing", e.target.checked)} />
+            Eligible for the employee housing discount
           </label>
         )}
         <label className="f">Anything else for the offer <span className="tiny muted">(optional)</span>

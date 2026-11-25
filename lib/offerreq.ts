@@ -18,12 +18,13 @@ export interface OfferRequest {
   employment: "Full-time" | "Part-time" | "Seasonal" | "Temporary";
   location: string; // where they'll work: one of the company's saved locations, or typed in
   pto: "" | "Accrued" | "DTO"; // only asked when the company turns it on
+  housing: boolean; // eligible for the housing discount (only asked when the company offers it)
   extras: string; // bonus, sign-on, relocation, contingencies
   approved: boolean; // used when the company has no approver
   approvedBy: string;
 }
 
-export const blankRequest = (): OfferRequest => ({ requester: "", requesterEmail: "", name: "", personalEmail: "", title: "", reportsTo: "", startDate: "", payType: "hourly", payAmount: "", exempt: "nonexempt", employment: "Full-time", location: "", pto: "", extras: "", approved: false, approvedBy: "" });
+export const blankRequest = (): OfferRequest => ({ requester: "", requesterEmail: "", name: "", personalEmail: "", title: "", reportsTo: "", startDate: "", payType: "hourly", payAmount: "", exempt: "nonexempt", employment: "Full-time", location: "", pto: "", housing: false, extras: "", approved: false, approvedBy: "" });
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -51,7 +52,7 @@ export function cleanRequest(x: Partial<OfferRequest>): OfferRequest {
     title: s(x.title, 120), reportsTo: s(x.reportsTo, 100), startDate: /^\d{4}-\d{2}-\d{2}$/.test(s(x.startDate, 10)) ? s(x.startDate, 10) : "",
     payType: x.payType === "salary" ? "salary" : "hourly", payAmount: String(Number(x.payAmount) || ""), exempt: x.exempt === "exempt" ? "exempt" : "nonexempt",
     employment: (["Full-time", "Part-time", "Seasonal", "Temporary"] as const).includes(x.employment as "Full-time") ? (x.employment as OfferRequest["employment"]) : "Full-time",
-    location: s(x.location, 160), pto: x.pto === "Accrued" || x.pto === "DTO" ? x.pto : "",
+    location: s(x.location, 160), pto: x.pto === "Accrued" || x.pto === "DTO" ? x.pto : "", housing: x.housing === true,
     extras: s(x.extras, 1500), approved: !!x.approved, approvedBy: s(x.approvedBy, 100),
   };
 }
@@ -62,13 +63,13 @@ export const payText = (r: { payType: string; payAmount: string | number }) =>
 /** The new hire record the request starts. */
 export function hireFromRequest(r: OfferRequest, clientId: string, id: string, approver: { name: string; email: string } | null): Hire {
   const now = new Date().toISOString();
-  const notes = [`${r.employment}.`, r.pto && `PTO: ${r.pto === "DTO" ? "DTO (discretionary time off)" : "Accrued"}.`, r.extras && `From the request: ${r.extras}`].filter(Boolean).join(" ");
+  const notes = [`${r.employment}.`, r.pto && `PTO: ${r.pto === "DTO" ? "DTO (discretionary time off)" : "Accrued"}.`, r.housing && "Eligible for the housing discount.", r.extras && `From the request: ${r.extras}`].filter(Boolean).join(" ");
   return {
     id, clientId, status: "Approved to hire",
     title: r.title, managerName: r.reportsTo || r.requester, managerTitle: "",
     name: r.name, personalEmail: r.personalEmail,
     payType: r.payType, payAmount: Number(r.payAmount), exempt: r.exempt,
-    startDate: r.startDate, location: r.location || undefined, notes, requestedBy: r.requester, createdAt: now,
+    startDate: r.startDate, location: r.location || undefined, housing: r.housing || undefined, notes, requestedBy: r.requester, createdAt: now,
     request: { name: r.requester, email: r.requesterEmail, at: now, employment: r.employment, approvedBy: approver ? undefined : r.approvedBy, pto: r.pto || undefined },
     preApproval: approver ? { status: "waiting", name: approver.name, email: approver.email.toLowerCase(), at: now } : undefined,
     history: [{ at: now, by: r.requester, text: approver ? `${r.requester} requested an offer. Waiting on ${approver.name} to approve.` : `${r.requester} requested an offer (approved by ${r.approvedBy}). Next: HR writes the offer letter.` }],
@@ -98,3 +99,7 @@ export function requestLocations(cfg: Partial<ClientConfig> | null | undefined):
 /** Whether this company's request form asks accrued vs DTO. */
 export const asksPto = (cfg: Partial<ClientConfig> | null | undefined, id: string, name = "") =>
   cfg?.offerPto ?? /presidio/i.test(`${id} ${name}`);
+
+/** Whether this company's offers have the employee housing discount section. */
+export const asksHousing = (cfg: Partial<ClientConfig> | null | undefined, id: string, name = "") =>
+  cfg?.offerHousing ?? /presidio/i.test(`${id} ${name}`);

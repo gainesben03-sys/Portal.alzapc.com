@@ -2,7 +2,7 @@
 // GET: the company's name and whether an approver signs off first. POST: send the request.
 // The form can only send. It never reads anything back about people or pay.
 import { NextResponse } from "next/server";
-import { asksPto, cleanRequest, hireFromRequest, OfferRequest, requestLocations, requestProblems } from "@/lib/offerreq";
+import { asksHousing, asksPto, cleanRequest, hireFromRequest, OfferRequest, requestLocations, requestProblems } from "@/lib/offerreq";
 import { clientByRequestToken, emailApprover, emailBenNew, emailRequester, putHire } from "@/lib/offerserver";
 import { admin, SERVER_LIVE, siteUrl } from "@/lib/server";
 
@@ -14,7 +14,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
   if (!SERVER_LIVE) return json({ ok: false, reason: "demo" }, 404);
   const co = await clientByRequestToken(admin(), (await params).token);
   if (!co) return json({ ok: false, reason: "not_found" }, 404);
-  return json({ ok: true, company: { name: co.name, accent: co.accent, logo: co.logo }, approver: co.approver ? co.approver.name : null, locations: requestLocations(co.cfg), pto: asksPto(co.cfg, co.id, co.name) });
+  return json({ ok: true, company: { name: co.name, accent: co.accent, logo: co.logo }, approver: co.approver ? co.approver.name : null, locations: requestLocations(co.cfg), pto: asksPto(co.cfg, co.id, co.name), housing: asksHousing(co.cfg, co.id, co.name) });
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ token: string }> }) {
@@ -30,6 +30,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   const r = cleanRequest(raw);
   const pto = asksPto(co.cfg, co.id, co.name);
   if (!pto) r.pto = "";
+  if (!asksHousing(co.cfg, co.id, co.name)) r.housing = false;
   const missing = requestProblems(r, !!co.approver, pto);
   if (missing.length) return json({ ok: false, reason: "missing", missing }, 400);
   const id = `h${now.toString(36)}${Math.random().toString(36).slice(2, 6)}`;

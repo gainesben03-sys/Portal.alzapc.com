@@ -85,14 +85,20 @@ export async function fillDocx(buf: Buffer, reps: Replacement[]): Promise<{ file
   const counts = reps.map(() => 0);
   for (const name of Object.keys(zip.files).filter((n) => PARTS.test(n))) {
     let xml = await zip.file(name)!.async("string");
-    xml = xml.replace(PARA, (p) => {
+    xml = xml.replace(PARA, (p, off: number, whole: string) => {
       let cur = p;
+      const before = Array.from(p.matchAll(TEXT)).map((m) => m[2]).join("").trim();
       reps.forEach((r, i) => {
         if (!r.find || r.find === r.replace) return;
         const res = replaceInParagraph(cur, r.find, r.replace);
         cur = res.xml;
         counts[i] += res.n;
       });
+      // a paragraph whose text was all removed goes away entirely (no blank line left behind),
+      // except inside a table cell, which Word needs to keep at least one paragraph
+      const after = Array.from(cur.matchAll(TEXT)).map((m) => m[2]).join("").trim();
+      const inCell = whole.lastIndexOf("<w:tc>", off) > whole.lastIndexOf("</w:tc>", off) || whole.lastIndexOf("<w:tc ", off) > whole.lastIndexOf("</w:tc>", off);
+      if (before && !after && cur !== p && !inCell) return "";
       return cur;
     });
     zip.file(name, xml);

@@ -166,6 +166,8 @@ export interface ClientConfig {
   offerApprover?: { name: string; email: string };
   /** Ask for the PTO type (accrued or DTO) on offer requests. Unset: on for Presidio Bay only. */
   offerPto?: boolean;
+  /** Ask whether the hire gets the employee housing discount. Unset: on for Presidio Bay only. */
+  offerHousing?: boolean;
   users: PortalUser[];
   codes: InviteCode[];
 }

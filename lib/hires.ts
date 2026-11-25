@@ -40,6 +40,8 @@ export interface Hire {
   startDate: string; // yyyy-mm-dd
   arrivalTime?: string;
   location?: string;
+  /** Gets the employee housing discount (companies that offer it, e.g. Presidio Bay). Off: that section comes out of the offer letter. */
+  housing?: boolean;
   // documents
   jd?: string;
   letterDate?: string;

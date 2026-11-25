@@ -191,6 +191,7 @@ export function HireForm({
   people,
   clientName,
   places,
+  askHousing,
 }: {
   value: HireDraft;
   onChange: (v: HireDraft) => void;
@@ -199,6 +200,8 @@ export function HireForm({
   clientName?: string;
   /** All of this company's saved locations (offices and properties). */
   places?: string[];
+  /** This company offers the employee housing discount: ask per hire. */
+  askHousing?: boolean;
 }) {
   const set = <K extends keyof HireDraft>(k: K, v: HireDraft[K]) => onChange({ ...value, [k]: v });
   const offices = (places ?? officeList(s)).filter((o) => o !== s.hqAddress);
@@ -291,6 +294,12 @@ export function HireForm({
             <option value="__other">{s.hqAddress || offices.length ? "Other (type it in)" : "Enter an address"}</option>
           </select>
           {locValue === "__other" && <input className="f" style={{ marginTop: 8 }} value={value.location ?? ""} onChange={(e) => set("location", e.target.value)} placeholder="Address, suite, and anything about parking" />}
+          {askHousing && (
+            <label className="row small" style={{ gap: 8, alignItems: "center", marginTop: 10 }}>
+              <input type="checkbox" checked={!!value.housing} onChange={(e) => set("housing", e.target.checked || undefined)} />
+              Eligible for the employee housing discount <span className="tiny muted">(off: that section comes out of the offer letter)</span>
+            </label>
+          )}
         </div>
       </fieldset>
 
