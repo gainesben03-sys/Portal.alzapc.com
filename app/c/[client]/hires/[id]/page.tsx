@@ -1,5 +1,6 @@
 "use client";
 
+import { requestLocations } from "@/lib/offerreq";
 import { canSeeHire } from "@/lib/hires";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -477,7 +478,7 @@ function HireInner() {
             </div>
             {editing ? (
               <div className="card">
-                <HireForm value={editing} onChange={setEditing} s={s} people={cfg.users} clientName={client?.name} />
+                <HireForm value={editing} onChange={setEditing} s={s} people={cfg.users} clientName={client?.name} places={requestLocations(cfg)} />
                 {isAdvisor && (
                   <label className="f">Stage (to correct it)
                     <select className="f" value={editing.status} onChange={(e) => setEditing({ ...editing, status: e.target.value as Stage })}>

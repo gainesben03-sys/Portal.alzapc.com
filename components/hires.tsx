@@ -190,18 +190,21 @@ export function HireForm({
   s,
   people,
   clientName,
+  places,
 }: {
   value: HireDraft;
   onChange: (v: HireDraft) => void;
   s: OnboardingSettings;
   people: PortalUser[];
   clientName?: string;
+  /** All of this company's saved locations (offices and properties). */
+  places?: string[];
 }) {
   const set = <K extends keyof HireDraft>(k: K, v: HireDraft[K]) => onChange({ ...value, [k]: v });
-  const offices = officeList(s);
+  const offices = (places ?? officeList(s)).filter((o) => o !== s.hqAddress);
   const companies = (s.companies ?? []).filter((c) => c.name.trim());
   const [otherLoc, setOtherLoc] = useState(!!value.location && value.location !== s.hqAddress && !offices.includes(value.location));
-  const locValue = otherLoc ? "__other" : value.location && offices.includes(value.location) ? value.location : s.hqAddress ? "__hq" : offices.length ? "" : "__other";
+  const locValue = otherLoc ? "__other" : value.location && offices.includes(value.location) ? value.location : s.hqAddress && (!value.location || value.location === s.hqAddress) ? "__hq" : offices.length ? "" : "__other";
   const managerOptions = useMemo(() => people.map((p) => ({ name: p.name, title: p.role })), [people]);
 
   return (
@@ -279,7 +282,7 @@ export function HireForm({
             onChange={(e) => {
               const v = e.target.value;
               setOtherLoc(v === "__other");
-              set("location", v === "__other" || v === "__hq" ? "" : v);
+              set("location", v === "__hq" ? s.hqAddress : v === "__other" ? "" : v);
             }}
           >
             {!s.hqAddress && offices.length > 0 && <option value="">Choose...</option>}

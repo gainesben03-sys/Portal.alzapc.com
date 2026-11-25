@@ -45,11 +45,13 @@ const KIND_LABELS: [RegExp, string][] = [
   [/transfer/i, "Transfer letter"],
   [/resign/i, "Resignation acceptance"],
 ];
+const kindOf = (title = "") => KIND_LABELS.find(([re]) => re.test(title))?.[1] ?? "Document";
+/** The name it was saved under (e.g. "PBV Offer Letter"), falling back to the kind of document. */
 function labelDocs(list: Doc[]): Record<string, string> {
   const out: Record<string, string> = {};
   const used: Record<string, number> = {};
   for (const d of list) {
-    const base = KIND_LABELS.find(([re]) => re.test(d.title))?.[1] ?? "Other document";
+    const base = (d.title || "").replace(/\.docx$/i, "").replace(/[_]+/g, " ").trim() || kindOf(d.file_name);
     used[base] = (used[base] ?? 0) + 1;
     out[d.id] = used[base] > 1 ? `${base} ${used[base]}` : base;
   }
@@ -157,7 +159,7 @@ export function FillPanel({
   return (
     <div className="draft-panel">
       <div className="row" style={{ alignItems: "center" }}>
-        <b className="small">{changes ? `Changes to the ${chosen?.toLowerCase() ?? "document"}` : "Fill in a past document"}</b>
+        <b className="small">{changes ? `Changes to ${chosen === "your upload" ? "your upload" : chosen ?? "the document"}` : "Fill in a past document"}</b>
         <button className="btn ghost sm" onClick={onClose}>Close</button>
       </div>
 
@@ -219,7 +221,7 @@ export function FillPanel({
             placeholder={hireId ? "Anything beyond the hire details? e.g. No relocation bonus this time. Sign-on bonus $5,000." : "What's new? e.g. Termination letter for Sam Lee, Sales Associate, last day Nov 7, 2026, final pay and PTO paid that day."}
           />
           <button className="btn primary block" style={{ marginTop: 10 }} disabled={!!busy || noSource || (!hireId && !instructions.trim())} onClick={find}>
-            {busy === "find" ? "Reading the document..." : "Find what changes"}
+            {busy === "find" ? "Writing it..." : `Generate ${(upload ? kindOf(upload.name) : kindOf(docs?.find((d) => d.id === pick)?.title)).toLowerCase()}`}
           </button>
         </>
       )}

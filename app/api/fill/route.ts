@@ -65,7 +65,8 @@ async function loadFile(db: ReturnType<typeof admin>, clientId: string, b: D): P
 
 async function newDetails(db: ReturnType<typeof admin>, clientId: string, b: D): Promise<string> {
   const lines: string[] = [];
-  const { data: c } = await db.from("clients").select("name").eq("id", clientId).maybeSingle();
+  const { data: c } = await db.from("clients").select("name, config").eq("id", clientId).maybeSingle();
+  const ob = ((c?.config ?? {}) as D).onboarding as { hqAddress?: string; companies?: { id: string; name: string }[] } | undefined;
   if (c) lines.push(`Company: ${c.name}`);
   lines.push(`Today: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "America/Los_Angeles" })}`);
   if (b.hireId) {
@@ -82,7 +83,8 @@ async function newDetails(db: ReturnType<typeof admin>, clientId: string, b: D):
         pay && `- Pay: ${pay}`,
         h.bonus !== "" && h.bonus != null ? `- Bonus: ${h.bonus}% target` : "- Bonus: none stated",
         `- Start date: ${h.startDate || ""}`,
-        h.location && `- Work location: ${h.location}`,
+        (h.companyId && ob?.companies?.find((x) => x.id === h.companyId)?.name) ? `- Hiring company: ${ob?.companies?.find((x) => x.id === h.companyId)?.name}` : "",
+        (h.location || ob?.hqAddress) ? `- Work location: ${h.location || ob?.hqAddress}` : "",
         h.letterDate && `- Letter date: ${h.letterDate}`,
         h.respondBy && `- Respond by: ${h.respondBy}`,
         h.contingencies && `- Contingencies: ${h.contingencies}`,

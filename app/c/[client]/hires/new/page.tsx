@@ -1,5 +1,6 @@
 "use client";
 
+import { requestLocations } from "@/lib/offerreq";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -81,7 +82,7 @@ function NewHireInner() {
             : "Tell HR who you're hiring. HR prepares the offer letter and agreement for you to approve, then handles the welcome and first-day emails."}
         </p>
         <div className="hire-new">
-          <div className="card"><HireForm value={v} onChange={setV} s={s} people={cfg.users} clientName={client?.name} /></div>
+          <div className="card"><HireForm value={v} onChange={setV} s={s} people={cfg.users} clientName={client?.name} places={requestLocations(cfg)} /></div>
           <div className="hire-side">
             <Checks h={v} s={s} />
             {err && <p className="small" style={{ color: "var(--red)" }}>{err}</p>}
