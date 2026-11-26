@@ -12,7 +12,7 @@ import { LangSwitch, ReviewDoc, StageChip, useDemo, useLang, useLiveTalk } from 
 import { useStore } from "@/lib/store";
 import { downloadDocx } from "@/lib/docx";
 import {
-  addDays, average, docOf, docText, first, reviewFileName, translatedFrom, trFields, trSrc, fmtDay, Goal, GOAL_STATUS, GoalStatus, KIND_LABEL, Lang, newId, PerformSettings, pipCheckins, Review, SCALE, stageOf, StepId, stepsFor, T,
+  addDays, average, docOf, isNegative, docText, first, reviewFileName, translatedFrom, trFields, trSrc, fmtDay, Goal, GOAL_STATUS, GoalStatus, KIND_LABEL, Lang, newId, PerformSettings, pipCheckins, Review, SCALE, stageOf, StepId, stepsFor, T,
 } from "@/lib/perform";
 import { GetData, performApi } from "@/lib/performclient";
 
@@ -105,13 +105,10 @@ export default function ReviewPage() {
         {open ? <span className="tiny muted">{t.minLeft(minsLeft)} · {saving === "saving" ? t.saving : t.saved}</span> : <StageChip st={st} lang={lang} />}
       </div>
       {open && (
-        <nav className="pf-steps" aria-label="Steps">
-          {steps.map((k, i) => (
-            <button key={k} className={i === step ? "on" : i < step ? "done" : ""} aria-current={i === step ? "step" : undefined} onClick={() => go(i)}>
-              <span className="pf-step-n">{i + 1}</span><span className="pf-step-l">{label(k)}</span>
-            </button>
-          ))}
-        </nav>
+        <div className="pf-prog">
+          <div className="pf-prog-bar" role="progressbar" aria-valuemin={1} aria-valuemax={steps.length} aria-valuenow={step + 1} aria-label={lang === "es" ? "Progreso" : "Progress"}><i style={{ width: `${((step + 1) / steps.length) * 100}%` }} /></div>
+          <span className="pf-prog-l">{lang === "es" ? `Paso ${step + 1} de ${steps.length}` : `Step ${step + 1} of ${steps.length}`} · <b>{label(cur)}</b></span>
+        </div>
       )}
     </header>
   );
@@ -148,8 +145,8 @@ export default function ReviewPage() {
       <div className="pf-step section">{body}</div>
       {cur !== "share" && (
         <div className="pf-nav">
-          <button className="btn" style={{ visibility: step > 0 ? "visible" : "hidden" }} onClick={() => go(step - 1)}>{t.back}</button>
-          <button className="btn primary" onClick={() => go(step + 1)}>{t.next}</button>
+          <button className="btn" style={{ visibility: step > 0 ? "visible" : "hidden" }} onClick={() => go(step - 1)}>{lang === "es" ? "Anterior" : "Previous"}</button>
+          <button className="btn primary" onClick={() => go(step + 1)}>{lang === "es" ? "Siguiente paso" : "Next step"}</button>
         </div>
       )}
       {g.admin && <CloseReview lang={lang} call={call} id={r.id} name={r.name} back={`/c/${clientId}/reviews`} />}
@@ -193,41 +190,52 @@ function LookBack({ r, g, s, lang, onPatch, call, toast, onBuildPip }: { r: Revi
       {r.kind !== "pip" && g.negatives >= s.pipAfter && g.admin && (
         <div className="pf-flag"><span className="grow">{t.pipSuggest(r.name, g.negatives)}</span><button className="btn sm" onClick={onBuildPip}>{t.buildPip}</button></div>
       )}
-      <div className="pf-grid2">
+      <div className="pf-look">
         {r.kind !== "pip" && (
-          <section className="card">
-            <h3 className="pf-h3">{t.selfH(f)}</h3>
+          <details className="pf-fold" open>
+            <summary>
+              <span className="pf-fold-t">{t.selfH(f)}</span>
+              <span className="pf-fold-m">{self?.doneAt && self.answers?.length ? (lang === "es" ? `${self.answers.length} respuestas` : `${self.answers.length} answers`) : lang === "es" ? "Pendiente" : "Not in yet"}</span>
+            </summary>
             {self?.doneAt && self.answers?.length ? (
-              self.answers.map((a) => <div key={a.q} className="pf-qa"><span>{a.q}</span>{a.a ? <TrText text={a.a} to={lang} /> : <p>—</p>}</div>)
+              <dl className="pf-qa-list">{self.answers.map((a) => <div key={a.q} className="pf-qa"><dt>{a.q}</dt><dd>{a.a ? <TrText text={a.a} to={lang} /> : "—"}</dd></div>)}</dl>
             ) : !s.selfAssess ? <p className="small muted">{t.selfOff}</p> : (
-              <>
-                <p className="small muted">{self?.sentAt ? (lang === "es" ? `Enviada ${fmtDay(self.sentAt.slice(0, 10), lang)}. ${t.selfNone(f)}` : `Sent ${fmtDay(self.sentAt.slice(0, 10), lang)}. ${t.selfNone(f)}`) : t.selfNone(f)}</p>
+              <div className="pf-fold-body">
+                <p className="small muted" style={{ margin: 0 }}>{self?.sentAt ? (lang === "es" ? `Enviada ${fmtDay(self.sentAt.slice(0, 10), lang)}. ${t.selfNone(f)}` : `Sent ${fmtDay(self.sentAt.slice(0, 10), lang)}. ${t.selfNone(f)}`) : t.selfNone(f)}</p>
                 {g.hasEmail ? <button className="btn sm" onClick={async () => { const x = await call({ action: "sendSelf", id: r.id }); if (x.ok) { setSelf(x.review.self); toast(lang === "es" ? "Enviada" : "Sent"); } else toast(x.reason === "no_email" ? (lang === "es" ? "No tiene correo en la lista" : "No email on the roster") : "Couldn't send it"); }}>{self?.sentAt ? (lang === "es" ? "Enviar de nuevo" : "Send again") : t.sendSelf}</button> : <p className="tiny muted">{lang === "es" ? "No tiene correo en la lista del equipo." : "No email on the team roster, so the link can't go out."}</p>}
-              </>
-            )}
-          </section>
-        )}
-        <section className="card">
-          <h3 className="pf-h3">{t.notesH} <span className="tiny muted">· {t.notesSub}</span></h3>
-          {g.notes.length ? g.notes.map((n) => <div key={n.date + n.notes.slice(0, 10)} className="pf-note"><span>{fmtDay(n.date, lang)}</span><TrText text={n.notes} to={lang} /></div>) : <p className="small muted">{t.notesNone}</p>}
-        </section>
-      </div>
-      {r.kind !== "pip" && (
-        <section className="card section">
-          <h3 className="pf-h3">{g.prevGoals.length ? t.progress : t.lastGoals}</h3>
-          {!g.prevGoals.length ? <p className="small muted">{t.lastNone(f)}</p> : g.prevGoals.map((goal) => {
-            const u = r.goalUpdates[goal.id] ?? { status: goal.status === "not_started" ? "in_progress" : goal.status };
-            return (
-              <div key={goal.id} className="pf-goal-prog">
-                <TrText as="div" className="pf-goal-t" text={goal.text} to={lang} />
-                <div className="pf-filters" role="group" aria-label={goal.text}>
-                  {(["done", "in_progress", "not_started", "deferred", "na"] as GoalStatus[]).map((k) => <button key={k} className={u.status === k ? "on" : ""} aria-pressed={u.status === k} onClick={() => onPatch({ goalUpdates: { ...r.goalUpdates, [goal.id]: { ...u, status: k } } })}>{GOAL_STATUS[k][lang]}</button>)}
-                </div>
               </div>
-            );
-          })}
-        </section>
-      )}
+            )}
+          </details>
+        )}
+        <details className="pf-fold" open={g.notes.length > 0}>
+          <summary>
+            <span className="pf-fold-t">{t.notesH}</span>
+            <span className="pf-fold-m">{g.notes.length ? (lang === "es" ? `${g.notes.length} notas · solo usted y RR. HH.` : `${g.notes.length} ${g.notes.length === 1 ? "note" : "notes"} · only you and HR`) : lang === "es" ? "Ninguna" : "None yet"}</span>
+          </summary>
+          {g.notes.length ? <dl className="pf-qa-list">{g.notes.map((n) => <div key={n.date + n.notes.slice(0, 10)} className="pf-qa"><dt>{fmtDay(n.date, lang)}</dt><dd><TrText text={n.notes} to={lang} /></dd></div>)}</dl> : <p className="small muted">{t.notesNone}</p>}
+        </details>
+        {r.kind !== "pip" && (g.prevGoals.length ? (
+          <details className="pf-fold" open>
+            <summary>
+              <span className="pf-fold-t">{t.progress}</span>
+              <span className="pf-fold-m">{g.prevGoals.length} {lang === "es" ? "metas" : g.prevGoals.length === 1 ? "goal" : "goals"}</span>
+            </summary>
+            {g.prevGoals.map((goal) => {
+              const u = r.goalUpdates[goal.id] ?? { status: goal.status === "not_started" ? "in_progress" : goal.status };
+              return (
+                <div key={goal.id} className="pf-goal-prog">
+                  <TrText as="div" className="pf-goal-t" text={goal.text} to={lang} />
+                  <div className="pf-filters" role="group" aria-label={goal.text}>
+                    {(["done", "in_progress", "not_started", "deferred", "na"] as GoalStatus[]).map((k) => <button key={k} className={u.status === k ? "on" : ""} aria-pressed={u.status === k} onClick={() => onPatch({ goalUpdates: { ...r.goalUpdates, [goal.id]: { ...u, status: k } } })}>{GOAL_STATUS[k][lang]}</button>)}
+                  </div>
+                </div>
+              );
+            })}
+          </details>
+        ) : (
+          <div className="pf-fold-line"><span className="pf-fold-t">{t.lastGoals}</span><span className="pf-fold-m">{t.lastNone(f)}</span></div>
+        ))}
+      </div>
       {g.past.length > 0 && <p className="tiny muted section">{lang === "es" ? "Evaluaciones anteriores" : "Past reviews"}: {g.past.map((p) => `${fmtDay(p.due, lang)}${p.overall ? ` (${p.overall}/${p.scale})` : ""}`).join(" · ")}</p>}
     </>
   );
@@ -321,6 +329,7 @@ function RatingCards({ r, lang, onPatch, onDone }: { r: Review; lang: Lang; onPa
             if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) go(dx < 0 ? i + 1 : i - 1);
           }}
         >
+          <div className="pf-rbar" aria-hidden="true"><i style={{ width: `${(rated / items.length) * 100}%` }} /></div>
           <span className="pf-rcard-n tiny">{cur.overall ? (es ? "Para cerrar" : "To finish") : `${i + 1} / ${items.length - 1}`}</span>
           <h3>{cur.name}</h3>
           {cur.desc && <p className="muted">{cur.desc}</p>}
@@ -339,40 +348,38 @@ function RatingCards({ r, lang, onPatch, onDone }: { r: Review; lang: Lang; onPa
           ))}
           <div className="pf-rcard-nav">
             <button className="btn ghost sm" disabled={i === 0} onClick={() => go(i - 1)}>← {es ? "Anterior" : "Previous"}</button>
-            <div className="pf-bubbles" role="tablist" aria-label={es ? `${rated} de ${items.length} calificadas` : `${rated} of ${items.length} rated`}>
-              {items.map((x, k) => (
-                <button key={x.id} role="tab" aria-selected={k === i} title={x.name} aria-label={`${x.name}${x.value ? `, ${x.value}` : ""}`} className={`${k === i ? "cur" : ""} ${x.value ? "done" : ""}`} onClick={() => go(k)}>
-                  {x.value ? <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> : null}
-                </button>
-              ))}
-            </div>
+            <span className="tiny muted">{es ? `${rated} de ${items.length} calificadas` : `${rated} of ${items.length} rated`}</span>
             <button className="btn ghost sm" onClick={() => go(i + 1)}>{cur.value ? (es ? "Siguiente" : "Next") : es ? "Omitir" : "Skip"} →</button>
           </div>
         </section>
       ) : (
-        <section key="summary" className="card pf-rcard pf-rsum in-right">
-          <span className="pf-rcard-n tiny">{rated === items.length ? (es ? "Todo calificado" : "All rated") : es ? `Faltan ${items.length - rated}` : `${items.length - rated} left`}</span>
-          <h3>{es ? "Resumen" : "Here's what you picked"}</h3>
-          <div className="pf-rsum-list">
-            {items.map((x, k) => (
-              <button key={x.id} className={`pf-rsum-row ${x.overall ? "overall" : ""}`} onClick={() => go(k)}>
-                <span>{x.name}</span>
-                {x.value ? <b>{x.value} <span className="muted">· {scale[x.value - 1][lang]}</span></b> : <span className="pf-chip gold">{es ? "Sin calificar" : "Not rated"}</span>}
-              </button>
-            ))}
-          </div>
-          <p className="tiny muted" style={{ margin: "10px 0 0" }}>{es ? "Toque cualquiera para cambiarla." : "Tap any of them to change it."}</p>
-          <div className="pf-rcard-nav">
-            <button className="btn ghost sm" onClick={() => go(items.length - 1)}>← {es ? "Anterior" : "Previous"}</button>
-            <div className="pf-bubbles" role="tablist" aria-label={es ? `${rated} de ${items.length} calificadas` : `${rated} of ${items.length} rated`}>
-              {items.map((x, k) => (
-                <button key={x.id} role="tab" aria-selected={k === i} title={x.name} aria-label={`${x.name}${x.value ? `, ${x.value}` : ""}`} className={`${k === i ? "cur" : ""} ${x.value ? "done" : ""}`} onClick={() => go(k)}>
-                  {x.value ? <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> : null}
+        <section key="summary" className="pf-sum in-right">
+          {(() => {
+            const ov = items[items.length - 1];
+            const tone = (v?: number) => (!v ? "none" : isNegative(v, r.template.scale) ? "low" : v === scale.length || (scale.length === 5 && v === 4) ? "high" : "mid");
+            return (
+              <>
+                <button className="pf-sum-overall" onClick={() => go(items.length - 1)}>
+                  <span className="pf-sum-k">{es ? "Calificación general" : "Overall rating"}</span>
+                  <span className="pf-sum-big">
+                    <b className={`pf-badge lg ${tone(ov.value)}`}>{ov.value ?? "–"}</b>
+                    <span>{ov.value ? scale[ov.value - 1][lang] : es ? "Sin calificar" : "Not rated yet"}</span>
+                  </span>
+                  {avg ? <span className="pf-sum-avg">{es ? `Promedio de las categorías: ${avg}` : `Category average ${avg}`}</span> : null}
                 </button>
-              ))}
-            </div>
-            <button className="btn primary sm" onClick={onDone}>{es ? "Siguiente paso" : "Next step"} →</button>
-          </div>
+                <div className="pf-sum-k" style={{ marginTop: 26 }}>{es ? "Calificaciones" : "Performance ratings"}</div>
+                <div className="pf-sum-list">
+                  {items.slice(0, -1).map((x, k) => (
+                    <button key={x.id} className="pf-sum-row" onClick={() => go(k)}>
+                      <span className="pf-sum-name">{x.name}<small>{x.value ? scale[x.value - 1][lang] : es ? "Sin calificar" : "Not rated"}</small></span>
+                      <b className={`pf-badge ${tone(x.value)}`}>{x.value ?? "–"}</b>
+                    </button>
+                  ))}
+                </div>
+                <p className="tiny muted" style={{ margin: "12px 0 0" }}>{es ? "Toque cualquiera para cambiarla." : "Tap any rating to change it."}</p>
+              </>
+            );
+          })()}
         </section>
       )}
     </div>
