@@ -228,7 +228,7 @@ export async function performApi(clientId: string, body: Res, demo?: Demo): Prom
     if (body.op === "coachDraft") {
       const said = (body.said ?? {}) as Record<string, string>;
       const answers = Object.fromEntries(Object.entries(said).filter(([, v]) => v?.trim()).map(([k, v]) => [k, tidy(v)]));
-      const goals = String(body.goals ?? "").split(/(?<=[.!?])\s+|;\s*|\band\s+(?=(?:lead|get|keep|finish|learn|hit|reach)\b)/i).map((x) => x.trim().replace(/[.!?]+$/, "")).filter((x) => x.length > 4).slice(0, 4).map((x) => ({ text: x.charAt(0).toUpperCase() + x.slice(1), measure: "", by: "" }));
+      const goals = String(body.goals ?? "").split(/(?<=[.!?])\s+|;\s*|\band\s+(?=(?:lead|get|keep|finish|learn|hit|reach|run|take|own)\b)/i).map((x) => x.trim().replace(/[.!?]+$/, "")).filter((x) => x.length > 4).slice(0, 4).map((x) => ({ text: x.charAt(0).toUpperCase() + x.slice(1), measure: "", by: "" }));
       return { ok: true, answers, goals, demo: true };
     }
     if (body.op === "sort") return { ok: true, answers: demoSort(String(body.transcript ?? ""), r.template.ask), vague: [], demo: true };
