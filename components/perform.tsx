@@ -249,3 +249,84 @@ export function useTalk(lang: Lang) {
   useEffect(() => () => { want.current = false; rec.current?.abort(); }, []);
   return { on, text, setText, err, supported, start, stop, finish, clear };
 }
+
+/** Hands-free talking for the review coach: one tap turns the mic on for the whole conversation.
+ *  When the person pauses (pauseMs of quiet after they've said something), what they said is handed to onPause.
+ *  While the coach is thinking or speaking, hold() ignores what the mic hears; resume() picks back up. */
+export function useLiveTalk(lang: Lang, onPause: (t: string) => void, pauseMs = 2600) {
+  const [on, setOn] = useState(false);
+  const [text, setText] = useState("");
+  const [err, setErr] = useState("");
+  const [supported, setSupported] = useState(false);
+  useEffect(() => setSupported(!!recognizer()), []);
+  const rec = useRef<Rec | null>(null);
+  const want = useRef(false);
+  const session = useRef(0);
+  const restarts = useRef(0);
+  const before = useRef(""); // heard in earlier sessions (phones end sessions on their own)
+  const heard = useRef(""); // everything heard since the mic went on
+  const mark = useRef(0); // how much of it has been used already
+  const held = useRef(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const cb = useRef(onPause);
+  cb.current = onPause;
+  const pending = () => heard.current.slice(mark.current).trim();
+  const arm = () => {
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      if (held.current || !want.current) return;
+      const t = pending();
+      if (!t) return;
+      mark.current = heard.current.length;
+      setText("");
+      cb.current(t);
+    }, pauseMs);
+  };
+  const open = (): boolean => {
+    const R = recognizer();
+    if (!R) return false;
+    const id = ++session.current;
+    const r = new R();
+    r.lang = lang === "es" ? "es-US" : "en-US";
+    r.continuous = true;
+    r.interimResults = true;
+    r.onresult = (e) => {
+      if (id !== session.current) return;
+      let all = "";
+      for (let i = 0; i < e.results.length; i++) all += e.results[i][0].transcript + " ";
+      heard.current = `${before.current} ${all}`.replace(/\s+/g, " ").trimStart();
+      if (held.current) { mark.current = heard.current.length; return; }
+      setText(pending());
+      arm();
+    };
+    r.onerror = (e) => {
+      if (id !== session.current) return;
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") { want.current = false; setErr("denied"); setOn(false); }
+      else if (e.error !== "no-speech" && e.error !== "aborted") setErr(e.error);
+    };
+    r.onend = () => {
+      if (id !== session.current) return;
+      if (want.current && restarts.current < 200) {
+        restarts.current++;
+        before.current = heard.current;
+        setTimeout(() => { if (want.current && id === session.current && !open()) { want.current = false; setOn(false); } }, 120);
+      } else { want.current = false; setOn(false); }
+    };
+    rec.current = r;
+    try { r.start(); return true; } catch { return false; }
+  };
+  const start = () => {
+    if (!recognizer()) return setErr("unsupported");
+    setErr("");
+    want.current = true; held.current = false; restarts.current = 0;
+    before.current = ""; heard.current = ""; mark.current = 0; setText("");
+    if (open()) setOn(true); else { want.current = false; setErr("start"); }
+  };
+  const stop = () => { want.current = false; clearTimeout(timer.current); session.current++; try { rec.current?.abort(); } catch {} setOn(false); setText(""); };
+  /** Use what's been said so far right now (the "Send now" button). */
+  const take = () => { clearTimeout(timer.current); const t = pending(); mark.current = heard.current.length; setText(""); return t; };
+  const hold = () => { held.current = true; clearTimeout(timer.current); mark.current = heard.current.length; setText(""); };
+  const resume = () => { mark.current = heard.current.length; held.current = false; };
+  useEffect(() => () => { want.current = false; clearTimeout(timer.current); try { rec.current?.abort(); } catch {} }, []);
+  return { on, text, err, supported, start, stop, take, hold, resume };
+}

@@ -8,7 +8,7 @@ import { TrText } from "@/components/trtext";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ClientNav, ClientTopbar, Toast, useGuard, useToast } from "@/components/ui";
-import { LangSwitch, ReviewDoc, StageChip, useDemo, useLang, useTalk } from "@/components/perform";
+import { LangSwitch, ReviewDoc, StageChip, useDemo, useLang, useLiveTalk } from "@/components/perform";
 import { useStore } from "@/lib/store";
 import { downloadDocx } from "@/lib/docx";
 import {
@@ -543,14 +543,16 @@ const MicIcon = ({ size = 22 }: { size?: number }) => (
 // ---------- the review coach: one question at a time, by voice or typing ----------
 type CoachMsg = { from: "coach" | "me"; text: string; flag?: boolean; hint?: string };
 const COACH = {
-  en: { sub: "I'll ask a few questions. Talk or type, and I'll turn it into a draft you can edit.", tap: "Tap to talk", stop: "Done, send it", type: "Or type here", next: "Send", skip: "Skip", read: "Read questions aloud", thinking: "Thinking…", writing: "Writing your draft…", draft: "Here's your draft", draftSub: "Your words, cleaned up. Change anything, then use it.", use: "Use this draft", back: "Back to the form", gap: "Needs your input", gaps: (n: number) => `${n} ${n === 1 ? "section needs" : "sections need"} your input.`, later: "Let's leave that one for you to fill in later.", goals: "Goals", goalsQ: (f: string) => `Last one. What goals do you have for ${f} before the next review?`, start: "Let's start.", noRate: "No ratings here. You set those yourself on the form.", fail: "Couldn't reach the coach. I kept your answer.", none: "Nothing for this one" },
-  es: { sub: "Le haré unas preguntas. Hable o escriba, y lo convierto en un borrador que puede editar.", tap: "Toque para hablar", stop: "Listo, enviar", type: "O escriba aquí", next: "Enviar", skip: "Omitir", read: "Leer las preguntas en voz alta", thinking: "Pensando…", writing: "Escribiendo su borrador…", draft: "Su borrador", draftSub: "Sus palabras, ordenadas. Cambie lo que quiera y úselo.", use: "Usar este borrador", back: "Volver al formulario", gap: "Falta su respuesta", gaps: (n: number) => `${n} ${n === 1 ? "sección necesita" : "secciones necesitan"} su respuesta.`, later: "Dejemos esa para que la complete después.", goals: "Metas", goalsQ: (f: string) => `La última. ¿Qué metas tiene para ${f} antes de la próxima evaluación?`, start: "Empecemos.", noRate: "Aquí no hay calificaciones. Esas las pone usted en el formulario.", fail: "No se pudo conectar con el asistente. Guardé su respuesta.", none: "Nada en esta" },
+  en: { sub: "I'll ask a few questions. Talk or type, and I'll turn it into a draft you can edit.", tap: "Start talking", stop: "Done, send it", listening: "Listening… pause when you're done and I'll move on.", pause: "Stop mic", liveHint: "The mic stays on for the whole conversation. Say your answer, then pause.", type: "Or type here", next: "Send", skip: "Skip", read: "Read questions aloud", thinking: "Thinking…", writing: "Writing your draft…", draft: "Here's your draft", draftSub: "Your words, cleaned up. Change anything, then use it.", use: "Use this draft", back: "Back to the form", gap: "Needs your input", gaps: (n: number) => `${n} ${n === 1 ? "section needs" : "sections need"} your input.`, later: "Let's leave that one for you to fill in later.", goals: "Goals", goalsQ: (f: string) => `Last one. What goals do you have for ${f} before the next review?`, start: "Let's start.", noRate: "No ratings here. You set those yourself on the form.", fail: "Couldn't reach the coach. I kept your answer.", none: "Nothing for this one" },
+  es: { sub: "Le haré unas preguntas. Hable o escriba, y lo convierto en un borrador que puede editar.", tap: "Empezar a hablar", stop: "Listo, enviar", listening: "Escuchando… haga una pausa al terminar y sigo.", pause: "Apagar mic", liveHint: "El micrófono queda encendido toda la conversación. Responda y haga una pausa.", type: "O escriba aquí", next: "Enviar", skip: "Omitir", read: "Leer las preguntas en voz alta", thinking: "Pensando…", writing: "Escribiendo su borrador…", draft: "Su borrador", draftSub: "Sus palabras, ordenadas. Cambie lo que quiera y úselo.", use: "Usar este borrador", back: "Volver al formulario", gap: "Falta su respuesta", gaps: (n: number) => `${n} ${n === 1 ? "sección necesita" : "secciones necesitan"} su respuesta.`, later: "Dejemos esa para que la complete después.", goals: "Metas", goalsQ: (f: string) => `La última. ¿Qué metas tiene para ${f} antes de la próxima evaluación?`, start: "Empecemos.", noRate: "Aquí no hay calificaciones. Esas las pone usted en el formulario.", fail: "No se pudo conectar con el asistente. Guardé su respuesta.", none: "Nada en esta" },
 };
 
 function Coach({ r, lang, call, toast, onCancel, onDone }: { r: Review; lang: Lang; call: Call; toast: (m: string) => void; onCancel: () => void; onDone: (answers: Record<string, string>, goals: { text: string; measure: string; by: string }[]) => void }) {
   const C = COACH[lang];
   const f = first(r.name);
-  const talk = useTalk(lang);
+  const [typed, setTyped] = useState("");
+  const sendRef = useRef<(t?: string) => void>(() => undefined);
+  const live = useLiveTalk(lang, (t) => sendRef.current(t));
   const question = (p: Review["template"]["ask"][number]) => {
     const n = p.name[lang].replace(/\bthey\b/g, f).replace(/\bthem\b/g, f).replace(/\bles?\b(?= va)/g, `a ${f} le`);
     return /[?¿]/.test(n) ? n : lang === "es" ? `¿Qué diría sobre ${n.toLowerCase()} de ${f}?` : `What would you say about ${f}'s ${n.charAt(0).toLowerCase() + n.slice(1)}?`;
@@ -568,16 +570,20 @@ function Coach({ r, lang, call, toast, onCancel, onDone }: { r: Review; lang: La
   const end = useRef<HTMLDivElement>(null);
   useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [msgs, draft, busy]);
 
+  // Speak the question (if asked to), then let the mic listen again. It ignores itself while speaking.
   const speak = (text: string) => {
-    if (!aloud || talk.on || typeof window === "undefined" || !window.speechSynthesis) return;
+    if (!aloud || typeof window === "undefined" || !window.speechSynthesis) return void setTimeout(live.resume, 250);
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = lang === "es" ? "es-US" : "en-US";
+    u.onend = () => setTimeout(live.resume, 400);
+    u.onerror = () => live.resume();
     window.speechSynthesis.speak(u);
   };
   const coachSays = (text: string, extra: Partial<CoachMsg> = {}) => { setMsgs((m) => [...m, { from: "coach", text, ...extra }]); speak(text); };
 
   const finish = async (all: Record<string, string>) => {
+    live.stop();
     setBusy("draft");
     const { __goals, ...rest } = all;
     const x = await call({ action: "ai", id: r.id, op: "coachDraft", said: rest, goals: __goals ?? "", lang });
@@ -603,11 +609,12 @@ function Coach({ r, lang, call, toast, onCancel, onDone }: { r: Review; lang: La
 
   const gapOut = (id: string, all: Record<string, string>) => { if (!all[id]?.trim()) setGaps((g) => [...new Set([...g, id])]); };
 
-  const send = async () => {
+  const send = async (heardText?: string) => {
     if (busy) return;
-    const text = (talk.on ? await talk.finish() : talk.text).trim();
-    talk.clear();
+    const text = (heardText ?? (typed.trim() || live.take())).trim();
+    setTyped("");
     if (!text) return toast(lang === "es" ? "No le escuché. Intente otra vez o escríbalo." : "Didn't catch that. Try again, or type it.");
+    live.hold();
     const step = steps[i];
     setMsgs((m) => [...m, { from: "me", text }]);
     const attempt = (tries[step.id] ?? 0) + 1;
@@ -631,7 +638,8 @@ function Coach({ r, lang, call, toast, onCancel, onDone }: { r: Review; lang: La
     }
   };
 
-  const skip = () => { talk.clear(); gapOut(steps[i].id, said); advance(said); };
+  sendRef.current = send;
+  const skip = () => { live.take(); setTyped(""); live.hold(); gapOut(steps[i].id, said); advance(said); };
 
   if (draft) {
     const open = r.template.ask.filter((p) => !draft.answers[p.id]?.trim()).length + (draft.goals.length ? 0 : 1);
@@ -676,24 +684,32 @@ function Coach({ r, lang, call, toast, onCancel, onDone }: { r: Review; lang: La
         {busy && <div className="rc-msg coach muted">{busy === "draft" ? C.writing : C.thinking}</div>}
         <div ref={end} />
       </div>
-      {!busy || busy === "turn" ? (
+      {busy !== "draft" && (
         <div className="rc-bar">
-          {talk.supported && (
-            <button className={`rc-mic ${talk.on ? "on" : ""}`} onClick={() => (talk.on ? send() : talk.start())} aria-label={talk.on ? C.stop : C.tap} disabled={!!busy}>
-              <MicIcon size={24} /><span>{talk.on ? C.stop : C.tap}</span>
+          {live.supported && !live.on && (
+            <button className="rc-mic" onClick={() => { if (typeof window !== "undefined") window.speechSynthesis?.cancel(); live.start(); }} disabled={!!busy}>
+              <MicIcon size={24} /><span>{C.tap}</span>
             </button>
           )}
-          {talk.err === "denied" && <p className="small" style={{ color: "var(--red)" }}>{lang === "es" ? "Permita el micrófono para este sitio." : "Allow the microphone for this site."}</p>}
-          <textarea className="rc-input" rows={2} value={talk.text} onChange={(e) => talk.setText(e.target.value)} placeholder={C.type} aria-label={C.type} />
+          {live.on && (
+            <div className="rc-live" role="status">
+              <span className={`rc-dot ${busy ? "" : "on"}`} aria-hidden="true" />
+              <span className="grow">{busy ? C.thinking : live.text ? <i>{live.text}</i> : C.listening}</span>
+              <button className="btn sm" onClick={live.stop}>{C.pause}</button>
+            </div>
+          )}
+          {live.on && !busy && <span className="tiny muted">{C.liveHint}</span>}
+          {live.err === "denied" && <p className="small" style={{ color: "var(--red)" }}>{lang === "es" ? "Permita el micrófono para este sitio." : "Allow the microphone for this site."}</p>}
+          <textarea className="rc-input" rows={2} value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={C.type} aria-label={C.type} />
           <div className="rc-row">
             <label className="rc-aloud"><input type="checkbox" checked={aloud} onChange={(e) => setAloud(e.target.checked)} /> {C.read}</label>
             <span className="grow" />
             <button className="btn" disabled={!!busy} onClick={skip}>{C.skip}</button>
-            <button className="btn primary" disabled={!!busy || (!talk.text.trim() && !talk.on)} onClick={send}>{C.next}</button>
+            <button className="btn primary" disabled={!!busy || (!typed.trim() && !live.text.trim())} onClick={() => send()}>{C.next}</button>
           </div>
-          <button className="linklike small" style={{ alignSelf: "flex-start" }} onClick={() => { talk.clear(); onCancel(); }}>{C.back}</button>
+          <button className="linklike small" style={{ alignSelf: "flex-start" }} onClick={() => { live.stop(); onCancel(); }}>{C.back}</button>
         </div>
-      ) : null}
+      )}
     </section>
   );
 }

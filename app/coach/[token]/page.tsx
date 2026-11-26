@@ -5,7 +5,7 @@
 // The demo uses simple rules for follow-ups and the draft; the real one would use the AI with the same guardrails.
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { useTalk } from "@/components/perform";
+import { useLiveTalk } from "@/components/perform";
 import { DEMO_COMPANY } from "@/lib/state";
 
 type Lang = "en" | "es";
@@ -22,8 +22,8 @@ const STEPS: Step[] = [
 ];
 
 const T = {
-  en: { title: `${WHO.first}'s 90-day review`, sub: "Talk it through. I'll turn it into a draft.", tap: "Tap to talk", stop: "Done, send it", type: "Or type here", next: "Next", skip: "Skip", read: "Read questions aloud", draft: "Here's your draft", draftSub: "In your words, cleaned up. Change anything before you use it.", use: "Use this draft", redo: "Start over", s: "Strengths", f: "Areas to focus on", sp: "Support", g: "Goals for the next 90 days", e: "Manager's note", flag: "Keep the review about work. Leave out anything about health, leave, family or personal life.", none: "Nothing yet", used: "In the real version this fills in the review form. You can still edit every word.", mock: "Mockup with sample data", hint: "No ratings or scores here. You'll set those yourself on the form.", more: "Can you say a bit more? A sentence or two is plenty.", ok: "No problem.", fit: "Got it, I added that under how you'll support Jordan. What's the goal for Jordan? Something Jordan will do or reach by the end of the 90 days.", last: "No pressure. Anything at all, even a rough thought, helps. Or tap Skip and come back to it.", later: "Let's leave that one for you to fill in later.", gap: "Needs your input", gaps: (n: number) => `${n} ${n === 1 ? "section needs" : "sections need"} your input before this goes to HR.` },
-  es: { title: `Evaluación de 90 días de ${WHO.first}`, sub: "Cuéntamelo y lo convierto en un borrador.", tap: "Toca para hablar", stop: "Listo, enviar", type: "O escribe aquí", next: "Siguiente", skip: "Omitir", read: "Leer las preguntas en voz alta", draft: "Tu borrador", draftSub: "Con tus palabras, ordenadas. Cambia lo que quieras antes de usarlo.", use: "Usar este borrador", redo: "Empezar de nuevo", s: "Fortalezas", f: "Áreas de enfoque", sp: "Apoyo", g: "Metas para los próximos 90 días", e: "Nota del gerente", flag: "Mantén la evaluación sobre el trabajo. No incluyas salud, permisos, familia ni vida personal.", none: "Nada todavía", used: "En la versión real esto llena el formulario. Puedes editar cada palabra.", mock: "Maqueta con datos de ejemplo", hint: "Aquí no hay calificaciones. Esas las pones tú en el formulario.", more: "¿Puedes decir un poco más? Una o dos frases bastan.", ok: "No pasa nada.", fit: "Entendido, lo agregué en cómo apoyarás a Jordan. ¿Cuál es la meta para Jordan? Algo que logre al final de los 90 días.", last: "Sin presión. Cualquier idea, aunque sea general, ayuda. O toca Omitir y vuelve después.", later: "Dejemos esa para que la completes después.", gap: "Falta tu respuesta", gaps: (n: number) => `${n} ${n === 1 ? "sección necesita" : "secciones necesitan"} tu respuesta antes de enviarla a RR. HH.` },
+  en: { title: `${WHO.first}'s 90-day review`, sub: "Talk it through. I'll turn it into a draft.", tap: "Start talking", stop: "Done, send it", listening: "Listening… pause when you're done and I'll move on.", pause: "Stop mic", liveHint: "The mic stays on for the whole conversation. Say your answer, then pause.", type: "Or type here", next: "Next", skip: "Skip", read: "Read questions aloud", draft: "Here's your draft", draftSub: "In your words, cleaned up. Change anything before you use it.", use: "Use this draft", redo: "Start over", s: "Strengths", f: "Areas to focus on", sp: "Support", g: "Goals for the next 90 days", e: "Manager's note", flag: "Keep the review about work. Leave out anything about health, leave, family or personal life.", none: "Nothing yet", used: "In the real version this fills in the review form. You can still edit every word.", mock: "Mockup with sample data", hint: "No ratings or scores here. You'll set those yourself on the form.", more: "Can you say a bit more? A sentence or two is plenty.", ok: "No problem.", fit: "Got it, I added that under how you'll support Jordan. What's the goal for Jordan? Something Jordan will do or reach by the end of the 90 days.", last: "No pressure. Anything at all, even a rough thought, helps. Or tap Skip and come back to it.", later: "Let's leave that one for you to fill in later.", gap: "Needs your input", gaps: (n: number) => `${n} ${n === 1 ? "section needs" : "sections need"} your input before this goes to HR.` },
+  es: { title: `Evaluación de 90 días de ${WHO.first}`, sub: "Cuéntamelo y lo convierto en un borrador.", tap: "Empezar a hablar", stop: "Listo, enviar", listening: "Escuchando… haz una pausa al terminar y sigo.", pause: "Apagar mic", liveHint: "El micrófono queda encendido toda la conversación. Responde y haz una pausa.", type: "O escribe aquí", next: "Siguiente", skip: "Omitir", read: "Leer las preguntas en voz alta", draft: "Tu borrador", draftSub: "Con tus palabras, ordenadas. Cambia lo que quieras antes de usarlo.", use: "Usar este borrador", redo: "Empezar de nuevo", s: "Fortalezas", f: "Áreas de enfoque", sp: "Apoyo", g: "Metas para los próximos 90 días", e: "Nota del gerente", flag: "Mantén la evaluación sobre el trabajo. No incluyas salud, permisos, familia ni vida personal.", none: "Nada todavía", used: "En la versión real esto llena el formulario. Puedes editar cada palabra.", mock: "Maqueta con datos de ejemplo", hint: "Aquí no hay calificaciones. Esas las pones tú en el formulario.", more: "¿Puedes decir un poco más? Una o dos frases bastan.", ok: "No pasa nada.", fit: "Entendido, lo agregué en cómo apoyarás a Jordan. ¿Cuál es la meta para Jordan? Algo que logre al final de los 90 días.", last: "Sin presión. Cualquier idea, aunque sea general, ayuda. O toca Omitir y vuelve después.", later: "Dejemos esa para que la completes después.", gap: "Falta tu respuesta", gaps: (n: number) => `${n} ${n === 1 ? "sección necesita" : "secciones necesitan"} tu respuesta antes de enviarla a RR. HH.` },
 };
 
 const SENSITIVE = /\b(pregnan\w*|medical|doctor|surgery|sick|illness|disab\w*|leave of absence|maternity|paternity|religio\w*|church|age|too old|young|kids|childcare|divorce|accent|embaraz\w*|médic\w*|enferm\w*|discapacidad|religi\w*|edad|hijos)\b/i;
@@ -49,7 +49,9 @@ const bullets = (s: string) => tidy(s).split(/(?<=[.!?])\s+|;\s+|\band also\b|\b
 export default function Coach() {
   const [lang, setLang] = useState<Lang>("en");
   const L = T[lang];
-  const talk = useTalk(lang);
+  const [typed, setTyped] = useState("");
+  const sendRef = useRef<(skip?: boolean, heard?: string) => void>(() => undefined);
+  const talk = useLiveTalk(lang, (t) => sendRef.current(false, t));
   const [i, setI] = useState(0);
   const [followed, setFollowed] = useState(false);
   const [tries, setTries] = useState<Record<string, number>>({});
@@ -63,11 +65,13 @@ export default function Coach() {
   const end = useRef<HTMLDivElement>(null);
 
   const say = (text: string) => {
-    if (!aloud || talk.on || typeof window === "undefined" || !window.speechSynthesis) return;
+    if (!aloud || typeof window === "undefined" || !window.speechSynthesis) return void setTimeout(talk.resume, 250);
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = lang === "es" ? "es-US" : "en-US";
     u.rate = 1.02;
+    u.onend = () => setTimeout(talk.resume, 400);
+    u.onerror = () => talk.resume();
     window.speechSynthesis.speak(u);
   };
 
@@ -75,9 +79,10 @@ export default function Coach() {
 
   const ask = (text: string) => { setMsgs((m) => [...m, { from: "coach", text }]); say(text); };
 
-  const send = async (skip = false) => {
-    const said = skip ? "" : (talk.on ? await talk.finish() : talk.text).trim();
-    talk.clear();
+  const send = (skip = false, heard?: string) => {
+    const said = skip ? (talk.take(), "") : (heard ?? (typed.trim() || talk.take())).trim();
+    setTyped("");
+    talk.hold();
     if (!skip && !said) return ask(lang === "es" ? "No te escuché. Intenta otra vez o escríbelo." : "Didn't catch that. Try again, or type it.");
     const step = STEPS[i];
     // not an answer: nudge with an easier version of the question, up to twice, then leave it for the manager
@@ -121,10 +126,11 @@ export default function Coach() {
     } else {
       if (lead) ask(lead);
       setDone(true);
-      say(L.draft);
+      talk.stop();
     }
   };
 
+  sendRef.current = send;
   const restart = () => { setFit({}); setTries({}); setGaps([]); setI(0); setFollowed(false); setAnswers({}); setDone(false); setUsed(false); setMsgs([{ from: "coach", text: STEPS[0].q[lang] }]); };
   const switchLang = (l: Lang) => { setFit({}); setTries({}); setGaps([]); setLang(l); setI(0); setFollowed(false); setAnswers({}); setDone(false); setUsed(false); setMsgs([{ from: "coach", text: STEPS[0].q[l] }]); };
 
@@ -180,18 +186,26 @@ export default function Coach() {
 
       {!done && (
         <footer className="rc-bar">
-          {talk.supported && (
-            <button className={`rc-mic ${talk.on ? "on" : ""}`} onClick={() => (talk.on ? send() : talk.start())} aria-label={talk.on ? L.stop : L.tap}>
+          {talk.supported && !talk.on && (
+            <button className="rc-mic" onClick={() => { if (typeof window !== "undefined") window.speechSynthesis?.cancel(); talk.start(); }} aria-label={L.tap}>
               <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
-              <span>{talk.on ? L.stop : L.tap}</span>
+              <span>{L.tap}</span>
             </button>
           )}
-          <textarea className="rc-input" rows={2} value={talk.text} onChange={(e) => talk.setText(e.target.value)} placeholder={L.type} />
+          {talk.on && (
+            <div className="rc-live" role="status">
+              <span className="rc-dot on" aria-hidden="true" />
+              <span className="grow">{talk.text ? <i>{talk.text}</i> : L.listening}</span>
+              <button className="btn sm" onClick={talk.stop}>{L.pause}</button>
+            </div>
+          )}
+          {talk.on && <span className="tiny muted">{L.liveHint}</span>}
+          <textarea className="rc-input" rows={2} value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={L.type} />
           <div className="rc-row">
             <label className="rc-aloud"><input type="checkbox" checked={aloud} onChange={(e) => setAloud(e.target.checked)} /> {L.read}</label>
             <span className="grow" />
             <button className="btn" onClick={() => send(true)}>{L.skip}</button>
-            <button className="btn primary" disabled={!talk.text.trim() && !talk.on} onClick={() => send()}>{L.next}</button>
+            <button className="btn primary" disabled={!typed.trim() && !talk.text.trim()} onClick={() => send()}>{L.next}</button>
           </div>
         </footer>
       )}
