@@ -168,7 +168,8 @@ export function useTalk(lang: Lang) {
   const [err, setErr] = useState("");
   const rec = useRef<Rec | null>(null);
   const base = useRef("");
-  const supported = !!recognizer();
+  const [supported, setSupported] = useState(false); // known only in the browser
+  useEffect(() => setSupported(!!recognizer()), []);
   const start = (keep = true) => {
     const R = recognizer();
     if (!R) return setErr("unsupported");
