@@ -657,7 +657,7 @@ function Coach({ r, lang, call, toast, onCancel, onDone }: { r: Review; lang: La
         {r.template.ask.map((p) => (
           <label key={p.id} className="rc-sec">
             <h3>{p.name[lang]}</h3>
-            <textarea className={`f ${draft.answers[p.id]?.trim() ? "" : "rc-gap"}`} rows={3} value={draft.answers[p.id] ?? ""} placeholder={gaps.includes(p.id) ? C.gap : C.none} onChange={(e) => setDraft({ ...draft, answers: { ...draft.answers, [p.id]: e.target.value } })} />
+            <textarea className={`f ${draft.answers[p.id]?.trim() ? "" : "rc-gap"}`} rows={Math.min(14, Math.max(3, Math.ceil((draft.answers[p.id]?.length ?? 0) / 34) + 1))} value={draft.answers[p.id] ?? ""} placeholder={gaps.includes(p.id) ? C.gap : C.none} onChange={(e) => setDraft({ ...draft, answers: { ...draft.answers, [p.id]: e.target.value } })} />
           </label>
         ))}
         <div className="rc-sec">

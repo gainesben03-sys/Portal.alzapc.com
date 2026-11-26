@@ -88,6 +88,11 @@ export function demoNarrative(id: string, notes: string, fullName: string, voice
   const name = fullName.split(" ")[0] || "they";
   const pts = notes.split(/(?<=[.!?])\s+|,\s*|;\s*|\s+and\s+|\n+/i).map((p) => toYou(p, name, voice)).filter(Boolean);
   if (!pts.length) return "";
+  // "you hasn't" -> "you haven't" after swapping the name for "you"
+  const fixYou = (t: string) => t
+    .replace(/\byou (is|has|was|does|doesn't|isn't|hasn't|wasn't)\b/gi, (_m, v: string) => `you ${BE[v.toLowerCase()] ?? v}`)
+    .replace(/\byou ([a-z]+)\b/g, (m, v: string) => (/(ss|us|is|ous)$/.test(v) || /^(always|sometimes|perhaps|besides|towards|afterwards|yours|unless|thanks)$/.test(v) || v.length < 4 || !v.endsWith("s") ? m : `you ${v.replace(/ies$/, "y").replace(/(sh|ch|x|o)es$/, "$1").replace(/s$/, "")}`));
+  for (let k = 0; k < pts.length; k++) pts[k] = fixYou(pts[k]);
   const you = voice !== "about";
   const lead = (p: string) => p.replace(/^(crew|team|staff|office|warehouse)\b/i, "the $1").replace(/^you\b/, "You").replace(/^./, (c) => c.toUpperCase());
   const body = joinPts(pts);
@@ -227,6 +232,12 @@ export async function performApi(clientId: string, body: Res, demo?: Demo): Prom
     if (body.op === "coach") return { ok: true, ...demoCoach(String(body.said ?? ""), Number(body.attempt) || 1, body.followed === true, String(body.current ?? ""), body.lang === "es" ? "es" : "en", r.name.split(" ")[0]), demo: true };
     if (body.op === "coachDraft") {
       const said = (body.said ?? {}) as Record<string, string>;
+      // the demo site can write the draft with the real AI too (rate limited); simple rules if it can't
+      try {
+        const res = await fetch("/api/demo-ai", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ op: "coachDraft", firstName: r.name.split(" ")[0], lang: body.lang === "es" ? "es" : "en", asks: r.template.ask.map((p) => ({ id: p.id, q: p.name[body.lang === "es" ? "es" : "en"] })), said, goals: String(body.goals ?? "") }) });
+        const j = await res.json();
+        if (j?.ok) return { ...j, demo: true };
+      } catch {}
       const answers = Object.fromEntries(Object.entries(said).filter(([, v]) => v?.trim()).map(([k, v]) => [k, demoNarrative(k, tidy(v), r.name, "you", "")]));
       const goals = String(body.goals ?? "").split(/(?<=[.!?])\s+|;\s*|\band\s+(?=(?:lead|get|keep|finish|learn|hit|reach|run|take|own)\b)/i).map((x) => x.trim().replace(/[.!?]+$/, "")).filter((x) => x.length > 4).slice(0, 4).map((x) => ({ text: x.charAt(0).toUpperCase() + x.slice(1), measure: "", by: "" }));
       return { ok: true, answers, goals, demo: true };
