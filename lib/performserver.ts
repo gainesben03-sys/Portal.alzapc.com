@@ -149,7 +149,7 @@ export async function polish(o: { firstName: string; asks: { id: string; q: stri
     : `Write directly to the employee in second person ("you", "your"), as the manager speaking to ${o.firstName}. Write the manager's commitments in first person ("I will").`;
   const r = await claude({
     system: RULES,
-    maxTokens: 2000,
+    maxTokens: 3000,
     messages: [{ role: "user", content: `Employee first name: ${o.firstName}\nWrite in ${LANG_NAME[o.lang]}.\n${voice}\n${CRAFT}\n${tone}\nFor each item, write the review text that answers the question from the manager's notes.\nItems:\n${JSON.stringify(items)}\nReturn {"written": {"<id>": "<text>"}, "vague": ["<short phrase from the notes that needs an example>"]}` }],
   });
   if (!r.ok) return { ok: false as const, reason: r.reason };
@@ -235,7 +235,7 @@ export async function coachDraft(o: { firstName: string; lang: Lang; asks: { id:
   const r = await claude({
     system: RULES,
     maxTokens: 2000,
-    messages: [{ role: "user", content: `Employee first name: ${o.firstName}\nThe manager answered these questions out loud. For each, turn what they said into clear written notes in ${LANG_NAME[o.lang]}, in the manager's own voice: fix grammar, drop filler words and repeats, keep every point and its strength, add nothing. 1 to 4 sentences each. Leave out any question they didn't answer.\nQuestions: ${JSON.stringify(o.asks)}\nWhat they said: ${JSON.stringify(said)}\nGoals they said: """${goals}"""\nTurn the goals into up to 4 separate goals. "measure" and "by" only if they said them, else "".\nReturn {"answers": {"<id>": "<text>"}, "goals": [{"text": "", "measure": "", "by": ""}]}` }],
+    messages: [{ role: "user", content: `Employee first name: ${o.firstName}\nThe manager answered these review questions out loud. For each question they answered, write a well-written review paragraph in ${LANG_NAME[o.lang]}, speaking to ${o.firstName} ("you"), in the manager's voice ("I").\n${CRAFT}\n- Write 3 to 5 sentences per question, like a thoughtful narrative about ${o.firstName}, not a list of notes.\n- Build out what the manager said: say what it looks like day to day, why it matters to the team or the work, and what to keep doing or change, but only where their words support it.\n- Never add facts, examples, numbers, dates, people, events or opinions they didn't give. If they said very little, write fewer sentences rather than make anything up.\n- Keep every point they made and its strength.\nLeave out any question they didn't answer.\nQuestions: ${JSON.stringify(o.asks)}\nWhat they said: ${JSON.stringify(said)}\nGoals they said: """${goals}"""\nTurn the goals into up to 4 separate goals, each one clear and specific in a single sentence using only what they said. "measure" and "by" only if they said them, else "".\nReturn {"answers": {"<id>": "<text>"}, "goals": [{"text": "", "measure": "", "by": ""}]}` }],
   });
   if (!r.ok) return { ok: false as const, reason: r.reason };
   const j = parseJson<{ answers?: Record<string, string>; goals?: { text?: string; measure?: string; by?: string }[] }>(r.text);

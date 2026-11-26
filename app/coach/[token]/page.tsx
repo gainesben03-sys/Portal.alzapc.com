@@ -22,7 +22,7 @@ const STEPS: Step[] = [
 ];
 
 const T = {
-  en: { title: `${WHO.first}'s 90-day review`, sub: "Talk it through. I'll turn it into a draft.", tap: "Start talking", stop: "Done, send it", listening: "Listening… pause when you're done and I'll move on.", pause: "Stop mic", liveHint: "The mic stays on for the whole conversation. Say your answer, then pause.", type: "Or type here", next: "Next", skip: "Skip", read: "Read questions aloud", draft: "Here's your draft", draftSub: "In your words, cleaned up. Change anything before you use it.", use: "Use this draft", redo: "Start over", s: "Strengths", f: "Areas to focus on", sp: "Support", g: "Goals for the next 90 days", e: "Manager's note", flag: "Keep the review about work. Leave out anything about health, leave, family or personal life.", none: "Nothing yet", used: "In the real version this fills in the review form. You can still edit every word.", mock: "Mockup with sample data", hint: "No ratings or scores here. You'll set those yourself on the form.", more: "Can you say a bit more? A sentence or two is plenty.", ok: "No problem.", fit: "Got it, I added that under how you'll support Jordan. What's the goal for Jordan? Something Jordan will do or reach by the end of the 90 days.", last: "No pressure. Anything at all, even a rough thought, helps. Or tap Skip and come back to it.", later: "Let's leave that one for you to fill in later.", gap: "Needs your input", gaps: (n: number) => `${n} ${n === 1 ? "section needs" : "sections need"} your input before this goes to HR.` },
+  en: { title: `${WHO.first}'s 90-day review`, sub: "Talk it through. I'll turn it into a draft.", tap: "Start talking", stop: "Done, send it", listening: "Listening… pause when you're done and I'll move on.", pause: "Stop mic", liveHint: "The mic stays on for the whole conversation. Say your answer, then pause.", type: "Or type here", next: "Next", skip: "Skip", read: "Read questions aloud", draft: "Here's your draft", draftSub: "Written up from what you said. Nothing added. Change anything before you use it.", use: "Use this draft", redo: "Start over", s: "Strengths", f: "Areas to focus on", sp: "Support", g: "Goals for the next 90 days", e: "Manager's note", flag: "Keep the review about work. Leave out anything about health, leave, family or personal life.", none: "Nothing yet", used: "In the real version this fills in the review form. You can still edit every word.", mock: "Mockup with sample data", hint: "No ratings or scores here. You'll set those yourself on the form.", more: "Can you say a bit more? A sentence or two is plenty.", ok: "No problem.", fit: "Got it, I added that under how you'll support Jordan. What's the goal for Jordan? Something Jordan will do or reach by the end of the 90 days.", last: "No pressure. Anything at all, even a rough thought, helps. Or tap Skip and come back to it.", later: "Let's leave that one for you to fill in later.", gap: "Needs your input", gaps: (n: number) => `${n} ${n === 1 ? "section needs" : "sections need"} your input before this goes to HR.` },
   es: { title: `Evaluación de 90 días de ${WHO.first}`, sub: "Cuéntamelo y lo convierto en un borrador.", tap: "Empezar a hablar", stop: "Listo, enviar", listening: "Escuchando… haz una pausa al terminar y sigo.", pause: "Apagar mic", liveHint: "El micrófono queda encendido toda la conversación. Responde y haz una pausa.", type: "O escribe aquí", next: "Siguiente", skip: "Omitir", read: "Leer las preguntas en voz alta", draft: "Tu borrador", draftSub: "Con tus palabras, ordenadas. Cambia lo que quieras antes de usarlo.", use: "Usar este borrador", redo: "Empezar de nuevo", s: "Fortalezas", f: "Áreas de enfoque", sp: "Apoyo", g: "Metas para los próximos 90 días", e: "Nota del gerente", flag: "Mantén la evaluación sobre el trabajo. No incluyas salud, permisos, familia ni vida personal.", none: "Nada todavía", used: "En la versión real esto llena el formulario. Puedes editar cada palabra.", mock: "Maqueta con datos de ejemplo", hint: "Aquí no hay calificaciones. Esas las pones tú en el formulario.", more: "¿Puedes decir un poco más? Una o dos frases bastan.", ok: "No pasa nada.", fit: "Entendido, lo agregué en cómo apoyarás a Jordan. ¿Cuál es la meta para Jordan? Algo que logre al final de los 90 días.", last: "Sin presión. Cualquier idea, aunque sea general, ayuda. O toca Omitir y vuelve después.", later: "Dejemos esa para que la completes después.", gap: "Falta tu respuesta", gaps: (n: number) => `${n} ${n === 1 ? "sección necesita" : "secciones necesitan"} tu respuesta antes de enviarla a RR. HH.` },
 };
 
@@ -43,6 +43,18 @@ function tidy(s: string) {
   const sentences = t.split(/(?<=[.!?])\s+/).map((x) => x.charAt(0).toUpperCase() + x.slice(1));
   const out = sentences.join(" ");
   return /[.!?]$/.test(out) ? out : out + ".";
+}
+/** Speak to the employee: "Jordan covered" becomes "you covered". Only pronouns change, never the facts. */
+const toYou = (t: string) => t.replace(new RegExp(`\\b${WHO.first}'s\\b`, "g"), "your").replace(new RegExp(`\\b${WHO.first}\\b`, "g"), "you").replace(/\b(his|her|their) own\b/gi, "your own").replace(/\b(he|she) (is|was|has)\b/gi, (_, __, v) => `you ${v === "is" ? "are" : v === "was" ? "were" : "have"}`).replace(/(^|[.!?]\s+)you\b/g, "$1You");
+const lowerFirst = (t: string) => (/^(I|I'll|I'm)\b/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1));
+/** Demo only: a few framing sentences around the manager's own words. The real version writes this with AI, from what was said. */
+function narrate(id: string, text: string, es: boolean) {
+  const t = toYou(tidy(text));
+  if (es) return t;
+  if (id === "strengths") return `You've had a strong start, ${WHO.first}. ${t} This is exactly what we want to see, so keep it up.`;
+  if (id === "focus") return `Over the next stretch, I'd like you to focus on this: ${lowerFirst(t)} We'll check in on how it's going along the way.`;
+  if (id === "support") return `To help you get there, here's what I'll do. ${t} If something isn't working, tell me and we'll adjust.`;
+  return t;
 }
 const bullets = (s: string) => tidy(s).split(/(?<=[.!?])\s+|;\s+|\band also\b|\balso,?\s/i).map((x) => x.trim().replace(/^and\s+/i, "")).filter((x) => x.length > 3).map((x) => x.charAt(0).toUpperCase() + x.slice(1).replace(/[.!?]?$/, "."));
 
@@ -137,7 +149,7 @@ export default function Coach() {
   const section = (title: string, text: string | undefined, list = false, id = "") => (
     <section className={`rc-sec ${!text && gaps.includes(id) ? "gap" : ""}`}>
       <h3>{title}</h3>
-      {!text ? (gaps.includes(id) ? <p className="rc-gap" contentEditable suppressContentEditableWarning>{L.gap}</p> : <p className="muted">{L.none}</p>) : list ? <ul contentEditable suppressContentEditableWarning>{bullets(text).map((b) => <li key={b}>{b}</li>)}</ul> : <p contentEditable suppressContentEditableWarning>{tidy(text)}</p>}
+      {!text ? (gaps.includes(id) ? <p className="rc-gap" contentEditable suppressContentEditableWarning>{L.gap}</p> : <p className="muted">{L.none}</p>) : list ? <ul contentEditable suppressContentEditableWarning>{bullets(text).map((b) => <li key={b}>{b}</li>)}</ul> : <p contentEditable suppressContentEditableWarning>{narrate(id, text, lang === "es")}</p>}
     </section>
   );
 
@@ -167,10 +179,10 @@ export default function Coach() {
             <h2>{L.draft}</h2>
             <p className="small muted">{L.draftSub}</p>
             {section(L.s, answers.strengths, false, "strengths")}
-            {section(L.f, answers.focus, true, "focus")}
+            {section(L.f, answers.focus, false, "focus")}
             {section(L.sp, answers.support, false, "support")}
             {section(L.g, answers.goals, true, "goals")}
-            {answers.else && section(L.e, answers.else)}
+            {answers.else && section(L.e, answers.else, false, "else")}
             {gaps.filter((g) => !answers[g]).length > 0 && <p className="rc-gapnote">{L.gaps(gaps.filter((g) => !answers[g]).length)}</p>}
             <p className="tiny muted">{L.hint}</p>
             {used ? <p className="rc-used">{L.used}</p> : (

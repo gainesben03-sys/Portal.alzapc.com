@@ -84,7 +84,7 @@ function toYou(pt: string, name: string, voice: string) {
   return x;
 }
 const joinPts = (pts: string[]) => (pts.length <= 1 ? pts.join("") : `${pts.slice(0, -1).join(", ")} and ${pts[pts.length - 1]}`);
-function demoNarrative(id: string, notes: string, fullName: string, voice: string, tone: string) {
+export function demoNarrative(id: string, notes: string, fullName: string, voice: string, tone: string) {
   const name = fullName.split(" ")[0] || "they";
   const pts = notes.split(/(?<=[.!?])\s+|,\s*|;\s*|\s+and\s+|\n+/i).map((p) => toYou(p, name, voice)).filter(Boolean);
   if (!pts.length) return "";
@@ -104,7 +104,7 @@ function demoNarrative(id: string, notes: string, fullName: string, voice: strin
     if (tone !== "shorter") out += you ? " Let's make this the focus between now and your next review, and we'll check progress along the way." : " This will be the focus before the next review, with progress checked along the way.";
   } else if (help.includes(id)) {
     const VERB = /^(pair|walk|train|meet|check|give|set|schedule|cover|show|send|help|coach|review|provide|make|get|find|sign|teach|shadow|introduce|share|talk|sit|book|add|take|buy|order)\b/i;
-    const acts = pts.map((p) => (p.startsWith("you ") ? p.replace(/^you/, you ? "you" : name) : VERB.test(p) ? `I'll ${p}` : `we'll set up ${p}`));
+    const acts = pts.map((p) => (/^i('ll|\s+will|\s+am|\s+can)\b/i.test(p) ? p.replace(/^i\b/, "I") : p.startsWith("you ") ? p.replace(/^you/, you ? "you" : name) : VERB.test(p) ? `I'll ${p}` : `we'll set up ${p}`));
     out = `Here's how I'll support ${you ? "you" : name}: ${joinPts(acts)}.`;
     if (tone !== "shorter") out += you ? " If something isn't working, tell me and we'll adjust." : ` If something isn't working, ${name} can raise it and we'll adjust.`;
   } else out = `${lead(body)}.`;
@@ -227,7 +227,7 @@ export async function performApi(clientId: string, body: Res, demo?: Demo): Prom
     if (body.op === "coach") return { ok: true, ...demoCoach(String(body.said ?? ""), Number(body.attempt) || 1, body.followed === true, String(body.current ?? ""), body.lang === "es" ? "es" : "en", r.name.split(" ")[0]), demo: true };
     if (body.op === "coachDraft") {
       const said = (body.said ?? {}) as Record<string, string>;
-      const answers = Object.fromEntries(Object.entries(said).filter(([, v]) => v?.trim()).map(([k, v]) => [k, tidy(v)]));
+      const answers = Object.fromEntries(Object.entries(said).filter(([, v]) => v?.trim()).map(([k, v]) => [k, demoNarrative(k, tidy(v), r.name, "you", "")]));
       const goals = String(body.goals ?? "").split(/(?<=[.!?])\s+|;\s*|\band\s+(?=(?:lead|get|keep|finish|learn|hit|reach|run|take|own)\b)/i).map((x) => x.trim().replace(/[.!?]+$/, "")).filter((x) => x.length > 4).slice(0, 4).map((x) => ({ text: x.charAt(0).toUpperCase() + x.slice(1), measure: "", by: "" }));
       return { ok: true, answers, goals, demo: true };
     }
