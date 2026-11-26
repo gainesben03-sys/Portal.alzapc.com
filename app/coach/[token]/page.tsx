@@ -22,8 +22,8 @@ const STEPS: Step[] = [
 ];
 
 const T = {
-  en: { title: `${WHO.first}'s 90-day review`, sub: "Talk it through. I'll turn it into a draft.", tap: "Tap to talk", stop: "Done talking", type: "Or type here", next: "Next", skip: "Skip", read: "Read questions aloud", draft: "Here's your draft", draftSub: "In your words, cleaned up. Change anything before you use it.", use: "Use this draft", redo: "Start over", s: "Strengths", f: "Areas to focus on", sp: "Support", g: "Goals for the next 90 days", e: "Manager's note", flag: "Keep the review about work. Leave out anything about health, leave, family or personal life.", none: "Nothing yet", used: "In the real version this fills in the review form. You can still edit every word.", mock: "Mockup with sample data", hint: "No ratings or scores here. You'll set those yourself on the form.", more: "Can you say a bit more? A sentence or two is plenty.", ok: "No problem.", fit: "Got it, I added that under how you'll support Jordan. What's the goal for Jordan? Something Jordan will do or reach by the end of the 90 days.", last: "No pressure. Anything at all, even a rough thought, helps. Or tap Skip and come back to it.", later: "Let's leave that one for you to fill in later.", gap: "Needs your input", gaps: (n: number) => `${n} ${n === 1 ? "section needs" : "sections need"} your input before this goes to HR.` },
-  es: { title: `Evaluación de 90 días de ${WHO.first}`, sub: "Cuéntamelo y lo convierto en un borrador.", tap: "Toca para hablar", stop: "Terminé", type: "O escribe aquí", next: "Siguiente", skip: "Omitir", read: "Leer las preguntas en voz alta", draft: "Tu borrador", draftSub: "Con tus palabras, ordenadas. Cambia lo que quieras antes de usarlo.", use: "Usar este borrador", redo: "Empezar de nuevo", s: "Fortalezas", f: "Áreas de enfoque", sp: "Apoyo", g: "Metas para los próximos 90 días", e: "Nota del gerente", flag: "Mantén la evaluación sobre el trabajo. No incluyas salud, permisos, familia ni vida personal.", none: "Nada todavía", used: "En la versión real esto llena el formulario. Puedes editar cada palabra.", mock: "Maqueta con datos de ejemplo", hint: "Aquí no hay calificaciones. Esas las pones tú en el formulario.", more: "¿Puedes decir un poco más? Una o dos frases bastan.", ok: "No pasa nada.", fit: "Entendido, lo agregué en cómo apoyarás a Jordan. ¿Cuál es la meta para Jordan? Algo que logre al final de los 90 días.", last: "Sin presión. Cualquier idea, aunque sea general, ayuda. O toca Omitir y vuelve después.", later: "Dejemos esa para que la completes después.", gap: "Falta tu respuesta", gaps: (n: number) => `${n} ${n === 1 ? "sección necesita" : "secciones necesitan"} tu respuesta antes de enviarla a RR. HH.` },
+  en: { title: `${WHO.first}'s 90-day review`, sub: "Talk it through. I'll turn it into a draft.", tap: "Tap to talk", stop: "Done, send it", type: "Or type here", next: "Next", skip: "Skip", read: "Read questions aloud", draft: "Here's your draft", draftSub: "In your words, cleaned up. Change anything before you use it.", use: "Use this draft", redo: "Start over", s: "Strengths", f: "Areas to focus on", sp: "Support", g: "Goals for the next 90 days", e: "Manager's note", flag: "Keep the review about work. Leave out anything about health, leave, family or personal life.", none: "Nothing yet", used: "In the real version this fills in the review form. You can still edit every word.", mock: "Mockup with sample data", hint: "No ratings or scores here. You'll set those yourself on the form.", more: "Can you say a bit more? A sentence or two is plenty.", ok: "No problem.", fit: "Got it, I added that under how you'll support Jordan. What's the goal for Jordan? Something Jordan will do or reach by the end of the 90 days.", last: "No pressure. Anything at all, even a rough thought, helps. Or tap Skip and come back to it.", later: "Let's leave that one for you to fill in later.", gap: "Needs your input", gaps: (n: number) => `${n} ${n === 1 ? "section needs" : "sections need"} your input before this goes to HR.` },
+  es: { title: `Evaluación de 90 días de ${WHO.first}`, sub: "Cuéntamelo y lo convierto en un borrador.", tap: "Toca para hablar", stop: "Listo, enviar", type: "O escribe aquí", next: "Siguiente", skip: "Omitir", read: "Leer las preguntas en voz alta", draft: "Tu borrador", draftSub: "Con tus palabras, ordenadas. Cambia lo que quieras antes de usarlo.", use: "Usar este borrador", redo: "Empezar de nuevo", s: "Fortalezas", f: "Áreas de enfoque", sp: "Apoyo", g: "Metas para los próximos 90 días", e: "Nota del gerente", flag: "Mantén la evaluación sobre el trabajo. No incluyas salud, permisos, familia ni vida personal.", none: "Nada todavía", used: "En la versión real esto llena el formulario. Puedes editar cada palabra.", mock: "Maqueta con datos de ejemplo", hint: "Aquí no hay calificaciones. Esas las pones tú en el formulario.", more: "¿Puedes decir un poco más? Una o dos frases bastan.", ok: "No pasa nada.", fit: "Entendido, lo agregué en cómo apoyarás a Jordan. ¿Cuál es la meta para Jordan? Algo que logre al final de los 90 días.", last: "Sin presión. Cualquier idea, aunque sea general, ayuda. O toca Omitir y vuelve después.", later: "Dejemos esa para que la completes después.", gap: "Falta tu respuesta", gaps: (n: number) => `${n} ${n === 1 ? "sección necesita" : "secciones necesitan"} tu respuesta antes de enviarla a RR. HH.` },
 };
 
 const SENSITIVE = /\b(pregnan\w*|medical|doctor|surgery|sick|illness|disab\w*|leave of absence|maternity|paternity|religio\w*|church|age|too old|young|kids|childcare|divorce|accent|embaraz\w*|médic\w*|enferm\w*|discapacidad|religi\w*|edad|hijos)\b/i;
@@ -63,7 +63,7 @@ export default function Coach() {
   const end = useRef<HTMLDivElement>(null);
 
   const say = (text: string) => {
-    if (!aloud || typeof window === "undefined" || !window.speechSynthesis) return;
+    if (!aloud || talk.on || typeof window === "undefined" || !window.speechSynthesis) return;
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = lang === "es" ? "es-US" : "en-US";
@@ -75,10 +75,10 @@ export default function Coach() {
 
   const ask = (text: string) => { setMsgs((m) => [...m, { from: "coach", text }]); say(text); };
 
-  const send = (skip = false) => {
-    if (talk.on) talk.stop();
-    const said = skip ? "" : talk.text.trim();
-    talk.setText("");
+  const send = async (skip = false) => {
+    const said = skip ? "" : (talk.on ? await talk.finish() : talk.text).trim();
+    talk.clear();
+    if (!skip && !said) return ask(lang === "es" ? "No te escuché. Intenta otra vez o escríbelo." : "Didn't catch that. Try again, or type it.");
     const step = STEPS[i];
     // not an answer: nudge with an easier version of the question, up to twice, then leave it for the manager
     if (said && (nonAnswer(said) || unclear(said)) && step.id !== "else") {
@@ -181,7 +181,7 @@ export default function Coach() {
       {!done && (
         <footer className="rc-bar">
           {talk.supported && (
-            <button className={`rc-mic ${talk.on ? "on" : ""}`} onClick={() => (talk.on ? talk.stop() : talk.start())} aria-label={talk.on ? L.stop : L.tap}>
+            <button className={`rc-mic ${talk.on ? "on" : ""}`} onClick={() => (talk.on ? send() : talk.start())} aria-label={talk.on ? L.stop : L.tap}>
               <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
               <span>{talk.on ? L.stop : L.tap}</span>
             </button>
@@ -191,7 +191,7 @@ export default function Coach() {
             <label className="rc-aloud"><input type="checkbox" checked={aloud} onChange={(e) => setAloud(e.target.checked)} /> {L.read}</label>
             <span className="grow" />
             <button className="btn" onClick={() => send(true)}>{L.skip}</button>
-            <button className="btn primary" disabled={!talk.text.trim()} onClick={() => send()}>{L.next}</button>
+            <button className="btn primary" disabled={!talk.text.trim() && !talk.on} onClick={() => send()}>{L.next}</button>
           </div>
         </footer>
       )}

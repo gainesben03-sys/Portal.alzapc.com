@@ -161,26 +161,33 @@ export const settingsOf = (x?: Partial<PerformSettings>) => performFor(x);
 type Rec = { start: () => void; stop: () => void; abort: () => void; lang: string; continuous: boolean; interimResults: boolean; onresult: ((e: { resultIndex: number; results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }> }) => void) | null; onend: (() => void) | null; onerror: ((e: { error: string }) => void) | null };
 const recognizer = (): (new () => Rec) | null => (typeof window === "undefined" ? null : ((window as unknown as { SpeechRecognition?: new () => Rec; webkitSpeechRecognition?: new () => Rec }).SpeechRecognition ?? (window as unknown as { webkitSpeechRecognition?: new () => Rec }).webkitSpeechRecognition ?? null));
 
-/** Live speech-to-text. Returns the running transcript; nothing is recorded or stored. */
+/** Live speech-to-text. Returns the running transcript; nothing is recorded or stored.
+ *  Phones end a listening session on their own after a pause (iPhone especially), so while the person
+ *  still has the mic on we quietly start a new session and keep what was already heard. */
 export function useTalk(lang: Lang) {
   const [on, setOn] = useState(false);
-  const [text, setText] = useState("");
+  const [text, setTextState] = useState("");
   const [err, setErr] = useState("");
   const rec = useRef<Rec | null>(null);
-  const base = useRef("");
+  const base = useRef(""); // text from earlier sessions (and anything typed)
+  const latest = useRef(""); // always the newest text, for reading right after stopping
+  const want = useRef(false); // the person still wants the mic on
+  const session = useRef(0); // results from an older session are ignored
+  const restarts = useRef(0);
   const [supported, setSupported] = useState(false); // known only in the browser
   useEffect(() => setSupported(!!recognizer()), []);
-  const start = (keep = true) => {
+  const setText = (t: string) => { latest.current = t; setTextState(t); };
+
+  const open = (): boolean => {
     const R = recognizer();
-    if (!R) return setErr("unsupported");
-    setErr("");
-    base.current = keep ? text.trim() : "";
-    if (!keep) setText("");
+    if (!R) return false;
+    const id = ++session.current;
     const r = new R();
     r.lang = lang === "es" ? "es-US" : "en-US";
     r.continuous = true;
     r.interimResults = true;
     r.onresult = (e) => {
+      if (id !== session.current) return;
       let finalT = "", interim = "";
       for (let i = 0; i < e.results.length; i++) {
         const res = e.results[i];
@@ -189,17 +196,56 @@ export function useTalk(lang: Lang) {
       }
       setText(`${base.current ? base.current + " " : ""}${finalT}${interim}`.replace(/\s+/g, " ").trim());
     };
-    r.onerror = (e) => setErr(e.error === "not-allowed" ? "denied" : e.error);
-    r.onend = () => setOn(false);
+    r.onerror = (e) => {
+      if (id !== session.current) return;
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") { want.current = false; setErr("denied"); }
+      else if (e.error !== "no-speech" && e.error !== "aborted") setErr(e.error);
+    };
+    r.onend = () => {
+      if (id !== session.current) return;
+      if (want.current && restarts.current < 30) {
+        restarts.current++;
+        base.current = latest.current.trim();
+        setTimeout(() => { if (want.current && id === session.current && !open()) { want.current = false; setOn(false); } }, 120);
+      } else {
+        want.current = false;
+        setOn(false);
+      }
+    };
     rec.current = r;
     try {
       r.start();
-      setOn(true);
+      return true;
     } catch {
-      setErr("start");
+      return false;
     }
   };
-  const stop = () => { rec.current?.stop(); setOn(false); };
-  useEffect(() => () => rec.current?.abort(), []);
-  return { on, text, setText, err, supported, start, stop };
+
+  const start = (keep = true) => {
+    if (!recognizer()) return setErr("unsupported");
+    if (typeof window !== "undefined") window.speechSynthesis?.cancel(); // don't listen to ourselves
+    setErr("");
+    base.current = keep ? latest.current.trim() : "";
+    if (!keep) setText("");
+    want.current = true;
+    restarts.current = 0;
+    if (open()) setOn(true);
+    else { want.current = false; setErr("start"); }
+  };
+  const stop = () => { want.current = false; rec.current?.stop(); setOn(false); };
+  /** Stop and give back everything heard, waiting a moment for the last words to come in. */
+  const finish = async (): Promise<string> => {
+    if (want.current || on) {
+      want.current = false;
+      rec.current?.stop();
+      await new Promise((res) => setTimeout(res, 600));
+      session.current++;
+      setOn(false);
+    }
+    return latest.current.trim();
+  };
+  /** Empty the box and drop anything still arriving from the last session. */
+  const clear = () => { session.current++; want.current = false; try { rec.current?.abort(); } catch {} base.current = ""; setText(""); setOn(false); };
+  useEffect(() => () => { want.current = false; rec.current?.abort(); }, []);
+  return { on, text, setText, err, supported, start, stop, finish, clear };
 }
