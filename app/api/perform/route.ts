@@ -20,7 +20,7 @@ import {
   PIP_TEMPLATE, PipIssue, Review, stageOf, templateById, first,
 } from "@/lib/perform";
 import { trSrc } from "@/lib/perform";
-import { allReviews, canEdit, canOpen, ensureManagerAccess, getReview, suggestGoals, launchEmail, loadCtx, log, managerEmail, nudgeEmail, polish, putReview, roleOf, roster, send, sendSelf, shareEmail, sortTalk, sync, translate } from "@/lib/performserver";
+import { coachDraft, coachTurn, allReviews, canEdit, canOpen, ensureManagerAccess, getReview, suggestGoals, launchEmail, loadCtx, log, managerEmail, nudgeEmail, polish, putReview, roleOf, roster, send, sendSelf, shareEmail, sortTalk, sync, translate } from "@/lib/performserver";
 import { admin, caller, SERVER_LIVE } from "@/lib/server";
 import type { TeamLog } from "@/lib/team";
 
@@ -230,12 +230,15 @@ export async function POST(req: Request) {
 
   if (action === "ai") {
     if (!x.s.ai) return json({ ok: false, reason: "off" }, 403);
-    if (!role.ben && !(await underLimit(db, role.email, "perform"))) return json({ ok: false, reason: "limit" }, 429);
     const op = String(b.op ?? "");
+    const kind = op === "coach" ? "coach" : "perform";
+    if (!role.ben && !(await underLimit(db, role.email, kind))) return json({ ok: false, reason: "limit" }, 429);
     const lang: Lang = b.lang === "es" ? "es" : b.lang === "en" ? "en" : r.lang;
     const asks = r.template.ask.map((q) => ({ id: q.id, q: q.name.en }));
     let out: object;
     if (op === "polish") out = await polish({ firstName: first(r.name), asks, answers: (b.answers as Record<string, string>) ?? r.answers, tone: String(b.tone ?? ""), voice: String(b.voice ?? ""), lang });
+    else if (op === "coach") out = await coachTurn({ firstName: first(r.name), lang, asks: [...asks, { id: "__goals", q: "Goals for the next period" }], current: s(b.current, 24), said: s(b.said, 2000), sofar: s(b.sofar, 1500), attempt: Number(b.attempt) || 1, followed: b.followed === true });
+    else if (op === "coachDraft") out = await coachDraft({ firstName: first(r.name), lang, asks, said: Object.fromEntries(Object.entries((b.said as Record<string, string>) ?? {}).slice(0, 12).map(([k, v]) => [k, s(v, 3000)])), goals: s(b.goals, 2000) });
     else if (op === "sort") out = await sortTalk({ firstName: first(r.name), asks, transcript: s(b.transcript, 8000), lang });
     else if (op === "translate") out = await translate(Object.fromEntries(Object.entries((b.fields as Record<string, string>) ?? {}).slice(0, 40).map(([k, v]) => [k, s(v, 3000)])), b.to === "es" ? "es" : "en");
     else if (op === "goals") {
@@ -247,7 +250,7 @@ export async function POST(req: Request) {
       out = await suggestGoals({ firstName: first(r.name), feedback: feedback.map((f) => ({ q: f.q, a: s(f.a, 2000) })), lowAreas: low, prevGoals: (prev?.goals ?? []).map((g) => g.text).filter(Boolean), lang });
     }
     else return json({ ok: false, reason: "bad_request" }, 400);
-    await logUsage(db, { email: role.email, clientId, kind: "perform", ref: r.id, meta: { op } });
+    await logUsage(db, { email: role.email, clientId, kind, ref: r.id, meta: { op } });
     return json(out);
   }
 

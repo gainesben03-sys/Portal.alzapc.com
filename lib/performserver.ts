@@ -191,6 +191,61 @@ export async function sortTalk(o: { firstName: string; asks: { id: string; q: st
   return { ok: true as const, answers, vague: (j.vague ?? []).filter((v) => typeof v === "string").slice(0, 3).map((v) => clip(v, 120)) };
 }
 
+// ---------- review coach: one question at a time, by voice or typing ----------
+export type CoachKind = "good" | "thin" | "none" | "unclear" | "elsewhere" | "sensitive";
+
+/** Reads the manager's latest answer and decides the next line of the conversation. Never writes the review. */
+export async function coachTurn(o: { firstName: string; lang: Lang; asks: { id: string; q: string }[]; current: string; said: string; sofar: string; attempt: number; followed: boolean }) {
+  const said = clip(o.said, 2000);
+  if (!said) return { ok: false as const, reason: "empty" };
+  const cur = o.asks.find((a) => a.id === o.current);
+  if (!cur) return { ok: false as const, reason: "bad_request" };
+  const r = await claude({
+    system: `You coach a manager through writing a review for ${o.firstName}, one question at a time, like a friendly HR partner. You only decide the next line of the conversation. Hard rules:
+- Never rate, score or rank ${o.firstName}. Never suggest pay, promotion, discipline or termination.
+- Never use em dashes. Plain, warm, short: at most 2 sentences, under 40 words. Write in ${LANG_NAME[o.lang]}.
+- Use the name ${o.firstName}, not he or she.
+Classify the manager's latest reply to the current question:
+- "sensitive": it mentions health, medical issues, injury, leave, pregnancy, disability, age, family or caregiving, religion, national origin, race, accent, or anything protected or personal. Reply by asking them to keep the review about work and what they see on the job, then re-ask the question in a simpler way.
+- "none": not an answer ("idk", "not sure", "nothing", "n/a", "pass"). attempt 1: re-ask as an easier, concrete question (for example "Think about the last few weeks..."). attempt 2 or more: tell them it's fine to leave it for now and they can tap Skip.
+- "unclear": too short to use, gibberish, or not about ${o.firstName}'s work. Ask for a bit more, gently.
+- "elsewhere": a real answer, but it clearly answers a different question in the list better than the current one. Give that question's id in "fileUnder". Reply: say you'll put it there, then re-ask the current question briefly.
+- "thin": a real answer to the current question that is vague (no example, no specifics, or no "what good looks like" for a concern) AND followed is false. Reply with ONE short follow-up asking for an example or specifics.
+- "good": a real answer to the current question. Reply with a 2 to 6 word acknowledgement only (for example "Got it." or "That's helpful.").
+Reply with JSON only: {"kind":"...","fileUnder":"<question id or empty>","reply":"..."}`,
+    maxTokens: 300,
+    messages: [{ role: "user", content: `Questions: ${JSON.stringify(o.asks)}\nCurrent question id: ${cur.id} ("${cur.q}")\nWhat they've already said for it: """${clip(o.sofar, 1500)}"""\nattempt: ${o.attempt}\nfollowed: ${o.followed}\nLatest reply: """${said}"""` }],
+  });
+  if (!r.ok) return { ok: false as const, reason: r.reason };
+  const j = parseJson<{ kind?: string; fileUnder?: string; reply?: string }>(r.text);
+  const kinds: CoachKind[] = ["good", "thin", "none", "unclear", "elsewhere", "sensitive"];
+  if (!j?.kind || !kinds.includes(j.kind as CoachKind)) return { ok: false as const, reason: "parse" };
+  let kind = j.kind as CoachKind;
+  const fileUnder = kind === "elsewhere" && o.asks.some((a) => a.id === j.fileUnder && a.id !== cur.id) ? String(j.fileUnder) : "";
+  if (kind === "elsewhere" && !fileUnder) kind = "good";
+  if (kind === "thin" && o.followed) kind = "good";
+  return { ok: true as const, kind, fileUnder, reply: clip(String(j.reply ?? ""), 300).replace(/—/g, ", ") };
+}
+
+/** What the manager said, per question, turned into clear written sentences in their own words. Goals come out as a list. */
+export async function coachDraft(o: { firstName: string; lang: Lang; asks: { id: string; q: string }[]; said: Record<string, string>; goals: string }) {
+  const said = Object.fromEntries(o.asks.map((a) => [a.id, clip(o.said[a.id] ?? "", 3000)]).filter(([, v]) => v));
+  const goals = clip(o.goals, 2000);
+  if (!Object.keys(said).length && !goals) return { ok: false as const, reason: "empty" };
+  const r = await claude({
+    system: RULES,
+    maxTokens: 2000,
+    messages: [{ role: "user", content: `Employee first name: ${o.firstName}\nThe manager answered these questions out loud. For each, turn what they said into clear written notes in ${LANG_NAME[o.lang]}, in the manager's own voice: fix grammar, drop filler words and repeats, keep every point and its strength, add nothing. 1 to 4 sentences each. Leave out any question they didn't answer.\nQuestions: ${JSON.stringify(o.asks)}\nWhat they said: ${JSON.stringify(said)}\nGoals they said: """${goals}"""\nTurn the goals into up to 4 separate goals. "measure" and "by" only if they said them, else "".\nReturn {"answers": {"<id>": "<text>"}, "goals": [{"text": "", "measure": "", "by": ""}]}` }],
+  });
+  if (!r.ok) return { ok: false as const, reason: r.reason };
+  const j = parseJson<{ answers?: Record<string, string>; goals?: { text?: string; measure?: string; by?: string }[] }>(r.text);
+  if (!j) return { ok: false as const, reason: "parse" };
+  const answers: Record<string, string> = {};
+  for (const a of o.asks) if (typeof j.answers?.[a.id] === "string" && j.answers[a.id].trim()) answers[a.id] = clip(j.answers[a.id], 2500).replace(/—/g, ", ");
+  const g = (j.goals ?? []).filter((x) => x?.text?.trim()).slice(0, 4).map((x) => ({ text: clip(String(x.text), 200).replace(/—/g, ", "), measure: clip(String(x.measure ?? ""), 200), by: clip(String(x.by ?? ""), 60) }));
+  return { ok: true as const, answers, goals: g };
+}
+
 /** Straight translation, nothing added or softened. */
 export async function translate(fields: Record<string, string>, to: Lang) {
   const items = Object.fromEntries(Object.entries(fields).filter(([, v]) => v && v.trim()).map(([k, v]) => [k, clip(v, 3000)]));

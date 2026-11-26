@@ -464,11 +464,26 @@ function Words({ r, s, lang, onPatch, call, toast }: { r: Review; s: PerformSett
       <h2 className="pf-h">{t.wordsH}</h2>
       <p className="muted pf-p">{t.wordsP}</p>
       {s.talk && !talking && (
-        <button className="pf-talk-cta pf-phone-only" onClick={() => setTalking(true)}>
-          <MicIcon /> <span><b>{lang === "es" ? "¿Prefiere hablar?" : "Rather talk?"}</b> {t.talk}</span>
+        <button className="pf-talk-cta" onClick={() => setTalking(true)}>
+          <MicIcon /> <span><b>{lang === "es" ? "¿Prefiere hablar?" : "Rather talk?"}</b> {lang === "es" ? `Responda unas preguntas en voz alta y armamos el borrador.` : `Answer a few questions out loud and we'll build the draft.`}</span>
         </button>
       )}
-      {talking && <Talk r={r} lang={lang} call={call} toast={toast} onCancel={() => setTalking(false)} onSorted={(answers, v) => { onPatch({ answers: { ...r.answers, ...Object.fromEntries(Object.entries(answers).filter(([, x]) => x)) } }); setVague(v); setTalking(false); }} />}
+      {talking && (
+        <Coach r={r} lang={lang} call={call} toast={toast} onCancel={() => setTalking(false)}
+          onDone={(answers, goals) => {
+            const merged = { ...r.answers };
+            for (const [k, v] of Object.entries(answers)) if (v.trim()) merged[k] = r.answers[k]?.trim() ? `${r.answers[k].trim()}\n\n${v.trim()}` : v.trim();
+            let gs = r.goals;
+            for (const g of goals.filter((x) => x.text.trim())) {
+              const goal = { id: newId(), text: g.text, measure: g.measure, by: g.by, status: "not_started" as const };
+              const blank = gs.findIndex((x) => !x.text.trim());
+              gs = blank >= 0 ? gs.map((x, j) => (j === blank ? { ...goal, id: x.id } : x)) : [...gs, goal].slice(0, 6);
+            }
+            onPatch({ answers: merged, goals: gs });
+            setTalking(false);
+            toast(lang === "es" ? "Listo. Revise y edite lo que quiera." : "Done. Read it over and change anything you like.");
+          }} />
+      )}
       {!talking && s.ai && Object.values(r.answers).some((v) => v?.trim()) && (
         <div className="pf-viewas">
           <span className="tiny muted">{lang === "es" ? "Ver mis notas en" : "View my notes in"}</span>
@@ -525,42 +540,160 @@ const MicIcon = ({ size = 22 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4" /></svg>
 );
 
-function Talk({ r, lang, call, toast, onCancel, onSorted }: { r: Review; lang: Lang; call: Call; toast: (m: string) => void; onCancel: () => void; onSorted: (a: Record<string, string>, vague: string[]) => void }) {
-  const t = T[lang];
+// ---------- the review coach: one question at a time, by voice or typing ----------
+type CoachMsg = { from: "coach" | "me"; text: string; flag?: boolean; hint?: string };
+const COACH = {
+  en: { sub: "I'll ask a few questions. Talk or type, and I'll turn it into a draft you can edit.", tap: "Tap to talk", stop: "Done talking", type: "Or type here", next: "Send", skip: "Skip", read: "Read questions aloud", thinking: "Thinking…", writing: "Writing your draft…", draft: "Here's your draft", draftSub: "Your words, cleaned up. Change anything, then use it.", use: "Use this draft", back: "Back to the form", gap: "Needs your input", gaps: (n: number) => `${n} ${n === 1 ? "section needs" : "sections need"} your input.`, later: "Let's leave that one for you to fill in later.", goals: "Goals", goalsQ: (f: string) => `Last one. What goals do you have for ${f} before the next review?`, start: "Let's start.", noRate: "No ratings here. You set those yourself on the form.", fail: "Couldn't reach the coach. I kept your answer.", none: "Nothing for this one" },
+  es: { sub: "Le haré unas preguntas. Hable o escriba, y lo convierto en un borrador que puede editar.", tap: "Toque para hablar", stop: "Terminé", type: "O escriba aquí", next: "Enviar", skip: "Omitir", read: "Leer las preguntas en voz alta", thinking: "Pensando…", writing: "Escribiendo su borrador…", draft: "Su borrador", draftSub: "Sus palabras, ordenadas. Cambie lo que quiera y úselo.", use: "Usar este borrador", back: "Volver al formulario", gap: "Falta su respuesta", gaps: (n: number) => `${n} ${n === 1 ? "sección necesita" : "secciones necesitan"} su respuesta.`, later: "Dejemos esa para que la complete después.", goals: "Metas", goalsQ: (f: string) => `La última. ¿Qué metas tiene para ${f} antes de la próxima evaluación?`, start: "Empecemos.", noRate: "Aquí no hay calificaciones. Esas las pone usted en el formulario.", fail: "No se pudo conectar con el asistente. Guardé su respuesta.", none: "Nada en esta" },
+};
+
+function Coach({ r, lang, call, toast, onCancel, onDone }: { r: Review; lang: Lang; call: Call; toast: (m: string) => void; onCancel: () => void; onDone: (answers: Record<string, string>, goals: { text: string; measure: string; by: string }[]) => void }) {
+  const C = COACH[lang];
+  const f = first(r.name);
   const talk = useTalk(lang);
-  const [phase, setPhase] = useState<"ready" | "heard">("ready");
-  const [busy, setBusy] = useState(false);
-  useEffect(() => { if (!talk.on && talk.text && phase === "ready") setPhase("heard"); }, [talk.on]); // eslint-disable-line react-hooks/exhaustive-deps
-  const sort = async () => {
-    setBusy(true);
-    const x = await call({ action: "ai", id: r.id, op: "sort", transcript: talk.text, lang });
-    setBusy(false);
-    if (!x.ok) return toast(lang === "es" ? "No se pudo ordenar. Intente otra vez." : "Couldn't sort it right now. Try again.");
-    onSorted(x.answers, x.vague ?? []);
+  const question = (p: Review["template"]["ask"][number]) => {
+    const n = p.name[lang].replace(/\bthey\b/g, f).replace(/\bthem\b/g, f).replace(/\bles?\b(?= va)/g, `a ${f} le`);
+    return /[?¿]/.test(n) ? n : lang === "es" ? `¿Qué diría sobre ${n.toLowerCase()} de ${f}?` : `What would you say about ${f}'s ${n.charAt(0).toLowerCase() + n.slice(1)}?`;
   };
+  const steps = [...r.template.ask.map((p) => ({ id: p.id, label: p.name[lang], q: question(p), hint: p.desc?.[lang] })), { id: "__goals", label: C.goals, q: C.goalsQ(f), hint: undefined as string | undefined }];
+  const [i, setI] = useState(0);
+  const [msgs, setMsgs] = useState<CoachMsg[]>([{ from: "coach", text: `${C.start} ${steps[0].q}`, hint: steps[0].hint }]);
+  const [said, setSaid] = useState<Record<string, string>>({});
+  const [tries, setTries] = useState<Record<string, number>>({});
+  const [followed, setFollowed] = useState(false);
+  const [gaps, setGaps] = useState<string[]>([]);
+  const [busy, setBusy] = useState<"" | "turn" | "draft">("");
+  const [aloud, setAloud] = useState(false);
+  const [draft, setDraft] = useState<{ answers: Record<string, string>; goals: { text: string; measure: string; by: string }[] } | null>(null);
+  const end = useRef<HTMLDivElement>(null);
+  useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [msgs, draft, busy]);
+
+  const speak = (text: string) => {
+    if (!aloud || typeof window === "undefined" || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang === "es" ? "es-US" : "en-US";
+    window.speechSynthesis.speak(u);
+  };
+  const coachSays = (text: string, extra: Partial<CoachMsg> = {}) => { setMsgs((m) => [...m, { from: "coach", text, ...extra }]); speak(text); };
+
+  const finish = async (all: Record<string, string>) => {
+    setBusy("draft");
+    const { __goals, ...rest } = all;
+    const x = await call({ action: "ai", id: r.id, op: "coachDraft", said: rest, goals: __goals ?? "", lang });
+    setBusy("");
+    if (!x.ok) {
+      toast(C.fail);
+      return setDraft({ answers: rest, goals: (__goals ?? "").trim() ? [{ text: __goals.trim(), measure: "", by: "" }] : [] });
+    }
+    setDraft({ answers: x.answers ?? {}, goals: x.goals ?? [] });
+  };
+
+  const advance = (all: Record<string, string>, lead = "") => {
+    setFollowed(false);
+    if (i + 1 < steps.length) {
+      setI(i + 1);
+      coachSays(`${lead ? lead + " " : ""}${steps[i + 1].q}`);
+      setMsgs((m) => m.map((x, k) => (k === m.length - 1 ? { ...x, hint: steps[i + 1].hint } : x)));
+    } else {
+      if (lead) coachSays(lead);
+      finish(all);
+    }
+  };
+
+  const gapOut = (id: string, all: Record<string, string>) => { if (!all[id]?.trim()) setGaps((g) => [...new Set([...g, id])]); };
+
+  const send = async () => {
+    if (talk.on) talk.stop();
+    const text = talk.text.trim();
+    if (!text || busy) return;
+    talk.setText("");
+    const step = steps[i];
+    setMsgs((m) => [...m, { from: "me", text }]);
+    const attempt = (tries[step.id] ?? 0) + 1;
+    setBusy("turn");
+    const x = await call({ action: "ai", id: r.id, op: "coach", current: step.id, said: text, sofar: said[step.id] ?? "", attempt, followed, lang });
+    setBusy("");
+    const add = (id: string) => { const prev = said[id]?.trim() ?? ""; const all = { ...said, [id]: `${prev ? (/[.!?]$/.test(prev) ? prev : prev + ".") + " " : ""}${text}` }; setSaid(all); setGaps((g) => g.filter((z) => z !== id)); return all; };
+    if (!x.ok) { toast(C.fail); return advance(add(step.id)); }
+    const reply = String(x.reply ?? "");
+    switch (x.kind) {
+      case "good": return advance(add(step.id), reply);
+      case "thin": add(step.id); setFollowed(true); return coachSays(reply);
+      case "elsewhere": { const id = steps.some((z) => z.id === x.fileUnder) ? String(x.fileUnder) : step.id; const all = add(id); return id === step.id ? advance(all, reply) : coachSays(reply); }
+      case "sensitive": return coachSays(reply, { flag: true });
+      default: { // none / unclear
+        setTries((t) => ({ ...t, [step.id]: attempt }));
+        if (said[step.id]?.trim()) return advance(said, lang === "es" ? "No pasa nada." : "No problem.");
+        if (attempt >= 3) { gapOut(step.id, said); return advance(said, C.later); }
+        return coachSays(reply);
+      }
+    }
+  };
+
+  const skip = () => { if (talk.on) talk.stop(); talk.setText(""); gapOut(steps[i].id, said); advance(said); };
+
+  if (draft) {
+    const open = r.template.ask.filter((p) => !draft.answers[p.id]?.trim()).length + (draft.goals.length ? 0 : 1);
+    return (
+      <section className="card rc-draft pf-coach">
+        <h2>{C.draft}</h2>
+        <p className="small muted">{C.draftSub}</p>
+        {r.template.ask.map((p) => (
+          <label key={p.id} className="rc-sec">
+            <h3>{p.name[lang]}</h3>
+            <textarea className={`f ${draft.answers[p.id]?.trim() ? "" : "rc-gap"}`} rows={3} value={draft.answers[p.id] ?? ""} placeholder={gaps.includes(p.id) ? C.gap : C.none} onChange={(e) => setDraft({ ...draft, answers: { ...draft.answers, [p.id]: e.target.value } })} />
+          </label>
+        ))}
+        <div className="rc-sec">
+          <h3>{C.goals}</h3>
+          {draft.goals.length === 0 && <p className={gaps.includes("__goals") ? "rc-gap" : "muted small"}>{gaps.includes("__goals") ? C.gap : C.none}</p>}
+          {draft.goals.map((g, k) => (
+            <textarea key={k} className="f" rows={2} style={{ marginBottom: 6 }} value={g.text} aria-label={`${C.goals} ${k + 1}`} onChange={(e) => setDraft({ ...draft, goals: draft.goals.map((x, j) => (j === k ? { ...x, text: e.target.value } : x)) })} />
+          ))}
+        </div>
+        {open > 0 && <p className="rc-gapnote">{C.gaps(open)}</p>}
+        <p className="tiny muted">{C.noRate}</p>
+        <div className="rc-row">
+          <button className="btn primary" onClick={() => onDone(draft.answers, draft.goals)}>{C.use}</button>
+          <button className="btn" onClick={onCancel}>{C.back}</button>
+        </div>
+      </section>
+    );
+  }
+
   return (
-    <section className="card pf-talk">
-      {phase === "ready" && (
-        <>
-          <button className={`pf-mic ${talk.on ? "on" : ""}`} aria-label={talk.on ? t.done : t.talk} onClick={() => (talk.on ? talk.stop() : talk.start())}><MicIcon size={46} /></button>
-          <b className="pf-talk-title" role="status">{talk.on ? t.listening : t.talk}</b>
-          <span className="small muted" style={{ textAlign: "center" }}>{talk.on ? (lang === "es" ? "Toque cuando termine." : "Tap when you're done.") : t.talkP}</span>
-          {talk.text && <p className="pf-transcript">{talk.text}</p>}
-          {talk.on && <button className="btn primary block" onClick={talk.stop}>{t.done}</button>}
-          {(talk.err || !talk.supported) && <p className="small" style={{ color: "var(--red)" }}>{talk.err === "denied" ? (lang === "es" ? "Permita el micrófono para este sitio." : "Allow the microphone for this site.") : t.talkNo}</p>}
-          <span className="tiny muted">{t.talkPrivacy}</span>
-        </>
-      )}
-      {phase === "heard" && (
-        <>
-          <b className="pf-talk-title">{t.heard}</b>
-          <span className="small muted">{t.heardP}</span>
-          <textarea className="f" rows={7} value={talk.text} onChange={(e) => talk.setText(e.target.value)} aria-label={t.heard} />
-          <button className="btn primary block" disabled={busy || !talk.text.trim()} onClick={sort}>{busy ? t.polishing : t.sortIt}</button>
-          <button className="btn block" onClick={() => { setPhase("ready"); talk.start(true); }}>{t.addMore}</button>
-        </>
-      )}
-      <button className="linklike small" onClick={() => { talk.stop(); onCancel(); }}>{t.type}</button>
+    <section className="card pf-coach">
+      <p className="small muted" style={{ marginTop: 0 }}>{C.sub}</p>
+      <div className="rc-progress" aria-hidden="true">{steps.map((z, k) => <i key={z.id} className={k < i ? "done" : k === i ? "on" : ""} />)}</div>
+      <div className="rc-chat" aria-live="polite">
+        {msgs.map((m, k) => (
+          <div key={k} className={`rc-msg ${m.from}${m.flag ? " flag" : ""}`}>
+            {m.text}
+            {m.hint && <span className="tiny muted" style={{ display: "block", marginTop: 4 }}>{m.hint}</span>}
+          </div>
+        ))}
+        {busy && <div className="rc-msg coach muted">{busy === "draft" ? C.writing : C.thinking}</div>}
+        <div ref={end} />
+      </div>
+      {!busy || busy === "turn" ? (
+        <div className="rc-bar">
+          {talk.supported && (
+            <button className={`rc-mic ${talk.on ? "on" : ""}`} onClick={() => (talk.on ? talk.stop() : talk.start())} aria-label={talk.on ? C.stop : C.tap} disabled={!!busy}>
+              <MicIcon size={24} /><span>{talk.on ? C.stop : C.tap}</span>
+            </button>
+          )}
+          {talk.err === "denied" && <p className="small" style={{ color: "var(--red)" }}>{lang === "es" ? "Permita el micrófono para este sitio." : "Allow the microphone for this site."}</p>}
+          <textarea className="rc-input" rows={2} value={talk.text} onChange={(e) => talk.setText(e.target.value)} placeholder={C.type} aria-label={C.type} />
+          <div className="rc-row">
+            <label className="rc-aloud"><input type="checkbox" checked={aloud} onChange={(e) => setAloud(e.target.checked)} /> {C.read}</label>
+            <span className="grow" />
+            <button className="btn" disabled={!!busy} onClick={skip}>{C.skip}</button>
+            <button className="btn primary" disabled={!!busy || !talk.text.trim()} onClick={send}>{C.next}</button>
+          </div>
+          <button className="linklike small" style={{ alignSelf: "flex-start" }} onClick={() => { talk.stop(); onCancel(); }}>{C.back}</button>
+        </div>
+      ) : null}
     </section>
   );
 }

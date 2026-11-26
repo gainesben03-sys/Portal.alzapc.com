@@ -111,6 +111,20 @@ function demoNarrative(id: string, notes: string, fullName: string, voice: strin
   return out.replace(/\.\./g, ".").replace(/\s+/g, " ").trim();
 }
 
+// Demo coach: simple rules. The live People Hub reads each answer with AI the same way.
+const NON = /^(i\s*d(on'?|o not)?\s*k(now)?|idk|dunno|no idea|not sure|unsure|n\/?a|none|nothing|no|nope|pass|skip|\?+|-+|\.+|no s[eé]|ni idea|nada|no estoy segur[oa])[.!?\s]*$/i;
+const SENS = /\b(pregnan\w*|medical|doctor|surgery|sick|illness|disab\w*|maternity|paternity|religio\w*|too old|childcare|divorce|accent|embaraz\w*|enferm\w*|discapacidad|religi\w*)\b/i;
+function demoCoach(said: string, attempt: number, followed: boolean, current: string, lang: "en" | "es", f: string) {
+  const es = lang === "es";
+  const w = said.trim().split(/\s+/).filter(Boolean);
+  if (SENS.test(said)) return { kind: "sensitive", fileUnder: "", reply: es ? `Mantengamos la evaluación sobre el trabajo. ¿Qué ve en el día a día de ${f}?` : `Let's keep the review about the work. What do you see from ${f} day to day on the job?` };
+  if (NON.test(said.trim())) return { kind: "none", fileUnder: "", reply: attempt >= 2 ? (es ? "Sin presión. Puede tocar Omitir y volver después." : "No pressure. You can tap Skip and come back to it.") : es ? `Piense en las últimas semanas. ¿Qué es una cosa concreta que notó de ${f}?` : `Think about the last few weeks. What's one specific thing you noticed about ${f}?` };
+  if (w.length < 4 || !/[aeiouáéíóú]/i.test(said) || /(.)\1{3,}/.test(said)) return { kind: "unclear", fileUnder: "", reply: es ? "¿Puede decir un poco más? Una o dos frases bastan." : "Can you say a bit more? A sentence or two is plenty." };
+  if (current === "__goals" && /^(i will|i'll|i can|yo voy a|le voy a)\b/i.test(said.trim())) return { kind: "elsewhere", fileUnder: "help", reply: es ? `Lo pondré en cómo apoyará a ${f}. ¿Cuál es la meta para ${f}?` : `I'll put that under how you'll support ${f}. What's the goal for ${f}?` };
+  if (!followed && w.length < 12) return { kind: "thin", fileUnder: "", reply: es ? "Bien. ¿Me da un ejemplo rápido?" : "Nice. Can you give me a quick example?" };
+  return { kind: "good", fileUnder: "", reply: es ? "Entendido." : "Got it." };
+}
+
 function demoSort(transcript: string, asks: { id: string }[]) {
   const parts = transcript.split(/(?<=[.!?])\s+|,\s+(?:but|though|and also)\s+/i).map((x) => x.trim()).filter(Boolean);
   const out: Record<string, string[]> = Object.fromEntries(asks.map((a) => [a.id, []]));
@@ -209,6 +223,13 @@ export async function performApi(clientId: string, body: Res, demo?: Demo): Prom
       const written: Record<string, string> = {};
       for (const [k, v] of Object.entries((body.answers ?? r.answers) as Record<string, string>)) if (v?.trim()) written[k] = demoNarrative(k, v, r.name, String(body.voice ?? "you"), String(body.tone ?? ""));
       return { ok: true, written, vague: [], demo: true };
+    }
+    if (body.op === "coach") return { ok: true, ...demoCoach(String(body.said ?? ""), Number(body.attempt) || 1, body.followed === true, String(body.current ?? ""), body.lang === "es" ? "es" : "en", r.name.split(" ")[0]), demo: true };
+    if (body.op === "coachDraft") {
+      const said = (body.said ?? {}) as Record<string, string>;
+      const answers = Object.fromEntries(Object.entries(said).filter(([, v]) => v?.trim()).map(([k, v]) => [k, tidy(v)]));
+      const goals = String(body.goals ?? "").split(/(?<=[.!?])\s+|;\s*|\band\s+(?=(?:lead|get|keep|finish|learn|hit|reach)\b)/i).map((x) => x.trim().replace(/[.!?]+$/, "")).filter((x) => x.length > 4).slice(0, 4).map((x) => ({ text: x.charAt(0).toUpperCase() + x.slice(1), measure: "", by: "" }));
+      return { ok: true, answers, goals, demo: true };
     }
     if (body.op === "sort") return { ok: true, answers: demoSort(String(body.transcript ?? ""), r.template.ask), vague: [], demo: true };
     if (body.op === "translate") return { ok: true, fields: body.fields, demo: true };
