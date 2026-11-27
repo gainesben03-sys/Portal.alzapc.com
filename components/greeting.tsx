@@ -38,9 +38,11 @@ export function Greeting({ clientId, onCustomize }: { clientId: string; onCustom
     const last = Number(get("alza-last-visit") || 0);
     if (last) setAway(Math.floor((d.getTime() - last) / 864e5));
     set("alza-last-visit", String(d.getTime()));
-    setOff(get("alza-line-off") === "1");
+    setOff(get("alza-line-on") !== "1"); // the daily line is off unless someone turns it on
+    const onLine = () => setOff(get("alza-line-on") !== "1");
+    window.addEventListener("alza-line", onLine);
     const t = setInterval(() => setNow(new Date()), 5 * 60e3);
-    return () => clearInterval(t);
+    return () => { clearInterval(t); window.removeEventListener("alza-line", onLine); };
   }, []);
 
   const mePerson = people.find((p) => p.clientId === clientId && email && (p.email ?? "").toLowerCase() === email);
@@ -63,7 +65,7 @@ export function Greeting({ clientId, onCustomize }: { clientId: string; onCustom
     }
     const myRoles = roles.filter((r) => r.clientId === clientId).map((r) => r.id);
     const waiting = candidates.filter((c) => myRoles.includes(c.roleId) && !c.hidden && !c.cleared && !c.decision).length;
-    if (waiting && !DEMO_SITE) out.push({ text: `${waiting} candidate${waiting === 1 ? "" : "s"} waiting on a yes or no`, href: `${base}/recruiting`, tone: "warn" });
+    void waiting; // candidates waiting now sit in "Needs your attention"
     const due = me?.access === "manager" ? 0 : projects.filter((p) => p.clientId === clientId && p.status === "active" && p.milestoneDue >= today && p.milestoneDue <= week).length;
     if (due) out.push({ text: `${due} project milestone${due === 1 ? "" : "s"} this week`, href: `${base}/projects`, tone: "info" });
     return out;
@@ -79,7 +81,11 @@ export function Greeting({ clientId, onCustomize }: { clientId: string; onCustom
           <h1 className={celebrate ? "gr-party" : ""}>{g.headline}</h1>
           <p className="gr-sub">{g.sub}</p>
         </div>
-        {!DEMO_SITE && <button className="btn sm" data-tour="customize" onClick={onCustomize}>Customize</button>}
+        {!DEMO_SITE && (
+          <button className="gr-cust" data-tour="customize" onClick={onCustomize} aria-label="Customize your dashboard" title="Customize">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" /><circle cx="16" cy="7" r="2" /><circle cx="10" cy="17" r="2" /></svg>
+          </button>
+        )}
       </div>
       {chips.length > 0 && (
         <div className="gr-chips">
@@ -88,7 +94,7 @@ export function Greeting({ clientId, onCustomize }: { clientId: string; onCustom
           ))}
         </div>
       )}
-      {!off && !DEMO_SITE && <p className="gr-line"><span aria-hidden="true">&ldquo;</span>{line}<span aria-hidden="true">&rdquo;</span> <button className="gr-x" aria-label="Hide the daily line" title="Hide" onClick={() => { set("alza-line-off", "1"); setOff(true); }}>×</button></p>}
+      {!off && !DEMO_SITE && <p className="gr-line"><span aria-hidden="true">&ldquo;</span>{line}<span aria-hidden="true">&rdquo;</span> <button className="gr-x" aria-label="Hide the daily line" title="Hide" onClick={() => { set("alza-line-on", "0"); setOff(true); }}>×</button></p>}
     </div>
   );
 }

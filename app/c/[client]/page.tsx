@@ -424,6 +424,9 @@ export default function Home() {
         {/* Ask HR lives in Resources; here only when Resources is off */}
         {!DEMO_SITE && !cfg.modules?.resources && !shown.includes("askhr") && <AskBox clientId={client.id} slim />}
 
+        <NeedsAttention clientId={client.id} base={base} overdue={meName ? forMe.filter((a) => ["overdue", "blocker"].includes(urgency(a, rules))) : overdue} isAdvisor={isAdvisor} meName={meName} />
+        {!DEMO_SITE && <Workspace clientId={client.id} base={base} />}
+
         <Dash>
           {shown.map((id) => <div key={id} className={TILES.find((t) => t.id === id)?.wide ? "span2" : ""}>{tiles[id]?.()}</div>)}
         </Dash>
@@ -565,6 +568,10 @@ function CustomizeSheet({ title, note, available, order, onClose, onSave, onRese
           );
         })}
       </div>
+      <label className="row small" style={{ gap: 8, alignItems: "center", marginTop: 12 }}>
+        <input type="checkbox" defaultChecked={(() => { try { return localStorage.getItem("alza-line-on") === "1"; } catch { return false; } })()} onChange={(e) => { try { localStorage.setItem("alza-line-on", e.target.checked ? "1" : "0"); } catch {} window.dispatchEvent(new Event("alza-line")); }} />
+        Show a daily quote under the greeting
+      </label>
       <div className="sheet-actions" style={{ justifyContent: "space-between" }}>
         <button className="btn ghost sm" onClick={onReset}>Reset to default</button>
         <div style={{ display: "flex", gap: 8 }}>
@@ -645,20 +652,22 @@ function ReviewsTile({ clientId }: { clientId: string }) {
   const toWrite = Math.max(0, sum("total") - sum("done") - waiting);
   const soon = d.upcoming.filter((u) => (new Date(u.due + "T12:00").getTime() - Date.now()) / 864e5 <= 30).length;
   const lines: [string, number, string, boolean][] = [
-    ["past due", overdue, base, true],
-    ["being written", Math.max(0, toWrite - overdue), base, false],
-    ["waiting on the employee to sign off", waiting, base, false],
-    ["coming up in the next 30 days", soon, base, false],
-    ...(d.role.admin ? ([[`flagged for an improvement plan`, d.pipFlags.length, base, true]] as [string, number, string, boolean][]) : []),
+    ["Past due", overdue, base, true],
+    ["In progress", Math.max(0, toWrite - overdue), base, false],
+    ["Awaiting employee sign-off", waiting, base, false],
+    ["Due in the next 30 days", soon, base, false],
+    ...(d.role.admin ? ([[`Flagged for an improvement plan`, d.pipFlags.length, base, true]] as [string, number, string, boolean][]) : []),
   ];
   const any = lines.some(([, n]) => n > 0);
   return (
     <Tile title="Reviews" count={overdue || undefined} href={base} linkLabel="Open reviews">
       {!any && <p className="small muted" style={{ margin: 0 }}>Nothing due. Reviews show up here a month before they&apos;re due.</p>}
       {lines.filter(([, n]) => n > 0).map(([label, n, href, bad]) => (
-        <Link key={label} href={href} className="lv-line">
-          <span className="grow"><b>{n}</b> <span className="muted">{label}</span></span>
-          {bad && <span className="pill overdue">{label.startsWith("past") ? "Late" : "Act"}</span>}
+        <Link key={label} href={href} className="st-line">
+          <span className={`st-dot ${bad ? "red" : label.startsWith("Awaiting") ? "amber" : label.startsWith("In progress") ? "blue" : ""}`} aria-hidden="true" />
+          <span className="grow">{label}</span>
+          <b>{n}</b>
+          <span className="st-go" aria-hidden="true">›</span>
         </Link>
       ))}
     </Tile>
@@ -695,5 +704,86 @@ function TrainingTile({ clientId }: { clientId: string }) {
       {!late && !(admin && checking) && !soon && <p className="small muted" style={{ margin: "6px 0 0" }}>Everyone is current. Nothing due soon.</p>}
       {admin && !d.settings.live && <p className="tiny muted" style={{ margin: "6px 0 0" }}>Not launched yet. Nothing has been emailed.</p>}
     </Tile>
+  );
+}
+
+/** The one question the dashboard answers first: what needs me? A short list, each row goes straight to it. */
+function NeedsAttention({ clientId, base, overdue, isAdvisor, meName }: { clientId: string; base: string; overdue: { id: string; title: string }[]; isAdvisor: boolean; meName: string | null }) {
+  const { hires, actions, rules, candidates, roles, me, config } = useStore();
+  const demo = useDemo(clientId);
+  const [rev, setRev] = useState<{ overdue: number; pip: number } | null>(null);
+  const cfg = config[clientId];
+  useEffect(() => {
+    if (!cfg?.modules?.perform || me?.access === "hiring") return;
+    performApi(clientId, { action: "list" }, demo).then((r) => {
+      if (!r.ok) return;
+      const d = r as ListData;
+      setRev({ overdue: d.insight.reduce((n, x) => n + x.overdue, 0), pip: d.role.admin ? d.pipFlags.length : 0 });
+    }).catch(() => undefined);
+  }, [clientId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const who = { advisor: isAdvisor, access: me?.access, name: meName ?? "" };
+  const items: { key: string; text: string; href: string; tone: "red" | "amber" }[] = [];
+  if (overdue.length === 1) items.push({ key: "t", text: `Overdue: ${overdue[0].title}`, href: `${base}/a/${overdue[0].id}`, tone: "red" });
+  else if (overdue.length > 1) items.push({ key: "t", text: `${overdue.length} overdue tasks`, href: `${base}/tasks`, tone: "red" });
+  for (const h of hires.filter((x) => x.clientId === clientId && x.status !== "Started" && canSeeHire(x, who))) {
+    const b = hireBadge(h, hireTasks(h, actions), rules);
+    if (b.tone !== "red") continue;
+    const f = (h.firstName || h.name || "New hire").split(" ")[0];
+    items.push({ key: `h${h.id}`, text: b.label === "Tight for the start date" ? `${f} starts soon, onboarding is behind` : `${f}'s onboarding needs you`, href: `${base}/hires/${h.id}`, tone: "red" });
+  }
+  if (cfg?.modules?.recruiting && me?.access !== "manager") {
+    const mine = roles.filter((r) => r.clientId === clientId).map((r) => r.id);
+    const waiting = candidates.filter((c) => mine.includes(c.roleId) && !c.hidden && !c.cleared && !c.decision).length;
+    if (waiting) items.push({ key: "c", text: `${waiting} candidate${waiting === 1 ? "" : "s"} waiting on a yes or no`, href: `${base}/recruiting`, tone: "amber" });
+  }
+  if (rev?.overdue) items.push({ key: "r", text: `${rev.overdue} review${rev.overdue === 1 ? "" : "s"} past due`, href: `${base}/reviews`, tone: "red" });
+  if (rev?.pip) items.push({ key: "p", text: `${rev.pip} flagged for an improvement plan`, href: `${base}/reviews`, tone: "amber" });
+  const list = [...items.filter((x) => x.tone === "red"), ...items.filter((x) => x.tone === "amber")].slice(0, 5);
+  return (
+    <section className="na" aria-labelledby="na-h">
+      <h2 id="na-h" className="na-h">Needs your attention{list.length > 0 && <span className="na-n">{items.length}</span>}</h2>
+      {list.length === 0 ? (
+        <p className="na-clear">You&apos;re all caught up.</p>
+      ) : (
+        <div className="na-list">
+          {list.map((x) => (
+            <Link key={x.key} href={x.href} className="na-row">
+              <span className={`st-dot ${x.tone}`} aria-hidden="true" />
+              <span className="grow">{x.text}</span>
+              <span className="st-go" aria-hidden="true">›</span>
+            </Link>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** Quick ways into the main areas. Only what this company has turned on. */
+function Workspace({ clientId, base }: { clientId: string; base: string }) {
+  const { config, viewer, me, actions, hires } = useStore();
+  const cfg = config[clientId];
+  const isAdvisor = viewer?.kind === "advisor";
+  const lead = isAdvisor || me?.access === "exec";
+  const m = (k: string) => !!(cfg?.modules as Record<string, boolean> | undefined)?.[k] && canSee(me?.access, k as never);
+  const open = actions.filter((a) => a.clientId === clientId && a.side === "client" && a.status !== "completed").length;
+  const ic = (d: string) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>;
+  const items: { label: string; href: string; meta?: string; icon: ReactNode }[] = [
+    { label: "Action Center", href: `${base}/tasks`, meta: open ? `${open} open` : undefined, icon: ic("M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9") },
+    { label: "Projects", href: `${base}/projects`, icon: ic("M3 7h18M3 12h12M3 17h8") },
+    ...(lead ? [{ label: "People", href: `${base}/roster`, icon: ic("M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8") }] : []),
+    ...(cfg?.modules.perform && me?.access !== "hiring" ? [{ label: "Reviews", href: `${base}/reviews`, icon: ic("M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z") }] : []),
+    ...(m("hires") ? [{ label: "New hires", href: `${base}/hires`, meta: (() => { const n = hires.filter((h) => h.clientId === clientId && h.status !== "Started").length; return n ? `${n} in progress` : undefined; })(), icon: ic("M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M19 8v6M22 11h-6") }] : []),
+    ...(m("recruiting") ? [{ label: "Recruiting", href: `${base}/recruiting`, icon: ic("M21 21l-4.3-4.3M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14") }] : []),
+  ].slice(0, 6);
+  return (
+    <nav className="ws" aria-label="Workspace">
+      {items.map((x) => (
+        <Link key={x.label} href={x.href} className="ws-item">
+          <span className="ws-ic">{x.icon}</span>
+          <span className="ws-t"><b>{x.label}</b>{x.meta && <small>{x.meta}</small>}</span>
+        </Link>
+      ))}
+    </nav>
   );
 }

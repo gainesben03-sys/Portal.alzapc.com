@@ -159,6 +159,8 @@ export interface ClientConfig {
   huddle: HuddleSettings;
   modules: Record<ModuleKey, boolean>;
   accent: string;
+  /** Second brand color for highlights (dots, icons, active tabs). Main color stays on buttons. */
+  accent2?: string;
   logo?: string; // URL or data URL
   logoEmail?: string; // PNG copy of an SVG logo, for email apps
   escalationEmail: string;

@@ -29,7 +29,7 @@ function luminance(hex: string) {
   return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2];
 }
 
-function HexField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function HexField({ value, onChange, preview = true }: { value: string; onChange: (v: string) => void; preview?: boolean }) {
   const [draft, setDraft] = useState(value.toUpperCase());
   const [bad, setBad] = useState(false);
   useEffect(() => setDraft(value.toUpperCase()), [value]);
@@ -57,10 +57,10 @@ function HexField({ value, onChange }: { value: string; onChange: (v: string) =>
           aria-invalid={bad}
         />
         <button className="btn sm" onClick={() => commit(draft)}>Apply</button>
-        <span className="btn sm primary" style={{ pointerEvents: "none" }}>Button preview</span>
+        {preview && <span className="btn sm primary" style={{ pointerEvents: "none" }}>Button preview</span>}
       </div>
       {bad && <p className="tiny" style={{ color: "var(--red)", marginTop: 6 }}>Use a 6-digit HEX like #2B3FF5.</p>}
-      {!bad && contrast < 3 && <p className="tiny" style={{ color: "var(--amber)", marginTop: 6 }}>This color is light, so white button text will be hard to read. A darker shade works better.</p>}
+      {!bad && preview && contrast < 3 && <p className="tiny" style={{ color: "var(--amber)", marginTop: 6 }}>This color is light, so white button text will be hard to read. A darker shade works better.</p>}
     </div>
   );
 }
@@ -294,7 +294,8 @@ export default function ClientSetup() {
               <p className="tiny muted" style={{ margin: "4px 0 0" }}>People Hub emails landing in spam? Ask their IT to allowlist alzapc.com.</p>
             </section>
             <section className="card">
-              <h2 className="set-card-h">Brand color</h2>
+              <h2 className="set-card-h">Brand colors</h2>
+              <p className="small" style={{ margin: "6px 0 0", fontWeight: 600 }}>Main color</p>
               <div className="swatches" style={{ marginTop: 6 }}>
                 {SWATCHES.map((c) => (
                   <button key={c} className={`swatch ${cfg.accent === c ? "on" : ""}`} style={{ background: c }} aria-label={c} onClick={() => set({ accent: c })} />
@@ -303,7 +304,7 @@ export default function ClientSetup() {
               </div>
               <HexField value={cfg.accent} onChange={(v) => set({ accent: v })} />
               <div className="row" style={{ marginTop: 10, alignItems: "center" }}>
-                <p className="tiny muted grow" style={{ margin: 0 }}>Buttons and highlights in their People Hub and emails. Light colors are darkened automatically where they&apos;re used as text.</p>
+                <p className="tiny muted grow" style={{ margin: 0 }}>Buttons, headings and emails. A darker color works best here. Light colors are darkened automatically where they&apos;re used as text.</p>
                 {cfg.logo && (
                   <button
                     className="btn ghost sm"
@@ -317,6 +318,21 @@ export default function ClientSetup() {
                     Match logo
                   </button>
                 )}
+              </div>
+              <p className="small" style={{ margin: "16px 0 0", fontWeight: 600 }}>Accent color</p>
+              <div className="swatches" style={{ marginTop: 6 }}>
+                {["#b8924f", "#c8a46a", "#2b3ff5", "#3b82c4", "#0f766e", "#d9714e", "#7c5cbf", "#c2410c"].map((c) => (
+                  <button key={c} className={`swatch ${(cfg.accent2 ?? "#b8924f") === c ? "on" : ""}`} style={{ background: c }} aria-label={c} onClick={() => set({ accent2: c })} />
+                ))}
+                <input type="color" value={cfg.accent2 ?? "#b8924f"} onChange={(e) => set({ accent2: e.target.value })} aria-label="Custom accent color" style={{ width: 38, height: 34, border: 0, background: "none" }} />
+              </div>
+              <HexField value={cfg.accent2 ?? "#b8924f"} onChange={(v) => set({ accent2: v })} preview={false} />
+              <p className="tiny muted" style={{ margin: "8px 0 0" }}>Highlights: the active tab, status dots, icons and progress. Leave it on gold if you&apos;re not sure.</p>
+              <div className="brand-preview" style={{ ["--accent" as string]: cfg.accent, ["--accent2" as string]: cfg.accent2 ?? "#b8924f" }} aria-hidden="true">
+                <span className="btn primary sm">Next step</span>
+                <span className="ws-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9" /></svg></span>
+                <span className="brand-tab">Dashboard</span>
+                <span className="gr-dot" />
               </div>
             </section>
           </div>

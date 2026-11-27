@@ -79,6 +79,7 @@ export async function loadAll(db: SupabaseClient, email: string): Promise<State>
       engagement: c.engagement,
       pilot: c.pilot,
       accent: s.config[c.id].accent,
+      accent2: s.config[c.id].accent2,
       logo: s.config[c.id].logo,
       escalation: { name: "", role: "" },
       contacts: [],

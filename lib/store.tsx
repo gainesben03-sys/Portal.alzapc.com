@@ -302,6 +302,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return {
         ...base,
         accent: cfg.accent,
+        accent2: cfg.accent2,
         logo: cfg.logo,
         contacts: cfg.users.map(({ name, role, email }) => ({ name, role, email })),
         escalation: esc ? { name: esc.name, role: esc.role, email: esc.email } : base.escalation,
@@ -405,7 +406,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const c = state.config[id];
         if (!c) return b;
         const esc = c.users.find((u) => u.email.toLowerCase() === (c.escalationEmail || "").toLowerCase());
-        return { ...b, accent: c.accent, logo: c.logo, contacts: c.users.map(({ name, role, email }) => ({ name, role, email })), escalation: esc ? { name: esc.name, role: esc.role, email: esc.email } : b.escalation };
+        return { ...b, accent: c.accent, accent2: c.accent2, logo: c.logo, contacts: c.users.map(({ name, role, email }) => ({ name, role, email })), escalation: esc ? { name: esc.name, role: esc.role, email: esc.email } : b.escalation };
       };
       return {
         ...state,

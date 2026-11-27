@@ -23,6 +23,7 @@ export interface Client {
   name: string;
   logo?: string;
   accent: string;
+  accent2?: string;
   pilot: boolean;
   engagement: string;
   escalation: Person;
