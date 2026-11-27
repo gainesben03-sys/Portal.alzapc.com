@@ -561,7 +561,7 @@ function Coach({ r, lang, call, toast, onCancel, onDone }: { r: Review; lang: La
   const sendRef = useRef<(t?: string) => void>(() => undefined);
   const live = useLiveTalk(lang, (t) => sendRef.current(t));
   const question = (p: Review["template"]["ask"][number]) => {
-    const n = p.name[lang].replace(/\bthey\b/g, f).replace(/\bthem\b/g, f).replace(/\bles?\b(?= va)/g, `a ${f} le`);
+    const n = p.name[lang].replace(/\bthey\b/g, f).replace(/\bthem\b/g, f).replace(/\ble va a apoyar\?/, `va a apoyar a ${f}?`);
     return /[?¿]/.test(n) ? n : lang === "es" ? `¿Qué diría sobre ${n.toLowerCase()} de ${f}?` : `What would you say about ${f}'s ${n.charAt(0).toLowerCase() + n.slice(1)}?`;
   };
   const steps = [...r.template.ask.map((p) => ({ id: p.id, label: p.name[lang], q: question(p), hint: p.desc?.[lang] })), { id: "__goals", label: C.goals, q: C.goalsQ(f), hint: undefined as string | undefined }];

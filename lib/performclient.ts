@@ -238,7 +238,7 @@ export async function performApi(clientId: string, body: Res, demo?: Demo): Prom
         const j = await res.json();
         if (j?.ok) return { ...j, demo: true };
       } catch {}
-      const answers = Object.fromEntries(Object.entries(said).filter(([, v]) => v?.trim()).map(([k, v]) => [k, demoNarrative(k, tidy(v), r.name, "you", "")]));
+      const answers = Object.fromEntries(Object.entries(said).filter(([, v]) => v?.trim()).map(([k, v]) => [k, body.lang === "es" ? tidy(v) : demoNarrative(k, tidy(v), r.name, "you", "")]));
       const goals = String(body.goals ?? "").split(/(?<=[.!?])\s+|;\s*|\band\s+(?=(?:lead|get|keep|finish|learn|hit|reach|run|take|own)\b)/i).map((x) => x.trim().replace(/[.!?]+$/, "")).filter((x) => x.length > 4).slice(0, 4).map((x) => ({ text: x.charAt(0).toUpperCase() + x.slice(1), measure: "", by: "" }));
       return { ok: true, answers, goals, demo: true };
     }
