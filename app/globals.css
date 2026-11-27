@@ -3797,3 +3797,16 @@ body.org-dragging, body.org-dragging * { cursor: grabbing !important; user-selec
 .ws-item:hover { background: color-mix(in srgb, var(--accent) 74%, #0b1220); border-color: transparent; }
 .ws-item .ws-ic { background: rgba(255,255,255,.12); color: color-mix(in srgb, var(--accent2) 65%, #fff); }
 .ws-item .ws-t small { color: rgba(255,255,255,.72); }
+/* workspace buttons: the main color at half strength, dark text */
+.ws-item { background: color-mix(in srgb, var(--accent) 50%, #fff); color: color-mix(in srgb, var(--accent) 35%, #0b1220); box-shadow: none; }
+.ws-item:hover { background: color-mix(in srgb, var(--accent) 60%, #fff); }
+.ws-item .ws-ic { background: rgba(255,255,255,.45); color: color-mix(in srgb, var(--accent) 60%, #0b1220); }
+.ws-item .ws-t small { color: color-mix(in srgb, var(--accent) 35%, #0b1220); opacity: .8; }
+/* each company's Hub sits on a very light shade of its main color instead of warm cream (light mode only) */
+:root.tinted:not([data-theme="dark"]) { --bg: color-mix(in srgb, var(--tint) 5%, #fbfcfe); --soft: color-mix(in srgb, var(--tint) 6%, #f7f8fb); --soft2: color-mix(in srgb, var(--tint) 10%, #f1f3f8); }
+.ws-item { background: color-mix(in srgb, var(--accent) var(--ws-mix, 50%), #fff); }
+.ws-item:hover { background: color-mix(in srgb, var(--accent) calc(var(--ws-mix, 50%) + 10%), #fff); }
+:root.dark-main .ws-item { background: color-mix(in srgb, var(--accent) 92%, #0b1220); color: #fff; }
+:root.dark-main .ws-item:hover { background: color-mix(in srgb, var(--accent) 78%, #0b1220); }
+:root.dark-main .ws-item .ws-ic { background: rgba(255,255,255,.12); color: color-mix(in srgb, var(--accent2) 65%, #fff); }
+:root.dark-main .ws-item .ws-t small { color: rgba(255,255,255,.72); opacity: 1; }

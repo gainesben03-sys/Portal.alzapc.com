@@ -266,8 +266,15 @@ export function ClientTopbar({ client }: { client: Client }) {
   useEffect(() => {
     const el = document.documentElement;
     el.style.setProperty("--accent2", client.accent2 || "#b8924f");
-    return () => { el.style.removeProperty("--accent2"); };
-  }, [client.accent2]);
+    el.style.setProperty("--tint", client.accent);
+    // dark main colors (navy, black) turn gray at half strength, so they get a lighter tint
+    const hx = (client.accent || "#19283c").replace("#", "");
+    const [r, g, b] = [0, 2, 4].map((i) => parseInt(hx.slice(i, i + 2), 16) / 255);
+    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    el.classList.toggle("dark-main", lum < 0.22); // dark main colors stay solid; bright ones are toned down
+    el.classList.add("tinted");
+    return () => { el.style.removeProperty("--accent2"); el.style.removeProperty("--tint"); el.classList.remove("tinted", "dark-main"); };
+  }, [client.accent2, client.accent]);
   return (
     <>
     {isAdvisor && (
